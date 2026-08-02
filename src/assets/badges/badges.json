@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "note": "Badge catalog. 'file' is relative to src/assets/badges/. Keep SVG when possible: it stays sharp at any size and costs ~2 KB. Rarity drives the frame color in the UI.",
+  "rarities": ["common", "rare", "epic", "legendary"],
+  "achievements": [
+    {
+      "id": "first_note",
+      "file": "achievements/first-note.svg",
+      "name": { "ru": "Первая нота", "en": "First Note" },
+      "desc": { "ru": "Прослушать первый трек", "en": "Listen to your first track" },
+      "rarity": "common",
+      "rule": { "metric": "tracks_played", "gte": 1 }
+    },
+    {
+      "id": "hour_one",
+      "file": "achievements/hour-one.svg",
+      "name": { "ru": "Час в наушниках", "en": "One Hour In" },
+      "desc": { "ru": "Час прослушивания", "en": "One hour of listening" },
+      "rarity": "common",
+      "rule": { "metric": "listen_seconds", "gte": 3600 }
+    },
+    {
+      "id": "day_of_sound",
+      "file": "achievements/day-of-sound.svg",
+      "name": { "ru": "Сутки звука", "en": "A Day of Sound" },
+      "desc": { "ru": "24 часа прослушивания", "en": "24 hours of listening" },
+      "rarity": "rare",
+      "rule": { "metric": "listen_seconds", "gte": 86400 }
+    },
+    {
+      "id": "week_of_sound",
+      "file": "achievements/week-of-sound.svg",
+      "name": { "ru": "Неделя звука", "en": "A Week of Sound" },
+      "desc": { "ru": "168 часов прослушивания", "en": "168 hours of listening" },
+      "rarity": "legendary",
+      "rule": { "metric": "listen_seconds", "gte": 604800 }
+    },
+    {
+      "id": "night_owl",
+      "file": "achievements/night-owl.svg",
+      "name": { "ru": "Полуночник", "en": "Night Owl" },
+      "desc": { "ru": "Слушать между 2:00 и 5:00", "en": "Listen between 2 and 5 AM" },
+      "rarity": "rare",
+      "rule": { "metric": "night_sessions", "gte": 1 }
+    },
+    {
+      "id": "crate_digger",
+      "file": "achievements/crate-digger.svg",
+      "name": { "ru": "Копатель", "en": "Crate Digger" },
+      "desc": { "ru": "500 уникальных треков", "en": "500 unique tracks" },
+      "rarity": "epic",
+      "rule": { "metric": "unique_tracks", "gte": 500 }
+    },
+    {
+      "id": "all_services",
+      "file": "achievements/all-services.svg",
+      "name": { "ru": "Всё сразу", "en": "Every Service" },
+      "desc": { "ru": "Подключить все сервисы", "en": "Connect every service" },
+      "rarity": "epic",
+      "rule": { "metric": "services_connected", "gte": 4 }
+    },
+    {
+      "id": "eq_tinkerer",
+      "file": "achievements/eq-tinkerer.svg",
+      "name": { "ru": "Звукорежиссёр", "en": "EQ Tinkerer" },
+      "desc": { "ru": "Сохранить свой пресет эквалайзера", "en": "Save a custom EQ preset" },
+      "rarity": "common",
+      "rule": { "metric": "custom_presets", "gte": 1 }
+    },
+    {
+      "id": "spatial_head",
+      "file": "achievements/spatial-head.svg",
+      "name": { "ru": "Объёмная голова", "en": "Spatial Head" },
+      "desc": { "ru": "Час с пространственным звуком", "en": "One hour of spatial audio" },
+      "rarity": "rare",
+      "rule": { "metric": "spatial_seconds", "gte": 3600 }
+    },
+    {
+      "id": "host",
+      "file": "achievements/host.svg",
+      "name": { "ru": "Хозяин комнаты", "en": "Host" },
+      "desc": { "ru": "Создать комнату и позвать друга", "en": "Create a room and invite a friend" },
+      "rarity": "rare",
+      "rule": { "metric": "rooms_hosted", "gte": 1 }
+    },
+    {
+      "id": "social_butterfly",
+      "file": "achievements/social-butterfly.svg",
+      "name": { "ru": "Душа компании", "en": "Social Butterfly" },
+      "desc": { "ru": "10 друзей", "en": "10 friends" },
+      "rarity": "epic",
+      "rule": { "metric": "friends", "gte": 10 }
+    },
+    {
+      "id": "top_of_the_board",
+      "file": "achievements/top-of-the-board.svg",
+      "name": { "ru": "Вершина", "en": "Top of the Board" },
+      "desc": { "ru": "Первое место в недельном лидерборде", "en": "Reach #1 on the weekly leaderboard" },
+      "rarity": "legendary",
+      "rule": { "metric": "leaderboard_best_rank", "lte": 1 }
+    }
+  ],
+  "codes": [
+    {
+      "id": "early_bird",
+      "file": "codes/early-bird.svg",
+      "name": { "ru": "Ранняя пташка", "en": "Early Bird" },
+      "desc": { "ru": "Был здесь до релиза", "en": "Here before release" },
+      "rarity": "legendary"
+    },
+    {
+      "id": "beta_cat",
+      "file": "codes/beta-cat.svg",
+      "name": { "ru": "Бета-кот", "en": "Beta Cat" },
+      "desc": { "ru": "Тестировал бету", "en": "Tested the beta" },
+      "rarity": "epic"
+    },
+    {
+      "id": "bug_hunter",
+      "file": "codes/bug-hunter.svg",
+      "name": { "ru": "Охотник за багами", "en": "Bug Hunter" },
+      "desc": { "ru": "Прислал воспроизводимый баг", "en": "Reported a reproducible bug" },
+      "rarity": "epic"
+    },
+    {
+      "id": "contributor",
+      "file": "codes/contributor.svg",
+      "name": { "ru": "Контрибьютор", "en": "Contributor" },
+      "desc": { "ru": "Код в проекте", "en": "Landed code in the project" },
+      "rarity": "legendary"
+    },
+    {
+      "id": "friend_of_the_cat",
+      "file": "codes/friend-of-the-cat.svg",
+      "name": { "ru": "Друг кота", "en": "Friend of the Cat" },
+      "desc": { "ru": "Выдаётся вручную", "en": "Handed out personally" },
+      "rarity": "rare"
+    },
+    {
+      "id": "meowave_day",
+      "file": "codes/meowave-day.svg",
+      "name": { "ru": "День Meowave", "en": "Meowave Day" },
+      "desc": { "ru": "Событийный значок", "en": "Event badge" },
+      "rarity": "rare"
+    }
+  ]
+}
