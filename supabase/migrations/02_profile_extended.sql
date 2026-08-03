@@ -26,6 +26,7 @@ alter table public.profiles
 -- blanket "readable by everyone" policy from schema.sql.
 drop policy if exists "profiles are readable by everyone" on public.profiles;
 
+drop policy if exists "public profiles, own profile, and friends" on public.profiles;
 create policy "public profiles, own profile, and friends"
   on public.profiles for select using (
     is_public
@@ -55,11 +56,13 @@ create table if not exists public.user_stats (
 
 alter table public.user_stats enable row level security;
 
+drop policy if exists "stats of visible profiles are readable" on public.user_stats;
 create policy "stats of visible profiles are readable"
   on public.user_stats for select using (
     exists (select 1 from public.profiles p where p.id = user_id)
   );
 
+drop policy if exists "users write own stats" on public.user_stats;
 create policy "users write own stats"
   on public.user_stats for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -74,9 +77,11 @@ create table if not exists public.weekly_stats (
 
 alter table public.weekly_stats enable row level security;
 
+drop policy if exists "weekly stats are readable" on public.weekly_stats;
 create policy "weekly stats are readable"
   on public.weekly_stats for select using (true);
 
+drop policy if exists "users write own weekly stats" on public.weekly_stats;
 create policy "users write own weekly stats"
   on public.weekly_stats for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -171,19 +176,23 @@ update storage.buckets
        allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif']
  where id = 'avatars';
 
+drop policy if exists "banners are publicly readable" on storage.objects;
 create policy "banners are publicly readable"
   on storage.objects for select using (bucket_id = 'banners');
 
+drop policy if exists "users upload own banner" on storage.objects;
 create policy "users upload own banner"
   on storage.objects for insert
   with check (bucket_id = 'banners'
               and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "users update own banner" on storage.objects;
 create policy "users update own banner"
   on storage.objects for update
   using (bucket_id = 'banners'
          and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "users delete own banner" on storage.objects;
 create policy "users delete own banner"
   on storage.objects for delete
   using (bucket_id = 'banners'

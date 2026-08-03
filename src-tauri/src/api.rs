@@ -203,20 +203,84 @@ pub async fn ym_stream_url(token: &str, id: &str, hq: bool) -> Result<String, St
 }
 
 /* ═══════════════════ SoundCloud ═══════════════════
-   A real public API, but the client_id comes from registering an app.
-   The user's OAuth token goes into the keychain like every other service.
+   No sign-in needed. The public web client ships its own client_id inside its
+   JavaScript bundles, so we fetch the homepage, pull the script URLs out of it
+   and grep the first client_id we find — exactly what the site does for every
+   anonymous visitor. If the user did connect an OAuth token, we use that
+   instead (it unlocks their private/go+ tracks).
    The progressive transcoding is plain mp3, so mode: "local".              */
 
 const SC_API: &str = "https://api-v2.soundcloud.com";
 
-/// The token field accepts either an OAuth token or a bare client_id, and the
-/// two are authorised differently, so guess which one we were handed.
-fn sc_is_oauth(token: &str) -> bool {
-    let t = token.trim();
-    t.starts_with("OAuth ") || t.contains('-') && t.len() > 40
+/// Scraped client_id, kept for the process lifetime. SoundCloud rotates them
+/// every few weeks, so it's cached but never persisted.
+static SC_CLIENT_ID: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+fn sc_cached_id() -> Option<String> {
+    SC_CLIENT_ID.lock().ok().and_then(|g| g.clone())
 }
 
-fn sc_req(c: &reqwest::Client, url: &str, token: &str) -> reqwest::RequestBuilder {
+fn sc_store_id(id: &str) {
+    if let Ok(mut g) = SC_CLIENT_ID.lock() {
+        *g = Some(id.to_string());
+    }
+}
+
+/// Pulls a working client_id out of the public web player's JS bundles.
+pub async fn sc_client_id() -> Result<String, String> {
+    if let Some(id) = sc_cached_id() {
+        return Ok(id);
+    }
+    let c = client()?;
+    let html = c
+        .get("https://soundcloud.com/")
+        .send()
+        .await
+        .map_err(|e| format!("network: {e}"))?
+        .text()
+        .await
+        .map_err(|e| format!("reading soundcloud.com: {e}"))?;
+
+    // <script crossorigin src="https://a-v2.sndcdn.com/assets/0-xxxx.js">
+    let mut scripts: Vec<String> = Vec::new();
+    for piece in html.split("src=\"").skip(1) {
+        if let Some(end) = piece.find('"') {
+            let url = &piece[..end];
+            if url.starts_with("https://a-v2.sndcdn.com/assets/") && url.ends_with(".js") {
+                scripts.push(url.to_string());
+            }
+        }
+    }
+    // The id lives in one of the last bundles more often than not.
+    scripts.reverse();
+
+    for url in scripts.iter().take(8) {
+        let Ok(resp) = c.get(url).send().await else { continue };
+        let Ok(js) = resp.text().await else { continue };
+        for marker in ["client_id:\"", "client_id=", "\"client_id\":\""] {
+            if let Some(pos) = js.find(marker) {
+                let rest = &js[pos + marker.len()..];
+                let id: String = rest
+                    .chars()
+                    .take_while(|ch| ch.is_ascii_alphanumeric())
+                    .collect();
+                if id.len() >= 24 {
+                    sc_store_id(&id);
+                    return Ok(id);
+                }
+            }
+        }
+    }
+    Err("could not find a public SoundCloud client_id".into())
+}
+
+/// An OAuth token beats the anonymous client_id when the user connected one.
+fn sc_is_oauth(token: &str) -> bool {
+    let t = token.trim();
+    t.starts_with("OAuth ") || (t.contains('-') && t.len() > 40)
+}
+
+async fn sc_req(c: &reqwest::Client, url: &str, token: &str) -> Result<reqwest::RequestBuilder, String> {
     let t = token.trim();
     if sc_is_oauth(t) {
         let v = if t.starts_with("OAuth ") {
@@ -224,15 +288,21 @@ fn sc_req(c: &reqwest::Client, url: &str, token: &str) -> reqwest::RequestBuilde
         } else {
             format!("OAuth {t}")
         };
-        c.get(url).header("Authorization", v)
-    } else {
-        c.get(url).query(&[("client_id", t)])
+        return Ok(c.get(url).header("Authorization", v));
     }
+    let id = if t.len() >= 24 && t.chars().all(|ch| ch.is_ascii_alphanumeric()) {
+        t.to_string()
+    } else {
+        sc_client_id().await?
+    };
+    Ok(c.get(url).query(&[("client_id", id)]))
 }
 
 pub async fn sc_search(token: &str, query: &str) -> Result<Vec<Track>, String> {
     let url = format!("{SC_API}/search/tracks?limit=25&q={}", urlencoding::encode(query));
-    let body: serde_json::Value = sc_req(&client()?, &url, token)
+    let c = client()?;
+    let body: serde_json::Value = sc_req(&c, &url, token)
+        .await?
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -279,6 +349,7 @@ pub async fn sc_search(token: &str, query: &str) -> Result<Vec<Track>, String> {
 pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
     let c = client()?;
     let track: serde_json::Value = sc_req(&c, &format!("{SC_API}/tracks/{id}"), token)
+        .await?
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -301,6 +372,7 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
     let url = pick.get("url").and_then(|u| u.as_str()).ok_or("transcoding has no url")?;
 
     let resolved: serde_json::Value = sc_req(&c, url, token)
+        .await?
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -316,55 +388,12 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
 }
 
 /* ═══════════════════ YouTube Music ═══════════════════
-   Their terms don't allow serving the audio outside their own player, so YTM
-   is a remote control only: search and metadata through YouTube Data API v3,
-   playback through the embedded iframe player (mode: "remote").
-   EQ, 3D and the visualiser are dead here — the audio never enters our
-   AudioContext.                                                            */
+   Guest InnerTube, no API key and no sign-in — see ytm.rs. The Android music
+   client hands back plain audio URLs, so playback stays local (mode: "local")
+   and the EQ, 3D panner and visualiser keep working.                       */
 
-pub async fn ytm_search(api_key: &str, query: &str) -> Result<Vec<Track>, String> {
-    let url = format!(
-        "https://www.googleapis.com/youtube/v3/search\
-         ?part=snippet&type=video&videoCategoryId=10&maxResults=20&q={}&key={}",
-        urlencoding::encode(query),
-        urlencoding::encode(api_key.trim())
-    );
-    let body: serde_json::Value = client()?
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("network: {e}"))?
-        .error_for_status()
-        .map_err(|e| format!("YouTube rejected the request: {e}"))?
-        .json()
-        .await
-        .map_err(|e| format!("bad response: {e}"))?;
-
-    let items = body.get("items").and_then(|v| v.as_array()).cloned().unwrap_or_default();
-
-    Ok(items
-        .iter()
-        .filter_map(|v| {
-            Some(Track {
-                id: v.pointer("/id/videoId")?.as_str()?.to_string(),
-                s: "ytm".into(),
-                t: v.pointer("/snippet/title")?.as_str()?.to_string(),
-                a: v.pointer("/snippet/channelTitle")
-                    .and_then(|c| c.as_str())
-                    .unwrap_or("—")
-                    .to_string(),
-                al: String::new(),
-                // /search doesn't include duration; the iframe player reports
-                // it once the video loads.
-                d: 0,
-                art: v
-                    .pointer("/snippet/thumbnails/high/url")
-                    .and_then(|u| u.as_str())
-                    .map(|s| s.to_string()),
-                mode: "remote".into(),
-            })
-        })
-        .collect())
+pub async fn ytm_search(query: &str) -> Result<Vec<Track>, String> {
+    crate::ytm::search(query).await
 }
 
 /* ═════════════════ commands exposed to the frontend ════════════════ */
@@ -382,15 +411,17 @@ pub async fn api_search(query: String, services: Vec<String>) -> Result<SearchRe
     for s in services {
         let q = query.clone();
         tasks.push(tokio::spawn(async move {
+            // SoundCloud and YouTube Music work anonymously; only Yandex
+            // insists on the user's own token.
             let token = match crate::tokens::read_token(&s) {
-                Ok(Some(t)) => t,
-                Ok(None) => return (s.clone(), Err("not connected".to_string())),
+                Ok(t) => t.unwrap_or_default(),
                 Err(e) => return (s.clone(), Err(e)),
             };
             let res = match s.as_str() {
+                "ym" if token.is_empty() => Err("not connected".to_string()),
                 "ym" => ym_search(&token, &q).await,
                 "sc" => sc_search(&token, &q).await,
-                "ytm" => ytm_search(&token, &q).await,
+                "ytm" => ytm_search(&q).await,
                 other => Err(format!("unknown service: {other}")),
             };
             (s, res)
@@ -422,7 +453,19 @@ pub async fn api_check_token(service: String, token: String) -> Result<bool, Str
     match service.as_str() {
         "ym" => ym_search(t, "test").await.map(|_| true),
         "sc" => sc_search(t, "test").await.map(|_| true),
-        "ytm" => ytm_search(t, "test").await.map(|_| true),
+        "ytm" => ytm_search("test").await.map(|_| true),
+        other => Err(format!("unknown service: {other}")),
+    }
+}
+
+/// Probes a service without a token: used by the UI to show sc/ytm as ready
+/// and to surface a real reason when they aren't.
+#[tauri::command]
+pub async fn api_probe_service(service: String) -> Result<bool, String> {
+    match service.as_str() {
+        "sc" => sc_search("", "test").await.map(|_| true),
+        "ytm" => ytm_search("test").await.map(|_| true),
+        "ym" => Err("Yandex Music needs your token".into()),
         other => Err(format!("unknown service: {other}")),
     }
 }

@@ -5,38 +5,28 @@
 -- helper below exists.
 
 -- ── friendships ─────────────────────────────────────────────
-create table if not exists public.friendships (
-  requester uuid not null references auth.users (id) on delete cascade,
-  addressee uuid not null references auth.users (id) on delete cascade,
-  status     text not null default 'pending'
-             check (status in ('pending', 'accepted', 'blocked')),
-  created_at timestamptz not null default now(),
-  primary key (requester, addressee),
-  constraint no_self_friendship check (requester <> addressee)
-);
+-- The table itself now lives in 01_core: policies in 02 and check_achievements()
+-- in 03 reference it, and those references are resolved at creation time, so it
+-- has to exist before them. Its policies and RPCs stay here.
 
-alter table public.friendships enable row level security;
-
--- Stop A→B and B→A existing at the same time: order the pair before indexing it.
-create unique index if not exists friendships_pair_key
-  on public.friendships (least(requester, addressee), greatest(requester, addressee));
-
-create index if not exists friendships_addressee_idx on public.friendships (addressee, status);
-
+drop policy if exists "see own friendships" on public.friendships;
 create policy "see own friendships"
   on public.friendships for select
   using (auth.uid() in (requester, addressee));
 
+drop policy if exists "send own friend requests" on public.friendships;
 create policy "send own friend requests"
   on public.friendships for insert
   with check (auth.uid() = requester and status = 'pending');
 
 -- Only the addressee accepts. Either side can block or walk away.
+drop policy if exists "respond to friend requests" on public.friendships;
 create policy "respond to friend requests"
   on public.friendships for update
   using (auth.uid() in (requester, addressee))
   with check (auth.uid() in (requester, addressee));
 
+drop policy if exists "remove own friendships" on public.friendships;
 create policy "remove own friendships"
   on public.friendships for delete
   using (auth.uid() in (requester, addressee));
@@ -138,28 +128,34 @@ $$;
 
 grant execute on function public.can_dj(uuid) to authenticated;
 
+drop policy if exists "public rooms and joined rooms are visible" on public.rooms;
 create policy "public rooms and joined rooms are visible"
   on public.rooms for select
   using (not is_private or public.in_room(id) or owner_id = auth.uid());
 
+drop policy if exists "users create own rooms" on public.rooms;
 create policy "users create own rooms"
   on public.rooms for insert with check (auth.uid() = owner_id);
 
 -- DJs update playback state; the owner also renames and locks the room.
+drop policy if exists "djs update room playback" on public.rooms;
 create policy "djs update room playback"
   on public.rooms for update
   using (public.can_dj(id) or owner_id = auth.uid())
   with check (public.can_dj(id) or owner_id = auth.uid());
 
+drop policy if exists "owner deletes room" on public.rooms;
 create policy "owner deletes room"
   on public.rooms for delete using (auth.uid() = owner_id);
 
+drop policy if exists "members of a visible room are listed" on public.room_members;
 create policy "members of a visible room are listed"
   on public.room_members for select
   using (public.in_room(room_id)
          or exists (select 1 from public.rooms r
                      where r.id = room_id and not r.is_private));
 
+drop policy if exists "users leave rooms themselves" on public.room_members;
 create policy "users leave rooms themselves"
   on public.room_members for delete
   using (auth.uid() = user_id
@@ -253,6 +249,7 @@ alter table public.messages enable row level security;
 create index if not exists messages_room_idx on public.messages (room_id, id desc);
 create index if not exists messages_dm_idx on public.messages (recipient, sender, id desc);
 
+drop policy if exists "read room chat and own dms" on public.messages;
 create policy "read room chat and own dms"
   on public.messages for select using (
     (room_id is not null and public.in_room(room_id))
@@ -260,6 +257,7 @@ create policy "read room chat and own dms"
   );
 
 -- DMs only between friends, so the inbox can't be spammed by strangers.
+drop policy if exists "send to own rooms and to friends" on public.messages;
 create policy "send to own rooms and to friends"
   on public.messages for insert with check (
     auth.uid() = sender and (
@@ -268,6 +266,7 @@ create policy "send to own rooms and to friends"
     )
   );
 
+drop policy if exists "delete own messages" on public.messages;
 create policy "delete own messages"
   on public.messages for delete using (auth.uid() = sender);
 
@@ -285,10 +284,12 @@ create table if not exists public.presence (
 
 alter table public.presence enable row level security;
 
+drop policy if exists "friends see presence" on public.presence;
 create policy "friends see presence"
   on public.presence for select
   using (auth.uid() = user_id or public.is_friend(user_id));
 
+drop policy if exists "users write own presence" on public.presence;
 create policy "users write own presence"
   on public.presence for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);

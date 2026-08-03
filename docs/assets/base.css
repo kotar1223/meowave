@@ -1,0 +1,119 @@
+/* Meowave landing page — design tokens lifted verbatim from the player
+   (src/index.html) so the site and the app can never drift apart visually.
+   oklch everywhere: the greys stay neutral at any lightness, which is what
+   makes the app look like graphite rather than blue-grey. */
+
+:root{
+  --bg:oklch(9% 0.004 280);
+  --surf:oklch(15% 0.005 280 / .58);
+  --surf-2:oklch(19% 0.005 280 / .7);
+  --line:oklch(100% 0 0 / .09);
+  --line-2:oklch(100% 0 0 / .16);
+  --text:oklch(97% 0.002 280);
+  --mute:oklch(66% 0.006 280);
+  --accent:oklch(97% 0.002 280);
+  --accent-soft:oklch(97% 0.002 280 / .14);
+  --accent-rgb:250 250 253;
+  --pr:250; --pg:250; --pb:253;
+
+  --glow:1; --blur:14px;
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-6:24px;--sp-8:32px;--sp-12:48px;--sp-16:64px;
+  --r:14px; --r-lg:20px;
+  --e:cubic-bezier(0.16,1,0.3,1);
+  --e-q:cubic-bezier(0.25,1,0.5,1);
+  --e-io:cubic-bezier(0.65,0,0.35,1);
+}
+
+html[data-theme="light"]{
+  --bg:oklch(96.5% 0.003 280);
+  --surf:oklch(100% 0 0 / .62);
+  --surf-2:oklch(100% 0 0 / .78);
+  --line:oklch(20% 0.01 280 / .10);
+  --line-2:oklch(20% 0.01 280 / .2);
+  --text:oklch(20% 0.008 280);
+  --mute:oklch(48% 0.008 280);
+  --accent:oklch(24% 0.008 280);
+  --accent-soft:oklch(24% 0.008 280 / .1);
+  --accent-rgb:26 24 32;
+  --pr:26; --pg:24; --pb:32;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  font-weight:350;font-size:16px;line-height:1.55;letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;font-optical-sizing:auto;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4{font-family:"Inter Tight",Inter,sans-serif;font-weight:500;letter-spacing:-.022em;text-wrap:balance;margin:0}
+a{color:inherit;text-decoration:none}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+::selection{background:var(--accent-soft)}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:3px;border-radius:8px}
+img{max-width:100%;display:block}
+
+.eyebrow{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:500}
+
+/* The particle field and the two drifting haze blobs are the app's signature.
+   Same canvas, same code path, so the landing feels like the product running. */
+#field{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%;
+  opacity:1;transition:opacity .6s var(--e);pointer-events:none}
+.haze{position:fixed;inset:-15vh -15vw;z-index:0;pointer-events:none;filter:blur(90px);overflow:hidden}
+.haze i{position:absolute;border-radius:50%;display:block;
+  background:radial-gradient(circle,oklch(100% 0 0 / .09),transparent 68%)}
+html[data-theme="light"] .haze i{background:radial-gradient(circle,oklch(30% 0.02 280 / .10),transparent 68%)}
+.haze i:nth-child(1){width:60vw;height:60vw;left:-10vw;top:-18vh;animation:d1 90s var(--e-io) infinite alternate}
+.haze i:nth-child(2){width:48vw;height:48vw;right:-8vw;bottom:-16vh;animation:d2 120s var(--e-io) infinite alternate}
+@keyframes d1{to{transform:translate3d(10vw,8vh,0) scale(1.15)}}
+@keyframes d2{to{transform:translate3d(-9vw,-7vh,0) scale(1.1)}}
+
+.pane{
+  background:var(--surf);
+  -webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));
+  border:1px solid var(--line);border-radius:var(--r-lg);
+}
+
+/* layout */
+.wrap{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:0 var(--sp-6)}
+section{position:relative;z-index:2;padding:var(--sp-16) 0}
+.shead{max-width:52ch;margin-bottom:var(--sp-8)}
+.shead h2{font-size:clamp(1.5rem,2.8vw,2.1rem);line-height:1.1;margin:10px 0 10px}
+.shead p{color:var(--mute);font-size:.95rem;margin:0}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:20;
+  backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
+  background:color-mix(in oklab,var(--bg) 72%,transparent);
+  border-bottom:1px solid transparent;transition:border-color .3s var(--e)}
+.nav[data-scrolled="true"]{border-bottom-color:var(--line)}
+.navin{max-width:1080px;margin:0 auto;padding:var(--sp-3) var(--sp-6);
+  display:flex;align-items:center;gap:var(--sp-6)}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Inter Tight",Inter,sans-serif;
+  font-weight:500;letter-spacing:-.02em}
+.brand img{width:30px;height:30px;border-radius:50%}
+.navlinks{display:flex;gap:var(--sp-6);margin-left:auto;align-items:center}
+.navlinks a{color:var(--mute);font-size:.86rem;transition:color .2s var(--e)}
+.navlinks a:hover{color:var(--text)}
+.iconbtn{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--mute);
+  transition:color .2s var(--e),background .2s var(--e)}
+.iconbtn:hover{color:var(--text);background:oklch(100% 0 0 / .06)}
+html[data-theme="light"] .iconbtn:hover{background:oklch(20% 0.01 280 / .05)}
+
+/* buttons — identical shape language to the player's .primary / .btn */
+.primary{display:inline-flex;align-items:center;gap:10px;padding:13px 24px;border-radius:999px;
+  font-size:.92rem;font-weight:500;background:var(--text);color:var(--bg);
+  transition:transform .18s var(--e-q),opacity .2s var(--e),box-shadow .3s var(--e)}
+.primary:hover{transform:translateY(-2px);box-shadow:0 12px 34px oklch(0% 0 0 / .4)}
+.primary:active{transform:none}
+.ghost{display:inline-flex;align-items:center;gap:9px;padding:12px 20px;border-radius:999px;
+  font-size:.88rem;font-weight:450;color:var(--mute);border:1px solid var(--line-2);
+  transition:color .2s var(--e),border-color .2s var(--e),background .2s var(--e)}
+.ghost:hover{color:var(--text);border-color:var(--text);background:var(--surf)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001s!important;transition-duration:.08s!important}
+  html{scroll-behavior:auto}
+}

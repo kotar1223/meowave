@@ -77,7 +77,23 @@ fn handle(rt: &tokio::runtime::Runtime, request: tiny_http::Request) -> Result<(
 
     if url.starts_with("/health") {
         return request
-            .respond(Response::from_string("ok"))
+            .respond(Response::from_string("ok").with_header(header("Access-Control-Allow-Origin", "*")))
+            .map_err(|e| e.to_string());
+    }
+
+    // <audio crossOrigin="anonymous"> is mandatory: without it
+    // createMediaElementSource yields silence. But the webview then treats the
+    // stream as a CORS fetch and drops every response that lacks these
+    // headers — which is why playback died even though the proxy served bytes.
+    if request.method() == &tiny_http::Method::Options {
+        return request
+            .respond(
+                Response::empty(StatusCode(204))
+                    .with_header(header("Access-Control-Allow-Origin", "*"))
+                    .with_header(header("Access-Control-Allow-Headers", "Range"))
+                    .with_header(header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS"))
+                    .with_header(header("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges")),
+            )
             .map_err(|e| e.to_string());
     }
 
@@ -99,6 +115,12 @@ fn handle(rt: &tokio::runtime::Runtime, request: tiny_http::Request) -> Result<(
         .iter()
         .find(|h| h.field.equiv("Range"))
         .map(|h| h.value.as_str().to_string());
+
+    // Local files never touch the network: read the requested byte range
+    // straight off the disk.
+    if service == "local" {
+        return serve_local(&id, range.as_deref(), request);
+    }
 
     let cache_key = format!("{service}/{id}/{}", if hq { "hq" } else { "lq" });
     let upstream = match cache_get(&cache_key) {
@@ -125,6 +147,14 @@ fn handle(rt: &tokio::runtime::Runtime, request: tiny_http::Request) -> Result<(
     let fetched = rt.block_on(async {
         let c = crate::api::client()?;
         let mut req = c.get(&upstream);
+        // googlevideo only serves a media stream to a client that looks like
+        // one of Google's own players and always asks for a byte range.
+        if service == "ytm" {
+            req = req.header("User-Agent", crate::ytm::VR_UA);
+            if range.is_none() {
+                req = req.header("Range", "bytes=0-");
+            }
+        }
         if let Some(r) = &range {
             req = req.header("Range", r.clone());
         }
@@ -162,6 +192,11 @@ fn handle(rt: &tokio::runtime::Runtime, request: tiny_http::Request) -> Result<(
         header("Content-Type", &ctype),
         header("Accept-Ranges", "bytes"),
         header("Cache-Control", "no-store"),
+        header("Access-Control-Allow-Origin", "*"),
+        header(
+            "Access-Control-Expose-Headers",
+            "Content-Range, Content-Length, Accept-Ranges",
+        ),
     ];
     if let Some(cr) = &crange {
         headers.push(header("Content-Range", cr));
@@ -177,13 +212,87 @@ fn handle(rt: &tokio::runtime::Runtime, request: tiny_http::Request) -> Result<(
     request.respond(response).map_err(|e| e.to_string())
 }
 
+/// Serves a byte range of a local file. Seeking in a two-hour FLAC has to work
+/// without loading the whole thing, so the range is parsed and only that slice
+/// is read.
+fn serve_local(id: &str, range: Option<&str>, request: tiny_http::Request) -> Result<(), String> {
+    use std::io::{Read, Seek, SeekFrom};
+
+    let Some(path) = crate::local::path_of(id) else {
+        return request
+            .respond(Response::from_string("unknown local track").with_status_code(StatusCode(404)))
+            .map_err(|e| e.to_string());
+    };
+
+    let mut file = match std::fs::File::open(&path) {
+        Ok(f) => f,
+        Err(e) => {
+            return request
+                .respond(
+                    Response::from_string(format!("cannot open file: {e}"))
+                        .with_status_code(StatusCode(404)),
+                )
+                .map_err(|e| e.to_string())
+        }
+    };
+    let total = file.metadata().map(|m| m.len()).unwrap_or(0);
+
+    // "bytes=START-" or "bytes=START-END"
+    let (start, end) = match range.and_then(|r| r.trim().strip_prefix("bytes=")).map(|spec| {
+        let (a, b) = spec.split_once('-').unwrap_or((spec, ""));
+        let start: u64 = a.trim().parse().unwrap_or(0);
+        let end: u64 = b.trim().parse().unwrap_or(total.saturating_sub(1));
+        (start.min(total), end.min(total.saturating_sub(1)))
+    }) {
+        Some(v) => v,
+        None => (0, total.saturating_sub(1)),
+    };
+
+    let len = end.saturating_sub(start) + 1;
+    let mut buf = vec![0u8; len as usize];
+    if file.seek(SeekFrom::Start(start)).is_err() || file.read_exact(&mut buf).is_err() {
+        return request
+            .respond(Response::from_string("read failed").with_status_code(StatusCode(500)))
+            .map_err(|e| e.to_string());
+    }
+
+    let partial = range.is_some();
+    let mut headers = vec![
+        header("Content-Type", crate::local::mime_of(&path)),
+        header("Accept-Ranges", "bytes"),
+        header("Access-Control-Allow-Origin", "*"),
+        header(
+            "Access-Control-Expose-Headers",
+            "Content-Range, Content-Length, Accept-Ranges",
+        ),
+    ];
+    if partial {
+        headers.push(header(
+            "Content-Range",
+            &format!("bytes {start}-{end}/{total}"),
+        ));
+    }
+
+    let blen = buf.len();
+    request
+        .respond(Response::new(
+            StatusCode(if partial { 206 } else { 200 }),
+            headers,
+            std::io::Cursor::new(buf),
+            Some(blen),
+            None,
+        ))
+        .map_err(|e| e.to_string())
+}
+
 async fn resolve(service: &str, id: &str, hq: bool) -> Result<String, String> {
-    let token = crate::tokens::read_token(service)?
-        .ok_or_else(|| format!("{service} is not connected"))?;
+    // Only Yandex needs credentials; sc/ytm resolve anonymously.
+    let token = crate::tokens::read_token(service)?.unwrap_or_default();
     match service {
+        "ym" if token.is_empty() => Err("Yandex Music is not connected".into()),
         "ym" => crate::api::ym_stream_url(&token, id, hq).await,
         "sc" => crate::api::sc_stream_url(&token, id).await,
-        "ytm" => Err("YouTube Music only plays through its own player".into()),
+        "ytm" => crate::ytm::stream(id, hq).await.map(|p| p.url),
         other => Err(format!("unknown service: {other}")),
     }
 }

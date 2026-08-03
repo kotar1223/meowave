@@ -1,0 +1,131 @@
+/* Section-specific styling: hero, feature grid, the fake player mock, badges,
+   FAQ and footer. Split from base.css so the tokens stay readable. */
+
+/* hero */
+.hero{min-height:calc(100vh - 58px);display:flex;flex-direction:column;justify-content:center;
+  padding:var(--sp-16) 0 var(--sp-12)}
+.hero .eyebrow{margin-bottom:var(--sp-4)}
+.hero h1{font-size:clamp(2.4rem,6.2vw,4.5rem);line-height:.98;letter-spacing:-.035em;max-width:20ch}
+.hero h1 em{font-style:normal;color:var(--mute)}
+.hero .lead{color:var(--mute);font-size:clamp(1rem,1.5vw,1.15rem);max-width:52ch;margin:var(--sp-6) 0 0}
+.hero .cta{display:flex;gap:var(--sp-3);margin-top:var(--sp-8);flex-wrap:wrap;align-items:center}
+.hero .meta{color:var(--mute);font-size:.78rem;margin-top:var(--sp-4)}
+.hero .meta b{color:var(--text);font-weight:500}
+
+/* Reveal on scroll. Everything starts hidden only when JS is alive, so the page
+   is fully readable with JS disabled or if the observer never fires. */
+.js .reveal{opacity:0;transform:translateY(14px)}
+.js .reveal.in{opacity:1;transform:none;transition:opacity .6s var(--e),transform .7s var(--e)}
+
+/* feature grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--sp-4)}
+.card{padding:var(--sp-6);display:grid;gap:10px;align-content:start;
+  transition:transform .35s var(--e),border-color .35s var(--e)}
+.card:hover{transform:translateY(-3px);border-color:var(--line-2)}
+.card .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--text);margin-bottom:var(--sp-2)}
+.card h3{font-size:1rem}
+.card p{color:var(--mute);font-size:.86rem;margin:0}
+.card.wide{grid-column:1/-1}
+
+/* The mock is a static replica of the player's chrome, not a screenshot: it
+   stays sharp on every display and weighs nothing. */
+.mock{padding:var(--sp-3);display:grid;gap:var(--sp-2);
+  grid-template-columns:64px 1fr;grid-template-areas:"rail main" "rail bar";
+  box-shadow:0 40px 100px oklch(0% 0 0 / .5);overflow:hidden}
+html[data-theme="light"] .mock{box-shadow:0 30px 80px oklch(0% 0 0 / .16)}
+.mock .mrail{grid-area:rail;display:flex;flex-direction:column;align-items:center;gap:var(--sp-2);
+  padding:var(--sp-3) 0}
+.mock .mrail i{width:34px;height:26px;border-radius:9px;background:var(--surf-2);display:block}
+.mock .mrail i:first-child{background:var(--accent-soft)}
+.mock .mmain{grid-area:main;min-height:210px;padding:var(--sp-3);display:flex;flex-direction:column;gap:10px}
+.mock .mrow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;
+  padding:7px;border-radius:10px}
+.mock .mrow[data-on="true"]{background:var(--surf-2)}
+.mock .mart{width:34px;height:34px;border-radius:8px;background:linear-gradient(148deg,oklch(42% 0 0),oklch(16% 0 0))}
+.mock .mtx{display:grid;gap:5px}
+.mock .mtx b{height:8px;width:52%;min-width:80px;background:var(--line-2);border-radius:4px;display:block}
+.mock .mtx s{height:7px;width:34%;min-width:54px;background:var(--line);border-radius:4px;display:block}
+.mock .mrow[data-on="true"] .mtx b{background:var(--text);opacity:.85}
+.mock .mdur{width:28px;height:7px;border-radius:4px;background:var(--line)}
+.mock .mbar{grid-area:bar;display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);
+  border-top:1px solid var(--line)}
+.mock .mplay{width:36px;height:36px;border-radius:50%;background:var(--text);flex:none}
+.mock .mseek{flex:1;height:3px;border-radius:99px;background:var(--line-2);position:relative}
+.mock .mseek::after{content:"";position:absolute;inset:0 62% 0 0;background:var(--text);border-radius:99px}
+/* Live equaliser bars: the one thing that moves, so the mock reads as "running". */
+.mock .meq{display:flex;align-items:flex-end;gap:3px;height:26px}
+.mock .meq b{width:3px;background:var(--text);opacity:.55;border-radius:2px;
+  animation:eqb 1.1s var(--e-io) infinite alternate;display:block}
+.mock .meq b:nth-child(1){height:30%;animation-delay:0s}
+.mock .meq b:nth-child(2){height:66%;animation-delay:.12s}
+.mock .meq b:nth-child(3){height:44%;animation-delay:.24s}
+.mock .meq b:nth-child(4){height:82%;animation-delay:.06s}
+.mock .meq b:nth-child(5){height:52%;animation-delay:.3s}
+.mock .meq b:nth-child(6){height:24%;animation-delay:.18s}
+@keyframes eqb{to{height:96%;opacity:.95}}
+
+/* services */
+.svcs{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.svc{display:flex;align-items:center;gap:9px;padding:9px 16px;border-radius:999px;
+  font-size:.84rem;color:var(--text);background:var(--surf);border:1px solid var(--line)}
+.svc s{width:6px;height:6px;border-radius:50%;background:var(--text);
+  box-shadow:0 0 calc(8px*var(--glow)) rgb(var(--accent-rgb) / .7);display:block}
+.svc small{color:var(--mute);font-size:.74rem}
+
+/* badges strip */
+.bstrip{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:var(--sp-4)}
+.bitem{display:grid;gap:7px;justify-items:center;text-align:center}
+.bitem span.art{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;
+  box-shadow:0 0 0 2px var(--ring,var(--line-2));transition:transform .3s var(--e-q)}
+.bitem:hover span.art{transform:translateY(-3px) scale(1.05)}
+.bitem img{width:50px;height:50px}
+.bitem b{font-size:.72rem;font-weight:450;line-height:1.25}
+
+/* steps / install */
+.steps{display:grid;gap:var(--sp-3);counter-reset:s}
+.step{display:grid;grid-template-columns:30px 1fr;gap:var(--sp-4);padding:var(--sp-4) var(--sp-6);align-items:start}
+.step::before{counter-increment:s;content:counter(s);
+  width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  background:var(--accent-soft);font-size:.8rem;font-weight:500}
+.step h4{font-size:.94rem;margin-bottom:4px}
+.step p{color:var(--mute);font-size:.85rem;margin:0}
+.step code{background:var(--surf-2);border:1px solid var(--line);border-radius:6px;
+  padding:1px 7px;font-size:.78rem;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+
+/* faq */
+.faq{display:grid;gap:var(--sp-2)}
+.faq details{padding:var(--sp-4) var(--sp-6);transition:border-color .3s var(--e)}
+.faq details[open]{border-color:var(--line-2)}
+.faq summary{cursor:pointer;font-weight:450;font-size:.94rem;list-style:none;
+  display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";width:8px;height:8px;flex:none;
+  border-right:1.5px solid var(--mute);border-bottom:1.5px solid var(--mute);
+  transform:rotate(45deg);transition:transform .3s var(--e)}
+.faq details[open] summary::after{transform:rotate(225deg)}
+.faq p{color:var(--mute);font-size:.87rem;margin:10px 0 0}
+.faq code{background:var(--surf-2);border:1px solid var(--line);border-radius:6px;
+  padding:1px 6px;font-size:.78rem;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+
+/* download */
+.dl{padding:var(--sp-12) var(--sp-8);text-align:center;display:grid;gap:var(--sp-4);justify-items:center}
+.dl h2{font-size:clamp(1.6rem,3vw,2.3rem)}
+.dl p{color:var(--mute);margin:0;max-width:46ch;font-size:.92rem}
+
+/* footer */
+footer{position:relative;z-index:2;border-top:1px solid var(--line);margin-top:var(--sp-16);
+  padding:var(--sp-8) 0 var(--sp-12)}
+.fin{max-width:1080px;margin:0 auto;padding:0 var(--sp-6);
+  display:flex;gap:var(--sp-6);align-items:center;flex-wrap:wrap;color:var(--mute);font-size:.82rem}
+.fin a{color:var(--mute);transition:color .2s var(--e)}
+.fin a:hover{color:var(--text)}
+.fin .sp{margin-left:auto}
+
+@media (max-width:720px){
+  section{padding:var(--sp-12) 0}
+  .navlinks a{display:none}
+  .hero{min-height:auto;padding-top:var(--sp-12)}
+  .mock{grid-template-columns:1fr;grid-template-areas:"main" "bar"}
+  .mock .mrail{display:none}
+}

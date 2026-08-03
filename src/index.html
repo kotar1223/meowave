@@ -76,7 +76,7 @@ button{background:none;border:0;cursor:pointer}
 :focus-visible{outline:1.5px solid var(--accent);outline-offset:3px;border-radius:8px}
 .eyebrow{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:500}
 
-/* ── field + haze ───────────────────────── */
+/* field + haze */
 #field{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%;
   opacity:1;transition:opacity .6s var(--e)}
 #field.dim{opacity:.3}
@@ -95,7 +95,7 @@ html[data-theme="light"] .haze i{background:radial-gradient(circle,oklch(30% 0.0
   border:1px solid var(--line);border-radius:var(--r-lg);
 }
 
-/* ── shell ──────────────────────────────── */
+/* shell */
 .app{position:relative;z-index:2;height:100vh;display:grid;
   grid-template-columns:74px 1fr;grid-template-rows:1fr auto;
   grid-template-areas:"rail main" "rail bar";gap:var(--sp-2);padding:var(--sp-2);
@@ -143,7 +143,14 @@ html[data-theme="light"] .navbtn:hover{background:oklch(20% 0.01 280 / .05)}
 .hero h1{font-size:clamp(1.8rem,3.4vw,2.7rem);line-height:1.04;margin-bottom:10px}
 .hero p{color:var(--mute);font-size:.92rem;margin:0;max-width:44ch}
 .hero .row2{display:flex;align-items:center;gap:var(--sp-4);margin-top:var(--sp-6);flex-wrap:wrap}
-.hero.fade{opacity:.18;transition:opacity .6s var(--e)}
+/* The wave heading dims but never disappears: hiding it outright made the
+   screen look empty rather than playing. */
+.hero.fade{opacity:.55;transition:opacity .6s var(--e)}
+.hero.fade h1{font-size:clamp(1.3rem,2.2vw,1.7rem);transition:font-size .5s var(--e)}
+.hero.fade p{opacity:.7}
+.wavehint{color:var(--mute);font-size:.8rem;max-width:34ch;line-height:1.45}
+.wavehint b{color:var(--text);font-weight:500}
+.wavehint[data-ready="true"] b{color:var(--accent)}
 .primary{display:inline-flex;align-items:center;gap:10px;padding:12px 22px;border-radius:999px;font-size:.9rem;font-weight:500;
   background:var(--text);color:var(--bg);transition:transform .18s var(--e-q),opacity .2s var(--e)}
 .primary:hover{transform:translateY(-1px)}
@@ -166,8 +173,20 @@ html[data-theme="light"] .navbtn:hover{background:oklch(20% 0.01 280 / .05)}
 .row:hover{background:oklch(100% 0 0 / .045)}
 html[data-theme="light"] .row:hover{background:oklch(20% 0.01 280 / .04)}
 .row[data-playing="true"] .meta b{color:var(--accent);text-shadow:0 0 calc(14px*var(--glow)) rgb(var(--accent-rgb) / .45)}
+/* The playing row gets a live ring, so it is obvious what is sounding. */
+.row[data-playing="true"] .art::after{content:"";position:absolute;inset:0;border-radius:inherit;
+  box-shadow:inset 0 0 0 1.5px rgb(var(--accent-rgb) / .55);animation:pulseRing 2.4s var(--e-io) infinite}
+.row .art{position:relative}
+@keyframes pulseRing{0%,100%{opacity:.35}50%{opacity:.9}}
+.row{animation:rowIn .34s var(--e) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* Wave building state */
+.primary[aria-busy="true"]{opacity:.6;pointer-events:none}
+.primary[aria-busy="true"] i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .art{width:38px;height:38px;border-radius:8px;flex:none;
-  background:linear-gradient(148deg,oklch(var(--l1) 0 0),oklch(var(--l2) 0 0))}
+  background:linear-gradient(148deg,oklch(var(--l1,42%) 0 0),oklch(var(--l2,12%) 0 0));
+  background-size:cover;background-position:center;background-repeat:no-repeat}
 html[data-theme="light"] .art{background:linear-gradient(148deg,oklch(calc(100% - var(--l1)) 0 0),oklch(calc(100% - var(--l2)) 0 0))}
 .meta{min-width:0}
 .meta b{display:block;font-weight:500;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .2s var(--e)}
@@ -178,7 +197,17 @@ html[data-theme="light"] .art{background:linear-gradient(148deg,oklch(calc(100% 
 .row:hover .heart{opacity:1}
 .heart[aria-pressed="true"]{opacity:1;color:var(--accent);filter:drop-shadow(0 0 calc(6px*var(--glow)) rgb(var(--accent-rgb) / .55))}
 
-.tabs{display:flex;gap:var(--sp-6);padding:0 var(--sp-2);border-bottom:1px solid var(--line);margin-bottom:var(--sp-6)}
+/* Settings tabs */
+.stab{display:none}
+.stab[data-active="true"]{display:block;animation:stabIn .3s var(--e) both}
+@keyframes stabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Token guide */
+.guide{border-top:1px solid var(--line);margin-top:2px;padding:12px 0 4px}
+.guide ol{margin:0;padding-left:20px;color:var(--mute);font-size:.78rem;line-height:1.75}
+.guide ol b{color:var(--text);font-weight:500}
+.guide .grow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.guide code{background:var(--surf-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.74rem}
+.tabs{display:flex;gap:var(--sp-6);padding:0 var(--sp-2);border-bottom:1px solid var(--line);margin-bottom:var(--sp-6);flex-wrap:wrap}
 .tabs button{padding:0 1px 12px;color:var(--mute);font-weight:450;font-size:.95rem;position:relative}
 .tabs button[aria-selected="true"]{color:var(--text)}
 .tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--accent);
@@ -189,7 +218,9 @@ html[data-theme="light"] .art{background:linear-gradient(148deg,oklch(calc(100% 
 .plc .sq{aspect-ratio:1;border-radius:var(--r);background:linear-gradient(150deg,oklch(var(--l1) 0 0),oklch(var(--l2) 0 0));
   transition:transform .35s var(--e)}
 html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(100% - var(--l1)) 0 0),oklch(calc(100% - var(--l2)) 0 0))}
-.plc:hover .sq{transform:translateY(-4px)}
+.plc:hover .sq{transform:translateY(-4px);box-shadow:0 14px 34px oklch(0% 0 0 / .4)}
+.plc .sq{background-size:cover;background-position:center}
+.plgrid .plc{animation:rowIn .36s var(--e) both}
 .plc b{font-weight:500;font-size:.9rem;display:block}
 .plc span{color:var(--mute);font-size:.75rem}
 
@@ -214,6 +245,102 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
   box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .55)}
 input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--accent);
   box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .55)}
+/* Favorites sync.
+   Favorites used to live only in localStorage, so they were tied to one
+   machine. Now localStorage is the offline cache and the account is the truth.
+
+   Merge rule on sign-in: union, never overwrite. Whoever signs in on a second
+   machine expects to end up with both sets, and a "server wins" rule would
+   silently delete everything they hearted while signed out. Deletions are
+   therefore explicit — they travel as removals, not as an absence. */
+const FAVQ={adds:new Map(),removes:new Map(),timer:0};
+const favKey=tr=>tr.s+"\u0000"+tr.id;
+
+function favRow(tr){
+ return {source:tr.s,source_track_id:String(tr.id),title:tr.t||"\u2014",
+  artist:tr.a||null,album:tr.al||null,duration:Math.max(0,Math.round(tr.d||0)),
+  cover_url:tr.art||null,local_path:tr.path||null}}
+
+/* Queue a change instead of firing a request per heart click. */
+function queueFav(tr,on){
+ const k=favKey(tr);
+ if(on){FAVQ.removes.delete(k);FAVQ.adds.set(k,favRow(tr))}
+ else{FAVQ.adds.delete(k);FAVQ.removes.set(k,[tr.s,String(tr.id)])}
+ if(!sb||!sbUser)return;
+ clearTimeout(FAVQ.timer);
+ FAVQ.timer=setTimeout(()=>flushFavorites(),1200)}
+
+async function flushFavorites(){
+ if(!sb||!sbUser)return;
+ if(!FAVQ.adds.size&&!FAVQ.removes.size)return;
+ /* Take the batch before awaiting: clicks during the request belong to the next
+    flush, not to this one. */
+ const adds=[...FAVQ.adds.values()],removes=[...FAVQ.removes.values()];
+ FAVQ.adds.clear();FAVQ.removes.clear();
+ try{
+  const {error}=await sb.rpc("sync_favorites",{adds,removes});
+  if(error)throw error;
+ }catch(e){
+  console.warn("sync_favorites:",e.message||e);
+  /* Put it back so nothing is lost when the network returns. */
+  adds.forEach(r=>FAVQ.adds.set(r.source+"\u0000"+r.source_track_id,r));
+  removes.forEach(r=>FAVQ.removes.set(r[0]+"\u0000"+r[1],r))}}
+
+/* Pull the account's favorites and merge them into the local set. */
+async function pullFavorites(){
+ if(!sb||!sbUser)return;
+ try{
+  const {data,error}=await sb.from("favorites")
+   .select("source,source_track_id,title,artist,album,duration,cover_url,local_path,added_at")
+   .order("added_at",{ascending:true});
+  if(error)throw error;
+
+  let added=0;
+  for(const r of data||[]){
+   const known=TRACKS.find(x=>String(x.id)===String(r.source_track_id)&&x.s===r.source);
+   if(known){
+    known.fav=true;
+    /* Prefer whatever has real metadata: rows saved before a duration was
+       known carry 0. */
+    if(!known.art&&r.cover_url)known.art=r.cover_url;
+    if((!known.d||known.d===0)&&r.duration)known.d=r.duration;
+    continue}
+   TRACKS.push({id:r.source_track_id,s:r.source,t:r.title,a:r.artist||"\u2014",
+    al:r.album||"",d:r.duration||0,art:r.cover_url||null,
+    mode:r.source==="local"?"local":"local",
+    ...(r.local_path?{path:r.local_path}:{}),fav:true});
+   added++}
+
+  /* Anything hearted offline is not on the server yet: push it now. */
+  const remote=new Set((data||[]).map(r=>r.source+"\u0000"+r.source_track_id));
+  TRACKS.filter(x=>x.fav&&!remote.has(favKey(x))).forEach(x=>{
+   FAVQ.adds.set(favKey(x),favRow(x))});
+
+  /* Local files whose path is missing on this machine stay visible but can't
+     play; mark them so the UI can grey them out instead of failing on click. */
+  if(TAURI){
+   const paths=TRACKS.filter(x=>x.s==="local"&&x.path).map(x=>x.path);
+   if(paths.length){
+    try{await inv("local_rehydrate",{paths})}catch(e){console.warn("rehydrate:",e)}}}
+
+  if(added||FAVQ.adds.size){save();if(S.view==="library")renderLib();renderWaveHint()}
+  await flushFavorites();
+ }catch(e){console.warn("pull favorites:",e.message||e)}}
+
+/* Badges. Owned ones are full colour; the rest stay as silhouettes so the
+   catalog doubles as a list of what is still out there. */
+.bdgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:var(--sp-4)}
+.bdg{text-align:center;display:grid;gap:6px;justify-items:center;animation:rowIn .3s var(--e) both}
+.bdg .bdgart{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;position:relative;
+  box-shadow:0 0 0 2px var(--ring);transition:transform .25s var(--e-q)}
+.bdg:hover .bdgart{transform:translateY(-3px) scale(1.04)}
+.bdg .bdgart img{width:56px;height:56px;display:block}
+.bdg b{font-size:.76rem;font-weight:500;line-height:1.25}
+.bdg span{font-size:.68rem;color:var(--mute);line-height:1.3}
+.bdg[data-owned="false"] .bdgart{box-shadow:0 0 0 1px var(--line-2)}
+.bdg[data-owned="false"] .bdgart img{filter:grayscale(1) opacity(.28)}
+.bdg[data-owned="false"] b{color:var(--mute)}
+.bdg[data-owned="true"] .bdgart{background:radial-gradient(circle at 50% 40%,rgb(255 255 255 / .07),transparent 70%)}
 .swatches{display:flex;gap:9px;flex-wrap:wrap}
 .sws{width:30px;height:30px;border-radius:50%;border:1px solid var(--line-2);position:relative;transition:transform .2s var(--e-q)}
 .sws:hover{transform:scale(1.1)}
@@ -227,7 +354,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 .tokrow input{flex:1 1 220px;padding:8px 14px;border-radius:999px;background:transparent;border:1px solid var(--line-2);font-size:.8rem}
 .tokrow input:focus{outline:none;border-color:var(--accent)}
 
-/* ── profile ────────────────────────────── */
+/* profile */
 .profhead{display:flex;align-items:center;gap:var(--sp-6);flex-wrap:wrap}
 .avatar{width:104px;height:104px;border-radius:50%;position:relative;flex:none;cursor:pointer;overflow:hidden;
   border:1px solid var(--line-2);background:linear-gradient(150deg,oklch(70% 0 0),oklch(24% 0 0));
@@ -258,7 +385,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 .authmsg.err{color:oklch(72% 0.17 25)}
 .authmsg.ok{color:var(--accent)}
 
-/* ── player bar ─────────────────────────── */
+/* player bar */
 .bar{grid-area:bar;position:relative;padding:0 var(--sp-4) var(--sp-3)}
 .seek{height:26px;display:flex;align-items:center;gap:12px;padding-top:6px}
 .seek .t{font-size:.72rem;color:var(--mute);font-variant-numeric:tabular-nums}
@@ -310,7 +437,7 @@ html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
 .pmini input{width:120px;padding:6px 11px;border-radius:999px;background:transparent;border:1px solid var(--line-2);font-size:.76rem}
 .pmini input:focus{outline:none;border-color:var(--accent)}
 
-/* ── fullscreen player ──────────────────── */
+/* fullscreen player */
 .fp{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:var(--sp-6);
   background:color-mix(in oklab,var(--bg) 72%,transparent);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
@@ -321,7 +448,8 @@ html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
   transform:translateY(20px) scale(.98);transition:transform .42s var(--e)}
 .fp[data-open="true"] .fpc{transform:none}
 .cover{aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;
-  background:linear-gradient(150deg,oklch(var(--l1) 0 0),oklch(var(--l2) 0 0));
+  background:linear-gradient(150deg,oklch(var(--l1,42%) 0 0),oklch(var(--l2,12%) 0 0));
+  background-size:cover;background-position:center;background-repeat:no-repeat;
   box-shadow:0 24px 70px oklch(0% 0 0 / .5)}
 html[data-theme="light"] .cover{background:linear-gradient(150deg,oklch(calc(100% - var(--l1)) 0 0),oklch(calc(100% - var(--l2)) 0 0));box-shadow:0 20px 60px oklch(0% 0 0 / .18)}
 .cover .vis{position:absolute;inset:0;width:100%;height:100%}
@@ -350,6 +478,17 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
 .hollow{color:var(--mute);font-size:.85rem;padding:var(--sp-8) 0;text-align:center}
 
 /* empty */
+/* Toasts. Failures used to reach the console only, so from the UI a dead
+   stream was indistinguishable from silence. */
+.toasts{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:120;
+  display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{padding:10px 18px;border-radius:999px;font-size:.82rem;background:var(--surf-2);
+  border:1px solid var(--line-2);color:var(--text);box-shadow:0 10px 30px oklch(0% 0 0 / .35);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  animation:toastIn .32s var(--e) both}
+.toast.out{animation:toastOut .3s var(--e) both}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-6px) scale(.98)}}
 .empty{text-align:center;padding:var(--sp-16) var(--sp-4);max-width:40ch;margin:0 auto;color:var(--mute)}
 .empty h3{font-size:1.05rem;color:var(--text);margin:var(--sp-4) 0 6px}
 .empty p{font-size:.85rem;margin:0}
@@ -359,7 +498,7 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
 @keyframes bl{0%,100%{opacity:.2}45%{opacity:1}}
 .pend{display:flex;align-items:center;gap:var(--sp-3);padding:11px var(--sp-3);border-top:1px solid var(--line);font-size:.82rem;color:var(--mute)}
 
-/* ── onboarding ─────────────────────────── */
+/* onboarding */
 .ob{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:var(--sp-6);transition:opacity .5s var(--e)}
 .ob[hidden]{display:none}
 .ob.out{opacity:0;pointer-events:none}
@@ -418,7 +557,7 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
 <div class="haze" aria-hidden="true"><i></i><i></i></div>
 <canvas id="field" aria-hidden="true"></canvas>
 
-<!-- ══ onboarding ══ -->
+<!-- onboarding -->
 <div class="splash" id="splash"><div class="splash-ring"></div><img src="./icons/icon.png" alt="Meowave"><span>Meowave</span></div>
 <div class="ob" id="ob">
   <div class="obc pane">
@@ -453,7 +592,7 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
   </div>
 </div>
 
-<!-- ══ app ══ -->
+<!-- app -->
 <div class="app" id="app" aria-hidden="true">
 
   <nav class="rail pane">
@@ -481,10 +620,7 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
           <p data-i18n="home.s">Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.</p>
           <div class="row2">
             <button class="primary" id="start"><i data-lucide="play" width="16" height="16"></i><span data-i18n="home.start">Запустить волну</span></button>
-            <div class="seg" id="mode" role="group">
-              <button aria-pressed="true" data-v="artists" data-i18n="mode.artists">По артистам</button>
-              <button aria-pressed="false" data-v="similar" data-i18n="mode.similar">Похожие</button>
-            </div>
+            <span class="wavehint" id="wavehint"></span>
           </div>
         </div>
       </div>
@@ -511,13 +647,24 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
 
       <div class="view" id="v-settings">
         <div class="vh"><h2 data-i18n="set.t">Настройки</h2></div>
-
-        <div class="panel pane">
-          <h3 data-i18n="set.acc">Аккаунты</h3>
-          <p class="ph" data-i18n="set.acc.s">Authorization Code + PKCE, без сервера. Spotify — схема meowave://callback, Google/YouTube — localhost-редирект.</p>
-          <div id="accounts"></div>
+        <!-- Settings outgrew a single scroll, so they are split into tabs. -->
+        <div class="tabs" role="tablist" id="settabs">
+          <button role="tab" aria-selected="true" data-stab="acc" data-i18n="set.acc">Аккаунты</button>
+          <button role="tab" aria-selected="false" data-stab="sound" data-i18n="set.tab.sound">Звук</button>
+          <button role="tab" aria-selected="false" data-stab="look" data-i18n="set.tab.look">Вид</button>
+          <button role="tab" aria-selected="false" data-stab="lib" data-i18n="set.tab.lib">Фонотека</button>
+          <button role="tab" aria-selected="false" data-stab="about" data-i18n="set.tab.about">О приложении</button>
         </div>
 
+        <div class="stab" data-stab="acc" data-active="true">
+        <div class="panel pane">
+          <h3 data-i18n="set.acc">Аккаунты</h3>
+          <p class="ph" data-i18n="set.acc.s">SoundCloud и YouTube Music работают без входа. Для Yandex Music нужен токен — инструкция ниже. Токены уходят в системный keychain.</p>
+          <div id="accounts"></div>
+        </div>
+        </div>
+
+        <div class="stab" data-stab="sound">
         <div class="panel pane">
           <h3 data-i18n="set.sp">Пространственный звук</h3>
           <p class="ph" data-i18n="set.sp.s">PannerNode в режиме HRTF: источник летает вокруг головы по орбите и проходит над ней. Плюс ConvolverNode для комнаты.</p>
@@ -550,7 +697,9 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
             </div>
           </div>
         </div>
+        </div>
 
+        <div class="stab" data-stab="look">
         <div class="panel pane">
           <h3 data-i18n="set.look">Вид</h3>
           <p class="ph" data-i18n="set.look.s">Плотность частиц влияет на нагрузку сильнее всего остального.</p>
@@ -599,6 +748,43 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
             <div class="seg" id="lang" role="group"><button data-v="ru" aria-pressed="true">Русский</button><button data-v="en">English</button></div>
           </div>
         </div>
+        </div>
+
+        <div class="stab" data-stab="lib">
+          <div class="panel pane">
+            <h3 data-i18n="loc.t">Локальные треки</h3>
+            <p class="ph" data-i18n="loc.s">Файлы не копируются и никуда не отправляются — читаются с диска напрямую. Теги берутся из имени файла.</p>
+            <div class="field">
+              <div><label data-i18n="loc.add">Добавить файлы</label><small data-i18n="loc.fmt">mp3, flac, wav, ogg, m4a</small></div>
+              <button class="btn" id="locadd" data-i18n="loc.pick">Выбрать…</button>
+            </div>
+            <div class="field">
+              <div><label data-i18n="loc.folder">Добавить папку</label><small data-i18n="loc.folder.s">Со всеми вложенными</small></div>
+              <button class="btn" id="locfolder" data-i18n="loc.pick">Выбрать…</button>
+            </div>
+            <div id="locinfo" class="ph" style="margin:8px 0 0"></div>
+          </div>
+          <div class="panel pane">
+            <h3 data-i18n="cache.t">Кэш и данные</h3>
+            <p class="ph" data-i18n="cache.s">Обложки и метаданные, сохранённые на диске.</p>
+            <div class="field">
+              <div><label data-i18n="cache.size">Занято</label><small id="cachesz">—</small></div>
+              <button class="btn" id="cacheclr" data-i18n="cache.clr">Очистить</button>
+            </div>
+            <div class="field">
+              <div><label data-i18n="data.reset">Сбросить избранное и историю</label><small data-i18n="data.reset.s">Настройки и токены останутся</small></div>
+              <button class="btn" id="datareset" data-i18n="data.reset.btn">Сбросить</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stab" data-stab="about">
+          <div class="panel pane">
+            <h3>Meowave</h3>
+            <p class="ph"><span data-i18n="about.ver">Версия</span> <span id="appver">0.1.0</span></p>
+            <p class="ph" data-i18n="about.s">Кросс-сервисный плеер с собственным звуковым трактом: эквалайзер, HRTF-орбита и визуализатор работают на всех сервисах, потому что звук идёт через нас, а не через чужой плеер.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -638,9 +824,10 @@ html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
 </div>
 
 <div class="fp" id="fp"><div class="fpc pane" id="fpc"></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
-/* ─────────── boot: частицы собирают круг → ударная волна ─────────── */
+/* boot: частицы собирают круг -> ударная волна */
 const BOOT={done:false,reduce:matchMedia("(prefers-reduced-motion: reduce)").matches};
 document.documentElement.classList.add("booting");
 function bootFinish(){
@@ -653,7 +840,7 @@ function bootFinish(){
  setTimeout(()=>sp?.setAttribute("hidden",""),BOOT.reduce?60:420);
  setTimeout(()=>document.documentElement.classList.remove("booting"),BOOT.reduce?120:1050);
 }
-/* ─────────── i18n ─────────── */
+/* i18n */
 const FIRST_RUN_KEY="meowave.firstRun.v1";
 const LOCAL_MODE_KEY="meowave.localMode.v1";
 const I18N={
@@ -676,7 +863,9 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "s.idle.t":"Одна строка, четыре сервиса","s.idle.s":"Запросы уходят параллельно, у каждого результата виден источник.",
 "s.none.t":"Ничего не нашлось","s.none.s":"Попробуйте имя артиста или часть названия.","s.ing":"опрашиваем","s.found":"найдено",
 "fav.none.t":"Избранное пусто","fav.none.s":"Отмечайте треки сердцем, метаданные останутся локально.",
-"queue":"Очередь","lyrics":"Текст","now":"Играет","tracks":"треков","nolyrics":"Для этого трека текста нет",
+"rec.none.t":"Здесь пока пусто","rec.none.s":"Всё, что вы слушали, появится тут автоматически.",
+"pl.none.t":"Плейлисты соберутся сами","pl.none.s":"Они группируют избранное и историю по артистам.",
+"queue":"Очередь","lyrics":"Текст","now":"Играет","tracks":"треков","nolyrics":"Для этого трека текста нет","q.none":"Очередь пуста — найдите треки в поиске","load.err":"Не удалось воспроизвести",
 "connect":"Подключить","disconnect":"Отключить","connected":"Подключено","noauth":"Не подключено","eq.name":"Свой пресет","acc.none":"Без цвета",
 "nav.profile":"Профиль","pr.email":"Email","pr.pass":"Пароль","pr.signin":"Войти","pr.signup":"Создать аккаунт","pr.magic":"Magic link",
 "pr.auth.t":"Вход в аккаунт","pr.auth.s":"Email и пароль или magic link на почту. Данные защищены Row Level Security на стороне Supabase.",
@@ -684,7 +873,32 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "pr.logout":"Выйти","pr.del":"Удалить аккаунт","pr.del.confirm":"Точно удалить? Нажмите ещё раз — это необратимо",
 "pr.name.ph":"Имя пользователя","pr.name.saved":"Имя сохранено","pr.ava.hint":"Тап по аватару — загрузить фото",
 "pr.nosupa":"Supabase не настроен: заполните SUPABASE_URL и SUPABASE_ANON_KEY в .env рядом с приложением.",
-"tok.ph":"Вставьте токен сервиса","tok.save":"Сохранить","tok.hint":"Токен уйдёт в системный keychain (Credential Manager)"},
+"tok.ph":"Вставьте токен сервиса","tok.save":"Сохранить","tok.hint":"Токен уйдёт в системный keychain (Credential Manager)",
+"bd.t":"Значки","bd.s":"Достижения открываются сами, когда статистика перешагивает порог. Проверка идёт на сервере.",
+"bd.have":"Открыто","bd.none":"Каталог значков не загрузился","bd.new":"Новый значок",
+"bd.code.ph":"Промокод","bd.code.go":"Активировать","bd.code.hint":"Код проверяется на сервере, в приложении его нет",
+"bd.code.empty":"Введите код","bd.code.auth":"Сначала войдите в аккаунт","bd.code.checking":"Проверяем…",
+"bd.code.ok":"Значок открыт","bd.code.dup":"Этот значок у вас уже есть","bd.code.bad":"Код не найден",
+"bd.code.exp":"Срок кода истёк","bd.code.used":"Код исчерпан",
+"s.nosvc":"Все сервисы выключены — включите их в шапке",
+"wave.need":"Волна собирается из ваших любимых треков. Пока отмечено {n} — добавьте ещё, и она заиграет.",
+"wave.ready":"В избранном {n} треков — волна подберёт похожее и запустится сразу.",
+"wave.need.toast":"Отметьте сердцем ещё {n} трека — по ним волна и подбирает музыку",
+"wave.empty":"Не удалось собрать подборку, попробуйте позже",
+"set.tab.sound":"Звук","set.tab.look":"Вид","set.tab.lib":"Фонотека","set.tab.about":"О приложении",
+"ym.g1":"Войдите в свой аккаунт на music.yandex.ru","ym.g2":"Откройте инструменты разработчика:",
+"ym.g3":"Перейдите в","ym.g4":"Найдите ключ","ym.g5":"Скопируйте значение и вставьте в поле выше",
+"ym.open":"Открыть Яндекс Музыку","ym.docs":"Документация",
+"loc.t":"Локальные треки","loc.s":"Файлы не копируются и никуда не отправляются — читаются с диска напрямую. Теги берутся из имени файла.",
+"loc.add":"Добавить файлы","loc.folder":"Добавить папку","loc.folder.s":"Со всеми вложенными",
+"loc.fmt":"mp3, flac, wav, ogg, m4a","loc.pick":"Выбрать…",
+"loc.count":"В фонотеке {n} локальных треков","loc.empty":"Пока ничего не добавлено",
+"loc.added":"Добавлено треков: {n}","loc.none":"Аудиофайлы не найдены","loc.err":"Не удалось прочитать файлы",
+"loc.desktop":"Импорт доступен только в приложении","loc.nodlg":"Диалог выбора файлов недоступен",
+"cache.t":"Кэш и данные","cache.s":"Обложки и метаданные, сохранённые на диске.","cache.size":"Занято","cache.clr":"Очистить","cache.done":"Кэш очищен",
+"data.reset":"Сбросить избранное и историю","data.reset.s":"Настройки и токены останутся","data.reset.btn":"Сбросить","data.done":"Избранное и история очищены",
+"about.ver":"Версия","about.s":"Кросс-сервисный плеер с собственным звуковым трактом: эквалайзер, HRTF-орбита и визуализатор работают на всех сервисах, потому что звук идёт через нас, а не через чужой плеер.",
+"nologin":"Без входа","ready":"Готов"},
 en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings":"Settings",
 "top.ph":"Search across services","mode.artists":"By artist","mode.similar":"Similar",
 "home.t":"Silence. The field waits.","home.s":"Start the wave: the stream builds from your artists, cover and queue open fullscreen.","home.start":"Start the wave",
@@ -704,7 +918,9 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "s.idle.t":"One field, four services","s.idle.s":"Queries fire in parallel, every result shows its source.",
 "s.none.t":"Nothing found","s.none.s":"Try an artist name or part of a title.","s.ing":"querying","s.found":"found",
 "fav.none.t":"No favorites yet","fav.none.s":"Heart any track, metadata stays local.",
-"queue":"Queue","lyrics":"Lyrics","now":"Playing","tracks":"tracks","nolyrics":"No lyrics for this track",
+"rec.none.t":"Nothing here yet","rec.none.s":"Everything you play shows up here automatically.",
+"pl.none.t":"Playlists build themselves","pl.none.s":"They group your favorites and history by artist.",
+"queue":"Queue","lyrics":"Lyrics","now":"Playing","tracks":"tracks","nolyrics":"No lyrics for this track","q.none":"Queue is empty — search for tracks","load.err":"Playback failed",
 "connect":"Connect","disconnect":"Disconnect","connected":"Connected","noauth":"Not connected","eq.name":"Custom preset","acc.none":"No color",
 "nav.profile":"Profile","pr.email":"Email","pr.pass":"Password","pr.signin":"Sign in","pr.signup":"Create account","pr.magic":"Magic link",
 "pr.auth.t":"Sign in","pr.auth.s":"Email + password or a magic link. Data is guarded by Supabase Row Level Security.",
@@ -712,7 +928,32 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "pr.logout":"Sign out","pr.del":"Delete account","pr.del.confirm":"Really delete? Click again — this is irreversible",
 "pr.name.ph":"Username","pr.name.saved":"Name saved","pr.ava.hint":"Tap the avatar to upload a photo",
 "pr.nosupa":"Supabase is not configured: set SUPABASE_URL and SUPABASE_ANON_KEY in .env next to the app.",
-"tok.ph":"Paste service token","tok.save":"Save","tok.hint":"Token goes to the system keychain (Credential Manager)"}};
+"tok.ph":"Paste service token","tok.save":"Save","tok.hint":"Token goes to the system keychain (Credential Manager)",
+"bd.t":"Badges","bd.s":"Achievements unlock themselves once your stats cross a threshold. The check runs on the server.",
+"bd.have":"Unlocked","bd.none":"Badge catalog failed to load","bd.new":"New badge",
+"bd.code.ph":"Promo code","bd.code.go":"Redeem","bd.code.hint":"Codes are verified server-side; the app holds no list",
+"bd.code.empty":"Enter a code","bd.code.auth":"Sign in first","bd.code.checking":"Checking…",
+"bd.code.ok":"Badge unlocked","bd.code.dup":"You already have this badge","bd.code.bad":"Code not found",
+"bd.code.exp":"Code expired","bd.code.used":"Code exhausted",
+"s.nosvc":"All services are off — enable them in the header",
+"wave.need":"The wave is built from your favorite tracks. {n} so far — add a few more and it will play.",
+"wave.ready":"{n} favorites — the wave will find similar music and start right away.",
+"wave.need.toast":"Heart {n} more track(s) — the wave builds its picks from them",
+"wave.empty":"Could not build a selection, try again later",
+"set.tab.sound":"Sound","set.tab.look":"Appearance","set.tab.lib":"Library","set.tab.about":"About",
+"ym.g1":"Sign in to your account at music.yandex.ru","ym.g2":"Open developer tools:",
+"ym.g3":"Go to","ym.g4":"Find the key","ym.g5":"Copy the value and paste it in the field above",
+"ym.open":"Open Yandex Music","ym.docs":"Documentation",
+"loc.t":"Local tracks","loc.s":"Files are never copied or uploaded — they are read straight off the disk. Tags come from the file name.",
+"loc.add":"Add files","loc.folder":"Add folder","loc.folder.s":"Including subfolders",
+"loc.fmt":"mp3, flac, wav, ogg, m4a","loc.pick":"Choose…",
+"loc.count":"{n} local tracks in the library","loc.empty":"Nothing added yet",
+"loc.added":"Tracks added: {n}","loc.none":"No audio files found","loc.err":"Could not read the files",
+"loc.desktop":"Import works in the desktop app only","loc.nodlg":"File dialog unavailable",
+"cache.t":"Cache and data","cache.s":"Artwork and metadata stored on disk.","cache.size":"Used","cache.clr":"Clear","cache.done":"Cache cleared",
+"data.reset":"Reset favorites and history","data.reset.s":"Settings and tokens are kept","data.reset.btn":"Reset","data.done":"Favorites and history cleared",
+"about.ver":"Version","about.s":"A cross-service player with its own audio path: the EQ, HRTF orbit and visualiser work on every service because the sound flows through us, not somebody else's player.",
+"nologin":"No sign-in needed","ready":"Ready"}};
 let LANG="ru";
 const t=k=>I18N[LANG][k]??I18N.ru[k]??k;
 function applyI18n(){
@@ -725,46 +966,43 @@ function applyI18n(){
   icons();
 }
 
-/* ─────────── data ─────────── */
+/* data */
 /* conn выставляется на старте из системного keychain (см. initServices) */
+/* free:true — works without any sign-in (guest InnerTube / public client_id),
+   so these have no token row and are connected from the first launch. */
 const SERVICES=[
- {id:"spotify",name:"Spotify",conn:false,lossless:false,redir:"meowave://callback",lat:[220,520]},
- /* YouTube Music uses YouTube Data API for search; token field accepts an API key. */
- {id:"ytm",name:"YouTube Music",conn:false,lossless:false,redir:"http://127.0.0.1:14565",lat:[360,880]},
- {id:"sc",name:"SoundCloud",conn:false,lossless:false,redir:"meowave://callback",lat:[280,640]},
- {id:"ym",name:"Yandex Music",conn:false,lossless:true,redir:"meowave://callback",lat:[400,1020]}];
+ {id:"ytm",name:"YouTube Music",conn:false,free:true,lossless:false,redir:"guest",lat:[360,880]},
+ {id:"sc",name:"SoundCloud",conn:false,free:true,lossless:false,redir:"public client_id",lat:[280,640]},
+ {id:"ym",name:"Yandex Music",conn:false,free:false,lossless:true,redir:"meowave://callback",lat:[400,1020]},
+ /* Local files are one more service to the UI, minus network and search. */
+ {id:"local",name:"Мои файлы",conn:true,on:true,free:true,local:true,lossless:true,redir:"с диска",lat:[0,0]}];
 SERVICES.forEach(s=>s.on=s.conn);
-const svc=id=>SERVICES.find(s=>s.id===id);
+/* A track can outlive the service it came from (saved library, removed
+   provider), so never hand back undefined — callers read .name straight off. */
+const svc=id=>SERVICES.find(s=>s.id===id)||{id,name:id||"—",conn:false,free:false,lossless:false,redir:"",lat:[300,700]};
 
-const LY1=[[0,"Открой окно, я слышу как гудит"],[7,"этот город на низких частотах"],[15,"каждый провод держит чей-то голос"],[23,"и никто не отвечает"],[31,"мы идём по контуру"],[39,"пока свет не станет плоским"],[48,"открой окно"],[56,"я слышу как гудит"]];
-const LY2=[[0,"Static on the tape again"],[6,"holding the room together"],[13,"nothing here but the hum"],[21,"and the shape of your name"],[30,"I keep the volume low"],[38,"so the walls can sleep"],[47,"static on the tape again"]];
+/* The player starts empty: TRACKS only holds real search results and restored
+   favorites. Demo tracks, demo playlists and hardcoded lyrics are gone — they
+   could not be opened and they broke the favorites handler. */
 const TRACKS=[];
-/* Демо-треки отключены: плеер стартует пустым и играет только реальные результаты API. */
-const DEMO_TRACKS=[
- {id:1,t:"Velvet Static",a:"Nova Ashe",al:"Static Bloom",d:222,s:"spotify",l1:"78%",l2:"22%",root:110.0,fav:true,ly:LY2},
- {id:2,t:"Low Orbit",a:"Kiko Nine",al:"Nine EP",d:198,s:"sc",l1:"58%",l2:"14%",root:98.0,fav:true},
- {id:3,t:"Midnight Dial Tone",a:"Vela Coast",al:"Signal Drift",d:264,s:"ytm",l1:"88%",l2:"34%",root:87.3,ly:LY2},
- {id:4,t:"Amber Hours",a:"Mansur Tape",al:"Slow Rooms",d:176,s:"ym",l1:"66%",l2:"18%",root:123.5,fav:true},
- {id:5,t:"Halogen",a:"Nova Ashe",al:"Static Bloom",d:245,s:"spotify",l1:"46%",l2:"12%",root:82.4},
- {id:6,t:"Nightcrawl",a:"Sábado Cinema",al:"Neon Alleyway",d:301,s:"ytm",l1:"72%",l2:"26%",root:73.4},
- {id:7,t:"Tin Roof",a:"Kiko Nine",al:"Nine EP",d:187,s:"sc",l1:"84%",l2:"38%",root:103.8},
- {id:8,t:"Salt Lamp",a:"Vela Coast",al:"Signal Drift",d:229,s:"spotify",l1:"54%",l2:"16%",root:92.5},
- {id:9,t:"Пыль на пластинке",a:"Мокрый асфальт",al:"Двор",d:214,s:"ym",l1:"92%",l2:"42%",root:116.5,ly:LY1},
- {id:10,t:"Hunting Season",a:"Trell & Void",al:"Teeth",d:256,s:"ytm",l1:"40%",l2:"10%",root:65.4},
- {id:11,t:"Softpaw",a:"Mansur Tape",al:"Slow Rooms",d:163,s:"ym",l1:"76%",l2:"30%",root:130.8,fav:true},
- {id:12,t:"Static Bloom",a:"Nova Ashe",al:"Static Bloom",d:278,s:"spotify",l1:"62%",l2:"20%",root:98.0},
- {id:13,t:"Двенадцать окон",a:"Мокрый асфальт",al:"Двор",d:241,s:"ym",l1:"50%",l2:"13%",root:110.0,ly:LY1},
- {id:14,t:"Chrome",a:"Trell & Void",al:"Teeth",d:198,s:"sc",l1:"80%",l2:"28%",root:87.3}];
-const PLAYLISTS=[
- {n:{ru:"Ночная сессия",en:"Night session"},c:42,l1:"70%",l2:"18%"},
- {n:{ru:"Дрейф",en:"Drift"},c:18,l1:"88%",l2:"36%"},
- {n:{ru:"Тихое утро",en:"Quiet morning"},c:27,l1:"56%",l2:"14%"},
- {n:{ru:"Бас",en:"Bass"},c:64,l1:"44%",l2:"10%"},
- {n:{ru:"Дорога домой",en:"Way home"},c:31,l1:"82%",l2:"30%"},
- {n:{ru:"Смешанное с 4 сервисов",en:"Cross-service mix"},c:120,l1:"64%",l2:"22%"}];
-const RECENT=[{id:5,w:{ru:"12 минут назад",en:"12 min ago"}},{id:10,w:{ru:"вчера, 23:40",en:"yesterday 23:40"}},
- {id:9,w:{ru:"вчера, 19:02",en:"yesterday 19:02"}},{id:2,w:{ru:"2 дня назад",en:"2 days ago"}},{id:13,w:{ru:"3 дня назад",en:"3 days ago"}}];
 
+/* Real listening history instead of hardcoded demo rows. */
+let HISTORY=[];
+function pushHistory(tr){
+ if(!tr||tr.mode==="empty")return;
+ HISTORY=HISTORY.filter(h=>!(String(h.tr.id)===String(tr.id)&&h.tr.s===tr.s));
+ HISTORY.unshift({tr,at:Date.now()});
+ HISTORY=HISTORY.slice(0,50);
+ if(S.view==="library"&&S.tab!=="fav")renderLib();
+ save()}
+function ago(ts){
+ const m=Math.round((Date.now()-ts)/60000);
+ if(m<1)return LANG==="ru"?"только что":"just now";
+ if(m<60)return LANG==="ru"?`${m} мин назад`:`${m} min ago`;
+ const h=Math.round(m/60);
+ if(h<24)return LANG==="ru"?`${h} ч назад`:`${h} h ago`;
+ const d=Math.round(h/24);
+ return LANG==="ru"?`${d} дн. назад`:`${d} d ago`}
 const FREQ=[60,150,400,1000,2400,4000,8000,12000,16000];
 const FLAB=["60","150","400","1k","2.4k","4k","8k","12k","16k"];
 const PRESETS=[
@@ -788,22 +1026,44 @@ const ACCENTS=[
  ["red","#f87171","248 113 113"],
  ["pink","#f472b6","244 114 182"]];
 
-/* ─────────── state ─────────── */
+/* state */
 const EMPTY_TRACK={id:"empty",s:"ytm",t:"Подключите сервис",a:"Meowave",al:"",d:0,mode:"empty",art:null};
 const TEST_TRACK={id:"test-track",s:"ytm",t:"Test Tone",a:"Meowave",al:"",d:12,mode:"local",art:null,url:""};
 const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,
  shuffle:false,repeat:false,vol:.8,muted:false,quality:"high",mode:"artists",
  glow:1,blur:14,theme:"dark",accent:"none",dens:2200,pspeed:.35,
  /* настройки поля курсора */ pf:{mode:"repel",rad:220,force:1,swirl:.7,drag:.25},
- eq:[...PRESETS[0].g],preset:"flat",custom:[],fpTab:"queue",listen:0,
+ eq:[...PRESETS[0].g],preset:"flat",custom:[],fpTab:"queue",listen:0,stab:"acc",
  sp:{on:false,speed:.10,rad:.7,elev:.55}};
-const fmt=s=>{s=Math.max(0,Math.floor(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`};
+const fmt=s=>{s=Math.max(0,Math.floor(s||0));return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`};
+/* Short bottom notice so errors are visible without opening the console. */
+function toast(msg,ms=3200){
+ const box=document.getElementById("toasts");if(!box||!msg)return;
+ const el=document.createElement("div");el.className="toast";el.textContent=msg;
+ box.appendChild(el);
+ setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),320)},ms)}
 const icons=()=>window.lucide&&lucide.createIcons();
 const fp=document.getElementById("fp");
 
-/* ─────────── audio ───────────
-   source → 9×Biquad → [HRTF Panner → dry + Convolver wet] | bypass → gain → analyser → out */
-const A={ctx:null,src:null,audio:null,media:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0};
+/* audio
+   source -> 9×Biquad -> [HRTF Panner -> dry + Convolver wet] | bypass -> gain -> analyser -> out */
+const A={ctx:null,src:null,audio:null,media:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0,
+ /* gen bumps on every track change; events from the previous src are dropped */
+ gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0};
+/* Exactly one <audio> element for the whole app. */
+function ensureAudioEl(){
+ if(A.audio)return A.audio;
+ const au=A.audio=document.createElement("audio");
+ au.crossOrigin="anonymous";au.preload="auto";
+ au.addEventListener("loadedmetadata",()=>A.onMeta?.());
+ au.addEventListener("durationchange",()=>A.onMeta?.());
+ au.addEventListener("timeupdate",()=>A.onTime?.());
+ au.addEventListener("ended",()=>A.onEnd?.());
+ au.addEventListener("error",()=>A.onErr?.());
+ au.addEventListener("playing",()=>{S.playing=true;sync()});
+ au.addEventListener("pause",()=>{if(!au.ended){S.playing=false;sync()}});
+ if(A.ctx&&!A.media){A.media=A.ctx.createMediaElementSource(au);A.media.connect(A.bands[0])}
+ return au}
 function ir(ctx){const n=Math.floor(ctx.sampleRate*1.5),b=ctx.createBuffer(2,n,ctx.sampleRate);
  for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++){const x=i/n;d[i]=(Math.random()*2-1)*Math.pow(1-x,2.8)*(i<ctx.sampleRate*.01?.12:1)}}return b}
 function loop(ctx,root){
@@ -839,20 +1099,55 @@ function initAudio(){
  A.dry.connect(A.gain);A.wet.connect(A.gain);A.byp.connect(A.gain);
  A.gain.connect(A.an);A.an.connect(ctx.destination);
  if(ctx.listener.positionZ){ctx.listener.positionX.value=0;ctx.listener.positionY.value=0;ctx.listener.positionZ.value=0}
- A.gain.gain.value=S.muted?0:S.vol;applySpatial()}
+ A.gain.gain.value=S.muted?0:S.vol;applySpatial();
+ /* If <audio> existed before the first user gesture, wire it up now. */
+ if(A.audio&&!A.media){A.media=ctx.createMediaElementSource(A.audio);A.media.connect(A.bands[0])}}
 function load(tr,auto){
  if(!tr||tr.mode==="empty")return;
  initAudio();if(!A.ctx)return;
- if(A.src){try{A.src.stop()}catch(e){}A.src.disconnect();A.src=null}
+ /* Stop a generated source (test tone); the <audio> element keeps living. */
+ if(A.src&&A.src!==A.audio){try{A.src.stop()}catch(e){}try{A.src.disconnect()}catch(e){}A.src=null}
  if(tr?.mode==="local"&&tr?.s!=="mock"){
-  const au=A.audio||(A.audio=document.createElement("audio"));
-  au.crossOrigin="anonymous";au.preload="auto";au.src=streamUrl(tr)||tr.url||"";
-  if(!A.media){A.media=A.ctx.createMediaElementSource(au);A.media.connect(A.bands[0])}
-  else {try{A.media.disconnect()}catch(e){}A.media.connect(A.bands[0])}
-  A.src=au;au.onloadedmetadata=()=>{if(Number.isFinite(au.duration)){S.dur=au.duration;renderNP();paint()}};
-  au.ontimeupdate=()=>{S.pos=au.currentTime;paint()};
-  au.onended=()=>next();
-  if(auto){A.ctx.resume();au.play().catch(console.warn);A.started=true}return}
+  const url=streamUrl(tr)||tr.url||"";
+  if(!url){/* the proxy port is unknown yet; without it src is empty and <audio> is mute */
+   ensureStreamPort().then(p=>{if(p)load(tr,auto)});return}
+
+  /* The <audio> element and its MediaElementSource are created EXACTLY ONCE
+     per page; changing track only swaps src. Recreating the node was the
+     cause of "you have to restart the player": a second
+     createMediaElementSource call on the same element throws
+     InvalidStateError, and the stale listeners stayed alive and fought over
+     the progress bar. */
+  const au=ensureAudioEl();
+  const gen=++A.gen;
+  au.pause();
+  au.src=url;
+  A.src=au;A.lastPos=0;
+  /* Events from the previous track can land after the swap; gen rejects them. */
+  A.onMeta=()=>{if(gen!==A.gen)return;if(Number.isFinite(au.duration)&&au.duration>0){S.dur=au.duration;renderNP();paint();if(fp.dataset.open==="true")renderFP()}};
+  /* Listening time is measured from the element's own clock, not from the render
+     loop: rAF is throttled or stopped when the window is hidden, and the old
+     `S.listen += 0` here meant local playback — i.e. every service now — never
+     counted a single second. Deltas are clamped so a seek isn't counted as
+     listening. */
+  A.onTime=()=>{
+   if(gen!==A.gen)return;
+   const now=au.currentTime;
+   if(!seeking){
+    const dt=now-(A.lastPos??now);
+    if(dt>0&&dt<2){S.listen+=dt;noteListening(dt)}
+   }
+   A.lastPos=now;
+   if(seeking)return;
+   S.pos=now;paint()};
+  A.onEnd=()=>{if(gen===A.gen)next()};
+  A.onErr=()=>{
+   if(gen!==A.gen)return;
+   console.error("audio load failed",au.error?.code,au.error?.message||"",url);
+   S.playing=false;sync();toast(t("load.err"))};
+  au.load();
+  if(auto){A.ctx.resume();au.play().catch(e=>{if(gen!==A.gen)return;console.error("play() rejected:",e);S.playing=false;sync()});A.started=true}
+  return}
  const b=A.ctx.createBufferSource();b.buffer=loop(A.ctx,tr.root||1);b.loop=true;b.connect(A.bands[0]);A.src=b;
  if(auto){A.ctx.resume();b.start();A.started=true}}
 function applyEQ(){if(A.ctx)A.bands.forEach((b,i)=>b.gain.setTargetAtTime(S.eq[i],A.ctx.currentTime,.02))}
@@ -882,7 +1177,7 @@ function bins(n){if(!A.an)return new Array(n).fill(0);A.an.getByteFrequencyData(
  const out=[];const step=Math.floor(A.data.length*.6/n);
  for(let i=0;i<n;i++){let s=0;for(let j=0;j<step;j++)s+=A.data[i*step+j];out.push(s/(step*255))}return out}
 
-/* ─────────── particle field ─────────── */
+/* particle field */
 let spriteCache={};
 let particlesEnabled=true;
 function setParticlesEnabled(v){particlesEnabled=!!v; if(!particlesEnabled){F.p.length=0;F.n=0}}
@@ -1019,91 +1314,168 @@ function drawVis(){
  for(let i=0;i<b.length;i++){const x=(i/(b.length-1))*w,y=h*.78-b[i]*h*.5;i?g.lineTo(x,y):g.moveTo(x,y)}
  g.stroke();g.globalAlpha=1}
 
-/* Render gating. A minimised or unfocused window still runs rAF on Windows, so
-   the field would keep burning a core behind other windows. `renderOn` is
-   driven by the meowave://render event from Rust plus the page's own
-   visibilitychange; when it goes false we cancel the loop outright instead of
-   spinning through no-op frames. Playback position keeps advancing from the
-   clock on resume, so nothing drifts. */
+/* Render gating.
+   Rule: the canvas only stops when the window is genuinely invisible
+   (minimised or hidden). Merely losing focus must NOT stop it — the window is
+   still on screen and a frozen field looks broken. Losing focus only lowers
+   the frame budget.
+
+   The 3D orbit is deliberately NOT part of this: it moves audio, not pixels,
+   so it keeps running on its own timer even while the window is hidden.
+   Otherwise the sound parked wherever the panner happened to stop. */
 let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=33;
 function frame(now){
  if(now-lastFrame<budget){raf=requestAnimationFrame(frame);return}
  lastFrame=now;
  const dt=Math.min(.05,(now-last)/1000);last=now;
- const lvl=level();step(dt,lvl);draw(lvl);orbit(dt);
+ const lvl=level();step(dt,lvl);draw(lvl);
  if(fp.dataset.open==="true")drawVis();
- if(S.playing&&S.current?.mode!=="local"){S.pos+=dt;S.listen+=dt;if(S.pos>=S.dur){S.repeat?S.pos=0:next()}paint()}
-
+ /* Non-local playback has no media element to read a clock from, so its
+    position and listening time advance here instead. */
+ if(S.playing&&S.current?.mode!=="local"){S.pos+=dt;S.listen+=dt;noteListening(dt);if(S.pos>=S.dur){S.repeat?S.pos=0:next()}paint()}
  raf=requestAnimationFrame(frame)
 }
+/* The orbit runs off the render loop: setInterval is not throttled in a hidden
+   window the way rAF is, so the sound keeps circling the head. */
+let orbitLast=performance.now();
+setInterval(()=>{
+ const now=performance.now(),dt=Math.min(.25,(now-orbitLast)/1000);orbitLast=now;
+ if(S.sp.on&&S.playing)orbit(dt);
+},1000/30);
 function setRender(on){
+ /* on comes from Rust meaning "the window is visible"; document.hidden concurs */
  on=!!on&&!document.hidden;
  if(on===renderOn)return;
  renderOn=on;
  if(on){last=performance.now();lastFrame=0;if(!raf)raf=requestAnimationFrame(frame)}
  else{cancelAnimationFrame(raf);raf=0}
 }
-/* Visible but in the background: keep the field alive so it isn't a frozen
-   screenshot behind a half-transparent window, just cheap (~8 fps). */
-function setFocused(f){budget=f?33:120}
+/* Visible but unfocused: the field stays alive, just at ~20 fps instead of 30. */
+function setFocused(f){budget=f?33:50}
 document.addEventListener("visibilitychange",()=>setRender(!document.hidden));
 window.addEventListener("blur",()=>setFocused(false));
 window.addEventListener("focus",()=>{setFocused(true);setRender(true)});
 raf=requestAnimationFrame(frame)
 
-/* ─────────── render ─────────── */
+/* render */
 function renderSrv(){
  document.getElementById("srv").innerHTML=SERVICES.map(s=>
   `<button class="s" data-svc="${s.id}" data-conn="${s.conn}" data-on="${!!(s.conn&&s.on)}"><span class="d"></span>${s.name}</button>`).join("")}
 let tokOpen=null;
 function renderAccounts(){
- document.getElementById("accounts").innerHTML=SERVICES.map(s=>`
-  <div class="acc"><span class="an"><b>${s.name}</b><span>${s.conn?t("connected")+" · keychain: meowave/"+s.id:t("noauth")} · ${s.redir}</span></span>
+ document.getElementById("accounts").innerHTML=SERVICES.map(s=>s.free?`
+  <div class="acc"><span class="an"><b>${s.name}</b><span>${t("nologin")} · ${s.redir}</span></span>
+  <span class="btn on" aria-disabled="true">${t("ready")}</span></div>`:`
+  <div class="acc"><span class="an"><b>${s.name}</b><span>${s.conn?t("connected")+" · keychain: meowave/"+s.id:t("noauth")}</span></span>
   <button class="btn ${s.conn?"on":""}" data-acc="${s.id}">${s.conn?t("disconnect"):t("connect")}</button></div>
   ${tokOpen===s.id?`<div class="tokrow"><input id="tok-${s.id}" type="password" placeholder="${t("tok.ph")}" autocomplete="off">
-   <button class="btn" data-toksave="${s.id}">${t("tok.save")}</button><small style="color:var(--mute);font-size:.72rem">${t("tok.hint")}</small></div>`:""}`).join("")}
+   <button class="btn" data-toksave="${s.id}">${t("tok.save")}</button><small style="color:var(--mute);font-size:.72rem">${t("tok.hint")}</small></div>
+   ${s.id==="ym"?ymGuide():""}`:""}`).join("")}
+/* Where to get the Yandex token; the bare field gave no hint. */
+function ymGuide(){
+ return `<div class="guide">
+  <ol>
+   <li>${t("ym.g1")}</li>
+   <li>${t("ym.g2")} <code>F12</code></li>
+   <li>${t("ym.g3")} <code>Application -> Local Storage -> music.yandex.ru</code></li>
+   <li>${t("ym.g4")} <code>oauth</code> -> <code>access_token</code></li>
+   <li>${t("ym.g5")}</li>
+  </ol>
+  <div class="grow">
+   <button class="btn" data-open-url="https://music.yandex.ru">${t("ym.open")}</button>
+   <button class="btn" data-open-url="https://yandex.ru/dev/music/">${t("ym.docs")}</button>
+  </div></div>`}
 function renderSwatches(){
  const html=ACCENTS.map(([id,c])=>`<button class="sws" data-sw="${id}" aria-pressed="${S.accent===id}"
   style="background:${id==="none"?"transparent":c}" title="${id==="none"?t("acc.none"):id}">
   ${id==="none"?'<span style="position:absolute;inset:9px;border-radius:50%;background:var(--mute)"></span>':""}</button>`).join("");
  document.getElementById("accent").innerHTML=html;
  const ob=document.getElementById("obaccent");if(ob)ob.innerHTML=html}
+/* A track is identified by (id, service): ids are unique per service only. */
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cssEsc=s=>window.CSS?.escape?CSS.escape(String(s)):String(s).replace(/[^\w-]/g,"\\$&");
+function findTrack(id,s){
+ const key=String(id);
+ return TRACKS.find(x=>String(x.id)===key&&(!s||x.s===s))||TRACKS.find(x=>String(x.id)===key)
+  ||(String(S.current?.id)===key?S.current:null)}
+const isCur=tr=>String(S.current?.id)===String(tr.id)&&S.current?.s===tr.s;
 function row(tr,extra=""){
- return `<div class="row" data-track="${tr.id}" data-playing="${S.current.id===tr.id}">
-  <span class="art" ${tr.art?`style="background-image:url('${tr.art}')"`:`style="--l1:${tr.l1};--l2:${tr.l2}"`}></span>
-  <span class="meta"><b>${tr.t}</b><span>${tr.a} · ${tr.al}${extra?" · "+extra:""}</span></span>
-  <span class="src">${svc(tr.s).name}</span><span class="dur">${fmt(tr.d)}</span>
-  <button class="heart" data-fav="${tr.id}" aria-pressed="${!!tr.fav}" aria-label="fav"><i data-lucide="heart" width="14" height="14"></i></button></div>`}
+ return `<div class="row" data-track="${esc(tr.id)}" data-svc="${esc(tr.s)}" data-playing="${isCur(tr)}">
+  <span class="art" ${tr.art?`style="background-image:url('${esc(tr.art)}')"`:`style="--l1:${tr.l1||'42%'};--l2:${tr.l2||'12%'}"`}></span>
+  <span class="meta"><b>${esc(tr.t)}</b><span>${esc(tr.a)}${tr.al?" · "+esc(tr.al):""}${extra?" · "+esc(extra):""}</span></span>
+  <span class="src">${esc(svc(tr.s).name)}</span><span class="dur">${fmt(tr.d)}</span>
+  <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" aria-label="fav"><i data-lucide="heart" width="14" height="14"></i></button></div>`}
 const empty=(ic,h,p)=>`<div class="empty"><i data-lucide="${ic}" width="26" height="26"></i><h3>${h}</h3><p>${p}</p></div>`;
 function renderLib(){
  const b=document.getElementById("libbody");
- if(S.tab==="pl")b.innerHTML=`<div class="plgrid">`+PLAYLISTS.map(p=>
-  `<button class="plc"><span class="sq" style="--l1:${p.l1};--l2:${p.l2}"></span><b>${p.n[LANG]||p.n.ru}</b><span>${p.c} ${t("tracks")}</span></button>`).join("")+`</div>`;
+ /* All three tabs are built from live data. The demo playlists are gone: they
+    were artwork with no tracks behind them and could never open. */
+ if(S.tab==="pl"){
+  const fav=TRACKS.filter(x=>x.fav);
+  const byArtist=new Map();
+  fav.concat(HISTORY.map(h=>h.tr)).forEach(x=>{
+   if(!x)return;
+   const k=x.a||"—";
+   if(!byArtist.has(k))byArtist.set(k,new Map());
+   byArtist.get(k).set(x.s+":"+x.id,x)});
+  const groups=[...byArtist.entries()].map(([a,m])=>({a,list:[...m.values()]}))
+   .filter(g=>g.list.length>1).sort((x,y)=>y.list.length-x.list.length).slice(0,12);
+  b.innerHTML=groups.length
+   ?`<div class="plgrid">`+groups.map((g,i)=>
+     `<button class="plc" data-pl="${i}"><span class="sq" ${g.list[0].art?`style="background-image:url('${esc(g.list[0].art)}')"`:`style="--l1:${40+i*4}%;--l2:${12+i*2}%"`}></span>
+      <b>${esc(g.a)}</b><span>${g.list.length} ${t("tracks")}</span></button>`).join("")+`</div>`
+   :empty("list-music",t("pl.none.t"),t("pl.none.s"));
+  PL_GROUPS=groups}
  else if(S.tab==="fav"){const f=TRACKS.filter(x=>x.fav);
   b.innerHTML=f.length?`<div class="rows">`+f.map(x=>row(x)).join("")+`</div>`:empty("heart",t("fav.none.t"),t("fav.none.s"))}
- else b.innerHTML=`<div class="rows">`+RECENT.map(r=>row(TRACKS.find(x=>x.id===r.id),r.w[LANG]||r.w.ru)).join("")+`</div>`;
+ else b.innerHTML=HISTORY.length
+  ?`<div class="rows">`+HISTORY.map(h=>row(h.tr,ago(h.at))).join("")+`</div>`
+  :empty("history",t("rec.none.t"),t("rec.none.s"));
+ icons()}
+/* opening an artist playlist */
+let PL_GROUPS=[];
+function openPl(i){
+ const g=PL_GROUPS[i];if(!g)return;
+ const b=document.getElementById("libbody");
+ b.innerHTML=`<button class="btn" id="plback" style="margin:0 var(--sp-2) var(--sp-4)">← ${esc(g.a)}</button>
+  <div class="rows">`+g.list.map(x=>row(x)).join("")+`</div>`;
+ document.getElementById("plback").onclick=()=>renderLib();
  icons()}
 let tok=0;
 async function search(v,silent){
  const box=document.getElementById("sres"),cnt=document.getElementById("scount"),q=(v||"").trim().toLowerCase(),my=++tok;
  if(!q){cnt.textContent="";box.innerHTML=empty("search",t("s.idle.t"),t("s.idle.s"));icons();return}
- const act=SERVICES.filter(s=>s.conn&&s.on);
- cnt.textContent=`${t("s.ing")}: ${act.map(s=>s.name).join(", ")}`;
- box.innerHTML=act.map(s=>`<div class="pend" data-p="${s.id}"><span class="dots3"><i></i><i></i><i></i></span>${s.name}</div>`).join("")
+ const act=SERVICES.filter(s=>s.conn&&s.on&&!s.local);
+ cnt.textContent=act.length?`${t("s.ing")}: ${act.map(s=>s.name).join(", ")}`:t("s.nosvc");
+ box.innerHTML=act.map(s=>`<div class="pend" data-p="${s.id}"><span class="dots3"><i></i><i></i><i></i></span>${esc(s.name)}</div>`).join("")
   +`<div class="rows" id="hits"></div>`;
- const all=TRACKS.filter(x=>(x.t+" "+x.a+" "+x.al).toLowerCase().includes(q));
+ /* Local files resolve instantly, so show them before the network answers. */
+ const localHits=SERVICES.find(s=>s.id==="local")?.on
+  ?TRACKS.filter(x=>x.s==="local"&&(x.t+" "+x.a+" "+x.al).toLowerCase().includes(q))
+  :[];
+ const list0=box.querySelector("#hits");
+ if(list0&&localHits.length)list0.insertAdjacentHTML("beforeend",localHits.map(x=>row(x)).join(""));
+
  const remote=await searchRemote(q);
  if(my!==tok)return;
- remote.forEach(x=>{if(!TRACKS.some(y=>y.id===x.id&&y.s===x.s))TRACKS.push(x)});
- let done=0,found=remote.length;
- act.forEach(s=>setTimeout(()=>{
-  if(my!==tok)return;
-  const hits=all.filter(x=>x.s===s.id),pd=box.querySelector(`[data-p="${s.id}"]`);if(pd)pd.remove();
-  const list=box.querySelector("#hits");if(list&&hits.length)list.insertAdjacentHTML("beforeend",hits.map(x=>row(x)).join(""));
-  found+=hits.length;done++;icons();
-  if(done===act.length){cnt.textContent=`${t("s.found")}: ${found}`;
-   if(!found){box.innerHTML=empty("circle-slash",t("s.none.t"),t("s.none.s"));icons()}}
- },silent?50:s.lat[0]+Math.random()*(s.lat[1]-s.lat[0])))}
+
+ /* Render whatever actually arrived instead of walking the active-service
+    list: results from a service missing from act were silently dropped,
+    which is why search sometimes looked empty despite a good response. */
+ const fresh=[];
+ remote.forEach(x=>{
+  const known=TRACKS.find(y=>String(y.id)===String(x.id)&&y.s===x.s);
+  if(known){Object.assign(known,{...x,fav:known.fav});fresh.push(known)}
+  else{TRACKS.push(x);fresh.push(x)}});
+
+ box.querySelectorAll(".pend").forEach(p=>p.remove());
+ const list=box.querySelector("#hits");
+ if(list&&fresh.length)list.insertAdjacentHTML("beforeend",fresh.map(x=>row(x)).join(""));
+
+ const found=fresh.length+localHits.length;
+ cnt.textContent=`${t("s.found")}: ${found}`;
+ if(!found)box.innerHTML=empty("circle-slash",t("s.none.t"),t("s.none.s"));
+ icons()}
 function renderNP(){
  const tr=S.current;
  if(!tr||tr.mode==="empty"){
@@ -1111,7 +1483,7 @@ function renderNP(){
   document.getElementById("tdur").textContent="0:00";icons();return}
  document.getElementById("np").innerHTML=`<span class="art" ${tr.art?`style="background-image:url('${tr.art}')"`:`style="--l1:${tr.l1||'42%'};--l2:${tr.l2||'12%'}"`}></span>
   <span class="meta"><b>${tr.t}</b><span>${tr.a} · ${svc(tr.s).name}${S.quality==="lossless"&&svc(tr.s).lossless?" · lossless":""}</span></span>
-  <button class="heart" data-fav="${tr.id}" aria-pressed="${!!tr.fav}" aria-label="fav" style="opacity:1"><i data-lucide="heart" width="15" height="15"></i></button>`;
+  <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" aria-label="fav" style="opacity:1"><i data-lucide="heart" width="15" height="15"></i></button>`;
  document.getElementById("tdur").textContent=fmt(S.dur);icons()}
 function paint(){
  const p=S.dur>0?Math.min(1,S.pos/S.dur)*100:0;
@@ -1120,7 +1492,7 @@ function paint(){
  const ff=document.querySelector("#fptrack .f");
  if(ff){ff.style.width=p+"%";document.querySelector("#fptrack .h").style.left=p+"%";document.getElementById("fpcur").textContent=fmt(S.pos)}
  if(S.fpTab==="lyrics")syncLyrics()}
-let queue=TRACKS.map(x=>x.id).slice(1,8);
+let queue=[];
 function renderFP(){
  const tr=S.current,pc=S.dur>0?S.pos/S.dur*100:0;
  document.getElementById("fpc").innerHTML=`
@@ -1135,7 +1507,7 @@ function renderFP(){
     <button class="play" data-act="play"><i data-lucide="${S.playing?"pause":"play"}" width="20" height="20"></i></button>
     <button class="ic" data-act="next"><i data-lucide="skip-forward" width="20" height="20"></i></button>
     <button class="ic" data-act="repeat" aria-pressed="${S.repeat}"><i data-lucide="repeat" width="17" height="17"></i></button>
-    <button class="heart" data-fav="${tr.id}" aria-pressed="${!!tr.fav}" style="opacity:1;margin-left:4px"><i data-lucide="heart" width="17" height="17"></i></button>
+    <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" style="opacity:1;margin-left:4px"><i data-lucide="heart" width="17" height="17"></i></button>
    </div>
    <div class="fpseek"><span class="t" id="fpcur" style="font-size:.72rem;color:var(--mute)">${fmt(S.pos)}</span>
     <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
@@ -1147,6 +1519,7 @@ function renderFP(){
    <div class="fpbody" id="fpbody"></div>
   </div>`;
  renderFPBody();
+ wireSeek("fptrack");
  vis.c=document.getElementById("vis");
  if(vis.c){const r=vis.c.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);
   vis.c.width=r.width*d;vis.c.height=r.height*d;vis.g=vis.c.getContext("2d")}
@@ -1154,8 +1527,9 @@ function renderFP(){
 function renderFPBody(){
  const el=document.getElementById("fpbody");if(!el)return;
  if(S.fpTab==="queue"){
-  el.innerHTML=queue.map((id,i)=>{const x=TRACKS.find(v=>v.id===id);
-   return x?`<div class="q" data-track="${id}"><i class="n">${String(i+1).padStart(2,"0")}</i><b>${x.t}</b><em>${x.a}</em></div>`:""}).join("")}
+  el.innerHTML=queue.length
+   ?queue.map((x,i)=>`<div class="q" data-track="${esc(x.id)}" data-svc="${esc(x.s)}"><i class="n">${String(i+1).padStart(2,"0")}</i><b>${esc(x.t)}</b><em>${esc(x.a)}</em></div>`).join("")
+   :`<p class="hollow">${t("q.none")}</p>`}
  else{
   const ly=S.current.ly;
   el.innerHTML=ly?`<div class="lyr" id="lyr">`+ly.map((l,i)=>`<p data-i="${i}">${l[1]}</p>`).join("")+`</div>`
@@ -1186,30 +1560,46 @@ function renderPresets(){
 function setBand(i,v){S.eq[i]=Math.max(-12,Math.min(12,v));paintBand(i);applyEQ();
  const m=allP().find(p=>p.g.every((g,j)=>Math.abs(g-S.eq[j])<.05));S.preset=m?m.id:null;renderPresets();save()}
 
-/* ─────────── playback ─────────── */
+/* playback */
 async function setTrack(tr,play=true,openFull=false){
- if(tr?.mode==="local")await ensureStreamPort();
- S.current=tr;S.dur=tr.d;S.pos=0;
- queue=TRACKS.filter(x=>x.id!==tr.id&&svc(x.s).on).slice(0,7).map(x=>x.id);
+ if(!tr)return;
+ if(tr.mode==="local")await ensureStreamPort();
+ S.current=tr;S.dur=tr.d||0;S.pos=0;
+ /* the queue holds tracks, not ids: ids collide across services */
+ queue=TRACKS.filter(x=>!(String(x.id)===String(tr.id)&&x.s===tr.s)&&svc(x.s).on).slice(0,7);
  load(tr,play);S.playing=play;sync();renderNP();paint();
- document.querySelectorAll(".row").forEach(r=>r.dataset.playing=(+r.dataset.track===tr.id));
+ pushHistory(tr);noteTrackStart(tr);
+ document.querySelectorAll(".row").forEach(r=>r.dataset.playing=
+  (String(r.dataset.track)===String(tr.id)&&r.dataset.svc===tr.s));
  if(openFull)openFP();else if(fp.dataset.open==="true")renderFP()}
 function toggle(){
  initAudio();
+ if(S.current?.mode==="empty")return go("search");
  if(A.audio&&S.current?.mode==="local"){
   if(S.playing){A.audio.pause();S.playing=false}
-  else {A.ctx.resume();A.audio.play().catch(console.warn);S.playing=true}
+  else {
+   A.ctx.resume();
+   /* After an error the src can be empty; reload rather than fail silently. */
+   if(!A.audio.src)load(S.current,true);
+   else A.audio.play().catch(e=>{console.warn(e);load(S.current,true)});
+   S.playing=true}
  }else if(!A.started&&A.ctx){load(S.current,true);S.playing=true}
  else if(A.ctx){S.playing?A.ctx.suspend():A.ctx.resume();S.playing=!S.playing}
  else S.playing=!S.playing;
  sync()}
+const sameTrack=(a,b)=>!!a&&!!b&&String(a.id)===String(b.id)&&a.s===b.s;
 function next(){
- const pool=TRACKS.filter(x=>svc(x.s).on),l=pool.length?pool:TRACKS;
- const nx=S.shuffle?l[Math.floor(Math.random()*l.length)]:l[(l.findIndex(x=>x.id===S.current.id)+1)%l.length];
- setTrack(nx,true)}
+ if(S.repeat&&A.audio&&S.current?.mode==="local"){A.audio.currentTime=0;A.audio.play().catch(console.warn);return}
+ const pool=TRACKS.filter(x=>svc(x.s).on&&x.mode!=="empty"),l=pool.length?pool:TRACKS.filter(x=>x.mode!=="empty");
+ if(!l.length)return;
+ const i=l.findIndex(x=>sameTrack(x,S.current));
+ const nx=S.shuffle?l[Math.floor(Math.random()*l.length)]:l[(i+1)%l.length];
+ if(nx)setTrack(nx,true)}
 function prev(){
- if(S.pos>4){S.pos=0;return paint()}
- const i=TRACKS.findIndex(x=>x.id===S.current.id);setTrack(TRACKS[(i-1+TRACKS.length)%TRACKS.length],S.playing)}
+ if(S.pos>4){S.pos=0;if(A.audio&&S.current?.mode==="local")A.audio.currentTime=0;return paint()}
+ const l=TRACKS.filter(x=>x.mode!=="empty");if(!l.length)return;
+ const i=l.findIndex(x=>sameTrack(x,S.current));
+ setTrack(l[(i-1+l.length)%l.length],S.playing)}
 function sync(){
  const b=document.getElementById("play");
  b.innerHTML=`<i data-lucide="${S.playing?"pause":"play"}" width="18" height="18"></i>`;
@@ -1219,7 +1609,7 @@ function sync(){
  if(fb)fb.innerHTML=`<i data-lucide="${S.playing?"pause":"play"}" width="20" height="20"></i>`;
  icons()}
 
-/* ─────────── nav ─────────── */
+/* nav */
 function go(v){
  S.view=v;
  document.querySelectorAll(".navbtn").forEach(b=>b.setAttribute("aria-current",b.dataset.nav===v));
@@ -1233,19 +1623,38 @@ document.getElementById("srv").addEventListener("click",e=>{
  const b=e.target.closest("[data-svc]");if(!b)return;const s=svc(b.dataset.svc);
  if(!s.conn)return go("settings");
  s.on=!s.on;renderSrv();if(S.view==="search")search(document.getElementById("q").value)});
-document.getElementById("mode").addEventListener("click",e=>{
- const b=e.target.closest("[data-v]");if(!b)return;S.mode=b.dataset.v;
- [...b.parentElement.children].forEach(x=>x.setAttribute("aria-pressed",x===b))});
+/* The "by artist / similar" switch is gone: the wave is always seeded from
+   favorite tracks now. */
 document.getElementById("libtabs").addEventListener("click",e=>{
  const b=e.target.closest("[data-tab]");if(!b)return;S.tab=b.dataset.tab;
  [...b.parentElement.children].forEach(x=>x.setAttribute("aria-selected",x===b));renderLib()});
+document.getElementById("settabs").addEventListener("click",e=>{
+ const b=e.target.closest("[data-stab]");if(!b)return;
+ S.stab=b.dataset.stab;showSettingsTab(S.stab);save()});
+function showSettingsTab(id){
+ document.querySelectorAll("#settabs [data-stab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.stab===id));
+ document.querySelectorAll(".stab").forEach(p=>p.dataset.active=(p.dataset.stab===id));
+ if(id==="lib")refreshCacheSize()}
 document.body.addEventListener("click",e=>{
  const f=e.target.closest("[data-fav]");
- if(f){const tr=TRACKS.find(x=>x.id===+f.dataset.fav);tr.fav=!tr.fav;
-  document.querySelectorAll(`[data-fav="${tr.id}"]`).forEach(el=>el.setAttribute("aria-pressed",!!tr.fav));
-  if(S.view==="library"&&S.tab==="fav")renderLib();save();e.stopPropagation();return}
+ if(f){
+  /* Real service ids are strings ("wU26xVT_vBU"), not numbers. The old +id gave
+     NaN, the track was never found, and the handler threw on tr.fav — which
+     killed every other click handler on the page. */
+  const tr=findTrack(f.dataset.fav,f.dataset.svc);
+  if(!tr){e.stopPropagation();return}
+  tr.fav=!tr.fav;
+  if(tr.fav&&!TRACKS.some(x=>x.id===tr.id&&x.s===tr.s))TRACKS.push(tr);
+  document.querySelectorAll(`[data-fav="${cssEsc(tr.id)}"]`).forEach(el=>el.setAttribute("aria-pressed",!!tr.fav));
+  if(S.view==="library"&&(S.tab==="fav"||S.tab==="pl"))renderLib();
+  renderWaveHint();
+  /* Mirror the change to the account; queued and batched, works offline. */
+  queueFav(tr,tr.fav);
+  save();e.stopPropagation();return}
  const r=e.target.closest("[data-track]");if(r){
-  const id=r.dataset.track;setTrack(TRACKS.find(x=>String(x.id)===String(id)),true);return}
+  const tr=findTrack(r.dataset.track,r.dataset.svc);
+  if(tr)setTrack(tr,true);
+  return}
  const ts=e.target.closest("[data-toksave]");
  if(ts){const id=ts.dataset.toksave,inp=document.getElementById("tok-"+id),v=(inp?.value||"").trim();
   if(!v){inp?.focus();return}
@@ -1254,13 +1663,57 @@ document.body.addEventListener("click",e=>{
   return}
  const a=e.target.closest("[data-acc]");
  if(a){const s=svc(a.dataset.acc);
+  if(s.free)return;
   if(s.conn){deleteToken(s.id).catch(()=>{});s.conn=false;s.on=false;tokOpen=null}
   else tokOpen=tokOpen===s.id?null:s.id;
   renderAccounts();renderSrv();icons();
   if(tokOpen)document.getElementById("tok-"+tokOpen)?.focus();
   return}
+ const pl=e.target.closest("[data-pl]");if(pl){openPl(+pl.dataset.pl);return}
+ const ou=e.target.closest("[data-open-url]");if(ou){openExternal(ou.dataset.openUrl);return}
  const sw=e.target.closest("[data-sw]");if(sw){setAccent(sw.dataset.sw);return}});
-document.getElementById("start").onclick=async()=>{if(S.current?.mode==="empty"){go("settings");return}await ensureStreamPort();if(!S.playing)toggle();setTrack(S.current,true,true)};
+/* The wave is seeded from favorite TRACKS (it used to key off artists).
+   It needs at least WAVE_MIN of them, or there is nothing to build on. */
+const WAVE_MIN=5;
+const favTracks=()=>TRACKS.filter(x=>x.fav&&x.mode!=="empty");
+function renderWaveHint(){
+ const el=document.getElementById("wavehint");if(!el)return;
+ const n=favTracks().length,ok=n>=WAVE_MIN;
+ el.dataset.ready=ok;
+ el.innerHTML=ok
+  ?t("wave.ready").replace("{n}",`<b>${n}</b>`)
+  :t("wave.need").replace("{n}",`<b>${n}/${WAVE_MIN}</b>`)}
+
+/* Seed with the favorites, pull more through a search on their artists,
+   shuffle the union and use it as the queue. */
+async function startWave(){
+ const seeds=favTracks();
+ if(seeds.length<WAVE_MIN){
+  go("search");
+  toast(t("wave.need.toast").replace("{n}",WAVE_MIN-seeds.length));
+  document.getElementById("q")?.focus();
+  return}
+ await ensureStreamPort();
+ const btn=document.getElementById("start");
+ btn?.setAttribute("aria-busy","true");
+ try{
+  const artists=[...new Set(seeds.map(x=>x.a).filter(Boolean))].slice(0,4);
+  const found=[];
+  for(const a of artists){
+   const r=await searchRemote(a).catch(()=>[]);
+   r.slice(0,6).forEach(x=>{
+    if(!TRACKS.some(y=>String(y.id)===String(x.id)&&y.s===x.s)){TRACKS.push(x);found.push(x)}
+    else found.push(TRACKS.find(y=>String(y.id)===String(x.id)&&y.s===x.s))})}
+  const pool=[...seeds,...found].filter(Boolean);
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  if(!pool.length){toast(t("wave.empty"));return}
+  WAVE=pool;
+  await setTrack(pool[0],true,true);
+  queue=pool.slice(1,8);
+  if(fp.dataset.open==="true")renderFPBody();
+ }finally{btn?.removeAttribute("aria-busy")}}
+let WAVE=[];
+document.getElementById("start").onclick=startWave;
 document.getElementById("play").onclick=toggle;
 document.getElementById("next").onclick=next;
 document.getElementById("prev").onclick=prev;
@@ -1273,8 +1726,26 @@ document.getElementById("mute").onclick=e=>{S.muted=!S.muted;const b=e.currentTa
  b.innerHTML=`<i data-lucide="${S.muted?"volume-x":"volume-2"}" width="16" height="16"></i>`;icons();
  if(A.gain)A.gain.gain.setTargetAtTime(S.muted?0:S.vol,A.ctx.currentTime,.02)};
 document.getElementById("sp3d").onclick=()=>{initAudio();S.sp.on=!S.sp.on;applySpatial();save()};
-function seek(el,x){const r=el.getBoundingClientRect();S.pos=Math.max(0,Math.min(1,(x-r.left)/r.width))*S.dur;if(A.audio&&S.current?.mode==="local")A.audio.currentTime=S.pos;paint()}
-document.getElementById("btrack").addEventListener("pointerdown",e=>seek(e.currentTarget,e.clientX));
+/* Progress bar. While the handle is dragged, timeupdate is ignored: it used to
+   yank the handle back to the stale position on every frame. */
+let seeking=false;
+function seekTo(el,x,commit){
+ const r=el.getBoundingClientRect();
+ const pos=Math.max(0,Math.min(1,(x-r.left)/r.width))*(S.dur||0);
+ S.pos=pos;paint();
+ if(commit&&A.audio&&S.current?.mode==="local"&&Number.isFinite(A.audio.duration)){
+  try{A.audio.currentTime=pos}catch(e){console.warn("seek:",e)}}}
+function wireSeek(id){
+ const el=document.getElementById(id);if(!el)return;
+ el.addEventListener("pointerdown",e=>{
+  if(!S.dur)return;
+  seeking=true;el.setPointerCapture?.(e.pointerId);
+  seekTo(el,e.clientX,false);
+  const mv=ev=>seekTo(el,ev.clientX,false);
+  const up=ev=>{seeking=false;seekTo(el,ev.clientX,true);
+   el.removeEventListener("pointermove",mv);el.removeEventListener("pointerup",up);el.removeEventListener("pointercancel",up)};
+  el.addEventListener("pointermove",mv);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",up)})}
+wireSeek("btrack");
 
 /* EQ dock */
 const dock=document.getElementById("dock"),eqbtn=document.getElementById("eqbtn");
@@ -1291,6 +1762,17 @@ document.getElementById("bands").addEventListener("keydown",e=>{
 document.getElementById("presets").addEventListener("click",e=>{
  const b=e.target.closest("[data-p]");if(!b)return;
  const p=allP().find(x=>x.id===b.dataset.p);S.eq=[...p.g];S.preset=p.id;renderBands();applyEQ();renderPresets();save()});
+/* Library: import and data maintenance */
+document.getElementById("locadd").onclick=pickLocal;
+document.getElementById("locfolder").onclick=pickLocalFolder;
+document.getElementById("cacheclr").onclick=async()=>{
+ if(!TAURI)return;
+ try{await inv("cache_clear");refreshCacheSize();toast(t("cache.done"))}catch(e){toast(String(e))}};
+document.getElementById("datareset").onclick=()=>{
+ TRACKS.forEach(x=>x.fav=false);
+ HISTORY=[];LOCAL_PATHS=[];
+ for(let i=TRACKS.length-1;i>=0;i--)if(TRACKS[i].s==="local")TRACKS.splice(i,1);
+ renderLib();renderWaveHint();renderLocalInfo();save();toast(t("data.done"))};
 document.getElementById("psave").onclick=()=>{
  const inp=document.getElementById("pname"),v=(inp.value||"").trim();if(!v){inp.focus();return}
  const id="c"+Date.now();S.custom.push({id,n:{ru:v,en:v},g:[...S.eq]});S.preset=id;inp.value="";renderPresets();save()};
@@ -1309,7 +1791,8 @@ fp.addEventListener("click",e=>{
   if(k==="play")toggle();if(k==="next")next();if(k==="prev")prev();
   if(k==="shuffle"){S.shuffle=!S.shuffle;a.setAttribute("aria-pressed",S.shuffle)}
   if(k==="repeat"){S.repeat=!S.repeat;a.setAttribute("aria-pressed",S.repeat)}}
- const tk=e.target.closest("#fptrack");if(tk)seek(tk,e.clientX)});
+ });
+/* The fullscreen bar is rebuilt by every renderFP, so bind after rendering. */
 
 /* settings segs */
 function seg(id,fn){document.getElementById(id).addEventListener("click",e=>{
@@ -1337,13 +1820,19 @@ function setAccent(id){
   st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b)}
  spriteCache={};renderSwatches();save()}
 
-/* ─────────── persistence ─────────── */
+/* persistence */
 let obDone=false;
 function save(){try{localStorage.setItem("meowave",JSON.stringify({
  lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,pspeed:S.pspeed,
  quality:S.quality,vol:S.vol,eq:S.eq,preset:S.preset,custom:S.custom,
  sp:{speed:S.sp.speed,rad:S.sp.rad,elev:S.sp.elev},ob:obDone,listen:Math.round(S.listen),
- fav:TRACKS.filter(x=>x.fav).map(x=>x.id)}))}catch(e){}}
+ /* Store whole tracks: an id alone is useless because TRACKS starts empty on
+    the next run, leaving nothing to restore the favorites from */
+ favt:TRACKS.filter(x=>x.fav).map(({id,s,t,a,al,d,art,mode})=>({id,s,t,a,al,d,art,mode,fav:true})),
+ hist:HISTORY.slice(0,50).map(h=>({at:h.at,tr:(({id,s,t,a,al,d,art,mode})=>({id,s,t,a,al,d,art,mode}))(h.tr)})),
+ stab:S.stab,
+ /* Local tracks with their paths, so the library survives a restart */
+ loct:TRACKS.filter(x=>x.s==="local").map(({id,s,t,a,al,d,art,mode,path,fav})=>({id,s,t,a,al,d,art,mode,path,fav:!!fav}))}))}catch(e){}}
 function restore(){try{
  const d=JSON.parse(localStorage.getItem("meowave")||"null");if(!d)return;
  if(d.lang)LANG=d.lang;
@@ -1359,7 +1848,15 @@ function restore(){try{
  if(d.preset!==undefined)S.preset=d.preset;
  if(Array.isArray(d.custom))S.custom=d.custom;
  if(d.sp){S.sp.speed=d.sp.speed??S.sp.speed;S.sp.rad=d.sp.rad??S.sp.rad;S.sp.elev=d.sp.elev??S.sp.elev}
- if(Array.isArray(d.fav))TRACKS.forEach(x=>x.fav=d.fav.includes(x.id));
+ if(Array.isArray(d.favt))d.favt.forEach(x=>{
+  if(!TRACKS.some(y=>String(y.id)===String(x.id)&&y.s===x.s))TRACKS.push({...x,fav:true})});
+ if(Array.isArray(d.loct))d.loct.forEach(x=>{
+  if(!TRACKS.some(y=>String(y.id)===String(x.id)&&y.s==="local"))TRACKS.push(x);
+  if(x.path&&!LOCAL_PATHS.includes(x.path))LOCAL_PATHS.push(x.path)});
+ if(Array.isArray(d.hist))HISTORY=d.hist.filter(h=>h?.tr?.id).map(h=>{
+  const known=TRACKS.find(y=>String(y.id)===String(h.tr.id)&&y.s===h.tr.s);
+  return {at:h.at,tr:known||h.tr}});
+ if(d.stab)S.stab=d.stab;
  if(d.listen)S.listen=d.listen;
  obDone=!!d.ob;
 }catch(e){}}
@@ -1377,7 +1874,7 @@ addEventListener("keydown",e=>{
  if(e.shiftKey&&e.key==="ArrowRight")next();
  if(e.shiftKey&&e.key==="ArrowLeft")prev()});
 
-/* ─────────── onboarding ─────────── */
+/* onboarding */
 const OB={step:0};
 document.getElementById("oblang").innerHTML=`
  <button class="opt" role="radio" aria-checked="true" data-v="ru" style="--i:0"><b>Русский</b><small>Полный интерфейс</small><span class="tick"><i data-lucide="check" width="16" height="16"></i></span></button>
@@ -1418,15 +1915,19 @@ function finish(){
  const app=document.getElementById("app");app.setAttribute("aria-hidden","false");app.classList.add("ready");
  obDone=true;save()}
 
-/* ─────────── tauri bridge ─────────── */
+/* tauri bridge */
 const TAURI=window.__TAURI__?.core;
 const TAURI_EVENT=window.__TAURI__?.event;
 const inv=(cmd,args)=>TAURI?.invoke(cmd,args);
 
 /* Rust tells us when the window is minimised or loses focus; see the render
    gating above. Without this the field keeps painting behind other windows. */
-TAURI_EVENT?.listen?.("meowave://render",e=>{setFocused(!!e.payload);setRender(!!e.payload)})
+/* render = the window is visible at all; focus = it is the active window. One
+   event used to imply both, so losing focus froze the field for good. */
+TAURI_EVENT?.listen?.("meowave://render",e=>setRender(!!e.payload))
   .catch(err=>console.warn("render events:",err));
+TAURI_EVENT?.listen?.("meowave://focus",e=>setFocused(!!e.payload))
+  .catch(()=>{});
 
 /* Persistent storage lives in %LOCALAPPDATA%\Meowave (see paths.rs). In a plain
    browser there's no Rust side, so fall back to localStorage. */
@@ -1459,7 +1960,9 @@ let searchTimer=0;
 async function searchRemote(query){
  const current=++searchTimer;
  if(!TAURI||!query.trim())return [];
- const services=SERVICES.filter(s=>s.on&&s.id!=="spotify").map(s=>s.id);
+ /* local is excluded: those files live on disk and the frontend filters them. */
+ const services=SERVICES.filter(s=>s.on&&!s.local).map(s=>s.id);
+ if(!services.length)return [];
  try{
   await new Promise(r=>setTimeout(r,180));
   if(current!==searchTimer)return [];
@@ -1468,6 +1971,52 @@ async function searchRemote(query){
  }catch(e){console.warn("service search:",e);return []}
 }
 /* dev-фолбэк в обычном браузере: localStorage вместо keychain */
+/* Local tracks.
+   Paths are persisted and re-registered on boot; otherwise the proxy would not
+   know which file to serve for /stream/local/<id> after a restart. */
+let LOCAL_PATHS=[];
+const dlgApi=()=>window.__TAURI__?.dialog;
+async function pickLocal(){
+ if(!TAURI)return toast(t("loc.desktop"));
+ try{
+  const sel=await dlgApi()?.open?.({multiple:true,directory:false,
+   filters:[{name:"Audio",extensions:["mp3","flac","wav","ogg","oga","m4a","aac","opus"]}]});
+  if(!sel)return;
+  mergeLocal(await inv("local_add",{paths:Array.isArray(sel)?sel:[sel]}));
+ }catch(e){console.error("local pick:",e);toast(t("loc.err"))}}
+async function pickLocalFolder(){
+ if(!TAURI)return toast(t("loc.desktop"));
+ try{
+  const f=await dlgApi()?.open?.({directory:true,multiple:false});
+  if(!f)return;
+  mergeLocal(await inv("local_scan",{folder:Array.isArray(f)?f[0]:f,depth:4}));
+ }catch(e){console.error("local scan:",e);toast(t("loc.err"))}}
+function mergeLocal(added){
+ if(!added?.length)return toast(t("loc.none"));
+ let n=0;
+ added.forEach(x=>{
+  if(!TRACKS.some(y=>String(y.id)===String(x.id)&&y.s==="local")){TRACKS.push(x);n++}
+  if(x.path&&!LOCAL_PATHS.includes(x.path))LOCAL_PATHS.push(x.path)});
+ renderLocalInfo();renderWaveHint();save();
+ if(S.view==="library")renderLib();
+ toast(t("loc.added").replace("{n}",n))}
+function renderLocalInfo(){
+ const el=document.getElementById("locinfo");if(!el)return;
+ const n=TRACKS.filter(x=>x.s==="local").length;
+ el.textContent=n?t("loc.count").replace("{n}",n):t("loc.empty")}
+/* External links open in the system browser, not inside the player window. */
+async function openExternal(url){
+ try{
+  const op=window.__TAURI__?.opener;
+  if(op?.openUrl)return void await op.openUrl(url);
+  window.open(url,"_blank","noopener");
+ }catch(e){console.warn("open url:",e);toast(url)}}
+async function refreshCacheSize(){
+ const el=document.getElementById("cachesz");if(!el)return;
+ if(!TAURI){el.textContent="—";return}
+ try{const b=await inv("cache_size");el.textContent=(b/1048576).toFixed(1)+" MB"}
+ catch(e){el.textContent="—"}}
+
 async function saveToken(id,tok){if(TAURI)return inv("set_service_token",{service:id,token:tok});localStorage.setItem("mw.tok."+id,tok)}
 async function deleteToken(id){if(TAURI)return inv("delete_service_token",{service:id});localStorage.removeItem("mw.tok."+id)}
 async function initServices(){
@@ -1478,7 +2027,7 @@ async function initServices(){
   renderSrv();renderAccounts();icons();
  }catch(e){console.warn("keychain unavailable:",e)}}
 
-/* ─────────── supabase: аккаунты ─────────── */
+/* supabase: аккаунты */
 let sb=null,sbUser=null,sbProfile=null,delArmed=false;
 async function initSupabase(){
  try{
@@ -1491,14 +2040,56 @@ async function initSupabase(){
   sbUser=session?.user||null;
   if(sbUser)await loadProfile();
   sb.auth.onAuthStateChange(async(_ev,sess)=>{
+   const wasSignedIn=!!sbUser;
+   /* Sign-out: push what is still queued while the session is alive, then drop
+      the badge state. Favorites stay in localStorage — they are this machine's
+      library too, not only the account's, and wiping them on sign-out would
+      look like data loss. */
+   if(wasSignedIn&&!sess?.user)await flushFavorites();
    sbUser=sess?.user||null;sbProfile=null;delArmed=false;
+   if(!sbUser){OWNED=new Set()}
    if(sbUser)await loadProfile();
    renderProfile()});
  }catch(e){console.warn("supabase init:",e.message||e)}
  renderProfile()}
 async function loadProfile(){
  const {data}=await sb.from("profiles").select("username,avatar_url").eq("id",sbUser.id).maybeSingle();
- sbProfile=data||{username:sbUser.email?.split("@")[0]||"",avatar_url:null}}
+ sbProfile=data||{username:sbUser.email?.split("@")[0]||"",avatar_url:null};
+ await loadBadgeCatalog();
+ await loadOwnedBadges();
+ /* Merge the account's favorites with whatever this machine has. */
+ await pullFavorites();
+ /* Catch up on anything earned while signed out or on another device. */
+ syncAchievements()}
+
+/* Listening time is reported in batches rather than per track: fewer requests,
+   and report_listening() clamps each call so a tampered client can only inflate
+   its own numbers. Unsent seconds accumulate here between flushes. */
+const REPORT={secs:0,spatial:0,tracks:0,ids:new Set(),last:Date.now()};
+function noteListening(dt){
+ REPORT.secs+=dt;
+ if(S.sp.on)REPORT.spatial+=dt}
+function noteTrackStart(tr){
+ if(!tr||tr.mode==="empty")return;
+ const key=tr.s+":"+tr.id;
+ if(!REPORT.ids.has(key)){REPORT.ids.add(key);REPORT.tracks++}}
+async function flushListening(force){
+ const secs=Math.floor(REPORT.secs);
+ if(!sb||!sbUser)return;
+ if(!force&&secs<60&&!REPORT.tracks)return;
+ if(!secs&&!REPORT.tracks)return;
+ const hour=new Date().getHours();
+ const payload={seconds:secs,new_tracks:REPORT.tracks,
+  spatial:Math.floor(REPORT.spatial),is_night:hour>=2&&hour<5};
+ REPORT.secs-=secs;REPORT.spatial=0;REPORT.tracks=0;
+ try{
+  const {error}=await sb.rpc("report_listening",payload);
+  if(error)throw error;
+  syncAchievements();
+ }catch(e){console.warn("report_listening:",e.message||e)}}
+setInterval(()=>flushListening(false),60000);
+/* A closing window must not lose the current batch. */
+window.addEventListener("beforeunload",()=>{flushListening(true);flushFavorites()});
 function authMsg(msg,cls){const el=document.getElementById("authmsg");if(el){el.textContent=msg||"";el.className="authmsg "+(cls||"")}}
 async function doAuth(kind){
  const email=(document.getElementById("au-email")?.value||"").trim();
@@ -1532,6 +2123,115 @@ async function uploadAvatar(file){
   if(e2)throw e2;
   sbProfile={...sbProfile,avatar_url:url};renderProfile();
  }catch(e){authMsg(e.message||String(e),"err")}}
+/* Badges.
+   badges.json is the catalog the app ships; the database only stores ids and
+   who owns what, so adding a badge never needs a schema change. Unlocks are
+   granted server-side (check_achievements / claim_client_badge) because a
+   client-side grant is just a request the user can forge. */
+let BADGES=null,OWNED=new Set(),badgeMsgTimer=0;
+const RARITY_COLOR={common:"#8b8b96",rare:"#4a9eff",epic:"#a855f7",legendary:"#f5a524"};
+
+async function loadBadgeCatalog(){
+ if(BADGES)return BADGES;
+ try{
+  const r=await fetch("assets/badges/badges.json");
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const j=await r.json();
+  BADGES=[...(j.achievements||[]).map(x=>({...x,source:"achievement"})),
+          ...(j.codes||[]).map(x=>({...x,source:"code"}))];
+ }catch(e){console.warn("badge catalog:",e);BADGES=[]}
+ return BADGES}
+
+async function loadOwnedBadges(){
+ if(!sb||!sbUser){OWNED=new Set();return OWNED}
+ try{
+  const {data,error}=await sb.from("user_badges").select("badge_id").eq("user_id",sbUser.id);
+  if(error)throw error;
+  OWNED=new Set((data||[]).map(r=>r.badge_id));
+ }catch(e){console.warn("owned badges:",e.message||e)}
+ return OWNED}
+
+/* Stats the server cannot verify itself (connected services, custom presets)
+   are reported so the same threshold check runs server-side. */
+async function claimClientBadges(){
+ if(!sb||!sbUser)return[];
+ const values={
+  services_connected:SERVICES.filter(s=>s.conn&&!s.local).length,
+  custom_presets:S.custom.length};
+ const cat=await loadBadgeCatalog();
+ const won=[];
+ for(const b of cat){
+  if(b.source!=="achievement")continue;
+  const metric=b.rule?.metric;
+  if(!(metric in values)||OWNED.has(b.id))continue;
+  try{
+   const {data,error}=await sb.rpc("claim_client_badge",{badge:b.id,value:values[metric]});
+   if(!error&&data===true)won.push(b.id);
+  }catch(e){console.warn("claim",b.id,e.message||e)}}
+ return won}
+
+/* Called after listening time is reported: the server re-checks every
+   threshold and returns whatever it just granted. */
+async function syncAchievements(){
+ if(!sb||!sbUser)return;
+ try{
+  const {data,error}=await sb.rpc("check_achievements");
+  if(error)throw error;
+  const fresh=[...(data||[]).map(r=>typeof r==="string"?r:r.badge_id),...await claimClientBadges()];
+  if(fresh.length){
+   await loadOwnedBadges();
+   fresh.forEach(id=>announceBadge(id));
+   if(S.view==="profile")renderProfile()}
+ }catch(e){console.warn("achievements:",e.message||e)}}
+
+function badgeById(id){return (BADGES||[]).find(b=>b.id===id)}
+function announceBadge(id){
+ const b=badgeById(id);
+ toast((b?`${t("bd.new")}: ${b.name[LANG]||b.name.ru}`:t("bd.new")),4200)}
+
+function badgeTile(b,owned){
+ const c=RARITY_COLOR[b.rarity]||RARITY_COLOR.common;
+ const name=b.name?.[LANG]||b.name?.ru||b.id;
+ const desc=b.desc?.[LANG]||b.desc?.ru||"";
+ return `<div class="bdg" data-owned="${owned}" title="${esc(name)} — ${esc(desc)}">
+  <span class="bdgart" style="--ring:${c}"><img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
+  <b>${esc(name)}</b><span>${esc(desc)}</span></div>`}
+
+function renderBadges(){
+ const box=document.getElementById("bdgbox");if(!box)return;
+ const cat=BADGES||[];
+ if(!cat.length){box.innerHTML=`<p class="ph" style="margin:0">${t("bd.none")}</p>`;return}
+ const mine=cat.filter(b=>OWNED.has(b.id)),rest=cat.filter(b=>!OWNED.has(b.id));
+ box.innerHTML=
+  `<p class="ph" style="margin:0 0 10px">${t("bd.have")}: ${mine.length} / ${cat.length}</p>
+   <div class="bdgrid">${[...mine,...rest].map(b=>badgeTile(b,OWNED.has(b.id))).join("")}</div>`}
+
+/* Promo codes are validated server-side: the plaintext is hashed there and
+   compared, so the app never holds a list of valid codes. */
+async function redeemCode(){
+ const inp=document.getElementById("bd-code"),msg=document.getElementById("bd-msg");
+ const raw=(inp?.value||"").trim();
+ const say=(text,cls)=>{if(msg){msg.textContent=text;msg.style.color=cls==="err"?"#f87171":cls==="ok"?"#4ade80":"var(--mute)"}};
+ if(!raw)return say(t("bd.code.empty"),"err");
+ if(!sb||!sbUser)return say(t("bd.code.auth"),"err");
+ say(t("bd.code.checking"));
+ try{
+  const {data,error}=await sb.rpc("redeem_badge_code",{raw_code:raw});
+  if(error)throw error;
+  const row=Array.isArray(data)?data[0]:data;
+  if(!row)throw new Error(t("bd.code.bad"));
+  await loadOwnedBadges();renderBadges();
+  if(row.already_owned)say(t("bd.code.dup"),"ok");
+  else{say(t("bd.code.ok"),"ok");announceBadge(row.badge_id)}
+  inp.value="";
+ }catch(e){
+  /* The function raises plain messages: invalid code / code expired /
+     code exhausted. Map the known ones, show the rest verbatim. */
+  const m=String(e.message||e);
+  const key={"invalid code":"bd.code.bad","code expired":"bd.code.exp","code exhausted":"bd.code.used"};
+  const hit=Object.keys(key).find(k=>m.includes(k));
+  say(hit?t(key[hit]):m,"err")}}
+
 function renderProfile(){
  const box=document.getElementById("profbody");if(!box)return;
  if(!sb){box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${t("pr.nosupa")}</p></div>`;return}
@@ -1572,11 +2272,24 @@ function renderProfile(){
    </div>
   </div>
   <div class="panel pane">
+   <h3>${t("bd.t")}</h3>
+   <p class="ph">${t("bd.s")}</p>
+   <div id="bdgbox"></div>
+   <div class="tokrow" style="margin-top:14px">
+    <input id="bd-code" placeholder="${t("bd.code.ph")}" autocomplete="off" maxlength="40">
+    <button class="btn" id="bd-redeem">${t("bd.code.go")}</button>
+    <small style="color:var(--mute);font-size:.72rem" id="bd-msg">${t("bd.code.hint")}</small>
+   </div>
+  </div>
+  <div class="panel pane">
    <div class="authrow">
     <button class="btn" id="au-out">${t("pr.logout")}</button>
     <button class="btn danger" id="au-del">${delArmed?t("pr.del.confirm"):t("pr.del")}</button>
    </div>
   </div>`;
+ renderBadges();
+ document.getElementById("bd-redeem").onclick=redeemCode;
+ document.getElementById("bd-code").addEventListener("keydown",e=>{if(e.key==="Enter")redeemCode()});
  document.getElementById("ava-file").onchange=e=>uploadAvatar(e.target.files[0]);
  const un=document.getElementById("un-input");
  un.onchange=async()=>{const v=un.value.trim();if(!v)return;
@@ -1591,7 +2304,7 @@ function renderProfile(){
   await sb.auth.signOut()};
  icons()}
 
-/* ─────────── boot ─────────── */
+/* boot */
 restore();
 setTheme(S.theme);setAccent(S.accent);
 document.documentElement.style.setProperty("--glow",S.glow);
@@ -1608,7 +2321,11 @@ document.getElementById("sp-rad-v").textContent=Math.round(S.sp.rad*100);
 document.getElementById("sp-elev").value=Math.round(S.sp.elev*100);
 document.getElementById("sp-elev-v").textContent=Math.round(S.sp.elev*100);
 applyI18n();
-renderBands();renderNP();paint();sync();go("home");search("");icons();
+renderBands();renderNP();paint();sync();go("home");search("");
+showSettingsTab(S.stab);renderWaveHint();renderLocalInfo();
+/* Hand the local paths back to Rust, or the proxy cannot resolve them. */
+if(TAURI&&LOCAL_PATHS.length)inv("local_rehydrate",{paths:LOCAL_PATHS}).catch(e=>console.warn("rehydrate:",e));
+icons();
 if(obDone){
  document.getElementById("ob").hidden=true;
  const app=document.getElementById("app");app.setAttribute("aria-hidden","false");app.classList.add("ready");

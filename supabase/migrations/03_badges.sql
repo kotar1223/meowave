@@ -20,6 +20,7 @@ create table if not exists public.badges (
 
 alter table public.badges enable row level security;
 
+drop policy if exists "badge catalog is public" on public.badges;
 create policy "badge catalog is public"
   on public.badges for select using (true);
 -- No insert/update policy: the catalog is seeded from SQL, not from the client.
@@ -34,6 +35,7 @@ create table if not exists public.user_badges (
 
 alter table public.user_badges enable row level security;
 
+drop policy if exists "badges of visible profiles are readable" on public.user_badges;
 create policy "badges of visible profiles are readable"
   on public.user_badges for select using (
     exists (select 1 from public.profiles p where p.id = user_id)
@@ -197,7 +199,10 @@ grant execute on function public.claim_client_badge(text, bigint) to authenticat
 
 -- ── seed: keep in sync with src/assets/badges/badges.json ────
 insert into public.badges (id, source, rarity, metric, threshold, compare) values
-  ('first_note',       'achievement', 'common',    'listen_seconds',        1,      'gte'),
+  -- "first track", not "first second": badges.json is the source of truth and
+  -- keys this off tracks_played. They disagreed until now, so the badge fired
+  -- on the first second of audio instead of the first completed track.
+  ('first_note',       'achievement', 'common',    'tracks_played',         1,      'gte'),
   ('hour_one',         'achievement', 'common',    'listen_seconds',        3600,   'gte'),
   ('day_of_sound',     'achievement', 'rare',      'listen_seconds',        86400,  'gte'),
   ('week_of_sound',    'achievement', 'legendary', 'listen_seconds',        604800, 'gte'),

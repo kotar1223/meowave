@@ -4,7 +4,13 @@
 use keyring::Entry;
 
 const KEYCHAIN_SERVICE: &str = "meowave";
-const KNOWN_SERVICES: &[&str] = &["spotify", "ytm", "sc", "ym"];
+const KNOWN_SERVICES: &[&str] = &["ytm", "sc", "ym"];
+
+/// Services that work without any user credentials: SoundCloud runs on a
+/// public client_id we scrape ourselves, YouTube Music answers guest
+/// InnerTube requests. They never appear in the keychain, but the UI still
+/// has to show them as usable.
+pub const TOKENLESS_SERVICES: &[&str] = &["sc", "ytm"];
 
 fn entry(service: &str) -> Result<Entry, String> {
     if !KNOWN_SERVICES.contains(&service) {
@@ -50,9 +56,10 @@ pub fn list_connected_services() -> Vec<String> {
     KNOWN_SERVICES
         .iter()
         .filter(|id| {
-            Entry::new(KEYCHAIN_SERVICE, id)
-                .and_then(|e| e.get_password())
-                .is_ok()
+            TOKENLESS_SERVICES.contains(id)
+                || Entry::new(KEYCHAIN_SERVICE, id)
+                    .and_then(|e| e.get_password())
+                    .is_ok()
         })
         .map(|s| s.to_string())
         .collect()

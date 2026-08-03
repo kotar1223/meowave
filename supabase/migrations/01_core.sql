@@ -12,12 +12,15 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "profiles are readable by everyone" on public.profiles;
 create policy "profiles are readable by everyone"
   on public.profiles for select using (true);
 
+drop policy if exists "users insert own profile" on public.profiles;
 create policy "users insert own profile"
   on public.profiles for insert with check (auth.uid() = id);
 
+drop policy if exists "users update own profile" on public.profiles;
 create policy "users update own profile"
   on public.profiles for update using (auth.uid() = id);
 
@@ -36,6 +39,33 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- ── friendships ─────────────────────────────────────────────
+-- Defined here rather than in 04_social because the profile visibility policy
+-- in 02 and check_achievements() in 03 both reference this table, and Postgres
+-- resolves table names when a policy or function body is created, not when it
+-- runs. Creating it later made a from-scratch `psql -f schema.sql` fail on 02.
+-- The friendship RPCs and the rest of the social layer still live in 04.
+--
+-- The canonical direction of a friendship is (requester, addressee): a single
+-- row covers both people, so queries have to check both columns.
+create table if not exists public.friendships (
+  requester uuid not null references auth.users (id) on delete cascade,
+  addressee uuid not null references auth.users (id) on delete cascade,
+  status     text not null default 'pending'
+             check (status in ('pending', 'accepted', 'blocked')),
+  created_at timestamptz not null default now(),
+  primary key (requester, addressee),
+  constraint no_self_friendship check (requester <> addressee)
+);
+
+alter table public.friendships enable row level security;
+
+-- Stop A->B and B->A existing at the same time: order the pair before indexing it.
+create unique index if not exists friendships_pair_key
+  on public.friendships (least(requester, addressee), greatest(requester, addressee));
+
+create index if not exists friendships_addressee_idx on public.friendships (addressee, status);
+
 -- ── playlists ───────────────────────────────────────────────
 create table if not exists public.playlists (
   id         uuid primary key default gen_random_uuid(),
@@ -46,6 +76,7 @@ create table if not exists public.playlists (
 
 alter table public.playlists enable row level security;
 
+drop policy if exists "owners manage own playlists" on public.playlists;
 create policy "owners manage own playlists"
   on public.playlists for all
   using (auth.uid() = owner_id)
@@ -65,6 +96,7 @@ create table if not exists public.playlist_tracks (
 
 alter table public.playlist_tracks enable row level security;
 
+drop policy if exists "owners manage tracks of own playlists" on public.playlist_tracks;
 create policy "owners manage tracks of own playlists"
   on public.playlist_tracks for all
   using (exists (select 1 from public.playlists p
@@ -78,20 +110,24 @@ insert into storage.buckets (id, name, public)
 values ('avatars', 'avatars', true)
 on conflict (id) do nothing;
 
+drop policy if exists "avatar images are publicly readable" on storage.objects;
 create policy "avatar images are publicly readable"
   on storage.objects for select
   using (bucket_id = 'avatars');
 
+drop policy if exists "users upload own avatar" on storage.objects;
 create policy "users upload own avatar"
   on storage.objects for insert
   with check (bucket_id = 'avatars'
               and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "users update own avatar" on storage.objects;
 create policy "users update own avatar"
   on storage.objects for update
   using (bucket_id = 'avatars'
          and (storage.foldername(name))[1] = auth.uid()::text);
 
+drop policy if exists "users delete own avatar" on storage.objects;
 create policy "users delete own avatar"
   on storage.objects for delete
   using (bucket_id = 'avatars'

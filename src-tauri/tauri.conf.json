@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' customprotocol: asset:; img-src 'self' asset: https: data:; media-src 'self' http://127.0.0.1:* https:; connect-src 'self' http://127.0.0.1:* https://api.music.yandex.net https://api-v2.soundcloud.com https://soundcloud.com https://www.googleapis.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
+      "csp": "default-src 'self' customprotocol: asset:; img-src 'self' asset: https: data: blob:; media-src 'self' http://127.0.0.1:* blob: https:; connect-src 'self' http://127.0.0.1:* https: wss:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:;"
     }
   },
   "bundle": {
