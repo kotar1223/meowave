@@ -22,6 +22,8 @@ The player features a distinctive, animated waveform-driven visual experience, a
 
 ### Supported services
 
+
+
 | YouTube Music | • Supported |
 | SoundCloud | • Supported |
 | Yandex Music | • Supported |
@@ -97,3 +99,4 @@ cargo run build
 
 Made by [kotar1223](https://kotar1223.github.io/kotyarbio/)
 
+Telegram Channel [Meowave](https://t.me/meowaveplayer_
