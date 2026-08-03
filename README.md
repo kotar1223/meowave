@@ -95,5 +95,5 @@ cargo run build
 
 ## Author
 
-Made by [kotar1223](https://github.com/kotar1223)
+Made by [kotar1223](https://kotar1223.github.io/kotyarbio/)
 
