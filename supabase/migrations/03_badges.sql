@@ -197,36 +197,41 @@ end $$;
 
 grant execute on function public.claim_client_badge(text, bigint) to authenticated;
 
--- ── seed: keep in sync with src/assets/badges/badges.json ────
-insert into public.badges (id, source, rarity, metric, threshold, compare) values
-  -- "first track", not "first second": badges.json is the source of truth and
-  -- keys this off tracks_played. They disagreed until now, so the badge fired
-  -- on the first second of audio instead of the first completed track.
-  ('first_note',       'achievement', 'common',    'tracks_played',         1,      'gte'),
-  ('hour_one',         'achievement', 'common',    'listen_seconds',        3600,   'gte'),
-  ('day_of_sound',     'achievement', 'rare',      'listen_seconds',        86400,  'gte'),
-  ('week_of_sound',    'achievement', 'legendary', 'listen_seconds',        604800, 'gte'),
-  ('night_owl',        'achievement', 'rare',      'night_sessions',        1,      'gte'),
-  ('crate_digger',     'achievement', 'epic',      'unique_tracks',         500,    'gte'),
-  ('all_services',     'achievement', 'epic',      'services_connected',    4,      'gte'),
-  ('eq_tinkerer',      'achievement', 'common',    'custom_presets',        1,      'gte'),
-  ('spatial_head',     'achievement', 'rare',      'spatial_seconds',       3600,   'gte'),
-  ('host',             'achievement', 'rare',      'rooms_hosted',          1,      'gte'),
-  ('social_butterfly', 'achievement', 'epic',      'friends',               10,     'gte'),
-  ('top_of_the_board', 'achievement', 'legendary', 'leaderboard_best_rank', 1,      'lte'),
-  ('early_bird',        'code', 'legendary', null, null, 'gte'),
-  ('beta_cat',          'code', 'epic',      null, null, 'gte'),
-  ('bug_hunter',        'code', 'epic',      null, null, 'gte'),
-  ('contributor',       'code', 'legendary', null, null, 'gte'),
-  ('friend_of_the_cat', 'code', 'rare',      null, null, 'gte'),
-  ('meowave_day',       'code', 'rare',      null, null, 'gte')
-on conflict (id) do update set
-  source = excluded.source, rarity = excluded.rarity,
-  metric = excluded.metric, threshold = excluded.threshold, compare = excluded.compare;
+-- ── seed ────────────────────────────────────────────────────
+-- The catalog is NOT seeded here any more.
+--
+-- This file used to carry a hand-written list of 18 badges. It had drifted so
+-- far from src/assets/badges/badges.json that not one id matched: the database
+-- knew 18 badges that no longer exist, and none of the 36 that do. Codes then
+-- failed with a foreign key violation because the badge they referenced was
+-- never inserted.
+--
+-- badges.json is the single source of truth. Generate the insert from it:
+--
+--   node supabase/make_badges_sql.mjs   -> supabase/BADGES.sql
+--
+-- and run that after this schema (or use seed_badges.mjs with a service key).
 
--- Handing out a code, from the SQL editor only:
+-- Handing out a code, from the SQL editor only. badge_id must already exist in
+-- public.badges or this fails with a foreign key violation (23503), so seed the
+-- catalog first:
 --
 --   insert into public.badge_codes (code_hash, badge_id, max_uses, note)
---   values (public.hash_code('MEOW-EARLY-2026'), 'early_bird', 500, 'pre-release');
+--   values (public.hash_code('MEOW-BOYKISSER-XXXXX'), 'boykisser', 500, 'pre-release');
 --
+-- In practice use `node supabase/make_codes.mjs`, which writes the whole file.
 -- Never commit the plaintext.
+
+-- ── badges leaderboard ──────────────────────────────────────
+-- Defined here, after user_badges exists. It used to sit in 02, where the
+-- forward reference killed a fresh install mid-run.
+create or replace view public.leaderboard_badges as
+  select p.id, p.username, p.avatar_url, p.pinned_badge,
+         count(b.badge_id) as badges,
+         rank() over (order by count(b.badge_id) desc) as rank
+  from public.profiles p
+  join public.user_badges b on b.user_id = p.id
+  where p.is_public
+  group by p.id, p.username, p.avatar_url, p.pinned_badge
+  order by badges desc
+  limit 100;

@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <title>Early Bird</title>
-  <circle cx="64" cy="64" r="56" fill="#f5a524" fill-opacity=".14"/>
-  <circle cx="64" cy="64" r="56" fill="none" stroke="#f5a524" stroke-width="3" stroke-dasharray="6 5" stroke-opacity=".8"/>
-  <circle cx="64" cy="64" r="42" fill="none" stroke="#f5a524" stroke-width="1.5" stroke-opacity=".35"/>
-  <text x="64" y="64" text-anchor="middle" dominant-baseline="central"
-        font-family="system-ui, sans-serif" font-size="34" font-weight="700"
-        fill="#f5a524">EB</text>
-</svg>

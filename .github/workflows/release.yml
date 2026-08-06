@@ -1,0 +1,54 @@
+name: Release
+
+# Builds the installer, signs it, and publishes the release plus the
+# latest.json the in-app updater reads.
+#
+# Trigger by pushing a tag:
+#   git tag v0.1.1 && git push origin v0.1.1
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           contents of ~/.meowave-keys/meowave.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  empty string if the key has no password
+#
+# The public half lives in tauri.conf.json and is not a secret: it only lets
+# clients verify a signature, never create one.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Rust builds dominate the runtime here; without a cache every tag pays
+      # the full dependency compile again.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build and publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Meowave ${{ github.ref_name }}"
+          releaseBody: "Установщик ниже. Обновление внутри приложения подтянется само."
+          releaseDraft: false
+          prerelease: false
+          # Publishes latest.json alongside the installer. Without it the
+          # updater endpoint 404s and the app reports "could not fetch a valid
+          # release JSON".
+          includeUpdaterJson: true

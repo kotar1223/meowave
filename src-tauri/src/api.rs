@@ -40,11 +40,17 @@ pub struct ServiceError {
 }
 
 pub fn client() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
+    let mut b = reqwest::Client::builder()
         .user_agent(UA)
-        .timeout(std::time::Duration::from_secs(20))
-        .build()
-        .map_err(|e| e.to_string())
+        .timeout(std::time::Duration::from_secs(20));
+    // Optional and off by default. The proxy carries its own routing rules, so
+    // only the blocked hosts go through it — Yandex and our 127.0.0.1 stream
+    // proxy stay direct. Every network path in the app funnels through this
+    // one constructor, which is why the switch works everywhere at once.
+    if let Some(p) = crate::proxy::reqwest_proxy() {
+        b = b.proxy(p);
+    }
+    b.build().map_err(|e| e.to_string())
 }
 
 fn sec(ms: u64) -> u32 {

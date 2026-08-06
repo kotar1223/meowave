@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meowave — музыка из всех сервисов в одном плеере</title>
+<meta name="description" content="Кросс-сервисный музыкальный плеер: YouTube Music, SoundCloud, Yandex Music и локальные файлы. Свой эквалайзер, HRTF-орбита, скачивание в mp3. Windows, бесплатно.">
+<meta name="theme-color" content="#09090d">
+
+<!-- Open Graph: the Telegram channel is the main distribution path, and a link
+     without a preview card looks like spam there. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Meowave — музыка из всех сервисов в одном плеере">
+<meta property="og:description" content="Один плеер вместо четырёх. Свой звуковой тракт, скачивание, плейлисты. Windows, бесплатно.">
+<meta property="og:image" content="assets/icon.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500&family=Inter+Tight:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/sections.css">
+</head>
+<body>
+
+<!-- The particle field is the app's signature, so the site opens with it. Same
+     idea as in the player: sprites drawn on a canvas, additive blending. -->
+<canvas id="field" aria-hidden="true"></canvas>
+<div class="haze" aria-hidden="true"><i></i><i></i></div>
+
+<nav class="nav" id="nav">
+  <div class="navin">
+    <a class="brand" href="#top"><img src="assets/icon.png" alt=""> Meowave</a>
+    <div class="navlinks">
+      <a href="#features">Возможности</a>
+      <a href="#sound">Звук</a>
+      <a href="#badges">Значки</a>
+      <a href="#install">Установка</a>
+      <a href="#faq">Вопросы</a>
+    </div>
+    <button class="iconbtn" id="theme" title="Тема" aria-label="Сменить тему">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</nav>
+
+<div class="wrap" id="top">
+  <header class="hero">
+    <p class="eyebrow reveal">Windows · бесплатно · без рекламы</p>
+    <h1 class="reveal">Четыре сервиса.<br><em>Один плеер.</em></h1>
+    <p class="lead reveal">YouTube Music, SoundCloud, Yandex Music и файлы с диска — в одной библиотеке,
+      с одним поиском и одной очередью. Звук идёт через собственный тракт, поэтому эквалайзер,
+      объёмное звучание и визуализатор работают на всех сервисах, а не только там, где их дали.</p>
+    <div class="cta reveal">
+      <a class="primary" href="#install" id="dl-top">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>
+        Скачать для Windows
+      </a>
+      <a class="ghost" href="https://t.me/meowaveplayer" target="_blank" rel="noopener">Telegram-канал</a>
+    </div>
+    <p class="meta reveal">Установщик <b id="ver">0.1.0</b> · около <b>3,3 МБ</b> · обновляется само</p>
+  </header>
+</div>
+
+<section class="wrap">
+  <!-- A drawn replica of the player's chrome rather than a screenshot: it stays
+       sharp on any display, weighs nothing, and cannot go out of date. -->
+  <div class="mock pane reveal" aria-hidden="true">
+    <div class="mrail"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="mmain">
+      <div class="mrow" data-on="true"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
+      <div class="mrow"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
+      <div class="mrow"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
+      <div class="mrow"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
+    </div>
+    <div class="mbar">
+      <span class="mplay"></span>
+      <span class="mseek"></span>
+      <span class="meq"><b></b><b></b><b></b><b></b><b></b><b></b></span>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="features">
+  <div class="shead reveal">
+    <p class="eyebrow">Возможности</p>
+    <h2>Всё, что нужно плееру, и ничего лишнего</h2>
+    <p>Никаких подписок внутри, никакой рекламы и никакой телеметрии. Токены сервисов
+      лежат в системном хранилище ключей, а не в файле рядом с программой.</p>
+  </div>
+  <div class="grid">
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>
+      <h3>Один поиск на все сервисы</h3>
+      <p>Запрос уходит во все подключённые сервисы сразу, результаты сходятся в один список.
+        Откуда трек — видно в строке, но выбирать источник заранее не нужно.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 15V9M8.5 19V5M13 16v-8M17.5 13v-2M21 17V7"/></svg></span>
+      <h3>Эквалайзер на 8 полос</h3>
+      <p>Работает поверх любого сервиса, потому что звук проходит через нас.
+        Пресет можно закрепить за конкретным треком или за всем плейлистом —
+        он применится сам, когда трек начнёт играть.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg></span>
+      <h3>Скачивание в mp3</h3>
+      <p>Трек или плейлист целиком, в выбранную папку. Плейлисты раскладываются
+        по подпапкам с их названиями. Можно включить автоскачивание всего,
+        что попадает в избранное.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></span>
+      <h3>Локальные файлы наравне</h3>
+      <p>mp3, flac, wav, ogg, m4a. Файлы никуда не копируются и не отправляются —
+        читаются с диска напрямую. В библиотеке они живут рядом с треками из сервисов.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM3.6 9h16.8M3.6 15h16.8"/><path d="M12 3c2.5 2.5 3.8 5.6 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3z"/></svg></span>
+      <h3>Плейлисты в аккаунте</h3>
+      <p>Плейлисты, избранное и отслеживаемые артисты хранятся на сервере,
+        поэтому переезжают на другой компьютер сами. Без аккаунта плеер тоже
+        работает — всё останется локально.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span>
+      <h3>Прокси для заблокированного</h3>
+      <p>SOCKS5 или HTTP, и только для тех сервисов, которым он реально нужен —
+        остальное идёт напрямую и не теряет скорость. Есть кнопка проверки туннеля.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="sound">
+  <div class="shead reveal">
+    <p class="eyebrow">Звук</p>
+    <h2>Свой звуковой тракт, а не чужой плеер в рамке</h2>
+    <p>Обычные приложения-обёртки показывают веб-плеер сервиса и не могут вмешаться в звук.
+      Здесь поток проходит через Web Audio, поэтому обработка одинаково доступна везде.</p>
+  </div>
+  <div class="grid">
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 12a9 9 0 0118 0v5a3 3 0 01-3 3h-2v-6h5"/><path d="M3 14h5v6H6a3 3 0 01-3-3v-3z"/></svg></span>
+      <h3>Объёмное звучание</h3>
+      <p>HRTF-панорамирование: источник летает вокруг головы по орбите, а не просто
+        перекидывается между наушниками. Радиус и скорость настраиваются.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span>
+      <h3>Скорость: slowed и nightcore</h3>
+      <p>От 0,5× до 1,5× ползунком плюс готовые кнопки. Высота тона намеренно
+        едет вместе со скоростью — именно это и делает slowed тем, чем он является,
+        иначе получается просто затянутый трек.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M16 9.5a4 4 0 010 5M19 7a7.5 7.5 0 010 10"/></svg></span>
+      <h3>Громче, чем максимум</h3>
+      <p>Дополнительное усиление до +9 дБ через лимитер, а не голым умножением:
+        тихие мастеринги становятся слышнее, но в хрип не уходят.</p>
+    </div>
+  </div>
+
+  <div class="svcs reveal" style="margin-top:var(--sp-8)">
+    <span class="svc"><s></s> YouTube Music <small>без входа</small></span>
+    <span class="svc"><s></s> SoundCloud <small>без входа</small></span>
+    <span class="svc"><s></s> Yandex Music <small>нужен токен</small></span>
+    <span class="svc"><s></s> Локальные файлы <small>с диска</small></span>
+  </div>
+</section>
+
+<section class="wrap" id="badges">
+  <div class="shead reveal">
+    <p class="eyebrow">Значки</p>
+    <h2>36 значков: за прослушанное и по промокодам</h2>
+    <p>Часть выдаётся сама за наигранные часы, редкие находки и ночные сессии.
+      Часть — по кодам из Telegram-канала. Выбранные значки показываются рядом с именем в профиле.</p>
+  </div>
+  <div class="bstrip reveal" id="bstrip">
+    <!-- Filled from badges.json so the site cannot list a badge the app no longer
+         ships. Falls back to nothing rather than to a broken grid. -->
+  </div>
+</section>
+
+<section class="wrap" id="install">
+  <div class="dl pane reveal">
+    <p class="eyebrow">Скачать</p>
+    <h2>Meowave для Windows 10 и 11</h2>
+    <p>Один установщик, около 3,3 МБ. Подписан ключом обновлений — приложение
+      проверяет подпись перед установкой апдейта, поэтому подменить его нельзя.</p>
+    <a class="primary" id="dl-main" href="https://github.com/kotar1223/meowave/releases/latest">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>
+      Скачать установщик
+    </a>
+    <p style="font-size:.8rem" id="dl-note">Последняя версия на GitHub Releases</p>
+  </div>
+
+  <div class="steps reveal" style="margin-top:var(--sp-8)">
+    <div class="step pane">
+      <div>
+        <h4>Запустите установщик</h4>
+        <p>Windows может показать предупреждение SmartScreen: у проекта нет платного
+          сертификата подписи кода. Нажмите «Подробнее» → «Выполнить в любом случае».</p>
+      </div>
+    </div>
+    <div class="step pane">
+      <div>
+        <h4>Подключите сервисы</h4>
+        <p>YouTube Music и SoundCloud работают сразу. Для Yandex Music нужен токен —
+          инструкция внутри, в разделе «Аккаунты».</p>
+      </div>
+    </div>
+    <div class="step pane">
+      <div>
+        <h4>Дальше обновления сами</h4>
+        <p>Плеер проверяет апдейты при запуске и предлагает установить.
+          Скачивать заново с сайта не нужно.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="faq">
+  <div class="shead reveal">
+    <p class="eyebrow">Вопросы</p>
+    <h2>Коротко о главном</h2>
+  </div>
+  <div class="faq reveal">
+    <details class="pane">
+      <summary>Это бесплатно?</summary>
+      <p>Да, полностью. Нет подписок, рекламы, платных функций и сбора статистики.</p>
+    </details>
+    <details class="pane">
+      <summary>Нужен ли аккаунт?</summary>
+      <p>Нет. Без аккаунта плеер работает целиком, просто библиотека и плейлисты
+        остаются на этом компьютере. Аккаунт нужен, чтобы они переезжали
+        между устройствами и чтобы получать значки.</p>
+    </details>
+    <details class="pane">
+      <summary>Почему Windows ругается при установке?</summary>
+      <p>SmartScreen предупреждает обо всех программах без платного сертификата
+        подписи кода — он стоит десятки тысяч рублей в год. Сам установщик подписан
+        ключом обновлений, и приложение проверяет эту подпись при каждом апдейте.</p>
+    </details>
+    <details class="pane">
+      <summary>Скачанные треки — в каком формате?</summary>
+      <p>mp3 192 кбит/с, если в системе есть <code>ffmpeg</code>. YouTube отдаёт
+        Opus в контейнере WebM, и без перекодирования файл не откроется в большинстве
+        плееров. Если ffmpeg нет, сохраняется исходный формат с настоящим расширением —
+        врать про mp3 в имени файла хуже.</p>
+    </details>
+    <details class="pane">
+      <summary>Где хранятся токены сервисов?</summary>
+      <p>В системном хранилище ключей Windows, не в файле рядом с программой
+        и не в открытом виде. Никуда не отправляются.</p>
+    </details>
+    <details class="pane">
+      <summary>Есть версии для macOS и Linux?</summary>
+      <p>Пока нет. Код кросс-платформенный, дело только в сборке и подписи —
+        планы обсуждаются в чате разработки.</p>
+    </details>
+    <details class="pane">
+      <summary>Плохо работает на старом ноутбуке</summary>
+      <p>Основная нагрузка — поле частиц. Настройки → Вид → Плотность частиц:
+        поставьте «Меньше» или отключите совсем. Остальное работает одинаково
+        на любом железе.</p>
+    </details>
+  </div>
+</section>
+
+<footer>
+  <div class="fin">
+    <span>Meowave · <span id="ver2">0.1.0</span></span>
+    <a href="https://t.me/meowaveplayer" target="_blank" rel="noopener">Канал</a>
+    <a href="https://t.me/techupdate_chat" target="_blank" rel="noopener">Чат разработки</a>
+    <a href="https://github.com/kotar1223/meowave" target="_blank" rel="noopener">GitHub</a>
+    <span class="sp">Сделано с любовью к музыке</span>
+  </div>
+</footer>
+
+<script>
+/* ---- theme -------------------------------------------------------------
+   Follows the OS unless the visitor has chosen, which is stored. The player
+   does the same, so switching between site and app is not jarring. */
+const html=document.documentElement;
+const savedTheme=localStorage.getItem("mw-theme");
+if(savedTheme)html.dataset.theme=savedTheme;
+else if(matchMedia("(prefers-color-scheme: light)").matches)html.dataset.theme="light";
+document.getElementById("theme").onclick=()=>{
+ const next=html.dataset.theme==="light"?"dark":"light";
+ html.dataset.theme=next;
+ localStorage.setItem("mw-theme",next);
+ /* Sprites bake the colour in, so they must be rebuilt or the field keeps the
+    old palette until something else forces a redraw. */
+ sprites={}};
+
+/* ---- nav shadow on scroll ------------------------------------------- */
+const nav=document.getElementById("nav");
+const onScroll=()=>nav.dataset.scrolled=scrollY>8;
+addEventListener("scroll",onScroll,{passive:true});onScroll();
+
+/* ---- reveal on scroll -----------------------------------------------
+   The .js class gates the hidden state, so with JavaScript off or if the
+   observer never fires the page is still fully readable. */
+html.classList.add("js");
+const io=new IntersectionObserver(es=>{
+ es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})
+},{rootMargin:"0px 0px -8% 0px",threshold:.05});
+document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
+
+/* ---- badges ---------------------------------------------------------
+   Read from the app's own catalog: hard-coding a list here is how a site ends
+   up advertising badges that no longer exist. */
+const RARITY={common:"#8b8b96",uncommon:"#3fb950",rare:"#4a9eff",epic:"#a855f7",legendary:"#f5a524",secret:"#e0679a"};
+fetch("assets/badges/badges.json").then(r=>r.json()).then(j=>{
+ const box=document.getElementById("bstrip");
+ /* A representative sample, not all 36: the strip is a taste of what exists,
+    and the full list belongs in the app. Rarest first — those are the ones
+    worth showing off. */
+ const order=["legendary","epic","rare","uncommon","common","secret"];
+ const pick=[...(j.badges||[])]
+  .sort((a,b)=>order.indexOf(a.rarity)-order.indexOf(b.rarity))
+  .slice(0,14);
+ box.innerHTML=pick.map(b=>{
+  const c=RARITY[b.rarity]||RARITY.common;
+  return `<span class="bitem" title="${esc(b.description||"")}">
+   <span class="art" style="--ring:${c};background:color-mix(in oklab,${c} 14%,transparent)">
+    <img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
+   <b>${esc(b.name)}</b></span>`}).join("");
+}).catch(()=>{
+ /* Leave the section without a grid rather than showing broken tiles. */
+ document.getElementById("badges").style.display="none"});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---- live download link ---------------------------------------------
+   The button always works: it points at the releases page by default, and is
+   upgraded to the exact installer when the GitHub API answers. Hard-coding a
+   filename would 404 on every version bump. */
+const REPO="kotar1223/meowave";
+fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+ .then(r=>r.ok?r.json():Promise.reject(r.status))
+ .then(rel=>{
+  const exe=(rel.assets||[]).find(a=>/\.exe$/i.test(a.name));
+  const ver=String(rel.tag_name||"").replace(/^v/,"");
+  if(ver){document.getElementById("ver").textContent=ver;
+          document.getElementById("ver2").textContent=ver}
+  if(exe){
+   const mb=(exe.size/1048576).toFixed(1).replace(".",",");
+   for(const id of ["dl-main","dl-top"]){
+    const el=document.getElementById(id);
+    if(el){el.href=exe.browser_download_url;el.removeAttribute("target")}}
+   document.getElementById("dl-note").textContent=`${exe.name} · ${mb} МБ`}
+ })
+ .catch(()=>{
+  /* No releases yet, or the API is rate-limited. The link to the releases page
+     is already correct, so only the note needs to be honest. */
+  document.getElementById("dl-note").textContent="Открыть страницу релизов на GitHub"});
+
+/* The top button scrolls to the download block; only the block's own button
+   downloads. Two buttons that do different things must not look identical in
+   behaviour. */
+
+/* ---- particle field -------------------------------------------------
+   Trimmed version of the player's field: same sprite-and-additive-blending
+   approach, no audio reactivity to react to. */
+const cv=document.getElementById("field"),gx=cv.getContext("2d",{alpha:true});
+const F={p:[],n:0,w:0,h:0};
+let sprites={};
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function sprite(a){
+ const dark=html.dataset.theme!=="light";
+ const k=a.toFixed(2)+html.dataset.theme;
+ if(sprites[k])return sprites[k];
+ const c=document.createElement("canvas");c.width=c.height=32;
+ const x=c.getContext("2d");
+ const g=x.createRadialGradient(16,16,0,16,16,16);
+ const base=dark?"255,255,255":"26,24,32";
+ g.addColorStop(0,`rgba(${base},${a})`);
+ g.addColorStop(.45,`rgba(${base},${a*.35})`);
+ g.addColorStop(1,`rgba(${base},0)`);
+ x.fillStyle=g;x.beginPath();x.arc(16,16,16,0,6.284);x.fill();
+ return sprites[k]=c}
+
+function size(){
+ const dpr=Math.min(2,devicePixelRatio||1);
+ F.w=innerWidth;F.h=innerHeight;
+ cv.width=F.w*dpr;cv.height=F.h*dpr;
+ gx.setTransform(dpr,0,0,dpr,0,0)}
+
+function build(){
+ /* Density scales with the viewport: a phone does not need a desktop's count,
+    and it is the count that costs frames. */
+ const n=reduce?0:Math.round(Math.min(1400,(F.w*F.h)/1400));
+ F.n=n;F.p=[];
+ for(let i=0;i<n;i++)F.p.push({
+  x:Math.random()*F.w,y:Math.random()*F.h,vx:0,vy:0,
+  a:.16+Math.random()*.4,s:.5+Math.random()*.85,
+  ph:Math.random()*Math.PI*2,lane:i%9})}
+
+let t0=0,raf=0,visible=true;
+function frame(now){
+ const t=now/1000;
+ gx.clearRect(0,0,F.w,F.h);
+ gx.globalCompositeOperation=html.dataset.theme==="light"?"source-over":"lighter";
+ for(let i=0;i<F.n;i++){
+  const p=F.p[i];
+  const ang=p.ph+t*.32+p.lane*.7;
+  p.vx+=Math.cos(ang)*.016;p.vy+=Math.sin(ang)*.016;
+  p.vx*=.965;p.vy*=.965;
+  p.x+=p.vx;p.y+=p.vy;
+  /* Wrap instead of respawn: a particle appearing out of nowhere reads as a
+     glitch, whereas drifting in from the far edge does not. */
+  if(p.x<-8)p.x+=F.w+16; else if(p.x>F.w+8)p.x-=F.w+16;
+  if(p.y<-8)p.y+=F.h+16; else if(p.y>F.h+8)p.y-=F.h+16;
+  const sz=2+p.s*2.6;
+  gx.drawImage(sprite(p.a),p.x-sz,p.y-sz,sz*2,sz*2)}
+ gx.globalCompositeOperation="source-over";
+ raf=requestAnimationFrame(frame)}
+
+function start(){if(!raf&&!reduce&&visible)raf=requestAnimationFrame(frame)}
+function stop(){cancelAnimationFrame(raf);raf=0}
+
+size();build();start();
+addEventListener("resize",()=>{size();build()});
+/* A background tab must not keep painting: that is a laptop battery for
+   nothing, and browsers throttle it inconsistently. */
+document.addEventListener("visibilitychange",()=>{
+ visible=!document.hidden;
+ visible?start():stop()});
+</script>
+
+</body>
+</html>

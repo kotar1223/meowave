@@ -24,6 +24,15 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
-    "icon": ["icons/icon.ico"]
+    "icon": ["icons/icon.ico"],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/kotar1223/meowave/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUyNDUyMDlCRDdCMUJFNjgKUldSb3ZySFhteUJGNHJjMk54b2FPZUlUczI5ZUNybFlIZ1lkSEQrY3BlMDVZNTlULyt6Y1lyUWgK"
+    }
   }
 }

@@ -33,6 +33,15 @@
 \echo '== 05_favorites: account-synced favorites =='
 \ir migrations/05_favorites.sql
 
+\echo '== 06_badges_v2: 36-badge catalog, new metrics, pinned badges =='
+\ir migrations/06_badges_v2.sql
+
+\echo '== 07_playlists_v2: user playlists with metadata =='
+\ir migrations/07_playlists_v2.sql
+
+echo '== 08_artists_and_prefs: followed artists, EQ presets, prefs =='
+\ir migrations/08_artists_and_prefs.sql
+
 \echo ''
 \echo 'Schema applied. Next:'
 \echo '  SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed_badges.mjs'

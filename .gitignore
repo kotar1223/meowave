@@ -5,3 +5,13 @@ node_modules/
 .env.*
 !.env.example
 
+
+# Updater signing keys must never be committed
+*.key
+*.key.pub
+
+# Promo code plaintext must never be committed
+supabase/CODES.txt
+supabase/CODES.sql
+
+supabase/BADGES.sql

@@ -25,12 +25,40 @@ create policy "users update own profile"
   on public.profiles for update using (auth.uid() = id);
 
 -- профиль создаётся автоматически при регистрации
+-- The email local part is not a valid username: it can contain '+', be shorter
+-- than 3 chars, or collide with someone else's. profiles_username_shape and the
+-- unique index would both reject it, and because this runs inside the signup
+-- transaction a rejection failed the whole registration. Sanitise, then fall
+-- back to a guaranteed-unique name and let the user pick a real one later.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  base text;
+  candidate text;
 begin
+  base := regexp_replace(split_part(coalesce(new.email, ''), '@', 1), '[^A-Za-z0-9_.-]', '', 'g');
+  if length(base) < 3 then
+    base := 'meow' || base;
+  end if;
+  base := left(base, 20);
+
+  candidate := base;
+  -- A handful of attempts, then give up on a pretty name rather than block signup.
+  for i in 1..5 loop
+    exit when not exists (select 1 from public.profiles where lower(username) = lower(candidate));
+    candidate := left(base, 14) || '_' || substr(replace(new.id::text, '-', ''), 1, 5 + i);
+  end loop;
+  if exists (select 1 from public.profiles where lower(username) = lower(candidate)) then
+    candidate := null;
+  end if;
+
   insert into public.profiles (id, username)
-  values (new.id, split_part(new.email, '@', 1))
+  values (new.id, candidate)
   on conflict (id) do nothing;
+  return new;
+exception when others then
+  -- Never let profile cosmetics break account creation.
+  insert into public.profiles (id) values (new.id) on conflict (id) do nothing;
   return new;
 end $$;
 
@@ -121,10 +149,17 @@ create policy "users upload own avatar"
   with check (bucket_id = 'avatars'
               and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- An UPDATE policy needs BOTH using and with check. `upsert: true` on an
+-- existing avatar is an UPDATE, and with check defaulting to the using clause
+-- is not enough here: Storage rewrites metadata on overwrite, so the row is
+-- re-validated against with check. Without it the second avatar upload failed
+-- while the first one appeared to work.
 drop policy if exists "users update own avatar" on storage.objects;
 create policy "users update own avatar"
   on storage.objects for update
   using (bucket_id = 'avatars'
+         and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'avatars'
          and (storage.foldername(name))[1] = auth.uid()::text);
 
 drop policy if exists "users delete own avatar" on storage.objects;

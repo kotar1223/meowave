@@ -4,9 +4,11 @@
 mod api;
 mod config;
 mod local;
+mod proxy;
 mod paths;
 mod stream;
 mod tokens;
+mod update;
 mod ytm;
 
 use std::sync::OnceLock;
@@ -127,6 +129,9 @@ async fn probe_proxy(service: &str, id: &str) {
 
 fn main() {
     config::load_env();
+    // Must run before any request is made: client() reads this cached config.
+    // A missing or corrupt file means "off", never a startup failure.
+    proxy::load();
 
     let args: Vec<String> = std::env::args().collect();
 
@@ -172,6 +177,8 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             config::get_supabase_config,
             tokens::set_service_token,
@@ -189,23 +196,29 @@ fn main() {
             paths::cache_clear,
             paths::cache_put,
             paths::cache_get,
+            proxy::proxy_get,
+            proxy::proxy_set,
+            proxy::proxy_test,
+            proxy::proxy_detect,
+            proxy::proxy_routes,
+            update::update_check,
+            update::update_install,
+            local::open_external,
+            local::has_ffmpeg,
             local::local_add,
             local::local_scan,
             local::local_rehydrate,
+            local::download_track,
             stream_port,
         ])
-        // Minimising doesn't stop requestAnimationFrame on Windows — the webview
-        // keeps painting a surface nobody can see. So we park the field when the
-        // window is really invisible.
-        //
-        // Losing focus is NOT that case: the window is still on screen, and
-        // reporting it as "not visible" froze the particle field into a
-        // screenshot whenever the user clicked another app. Focus changes only
-        // carry a hint so the frontend can lower its frame budget.
+        // Only a minimised window stops rendering. Tying this to focus was a
+        // mistake: the window is still fully on screen when the user clicks
+        // another app, and freezing the field turned the wave into a black
+        // rectangle the moment Meowave lost focus. Focus alone just lowers the
+        // frame budget.
         .on_window_event(|window, event| match event {
             WindowEvent::Focused(focused) => {
                 let _ = window.emit("meowave://focus", *focused);
-                // Still visible either way unless it is actually minimised.
                 let visible = !window.is_minimized().unwrap_or(false);
                 let _ = window.emit("meowave://render", visible);
             }
@@ -311,5 +324,22 @@ mod local_tests {
             assert_eq!(&got[..], &body[100..200], "wrong slice returned");
         });
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Real filenames from the user's library: downloads keep underscores and
+    /// quality tags, which rendered as unreadable titles in the player bar.
+    #[test]
+    fn cleans_download_style_names() {
+        let cases: [(&str, &str, &str); 5] = [
+            ("uniivxrs__feat._Sqwore__320kbps", "—", "uniivxrs feat. Sqwore"),
+            ("07 - Artist - Song Name", "Artist", "Song Name"),
+            ("Artist_-_Track_Name", "Artist", "Track Name"),
+            ("nyan.mp3", "—", "nyan.mp3"),
+            ("Some Song (Official Video)", "—", "Some Song"),
+        ];
+        for (input, want_a, want_t) in cases {
+            let (a, t) = super::local::parse_name_pub(input);
+            assert_eq!((a.as_str(), t.as_str()), (want_a, want_t), "input: {input}");
+        }
     }
 }

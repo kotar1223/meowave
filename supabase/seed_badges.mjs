@@ -88,21 +88,48 @@ function ruleOf(entry) {
   return { metric: null, threshold: null, compare: "gte" };
 }
 
+/// Status badges are granted by a maintainer only: no code, no threshold. Their
+/// ids are fixed here rather than inferred, because getting this wrong would
+/// mean minting a redeemable code for Owner.
+const STATUS_IDS = new Set(["owner", "admin", "developer", "moderator", "tester"]);
+
 function loadCatalog() {
   const json = JSON.parse(readFileSync(CATALOG, "utf8"));
   const rows = [];
-  for (const a of json.achievements ?? []) {
-    rows.push({ id: a.id, source: "achievement", rarity: a.rarity ?? "common", ...ruleOf(a) });
-  }
-  for (const c of json.codes ?? []) {
-    rows.push({
-      id: c.id,
-      source: "code",
-      rarity: c.rarity ?? "common",
-      metric: null,
-      threshold: null,
-      compare: "gte",
-    });
+
+  // v2 catalog: one flat `badges` array with an `unlock` field.
+  // v1 catalog: separate `achievements` / `codes` arrays. Both are accepted so
+  // an older checkout still seeds.
+  if (Array.isArray(json.badges)) {
+    for (const b of json.badges) {
+      const source = STATUS_IDS.has(b.id)
+        ? "status"
+        : b.unlock === "achievement"
+          ? "achievement"
+          : "code";
+      rows.push({
+        id: b.id,
+        source,
+        rarity: b.rarity ?? "common",
+        ...(source === "achievement"
+          ? ruleOf(b)
+          : { metric: null, threshold: null, compare: "gte" }),
+      });
+    }
+  } else {
+    for (const a of json.achievements ?? []) {
+      rows.push({ id: a.id, source: "achievement", rarity: a.rarity ?? "common", ...ruleOf(a) });
+    }
+    for (const c of json.codes ?? []) {
+      rows.push({
+        id: c.id,
+        source: "code",
+        rarity: c.rarity ?? "common",
+        metric: null,
+        threshold: null,
+        compare: "gte",
+      });
+    }
   }
 
   const seen = new Set();
@@ -159,6 +186,14 @@ async function mintCodes(catalogIds) {
     if (!catalogIds.has(badge_id)) {
       throw new Error(`unknown badge id "${badge_id}" — add it to badges.json first`);
     }
+    // A leaked Owner code cannot be taken back, so there is deliberately no way
+    // to mint one. Use --grant for those.
+    if (STATUS_IDS.has(badge_id)) {
+      throw new Error(
+        `"${badge_id}" is a status badge and has no code by design.\n` +
+          `  Grant it directly:  node supabase/seed_badges.mjs --grant ${badge_id}=<user-uuid>`,
+      );
+    }
     return {
       badge_id,
       raw,
@@ -191,6 +226,39 @@ async function mintCodes(catalogIds) {
     prefer: "resolution=merge-duplicates,return=minimal",
   });
   console.log("  stored (hashed — the plaintext above is the only copy, save it now)");
+}
+
+/// Hands a badge to a specific account. This is the only path to the status
+/// badges (Owner, Admin, Developer, Moderator, Tester), and it needs the
+/// service role key — there is no client-callable equivalent.
+async function grantBadges(catalogIds) {
+  const specs = many("--grant");
+  if (!specs.length) return;
+
+  const rows = specs.map((spec) => {
+    const at = spec.indexOf("=");
+    if (at < 1) throw new Error(`--grant expects BADGE=USER_UUID, got: ${spec}`);
+    const badge_id = spec.slice(0, at).trim();
+    const user_id = spec.slice(at + 1).trim();
+    if (!catalogIds.has(badge_id)) throw new Error(`unknown badge id "${badge_id}"`);
+    if (!/^[0-9a-f-]{36}$/i.test(user_id)) {
+      throw new Error(`"${user_id}" is not a user uuid (find it in Auth → Users)`);
+    }
+    return { user_id, badge_id };
+  });
+
+  console.log(`\nDirect grants (${rows.length}):`);
+  for (const r of rows) console.log(`  ${r.badge_id} -> ${r.user_id}`);
+  if (DRY) {
+    console.log("  (dry run, nothing written)");
+    return;
+  }
+  await rest("user_badges?on_conflict=user_id,badge_id", {
+    method: "POST",
+    body: rows,
+    prefer: "resolution=merge-duplicates,return=minimal",
+  });
+  console.log("  granted");
 }
 
 async function main() {
@@ -246,6 +314,7 @@ async function main() {
   }
 
   await mintCodes(new Set(local.map((l) => l.id)));
+  await grantBadges(new Set(local.map((l) => l.id)));
   console.log("\nDone.");
 }
 

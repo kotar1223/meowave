@@ -21,14 +21,18 @@ pub fn load_env() {
     let _ = dotenvy::dotenv();
 }
 
-/// The anon key is intentionally non-secret: data access is guarded by
-/// Supabase Row Level Security, not by hiding this key.
+/// The publishable key is intentionally non-secret: data access is guarded by
+/// Supabase Row Level Security, not by hiding this key. These defaults are the
+/// production Meowave project, so an installed build has working accounts out
+/// of the box. Environment variables still override them for dev/staging.
 #[tauri::command]
 pub fn get_supabase_config() -> Result<SupabaseConfig, String> {
-    let url = std::env::var("SUPABASE_URL")
-        .map_err(|_| "SUPABASE_URL is not set (put it in .env)".to_string())?;
+    const DEFAULT_URL: &str = "https://tvbdxxhskxnskbzfrxpp.supabase.co";
+    const DEFAULT_PUBLISHABLE: &str = "sb_publishable_dbur0qB9UvZQwQDeMiWjaw_-Mpg4cTu";
+    let url = std::env::var("SUPABASE_URL").unwrap_or_else(|_| DEFAULT_URL.to_string());
     let anon_key = std::env::var("SUPABASE_ANON_KEY")
-        .map_err(|_| "SUPABASE_ANON_KEY is not set (put it in .env)".to_string())?;
+        .or_else(|_| std::env::var("SUPABASE_PUBLISHABLE_KEY"))
+        .unwrap_or_else(|_| DEFAULT_PUBLISHABLE.to_string());
     if url.trim().is_empty() || anon_key.trim().is_empty() {
         return Err("SUPABASE_URL / SUPABASE_ANON_KEY are empty in .env".into());
     }

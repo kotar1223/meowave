@@ -3,5 +3,15 @@
   "identifier": "default",
   "description": "Main window capabilities",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "comment": "Tauri v2 denies every plugin command unless it is listed here. The dialog and opener plugins were registered in Rust but never permitted, so picking files failed with 'Could not read the files' and external links did nothing. The updater needs its own permissions too, or the in-app update button would fail the same silent way.",
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "opener:default",
+    "opener:allow-open-url",
+    "updater:default",
+    "process:default",
+    "process:allow-restart"
+  ]
 }

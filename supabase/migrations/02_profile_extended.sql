@@ -15,10 +15,16 @@ alter table public.profiles
 create unique index if not exists profiles_username_key
   on public.profiles (lower(username)) where username is not null;
 
+-- Postgres has no "add constraint if not exists", so drop first. Without this
+-- a second `psql -f schema.sql` died on "constraint already exists" — and since
+-- 02 aborted, everything after it (banners, badges, favorites) silently never
+-- got applied. That is why avatars and banners looked broken on a re-run.
+alter table public.profiles drop constraint if exists profiles_username_shape;
 alter table public.profiles
   add constraint profiles_username_shape
   check (username is null or username ~ '^[A-Za-z0-9_.-]{3,24}$') not valid;
 
+alter table public.profiles drop constraint if exists profiles_bio_len;
 alter table public.profiles
   add constraint profiles_bio_len check (bio is null or length(bio) <= 300) not valid;
 
@@ -150,16 +156,10 @@ create or replace view public.leaderboard_weekly as
   order by w.listen_seconds desc
   limit 100;
 
-create or replace view public.leaderboard_badges as
-  select p.id, p.username, p.avatar_url, p.pinned_badge,
-         count(b.badge_id) as badges,
-         rank() over (order by count(b.badge_id) desc) as rank
-  from public.profiles p
-  join public.user_badges b on b.user_id = p.id
-  where p.is_public
-  group by p.id, p.username, p.avatar_url, p.pinned_badge
-  order by badges desc
-  limit 100;
+-- The badges leaderboard view lives in 03_badges.sql: it joins
+-- public.user_badges, which does not exist yet at this point, so defining it
+-- here aborted the whole schema run on a fresh database (42P01) and nothing
+-- after this line was ever applied.
 
 -- ── storage: banners ────────────────────────────────────────
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -186,10 +186,14 @@ create policy "users upload own banner"
   with check (bucket_id = 'banners'
               and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- Same as avatars: upsert of an existing banner is an UPDATE and needs
+-- with check, or only the very first upload succeeds.
 drop policy if exists "users update own banner" on storage.objects;
 create policy "users update own banner"
   on storage.objects for update
   using (bucket_id = 'banners'
+         and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'banners'
          and (storage.foldername(name))[1] = auth.uid()::text);
 
 drop policy if exists "users delete own banner" on storage.objects;

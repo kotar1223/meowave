@@ -63,13 +63,51 @@ fn parse_name(stem: &str) -> (String, String) {
             cleaned
         }
     };
-    match no_num.split_once(" - ") {
+    // Downloaded files routinely use underscores where the original had
+    // spaces ("artist__feat._Sqwore__320kbps"), which produced titles that
+    // looked like corrupted text. Collapse them first, and strip the quality
+    // and source tags that add nothing to a track name.
+    let spaced = no_num.replace('_', " ");
+    let mut s = spaced.as_str().trim().to_string();
+    for tag in [
+        "320kbps", "256kbps", "192kbps", "128kbps", "320 kbps", "(Official Video)",
+        "(Official Audio)", "[Official Video]", "(Lyrics)", "(Audio)", "HD", "HQ",
+    ] {
+        // Case-insensitive removal without pulling in a regex dependency.
+        loop {
+            let Some(at) = s.to_lowercase().find(&tag.to_lowercase()) else {
+                break;
+            };
+            s.replace_range(at..at + tag.len(), "");
+        }
+    }
+    // Tidy up what the removals left behind.
+    let s = s
+        .replace("()", "")
+        .replace("[]", "")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let s = s.trim().trim_matches(['-', '–', ' ', '.']).trim().to_string();
+    let cleaned = if s.is_empty() { no_num.to_string() } else { s };
+
+    // " - " is the conventional separator, but a bare "-" is common too.
+    let split = cleaned
+        .split_once(" - ")
+        .or_else(|| cleaned.split_once(" — "))
+        .or_else(|| cleaned.split_once(" – "));
+    match split {
         Some((a, t)) if !a.trim().is_empty() && !t.trim().is_empty() => {
             (a.trim().to_string(), t.trim().to_string())
         }
-        _ => ("—".to_string(), no_num.to_string()),
+        _ => ("—".to_string(), cleaned),
     }
 }
+
+/// Test-only shim: parse_name is private, and the filename parser is the
+/// only metadata source, so it needs direct coverage.
+#[cfg(test)]
+pub fn parse_name_pub(s: &str) -> (String, String) { parse_name(s) }
 
 fn is_audio(path: &Path) -> bool {
     path.extension()
@@ -179,4 +217,207 @@ pub fn mime_of(path: &Path) -> &'static str {
         "webm" => "audio/webm",
         _ => "application/octet-stream",
     }
+}
+
+/// Saves a track to disk through the same resolver playback uses.
+///
+/// Downloading is deliberately a Rust command rather than a link in the
+/// webview: the service URLs are signed and short-lived, several of them refuse
+/// a request without the right User-Agent, and handing the raw URL to the
+/// browser opened an external window instead of saving a file. Going through
+/// the local proxy means the bytes arrive on exactly the path that is already
+/// known to work for playback.
+#[tauri::command]
+pub async fn download_track(
+    service: String,
+    id: String,
+    name: String,
+    folder: Option<String>,
+    port: u16,
+    hq: bool,
+) -> Result<String, String> {
+    // Sanitise: `name` is built from a track title, which routinely contains
+    // characters Windows rejects outright, and could otherwise walk out of the
+    // target directory.
+    let stem: String = name
+        .chars()
+        .map(|c| match c {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+            c if (c as u32) < 0x20 => '_',
+            c => c,
+        })
+        .collect();
+    let stem = stem.trim().trim_end_matches('.').to_string();
+    let stem = if stem.is_empty() { "track".to_string() } else { stem };
+    let stem: String = stem.chars().take(120).collect();
+
+    let dir = match folder {
+        Some(f) if !f.trim().is_empty() => std::path::PathBuf::from(f),
+        _ => {
+            let base = std::env::var_os("USERPROFILE")
+                .or_else(|| std::env::var_os("HOME"))
+                .map(std::path::PathBuf::from)
+                .ok_or("no home directory")?;
+            base.join("Music").join("Meowave")
+        }
+    };
+    std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+
+    let url = format!(
+        "http://127.0.0.1:{port}/stream/{}/{}?hq={}",
+        urlencoding::encode(&service),
+        urlencoding::encode(&id),
+        if hq { 1 } else { 0 }
+    );
+
+    let resp = crate::api::client()?
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("download failed: {e}"))?;
+    if !resp.status().is_success() && resp.status().as_u16() != 206 {
+        return Err(format!("service returned {}", resp.status()));
+    }
+
+    // Extension from the content type: the proxy knows what it actually served,
+    // and a .mp3 holding webm confuses every other player.
+    //
+    // YouTube serves Opus-in-WebM, which is why downloads arrived as .webm.
+    // The extension was honest, but a .webm audio file will not open in most
+    // players or car stereos, so it reads as a broken download. If ffmpeg is
+    // available the container is remuxed/encoded to mp3 below; if not, the
+    // real extension is kept rather than lying about the contents.
+    let ext = match resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+    {
+        t if t.contains("webm") => "webm",
+        t if t.contains("mp4") || t.contains("m4a") || t.contains("aac") => "m4a",
+        t if t.contains("flac") => "flac",
+        t if t.contains("ogg") => "ogg",
+        t if t.contains("wav") => "wav",
+        _ => "mp3",
+    };
+
+    // Never overwrite: a second download of the same title gets a suffix.
+    let mut path = dir.join(format!("{stem}.{ext}"));
+    let mut n = 2;
+    while path.exists() {
+        path = dir.join(format!("{stem} ({n}).{ext}"));
+        n += 1;
+        if n > 999 {
+            return Err("too many files with that name".into());
+        }
+    }
+
+    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+    if bytes.is_empty() {
+        return Err("service returned an empty stream".into());
+    }
+    std::fs::write(&path, &bytes).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+
+    // Convert to mp3 when the source container is one general-purpose players
+    // choke on. Failure is not an error: the original file is already written
+    // and playable in Meowave, so a missing ffmpeg costs compatibility, not the
+    // download.
+    if matches!(ext, "webm" | "m4a") {
+        if let Some(mp3) = to_mp3(&path) {
+            return Ok(mp3.to_string_lossy().to_string());
+        }
+    }
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// Locates ffmpeg without requiring it to be installed system-wide.
+fn ffmpeg_bin() -> Option<std::path::PathBuf> {
+    // Next to our own executable first: that is where a bundled copy would be.
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let local = dir.join(if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" });
+            if local.exists() {
+                return Some(local);
+            }
+        }
+    }
+    // Then PATH.
+    let probe = std::process::Command::new(if cfg!(windows) { "where" } else { "which" })
+        .arg("ffmpeg")
+        .output()
+        .ok()?;
+    if !probe.status.success() {
+        return None;
+    }
+    let first = String::from_utf8_lossy(&probe.stdout)
+        .lines()
+        .next()?
+        .trim()
+        .to_string();
+    if first.is_empty() {
+        None
+    } else {
+        Some(std::path::PathBuf::from(first))
+    }
+}
+
+/// Transcodes to mp3 and removes the source. Returns None if ffmpeg is absent
+/// or the conversion fails, leaving the original untouched.
+fn to_mp3(src: &std::path::Path) -> Option<std::path::PathBuf> {
+    let ff = ffmpeg_bin()?;
+    let dst = src.with_extension("mp3");
+    let status = std::process::Command::new(ff)
+        .args(["-y", "-loglevel", "error", "-i"])
+        .arg(src)
+        // 192k CBR: transparent enough for a re-encode of a lossy source, and
+        // universally supported.
+        .args(["-vn", "-codec:a", "libmp3lame", "-b:a", "192k"])
+        .arg(&dst)
+        .status()
+        .ok()?;
+    if status.success() && dst.exists() {
+        let _ = std::fs::remove_file(src);
+        Some(dst)
+    } else {
+        let _ = std::fs::remove_file(&dst);
+        None
+    }
+}
+
+/// Whether mp3 conversion is possible on this machine, so the UI can say so
+/// instead of silently producing .webm files.
+#[tauri::command]
+pub fn has_ffmpeg() -> bool {
+    ffmpeg_bin().is_some()
+}
+
+/// Opens a URL in the user's default browser.
+///
+/// A backup for the opener plugin: if its permission or registration is ever
+/// missing, links must still open somewhere real instead of silently doing
+/// nothing. Only http(s) is accepted — handing an arbitrary scheme to the
+/// shell would let a crafted URL launch a local program.
+#[tauri::command]
+pub fn open_external(url: String) -> Result<(), String> {
+    let u = url.trim();
+    if !(u.starts_with("http://") || u.starts_with("https://")) {
+        return Err("only http(s) links can be opened".into());
+    }
+    if u.contains('\n') || u.contains('\r') {
+        return Err("invalid url".into());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        // `cmd /c start` would need escaping of & and ^; ShellExecute via
+        // rundll32 avoids the shell entirely.
+        std::process::Command::new("rundll32.exe")
+            .args(["url.dll,FileProtocolHandler", u])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open").arg(u).spawn().map_err(|e| e.to_string())?;
+    #[cfg(all(unix, not(target_os = "macos")))]
+    std::process::Command::new("xdg-open").arg(u).spawn().map_err(|e| e.to_string())?;
+    Ok(())
 }
