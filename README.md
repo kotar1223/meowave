@@ -30,6 +30,10 @@ header of `src-tauri/src/stream.rs`.
 - **Downloads** — mp3 via a bundled ffmpeg, plus an export that bakes in the
   live EQ and speed
 - **Local files** — read straight off disk, never copied
+- **People** — friends, direct and group chats, and listening rooms where one
+  person is the DJ and everyone else follows their playback
+- **Interface in Russian and English** — switchable at any time, both tables
+  kept in sync by `scripts/find-cyrillic.mjs`
 - **Selective proxy** — SOCKS5/HTTP for the services that need it, never for
   Yandex or Supabase
 - **Accounts via Supabase** — favorites, playlists, stats, badges
@@ -146,10 +150,15 @@ SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run badges:seed
 
 ## Roadmap
 
-- [ ] Spotify: playlist and library import
-- [ ] Social layer (friends, rooms, shared listening) — schema exists, no UI yet
+- [ ] Spotify: saved-library import (playlist import ships — matched against
+  YouTube Music, since the Web API never serves full tracks to a third-party
+  client)
+- [x] Social layer (friends, chats, listening rooms) — schema **and** UI; the
+  social migrations are separate files and still have to be applied by hand
+  (`supabase/migrations/09`…`12`, or one paste of `supabase/FULL_SCHEMA.sql`)
 - [x] macOS and Linux builds
-- [ ] Real badge art (the shipped SVGs are generated placeholders)
+- [ ] Real badge art — 35 of 36 badges have PNG art; `party_boykisser` still
+  falls back to the generated placeholder SVG
 
 ## Third-party
 
