@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "rarity_colors": {
     "common": "#8b8b96",
     "uncommon": "#3fb950",
@@ -14,8 +14,8 @@
       "name": "Owner",
       "description": "Owner of Meowave.",
       "rarity": "legendary",
-      "unlock": "code",
-      "file": "codes/owner.svg",
+      "unlock": "status",
+      "file": "codes/owner.png",
       "subject": "a cat head under a crown inside a shield"
     },
     {
@@ -23,8 +23,8 @@
       "name": "Admin",
       "description": "Keeps the place running.",
       "rarity": "legendary",
-      "unlock": "code",
-      "file": "codes/admin.svg",
+      "unlock": "status",
+      "file": "codes/admin.png",
       "subject": "a cat head with a star inside a shield"
     },
     {
@@ -32,8 +32,8 @@
       "name": "Developer",
       "description": "Ships the code.",
       "rarity": "epic",
-      "unlock": "code",
-      "file": "codes/developer.svg",
+      "unlock": "status",
+      "file": "codes/developer.png",
       "subject": "a cat head with a </> tag inside a shield"
     },
     {
@@ -41,8 +41,8 @@
       "name": "Moderator",
       "description": "Keeps the peace.",
       "rarity": "rare",
-      "unlock": "code",
-      "file": "codes/moderator.svg",
+      "unlock": "status",
+      "file": "codes/moderator.png",
       "subject": "a cat head with a small shield crest"
     },
     {
@@ -50,8 +50,8 @@
       "name": "Tester",
       "description": "Broke it before you did.",
       "rarity": "rare",
-      "unlock": "code",
-      "file": "codes/tester.svg",
+      "unlock": "status",
+      "file": "codes/tester.png",
       "subject": "a cat head with a beetle above it inside a shield"
     },
     {
@@ -60,7 +60,7 @@
       "description": "Was here early.",
       "rarity": "uncommon",
       "unlock": "code",
-      "file": "codes/early_user.svg",
+      "file": "codes/early_user.png",
       "subject": "a cat head with a clock inside a shield"
     },
     {
@@ -69,7 +69,7 @@
       "description": "Played your first track.",
       "rarity": "common",
       "unlock": "achievement",
-      "file": "achievements/first_listen.svg",
+      "file": "achievements/first_listen.png",
       "subject": "a cat with a single glowing eighth note",
       "rule": {
         "metric": "tracks_played",
@@ -82,7 +82,7 @@
       "description": "100 tracks played.",
       "rarity": "uncommon",
       "unlock": "achievement",
-      "file": "achievements/listener_i.svg",
+      "file": "achievements/listener_i.png",
       "subject": "a cat holding a badge reading 100",
       "rule": {
         "metric": "tracks_played",
@@ -95,7 +95,7 @@
       "description": "1,000 tracks played.",
       "rarity": "rare",
       "unlock": "achievement",
-      "file": "achievements/listener_ii.svg",
+      "file": "achievements/listener_ii.png",
       "subject": "a cat holding a badge reading 1K",
       "rule": {
         "metric": "tracks_played",
@@ -108,7 +108,7 @@
       "description": "10,000 tracks played.",
       "rarity": "epic",
       "unlock": "achievement",
-      "file": "achievements/listener_iii.svg",
+      "file": "achievements/listener_iii.png",
       "subject": "a cat holding a badge reading 10K",
       "rule": {
         "metric": "tracks_played",
@@ -121,7 +121,7 @@
       "description": "100 hours of listening.",
       "rarity": "epic",
       "unlock": "achievement",
-      "file": "achievements/music_addict.svg",
+      "file": "achievements/music_addict.png",
       "subject": "a cat wearing headphones with sound rings",
       "rule": {
         "metric": "listening_minutes",
@@ -134,7 +134,7 @@
       "description": "Made your first playlist.",
       "rarity": "uncommon",
       "unlock": "achievement",
-      "file": "achievements/playlist_creator.svg",
+      "file": "achievements/playlist_creator.png",
       "subject": "a cat holding a playlist sheet with a note",
       "rule": {
         "metric": "playlists_created",
@@ -147,7 +147,7 @@
       "description": "25 playlists created.",
       "rarity": "rare",
       "unlock": "achievement",
-      "file": "achievements/playlist_master.svg",
+      "file": "achievements/playlist_master.png",
       "subject": "a crowned cat holding a playlist sheet",
       "rule": {
         "metric": "playlists_created",
@@ -160,7 +160,7 @@
       "description": "50 tracks in your library.",
       "rarity": "uncommon",
       "unlock": "achievement",
-      "file": "achievements/collector.svg",
+      "file": "achievements/collector.png",
       "subject": "a cat holding a heart-marked library card",
       "rule": {
         "metric": "tracks_liked",
@@ -173,7 +173,7 @@
       "description": "10 sessions before 7am.",
       "rarity": "rare",
       "unlock": "achievement",
-      "file": "achievements/early_listener.svg",
+      "file": "achievements/early_listener.png",
       "subject": "a cat next to a clock at sunrise",
       "rule": {
         "metric": "sessions_before_7am",
@@ -186,7 +186,7 @@
       "description": "10 sessions after 1am.",
       "rarity": "epic",
       "unlock": "achievement",
-      "file": "achievements/night_listener.svg",
+      "file": "achievements/night_listener.png",
       "subject": "a cat under a crescent moon",
       "rule": {
         "metric": "sessions_after_1am",
@@ -199,7 +199,7 @@
       "description": "A 24-hour listening session.",
       "rarity": "epic",
       "unlock": "achievement",
-      "file": "achievements/marathon_listener.svg",
+      "file": "achievements/marathon_listener.png",
       "subject": "a cat with a 24H marker and stars",
       "rule": {
         "metric": "longest_session_minutes",
@@ -212,7 +212,7 @@
       "description": "Listened across 20 genres.",
       "rarity": "rare",
       "unlock": "achievement",
-      "file": "achievements/genre_explorer.svg",
+      "file": "achievements/genre_explorer.png",
       "subject": "a cat with a magnifier over a vinyl record",
       "rule": {
         "metric": "distinct_genres",
@@ -225,7 +225,7 @@
       "description": "30-day listening streak.",
       "rarity": "epic",
       "unlock": "achievement",
-      "file": "achievements/streak_master.svg",
+      "file": "achievements/streak_master.png",
       "subject": "a cat silhouette holding the numeral 30",
       "rule": {
         "metric": "daily_streak",
@@ -238,7 +238,7 @@
       "description": "???",
       "rarity": "secret",
       "unlock": "achievement",
-      "file": "achievements/secret_achievement.svg",
+      "file": "achievements/secret_achievement.png",
       "subject": "a blacked-out cat silhouette with a question mark",
       "hidden": true
     },
@@ -248,7 +248,7 @@
       "description": "The original.",
       "rarity": "common",
       "unlock": "code",
-      "file": "codes/boykisser.svg",
+      "file": "codes/boykisser.png",
       "subject": "a plain boykisser cat head"
     },
     {
@@ -257,7 +257,7 @@
       "description": "Never without a track.",
       "rarity": "uncommon",
       "unlock": "code",
-      "file": "codes/music_boykisser.svg",
+      "file": "codes/music_boykisser.png",
       "subject": "a boykisser cat wearing headphones"
     },
     {
@@ -266,7 +266,7 @@
       "description": "Hears the difference.",
       "rarity": "rare",
       "unlock": "code",
-      "file": "codes/audiophile_boykisser.svg",
+      "file": "codes/audiophile_boykisser.png",
       "subject": "a boykisser cat with a floating music note"
     },
     {
@@ -275,7 +275,7 @@
       "description": "Writes the meow.",
       "rarity": "rare",
       "unlock": "code",
-      "file": "codes/developer_boykisser.svg",
+      "file": "codes/developer_boykisser.png",
       "subject": "a boykisser cat with a </> tag"
     },
     {
@@ -284,7 +284,7 @@
       "description": "Boykisser with power.",
       "rarity": "epic",
       "unlock": "code",
-      "file": "codes/admin_boykisser.svg",
+      "file": "codes/admin_boykisser.png",
       "subject": "a boykisser cat wearing a crown"
     },
     {
@@ -293,7 +293,7 @@
       "description": "Not easy to find.",
       "rarity": "rare",
       "unlock": "code",
-      "file": "codes/rare_boykisser.svg",
+      "file": "codes/rare_boykisser.png",
       "subject": "a boykisser cat with blue sparkles"
     },
     {
@@ -302,7 +302,7 @@
       "description": "The rarest cat.",
       "rarity": "legendary",
       "unlock": "code",
-      "file": "codes/legendary_boykisser.svg",
+      "file": "codes/legendary_boykisser.png",
       "subject": "a crowned boykisser cat in a golden glow"
     },
     {
@@ -311,7 +311,7 @@
       "description": "???",
       "rarity": "secret",
       "unlock": "code",
-      "file": "codes/secret_boykisser.svg",
+      "file": "codes/secret_boykisser.png",
       "subject": "a boykisser cat with a rainbow glitch aura and a question mark",
       "hidden": true
     },
@@ -321,7 +321,7 @@
       "description": "No stress.",
       "rarity": "uncommon",
       "unlock": "code",
-      "file": "codes/chill_boykisser.svg",
+      "file": "codes/chill_boykisser.png",
       "subject": "a boykisser cat in sunglasses"
     },
     {
@@ -330,7 +330,7 @@
       "description": "Monitoring everything.",
       "rarity": "rare",
       "unlock": "code",
-      "file": "codes/headphone_boykisser.svg",
+      "file": "codes/headphone_boykisser.png",
       "subject": "a boykisser cat in studio headphones and glasses"
     },
     {
@@ -339,7 +339,7 @@
       "description": "Runs the set.",
       "rarity": "epic",
       "unlock": "code",
-      "file": "codes/dj_boykisser.svg",
+      "file": "codes/dj_boykisser.png",
       "subject": "a boykisser cat behind a DJ deck"
     },
     {
@@ -348,7 +348,7 @@
       "description": "Turn it up.",
       "rarity": "epic",
       "unlock": "code",
-      "file": "codes/rock_boykisser.svg",
+      "file": "codes/rock_boykisser.png",
       "subject": "a boykisser cat with an electric guitar"
     },
     {
@@ -357,7 +357,7 @@
       "description": "Fueled.",
       "rarity": "uncommon",
       "unlock": "code",
-      "file": "codes/coffee_boykisser.svg",
+      "file": "codes/coffee_boykisser.png",
       "subject": "a boykisser cat holding a coffee mug"
     },
     {
@@ -366,7 +366,7 @@
       "description": "Sleep playlist enjoyer.",
       "rarity": "uncommon",
       "unlock": "code",
-      "file": "codes/sleepy_boykisser.svg",
+      "file": "codes/sleepy_boykisser.png",
       "subject": "a boykisser cat in a blue nightcap with closed eyes"
     },
     {
@@ -375,7 +375,7 @@
       "description": "Spreading love.",
       "rarity": "rare",
       "unlock": "code",
-      "file": "codes/love_boykisser.svg",
+      "file": "codes/love_boykisser.png",
       "subject": "a boykisser cat hugging a red heart"
     },
     {

@@ -4,8 +4,11 @@
 mod api;
 mod config;
 mod local;
+mod lyrics;
+mod mem;
 mod proxy;
 mod paths;
+mod spotify;
 mod stream;
 mod tokens;
 mod update;
@@ -15,15 +18,34 @@ use std::sync::OnceLock;
 
 use tauri::{Emitter, Manager, WindowEvent};
 
-/// Port of the local audio proxy; the frontend asks for it via `stream_port`.
+/// Port of the local audio proxy; the frontend asks for it via `stream_info`.
 static STREAM_PORT: OnceLock<u16> = OnceLock::new();
 
+/// Where the frontend must send audio requests, and the token it has to carry.
+///
+/// The port alone used to be enough, which made the proxy an unauthenticated
+/// local service; see the comment at the top of stream.rs.
+#[derive(serde::Serialize)]
+pub struct StreamInfo {
+    pub port: u16,
+    pub token: String,
+}
+
 #[tauri::command]
-fn stream_port() -> Result<u16, String> {
-    STREAM_PORT
+fn stream_info() -> Result<StreamInfo, String> {
+    let port = STREAM_PORT
         .get()
         .copied()
-        .ok_or_else(|| "the audio proxy failed to start".to_string())
+        .ok_or_else(|| "the audio proxy failed to start".to_string())?;
+    Ok(StreamInfo {
+        port,
+        token: stream::token().to_string(),
+    })
+}
+
+/// Kept for the download command, which builds its own proxy URL in Rust.
+pub(crate) fn stream_port_value() -> Option<u16> {
+    STREAM_PORT.get().copied()
 }
 
 /// `meowave --probe <query>` — hits the services from the command line and
@@ -62,7 +84,7 @@ fn probe(query: &str) {
                     if let Some(first) = tracks.first() {
                         let url = match service {
                             "sc" => api::sc_stream_url(&token, &first.id).await,
-                            "ytm" => ytm::stream(&first.id, true).await.map(|p| {
+                            "ytm" => ytm::stream(&first.id, true, "best").await.map(|p| {
                                 println!("   format: {} @ {} bps", p.mime, p.bitrate);
                                 p.url
                             }),
@@ -87,7 +109,10 @@ async fn probe_proxy(service: &str, id: &str) {
         println!("   proxy: not running");
         return;
     };
-    let url = format!("http://127.0.0.1:{port}/stream/{service}/{id}?hq=1");
+    let url = format!(
+        "http://127.0.0.1:{port}/stream/{service}/{id}?k={}&hq=1",
+        stream::token()
+    );
     let req = reqwest::Client::new()
         .get(&url)
         .header("Range", "bytes=0-65535")
@@ -127,11 +152,130 @@ async fn probe_proxy(service: &str, id: &str) {
     }
 }
 
+/// Chromium command-line switches for the embedded WebView2.
+///
+/// WebView2 is Chromium, and Chromium sizes its caches for a browser holding
+/// many tabs on a machine doing nothing else. This is a music player with one
+/// document, so those defaults are pure overhead:
+///
+/// - the GPU program and shader caches keep every pipeline ever compiled,
+///   which for a page with a handful of effects is megabytes of dead entries;
+/// - the tile manager pre-allocates enough texture memory to scroll a large
+///   page instantly, sized from total VRAM rather than from what is on screen;
+/// - the renderer keeps decoded images alive long after they leave the
+///   viewport, and album art is exactly that — large, and mostly scrolled past.
+///
+/// None of this changes what is drawn, only how much is kept around for a
+/// hypothetical next frame that a single-page app never has.
+/// PCI address of the first Intel graphics adapter, in sysfs form
+/// ("0000:00:02.0"). None when the machine has no Intel iGPU.
+#[cfg(target_os = "linux")]
+fn intel_gpu_pci() -> Option<String> {
+    let drm = std::path::Path::new("/sys/class/drm");
+    let mut cards: Vec<_> = std::fs::read_dir(drm).ok()?.filter_map(|e| e.ok())
+        .filter(|e| e.file_name().to_string_lossy().starts_with("card"))
+        .filter(|e| !e.file_name().to_string_lossy().contains('-'))
+        .collect();
+    cards.sort_by_key(|e| e.file_name());
+    for card in cards {
+        let dev = card.path().join("device");
+        let uevent = std::fs::read_to_string(dev.join("uevent")).ok()?;
+        let is_intel = uevent.lines().any(|l| {
+            let l = l.trim();
+            (l.starts_with("DRIVER=") && (l == "DRIVER=i915" || l == "DRIVER=xe"))
+                || (l.starts_with("PCI_ID=8086:"))
+        });
+        if !is_intel {
+            continue;
+        }
+        // device is a symlink into /sys/devices/pci.../0000:00:02.0
+        let link = std::fs::read_link(&dev).ok()?;
+        let addr = link.file_name()?.to_string_lossy().to_string();
+        if addr.split(':').count() == 2 {
+            return Some(addr);
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn webview_args() -> String {
+    // Diagnostic mode: all Chromium flags off to isolate the gray-square issue.
+    if std::env::var_os("MEOWAVE_NO_WEBVIEW_ARGS").is_some() {
+        return String::new();
+    }
+    let mut args: Vec<String> = vec![
+        // Cap the tile pool instead of letting it scale with VRAM.
+        "--force-gpu-mem-available-mb=256".into(),
+        // Same limit for the compositor's own working set.
+        "--gpu-rasterization-msaa-sample-count=0".into(),
+        // One renderer for one document; process-per-site buys isolation we
+        // do not need here and costs a full process each time.
+        "--renderer-process-limit=2".into(),
+        // Chromium keeps decoded frames cached per-image; the default budget
+        // assumes a photo gallery.
+        "--disable-features=CalculateNativeWinOcclusion,MediaFoundationClearPlayback".into(),
+        // The page has no <video> and no plugins; these subsystems otherwise
+        // initialise and hold buffers regardless.
+        "--disable-background-timer-throttling".into(),
+        // Release memory back to the OS when it falls idle rather than holding
+        // the high-water mark for the life of the process.
+        "--enable-features=MemoryPressureBasedSourceBufferGC".into(),
+    ];
+    // CDP endpoint for debugging the embedded webview: MEOWAVE_DEBUG_PORT=9222.
+    if let Some(port) = std::env::var_os("MEOWAVE_DEBUG_PORT") {
+        args.push(format!("--remote-debugging-port={}", port.to_string_lossy()));
+    }
+    args.join(" ")
+}
+
 fn main() {
+    // Must be set before the webview is created; WebView2 reads it once at
+    // environment creation and ignores later changes. The variable is a
+    // WebView2 (Windows) knob and is simply ignored elsewhere.
+    #[cfg(target_os = "windows")]
+    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", webview_args());
+
     config::load_env();
     // Must run before any request is made: client() reads this cached config.
     // A missing or corrupt file means "off", never a startup failure.
     proxy::load();
+
+    // Linux: WebKitGTK's native Wayland path drops whole compositor layers on
+    // several compositors (niri in particular) — SVG icons, canvases and
+    // backdrop-filter panels render black while plain text survives, and the
+    // DMABUF / compositing env switches do not reliably fix it. The X11 path
+    // through XWayland renders the same page perfectly, so prefer it whenever
+    // an X server is reachable. Override with MEOWAVE_WAYLAND=1; unset on
+    // systems with no DISPLAY at all, which then keep native Wayland.
+    #[cfg(target_os = "linux")]
+    let forced_x11 = std::env::var_os("MEOWAVE_WAYLAND").is_none()
+        && std::env::var_os("GDK_BACKEND").is_none()
+        && std::env::var_os("DISPLAY").is_some();
+    #[cfg(target_os = "linux")]
+    if forced_x11 {
+        std::env::set_var("GDK_BACKEND", "x11");
+    }
+    // On the native Wayland path the DMABUF renderer glitches on several
+    // drivers (black layers, software-render fallback). On X11/GLX it is the
+    // *accelerated* path and disabling it drags every canvas frame through
+    // the CPU — the "particles are a slideshow" report — so it is only turned
+    // off where it is actually broken.
+    #[cfg(target_os = "linux")]
+    if !forced_x11 && std::env::var_os("MEOWAVE_KEEP_DMABUF").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+    // Hybrid-graphic laptops: the discrete NVIDIA chip under the open nouveau
+    // driver has no usable GL acceleration on modern cards, so every canvas
+    // frame is rasterised on the CPU and the particle field becomes a
+    // slideshow. When an Intel iGPU is present, steer Mesa to it explicitly.
+    // A user-provided DRI_PRIME always wins; no Intel, no change.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("DRI_PRIME").is_none() {
+        if let Some(pci) = intel_gpu_pci() {
+            std::env::set_var("DRI_PRIME", format!("pci-{}", pci.replace([':', '.'], "_")));
+        }
+    }
 
     let args: Vec<String> = std::env::args().collect();
 
@@ -142,6 +286,9 @@ fn main() {
             Ok(port) => {
                 let _ = STREAM_PORT.set(port);
                 println!("stream proxy on 127.0.0.1:{port}");
+                // The token is per-process and random, so a request cannot be
+                // replayed by hand without it. This mode exists only for that.
+                println!("token {}", stream::token());
                 loop {
                     std::thread::sleep(std::time::Duration::from_secs(3600));
                 }
@@ -193,9 +340,8 @@ fn main() {
             paths::store_delete,
             paths::data_dir,
             paths::cache_size,
+            mem::mem_info,
             paths::cache_clear,
-            paths::cache_put,
-            paths::cache_get,
             proxy::proxy_get,
             proxy::proxy_set,
             proxy::proxy_test,
@@ -209,7 +355,15 @@ fn main() {
             local::local_scan,
             local::local_rehydrate,
             local::download_track,
-            stream_port,
+            local::download_processed,
+            lyrics::lyrics_get,
+            spotify::spotify_login,
+            spotify::spotify_logout,
+            spotify::spotify_me,
+            spotify::spotify_available,
+            spotify::spotify_playlists,
+            spotify::spotify_playlist_tracks,
+            stream_info,
         ])
         // Only a minimised window stops rendering. Tying this to focus was a
         // mistake: the window is still fully on screen when the user clicks
@@ -302,7 +456,10 @@ mod local_tests {
 
         let port = crate::stream::spawn().expect("proxy");
         std::thread::sleep(std::time::Duration::from_millis(250));
-        let base = format!("http://127.0.0.1:{port}/stream/local/{id}");
+        let base = format!(
+            "http://127.0.0.1:{port}/stream/local/{id}?k={}",
+            crate::stream::token()
+        );
 
         let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         rt.block_on(async {
@@ -322,6 +479,65 @@ mod local_tests {
             let got = part.bytes().await.unwrap();
             assert_eq!(got.len(), 100);
             assert_eq!(&got[..], &body[100..200], "wrong slice returned");
+
+            // The suffix form used to return the first 501 bytes.
+            let tail = c.get(&base).header("Range", "bytes=-500").send().await.unwrap();
+            assert_eq!(tail.status().as_u16(), 206);
+            let tail_body = tail.bytes().await.unwrap();
+            assert_eq!(&tail_body[..], &body[body.len() - 500..]);
+
+            // HEAD must not carry a body.
+            let head = c
+                .head(&base)
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(head.status().as_u16(), 200);
+            assert!(head.bytes().await.unwrap().is_empty());
+        });
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Anything on the machine can reach the proxy's port, so the token and the
+    /// Host check are the only things standing between a random web page and the
+    /// user's local files. Both are asserted here because both have to hold.
+    #[test]
+    fn local_stream_requires_a_token() {
+        let dir = std::env::temp_dir().join("meowave_local_auth");
+        std::fs::create_dir_all(&dir).unwrap();
+        let p = dir.join("A - Secret.wav");
+        std::fs::write(&p, vec![7u8; 512]).unwrap();
+        let id = local::local_add(vec![p.to_string_lossy().to_string()])[0].id.clone();
+
+        let port = crate::stream::spawn().expect("proxy");
+        std::thread::sleep(std::time::Duration::from_millis(250));
+
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        rt.block_on(async {
+            let c = reqwest::Client::new();
+            let bare = format!("http://127.0.0.1:{port}/stream/local/{id}");
+
+            // No token at all.
+            let anon = c.get(&bare).send().await.unwrap();
+            assert_eq!(anon.status().as_u16(), 403, "an untokened request was served");
+            assert!(
+                anon.headers().get("access-control-allow-origin").is_none(),
+                "CORS was granted to an unauthenticated caller"
+            );
+
+            // A wrong token.
+            let wrong = c.get(format!("{bare}?k=deadbeef")).send().await.unwrap();
+            assert_eq!(wrong.status().as_u16(), 403);
+
+            // Right token, wrong Host: this is the DNS-rebinding case, where a
+            // page's own domain resolves to 127.0.0.1.
+            let rebind = c
+                .get(format!("{bare}?k={}", crate::stream::token()))
+                .header("Host", "music.example.com")
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(rebind.status().as_u16(), 403);
         });
         let _ = std::fs::remove_dir_all(&dir);
     }

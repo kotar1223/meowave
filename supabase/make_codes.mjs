@@ -19,7 +19,7 @@
 // codes; it is git-ignored so it cannot be pushed by accident.
 
 import { createHash, randomBytes } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,8 +40,9 @@ const only = val("--only", null)?.split(",").map((s) => s.trim());
 const expires = val("--expires", null);
 
 // Status badges must never be redeemable: minting a code for Owner would let
-// anyone holding it impersonate the project owner.
-const STATUS = new Set(["owner", "admin", "developer", "moderator", "tester"]);
+// anyone holding it impersonate the project owner. `unlock: "status"` in the
+// catalog is what marks them — it used to be an id list copied into each script,
+// where one stale copy meant exactly that leak.
 
 const hashCode = (raw) =>
   createHash("sha256").update(raw.trim().toUpperCase()).digest("hex");
@@ -57,8 +58,18 @@ const chunk = (n) => {
 };
 
 const targets = catalog.badges.filter(
-  (b) => b.unlock === "code" && !STATUS.has(b.id) && (!only || only.includes(b.id)),
+  (b) => b.unlock === "code" && (!only || only.includes(b.id)),
 );
+
+const missingArt = targets.filter(
+  (b) => !b.file || !existsSync(join(here, "..", "src", "assets", "badges", b.file)),
+);
+if (missingArt.length) {
+  console.error(
+    "Code badges reference missing art: " + missingArt.map((b) => `${b.id} -> ${b.file || "(none)"}`).join(", "),
+  );
+  process.exit(1);
+}
 
 if (!targets.length) {
   console.error("No matching code badges. Check --only.");

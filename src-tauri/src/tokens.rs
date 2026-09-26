@@ -4,7 +4,10 @@
 use keyring::Entry;
 
 const KEYCHAIN_SERVICE: &str = "meowave";
-const KNOWN_SERVICES: &[&str] = &["ytm", "sc", "ym"];
+/// `sp` holds the whole Spotify token set as JSON rather than a bare string:
+/// PKCE hands back an access token, a refresh token and an expiry, and losing
+/// any of the three means a fresh browser round-trip on every restart.
+const KNOWN_SERVICES: &[&str] = &["ytm", "sc", "ym", "sp"];
 
 /// Services that work without any user credentials: SoundCloud runs on a
 /// public client_id we scrape ourselves, YouTube Music answers guest

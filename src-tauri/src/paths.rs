@@ -8,10 +8,10 @@
 //!   %LOCALAPPDATA%\Meowave\
 //!     account.json      profile snapshot, so the UI can paint before the network answers
 //!     settings.json     UI state that isn't worth a round trip
-//!     cache\covers\     album art, keyed by a hash of the URL
-//!     cache\audio\      partially downloaded tracks
-//!     cache\badges\     badge art pulled from the server
-//!     logs\
+//!     badges.json       owned badges, so the profile renders offline
+//!     queue.json        the playback queue
+//!     proxy.json        proxy configuration, see proxy.rs
+//!     cache\            reported and cleared from the settings screen
 
 use std::fs;
 use std::io::Write;
@@ -28,10 +28,14 @@ pub fn root() -> Result<PathBuf, String> {
     } else if cfg!(target_os = "macos") {
         home()?.join("Library").join("Application Support")
     } else {
-        // XDG: honour the override, fall back to the spec default.
-        std::env::var_os("XDG_DATA_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| home().unwrap_or_default().join(".local").join("share"))
+        // XDG: honour the override, fall back to the spec default. `home()?`
+        // rather than `unwrap_or_default()` — an empty base made the data
+        // directory relative to the working directory, so settings silently
+        // landed in whatever folder the app was launched from.
+        match std::env::var_os("XDG_DATA_HOME") {
+            Some(x) => PathBuf::from(x),
+            None => home()?.join(".local").join("share"),
+        }
     };
     let dir = base.join(APP_DIR);
     fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
@@ -45,23 +49,12 @@ fn home() -> Result<PathBuf, String> {
         .ok_or_else(|| "no home directory".to_string())
 }
 
-/// A subdirectory of the root, created if missing.
-pub fn dir(name: &str) -> Result<PathBuf, String> {
-    let d = root()?.join(name);
+fn cache_root() -> Result<PathBuf, String> {
+    let d = root()?.join("cache");
     fs::create_dir_all(&d).map_err(|e| format!("cannot create {}: {e}", d.display()))?;
     Ok(d)
 }
 
-pub fn cache_dir(kind: &str) -> Result<PathBuf, String> {
-    // Reject anything that could climb out of the cache directory: these names
-    // come from the frontend.
-    if kind.is_empty() || !kind.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
-        return Err(format!("bad cache name: {kind}"));
-    }
-    let d = root()?.join("cache").join(kind);
-    fs::create_dir_all(&d).map_err(|e| format!("cannot create {}: {e}", d.display()))?;
-    Ok(d)
-}
 
 /// Only these names are writable from the frontend, so a bug (or a hostile
 /// page, if a webview ever loads remote content) can't scribble anywhere else.
@@ -135,40 +128,19 @@ fn dir_size(path: &Path) -> u64 {
 
 #[tauri::command]
 pub fn cache_size() -> Result<u64, String> {
-    Ok(dir_size(&root()?.join("cache")))
+    Ok(dir_size(&cache_root()?))
 }
 
 #[tauri::command]
 pub fn cache_clear() -> Result<(), String> {
-    let c = root()?.join("cache");
-    if c.exists() {
-        fs::remove_dir_all(&c).map_err(|e| e.to_string())?;
-    }
+    let c = cache_root()?;
+    fs::remove_dir_all(&c).map_err(|e| e.to_string())?;
     fs::create_dir_all(&c).map_err(|e| e.to_string())
 }
 
-/// Cache a binary blob (cover art, badge art) under a caller-supplied key.
-/// Returns the path so the frontend can point an `<img>` at it via asset://.
-#[tauri::command]
-pub fn cache_put(kind: String, key: String, bytes: Vec<u8>) -> Result<String, String> {
-    let safe: String = key
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' { c } else { '_' })
-        .collect();
-    if safe.is_empty() {
-        return Err("empty cache key".into());
-    }
-    let path = cache_dir(&kind)?.join(&safe);
-    fs::write(&path, bytes).map_err(|e| e.to_string())?;
-    Ok(path.to_string_lossy().to_string())
-}
+// cache_put / cache_get used to live here. They returned a filesystem path for
+// the frontend to use as an `asset://` URL, but the asset protocol is not
+// enabled (no `protocol-asset` feature, no `assetProtocol` scope), so the path
+// was unusable and nothing ever called them. Covers are cached by the webview's
+// own HTTP cache instead.
 
-#[tauri::command]
-pub fn cache_get(kind: String, key: String) -> Result<Option<String>, String> {
-    let safe: String = key
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' { c } else { '_' })
-        .collect();
-    let path = cache_dir(&kind)?.join(&safe);
-    Ok(path.exists().then(|| path.to_string_lossy().to_string()))
-}

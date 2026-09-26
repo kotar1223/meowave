@@ -14,18 +14,30 @@
         "width": 1280,
         "height": 800,
         "minWidth": 900,
-        "minHeight": 620
+        "minHeight": 620,
+        "decorations": false
       }
     ],
     "security": {
-      "csp": "default-src 'self' customprotocol: asset:; img-src 'self' asset: https: data: blob:; media-src 'self' http://127.0.0.1:* blob: https:; connect-src 'self' http://127.0.0.1:* https: wss:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; font-src 'self' data:;"
+      "csp": "default-src 'self'; img-src 'self' https: data: blob:; media-src 'self' http://127.0.0.1:* blob:; connect-src 'self' http://127.0.0.1:* https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://huggingface.co https://*.hf.co; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/icon.ico"],
-    "createUpdaterArtifacts": true
+    "targets": ["nsis", "app", "dmg", "deb", "appimage"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true,
+    "licenseFile": "ffmpeg/LICENSE.txt",
+    "externalBin": ["ffmpeg/ffmpeg"],
+    "resources": {
+      "ffmpeg/LICENSE.txt": "FFMPEG-LICENSE.txt"
+    }
   },
   "plugins": {
     "updater": {

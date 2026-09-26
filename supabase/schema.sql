@@ -13,10 +13,10 @@
 --
 --   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed_badges.mjs
 --
--- The badge catalog is also seeded at the end of 03_badges.sql, so plain SQL
--- alone leaves you with a working install; seed_badges.mjs exists to keep the
--- catalog in sync with src/assets/badges/badges.json without editing SQL, and
--- to mint promo codes without ever committing the plaintext.
+-- The badge catalog is not seeded by SQL: seed_badges.mjs is the single source
+-- and reads src/assets/badges/badges.json directly, so the catalog cannot drift
+-- from the art the app ships. It also mints promo codes without ever committing
+-- the plaintext.
 
 \echo '== 01_core: profiles, playlists, favorites =='
 \ir migrations/01_core.sql
@@ -39,8 +39,20 @@
 \echo '== 07_playlists_v2: user playlists with metadata =='
 \ir migrations/07_playlists_v2.sql
 
-echo '== 08_artists_and_prefs: followed artists, EQ presets, prefs =='
+\echo '== 08_artists_and_prefs: followed artists, EQ presets, prefs =='
 \ir migrations/08_artists_and_prefs.sql
+
+\echo '== 09_hardening: server-owned stats, guarded profile writes, indexes =='
+\ir migrations/09_hardening.sql
+
+\echo '== 10_social2: group chats, room queue, privacy, leaderboard =='
+\ir migrations/10_social2.sql
+
+\echo '== 11_social_fix: social repair functions and policies =='
+\ir migrations/11_social_fix.sql
+
+\echo '== 12_social_fix: standalone social recovery =='
+\ir migrations/12_social_fix.sql
 
 \echo ''
 \echo 'Schema applied. Next:'

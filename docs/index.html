@@ -12,9 +12,15 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Meowave — музыка из всех сервисов в одном плеере">
 <meta property="og:description" content="Один плеер вместо четырёх. Свой звуковой тракт, скачивание, плейлисты. Windows, бесплатно.">
-<meta property="og:image" content="assets/icon.png">
+<!-- Absolute, not "assets/icon.png": Telegram and every other OG consumer
+     fetches this URL on its own and cannot resolve a relative path, so the
+     preview card came out blank — on the one surface that matters most here. -->
+<meta property="og:url" content="https://kotar1223.github.io/meowave/">
+<meta property="og:image" content="https://kotar1223.github.io/meowave/assets/icon.png">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kotar1223.github.io/meowave/assets/icon.png">
 
+<link rel="canonical" href="https://kotar1223.github.io/meowave/">
 <link rel="icon" href="assets/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,7 +65,7 @@
       </a>
       <a class="ghost" href="https://t.me/meowaveplayer" target="_blank" rel="noopener">Telegram-канал</a>
     </div>
-    <p class="meta reveal">Установщик <b id="ver">0.1.0</b> · около <b>3,3 МБ</b> · обновляется само</p>
+    <p class="meta reveal">Установщик <b id="ver">0.1.0</b> · <b id="size-top">около 3,3 МБ</b> · обновляется само</p>
   </header>
 </div>
 
@@ -86,8 +92,10 @@
   <div class="shead reveal">
     <p class="eyebrow">Возможности</p>
     <h2>Всё, что нужно плееру, и ничего лишнего</h2>
-    <p>Никаких подписок внутри, никакой рекламы и никакой телеметрии. Токены сервисов
-      лежат в системном хранилище ключей, а не в файле рядом с программой.</p>
+    <p>Никаких подписок внутри, никакой рекламы и никакой аналитики. Токены сервисов
+      лежат в системном хранилище ключей, а не в файле рядом с программой. Время
+      прослушивания уходит на сервер только если вы вошли в аккаунт — это нужно
+      для значков и статистики в профиле.</p>
   </div>
   <div class="grid">
     <div class="card pane reveal">
@@ -186,7 +194,7 @@
   <div class="dl pane reveal">
     <p class="eyebrow">Скачать</p>
     <h2>Meowave для Windows 10 и 11</h2>
-    <p>Один установщик, около 3,3 МБ. Подписан ключом обновлений — приложение
+    <p>Один установщик, <span id="size-main">около 3,3 МБ</span>. Подписан ключом обновлений — приложение
       проверяет подпись перед установкой апдейта, поэтому подменить его нельзя.</p>
     <a class="primary" id="dl-main" href="https://github.com/kotar1223/meowave/releases/latest">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>
@@ -244,10 +252,10 @@
     </details>
     <details class="pane">
       <summary>Скачанные треки — в каком формате?</summary>
-      <p>mp3 192 кбит/с, если в системе есть <code>ffmpeg</code>. YouTube отдаёт
-        Opus в контейнере WebM, и без перекодирования файл не откроется в большинстве
-        плееров. Если ffmpeg нет, сохраняется исходный формат с настоящим расширением —
-        врать про mp3 в имени файла хуже.</p>
+      <p>mp3 192 кбит/с. YouTube отдаёт Opus в контейнере WebM, и без перекодирования
+        файл не откроется в большинстве плееров, поэтому <code>ffmpeg</code> идёт
+        в комплекте с установщиком — ставить отдельно ничего не нужно. Можно скачать
+        и с обработкой: тогда в файл запекаются эквалайзер и скорость.</p>
     </details>
     <details class="pane">
       <summary>Где хранятся токены сервисов?</summary>
@@ -312,6 +320,10 @@ document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
    Read from the app's own catalog: hard-coding a list here is how a site ends
    up advertising badges that no longer exist. */
 const RARITY={common:"#8b8b96",uncommon:"#3fb950",rare:"#4a9eff",epic:"#a855f7",legendary:"#f5a524",secret:"#e0679a"};
+/* Declared before the fetch callbacks that use it. It was a `const` further
+   down, which only worked because the callbacks run after the script is parsed —
+   one reorder away from a ReferenceError. */
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 fetch("assets/badges/badges.json").then(r=>r.json()).then(j=>{
  const box=document.getElementById("bstrip");
  /* A representative sample, not all 36: the strip is a taste of what exists,
@@ -328,9 +340,10 @@ fetch("assets/badges/badges.json").then(r=>r.json()).then(j=>{
     <img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
    <b>${esc(b.name)}</b></span>`}).join("");
 }).catch(()=>{
- /* Leave the section without a grid rather than showing broken tiles. */
- document.getElementById("badges").style.display="none"});
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ /* Leave the section without a grid rather than showing broken tiles — and drop
+    its nav entry too, otherwise the menu links to a hidden section. */
+ document.getElementById("badges").style.display="none";
+ document.querySelector('a[href="#badges"]')?.remove()});
 
 /* ---- live download link ---------------------------------------------
    The button always works: it points at the releases page by default, and is
@@ -349,7 +362,12 @@ fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
    for(const id of ["dl-main","dl-top"]){
     const el=document.getElementById(id);
     if(el){el.href=exe.browser_download_url;el.removeAttribute("target")}}
-   document.getElementById("dl-note").textContent=`${exe.name} · ${mb} МБ`}
+   document.getElementById("dl-note").textContent=`${exe.name} · ${mb} МБ`;
+   /* The size was written out by hand in three places and only one of them was
+      ever updated, so the page advertised a stale figure. */
+   for(const id of ["size-top","size-main"]){
+    const el=document.getElementById(id);
+    if(el)el.textContent=`${mb} МБ`}}
  })
  .catch(()=>{
   /* No releases yet, or the API is rate-limited. The link to the releases page

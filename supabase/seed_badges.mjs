@@ -88,25 +88,24 @@ function ruleOf(entry) {
   return { metric: null, threshold: null, compare: "gte" };
 }
 
-/// Status badges are granted by a maintainer only: no code, no threshold. Their
-/// ids are fixed here rather than inferred, because getting this wrong would
-/// mean minting a redeemable code for Owner.
-const STATUS_IDS = new Set(["owner", "admin", "developer", "moderator", "tester"]);
+/// Which badges are maintainer-granted comes from badges.json now
+/// (`unlock: "status"`), not from a list repeated in every script. Getting that
+/// wrong in one copy would have meant minting a redeemable code for Owner.
+let STATUS_IDS = new Set();
 
 function loadCatalog() {
   const json = JSON.parse(readFileSync(CATALOG, "utf8"));
   const rows = [];
 
-  // v2 catalog: one flat `badges` array with an `unlock` field.
+  // v2 catalog: one flat `badges` array with an `unlock` field of
+  // status | achievement | code.
   // v1 catalog: separate `achievements` / `codes` arrays. Both are accepted so
   // an older checkout still seeds.
   if (Array.isArray(json.badges)) {
+    STATUS_IDS = new Set(json.badges.filter((b) => b.unlock === "status").map((b) => b.id));
     for (const b of json.badges) {
-      const source = STATUS_IDS.has(b.id)
-        ? "status"
-        : b.unlock === "achievement"
-          ? "achievement"
-          : "code";
+      const source =
+        b.unlock === "status" ? "status" : b.unlock === "achievement" ? "achievement" : "code";
       rows.push({
         id: b.id,
         source,

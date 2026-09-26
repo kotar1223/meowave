@@ -1,0 +1,29 @@
+{
+  "name": "meowave",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tooling for the Meowave desktop player: badge catalog, Supabase schema and seeding.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "tauri dev",
+    "ffmpeg": "node scripts/fetch-ffmpeg.mjs",
+    "build": "node scripts/fetch-ffmpeg.mjs && tauri build",
+    "check": "cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test",
+    "check:js": "node --check src/app.js",
+    "badges": "node src/assets/badges/_gen.mjs",
+    "badges:sql": "node supabase/make_badges_sql.mjs",
+    "badges:seed": "node supabase/seed_badges.mjs",
+    "codes": "node supabase/make_codes.mjs",
+    "schema": "node supabase/build_sql.mjs",
+    "sync:docs": "node scripts/sync-docs-badges.mjs",
+    "find-cyrillic": "node scripts/find-cyrillic.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "@tauri-apps/cli": "^2.11.4",
+    "lucide": "^0.383.0"
+  }
+}

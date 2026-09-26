@@ -295,7 +295,22 @@ create policy "users write own presence"
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Realtime: the client subscribes to these instead of polling.
-alter publication supabase_realtime add table public.messages;
-alter publication supabase_realtime add table public.rooms;
-alter publication supabase_realtime add table public.room_members;
-alter publication supabase_realtime add table public.presence;
+--
+-- ALTER PUBLICATION ... ADD TABLE has no IF NOT EXISTS, so a second run of the
+-- schema failed here with 42710 — which contradicted the "safe to run
+-- repeatedly" promise at the top of the file. Guarded by a lookup instead.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['messages', 'rooms', 'room_members', 'presence'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

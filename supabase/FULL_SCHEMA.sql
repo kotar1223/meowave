@@ -464,13 +464,16 @@ alter table public.badge_codes enable row level security;
 -- No select policy at all: nobody reads this table from the client, not even to
 -- count rows. redeem_badge_code() runs as definer and bypasses RLS.
 
+-- pgcrypto provides digest(). It has to exist *before* hash_code() is created,
+-- and hash_code needs `extensions` on its search_path — otherwise a fresh
+-- database fails with "function digest(...) does not exist".
+create extension if not exists pgcrypto with schema extensions;
+
 create or replace function public.hash_code(raw text)
-returns text language sql immutable as $$
+returns text language sql immutable
+set search_path = public, extensions as $$
   select encode(digest(upper(btrim(raw)), 'sha256'), 'hex')
 $$;
-
--- pgcrypto provides digest(); Supabase ships it, this just makes it explicit.
-create extension if not exists pgcrypto with schema extensions;
 
 create or replace function public.redeem_badge_code(raw_code text)
 returns table (badge_id text, already_owned boolean)
@@ -940,10 +943,25 @@ create policy "users write own presence"
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Realtime: the client subscribes to these instead of polling.
-alter publication supabase_realtime add table public.messages;
-alter publication supabase_realtime add table public.rooms;
-alter publication supabase_realtime add table public.room_members;
-alter publication supabase_realtime add table public.presence;
+--
+-- ALTER PUBLICATION ... ADD TABLE has no IF NOT EXISTS, so a second run of the
+-- schema failed here with 42710 — which contradicted the "safe to run
+-- repeatedly" promise at the top of the file. Guarded by a lookup instead.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['messages', 'rooms', 'room_members', 'presence'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
 
 
 -- ======================================================
@@ -1567,4 +1585,1064 @@ begin
 end $$;
 
 grant execute on function public.set_prefs(jsonb) to authenticated;
+
+
+-- ======================================================
+-- migrations/09_hardening.sql
+-- ======================================================
+-- Hardening pass: the database stops trusting the client.
+--
+-- Everything here fixes something that was exploitable or outright broken:
+--
+--   * user_stats / weekly_stats were writable by the client (`for all` with
+--     `auth.uid() = user_id`). One PATCH against the REST API set
+--     listen_seconds to anything, which handed out first place on both
+--     leaderboards *and* every achievement, because check_achievements() reads
+--     exactly those columns. All the clamping inside report_listening() was
+--     decoration. Writes now only happen inside security-definer functions.
+--
+--   * profiles was updatable column-by-column, so pinned_badges could be set to
+--     any badge id — Owner included — bypassing set_pinned_badges(), and prefs
+--     had no size limit outside the RPC.
+--
+--   * report_listening_v2() inserted into weekly_stats(week), a column that has
+--     never existed (it is week_start). Its first call would have failed with
+--     42703; it was only safe because nothing called it.
+--
+--   * playlist_tracks.media_ref is selected by the client on every playlist
+--     load. The column did not exist, so loading playlists from an account
+--     failed outright.
+
+-- ── stats are server-owned ──────────────────────────────────
+drop policy if exists "users write own stats" on public.user_stats;
+drop policy if exists "users write own weekly stats" on public.weekly_stats;
+
+-- No insert/update/delete policy at all: report_listening(),
+-- report_listening_v2(), playlist_sync(), create_playlist() and the favorites
+-- trigger below are all `security definer` and bypass RLS, which is the only
+-- path that applies the clamps.
+--
+-- Belt and braces, in case a policy is ever added back by accident.
+revoke insert, update, delete on public.user_stats from anon, authenticated;
+revoke insert, update, delete on public.weekly_stats from anon, authenticated;
+
+-- Weekly totals leaked for private profiles: the policy was `using (true)`.
+drop policy if exists "weekly stats are readable" on public.weekly_stats;
+create policy "weekly stats of visible profiles are readable"
+  on public.weekly_stats for select using (
+    user_id = auth.uid()
+    or exists (select 1 from public.profiles p
+                where p.id = user_id and p.is_public)
+  );
+
+-- Same for all-time: the old policy accepted any row whose profile merely
+-- existed, i.e. every row.
+drop policy if exists "stats of visible profiles are readable" on public.user_stats;
+create policy "stats of visible profiles are readable"
+  on public.user_stats for select using (
+    user_id = auth.uid()
+    or exists (select 1 from public.profiles p
+                where p.id = user_id and p.is_public)
+  );
+
+-- ── profiles: only the harmless columns are client-writable ─
+-- A trigger rather than a column-list policy, because RLS cannot express "these
+-- columns may not change" and splitting the table would break every read.
+--
+-- The server-owned columns are unlocked by a transaction-local flag that only
+-- the definer functions below set. Checking the JWT role is not enough: those
+-- functions run with the *caller's* role in `request.jwt.claim.role`, so a plain
+-- role check would have made set_pinned_badges() block itself.
+create or replace function public.profiles_guard()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  -- The service role administers directly and is not subject to this.
+  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' then
+    return new;
+  end if;
+
+  if coalesce(current_setting('meowave.trusted_write', true), '') <> '1' then
+    -- Server-owned: set_pinned_badges() verifies ownership of every id.
+    new.pinned_badges := old.pinned_badges;
+    new.pinned_badge  := old.pinned_badge;
+  end if;
+
+  -- History, not state.
+  new.created_at := old.created_at;
+  new.id         := old.id;
+
+  -- prefs had a length limit only inside set_prefs(); a direct upsert made the
+  -- column unbounded storage on an anonymous key.
+  if new.prefs is not null and length(new.prefs::text) > 8000 then
+    raise exception 'prefs too large';
+  end if;
+  if new.eq_presets is not null and length(new.eq_presets::text) > 20000 then
+    raise exception 'eq_presets too large';
+  end if;
+  if new.fav_artists is not null and array_length(new.fav_artists, 1) > 500 then
+    raise exception 'too many followed artists';
+  end if;
+
+  new.updated_at := now();
+  return new;
+end $$;
+
+drop trigger if exists profiles_guard_trg on public.profiles;
+create trigger profiles_guard_trg
+  before update on public.profiles
+  for each row execute function public.profiles_guard();
+
+-- Re-created so it can raise the flag the guard looks for.
+create or replace function public.set_pinned_badges(ids text[])
+returns text[] language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  cleaned text[];
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+  -- Only badges the user actually owns, capped at five, order preserved.
+  select array_agg(x order by ord) into cleaned from (
+    select x, ord from unnest(ids) with ordinality as u(x, ord)
+     where exists (select 1 from public.user_badges ub
+                    where ub.user_id = uid and ub.badge_id = u.x)
+     limit 5
+  ) s;
+  cleaned := coalesce(cleaned, '{}');
+  -- true = transaction-local, so it cannot leak into the next request on a
+  -- pooled connection.
+  perform set_config('meowave.trusted_write', '1', true);
+  update public.profiles set pinned_badges = cleaned where id = uid;
+  perform set_config('meowave.trusted_write', '', true);
+  return cleaned;
+end $$;
+
+grant execute on function public.set_pinned_badges(text[]) to authenticated;
+
+-- ── favorites feed tracks_liked ─────────────────────────────
+-- The counter behind the Collector badge. It was never incremented by anything,
+-- and now that clients cannot write user_stats it has to be maintained here.
+-- Recounted rather than incremented: a delta drifts, a count cannot.
+create or replace function public.favorites_touch_stats()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := coalesce(new.user_id, old.user_id);
+begin
+  insert into public.user_stats (user_id) values (uid) on conflict do nothing;
+  update public.user_stats
+     set tracks_liked = (select count(*) from public.favorites f where f.user_id = uid),
+         updated_at = now()
+   where user_id = uid;
+  return null;
+end $$;
+
+drop trigger if exists favorites_stats_trg on public.favorites;
+create trigger favorites_stats_trg
+  after insert or delete on public.favorites
+  for each row execute function public.favorites_touch_stats();
+
+-- ── report_listening_v2: the column is week_start ───────────
+create or replace function public.report_listening_v2(
+  seconds int default 0,
+  new_tracks int default 0,
+  spatial int default 0,
+  local_hour int default null,
+  session_minutes int default 0,
+  genres int default 0,
+  liked int default 0,
+  playlists int default 0
+) returns void language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  today date := (now() at time zone 'utc')::date;
+  prev date;
+  cur_streak int;
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  -- Clamp every input. These come from a client that can be patched, and an
+  -- unbounded value would poison the leaderboard permanently.
+  seconds := least(greatest(coalesce(seconds, 0), 0), 7200);
+  new_tracks := least(greatest(coalesce(new_tracks, 0), 0), 200);
+  spatial := least(greatest(coalesce(spatial, 0), 0), seconds);
+  session_minutes := least(greatest(coalesce(session_minutes, 0), 0), 1440);
+  genres := least(greatest(coalesce(genres, 0), 0), 200);
+  playlists := least(greatest(coalesce(playlists, 0), 0), 10000);
+
+  insert into public.user_stats (user_id) values (uid) on conflict do nothing;
+
+  select last_played_on, daily_streak into prev, cur_streak
+    from public.user_stats where user_id = uid;
+
+  -- Streak: same day is a no-op, yesterday extends, any older gap restarts.
+  if prev is null or prev < today - 1 then
+    cur_streak := 1;
+  elsif prev = today - 1 then
+    cur_streak := coalesce(cur_streak, 0) + 1;
+  end if;
+
+  update public.user_stats set
+    listen_seconds = listen_seconds + seconds,
+    tracks_played  = tracks_played + new_tracks,
+    -- The client reports "tracks not played yet this session"; without a
+    -- per-user seen-set the server cannot truly dedupe across sessions, so
+    -- this is an upper bound capped by total plays. The old expression,
+    -- greatest(unique_tracks, unique_tracks + n), was just a sum and let the
+    -- same song on loop inflate the metric forever.
+    unique_tracks  = least(
+      coalesce(unique_tracks, 0) + greatest(new_tracks, 0),
+      coalesce(tracks_played, 0) + greatest(new_tracks, 0)),
+    spatial_seconds = spatial_seconds + spatial,
+    night_sessions = night_sessions
+      + case when local_hour is not null and local_hour >= 2 and local_hour < 5 then 1 else 0 end,
+    sessions_after_1am = sessions_after_1am
+      + case when local_hour is not null and local_hour >= 1 and local_hour < 5 then 1 else 0 end,
+    sessions_before_7am = sessions_before_7am
+      + case when local_hour is not null and local_hour >= 4 and local_hour < 7 then 1 else 0 end,
+    -- Monotonic maxima: a short session must not lower the record.
+    longest_session_minutes = greatest(longest_session_minutes, session_minutes),
+    distinct_genres = greatest(distinct_genres, genres),
+    -- tracks_liked is maintained by favorites_stats_trg from the real table, so
+    -- the client's own count is ignored. The parameter stays for compatibility.
+    playlists_created = greatest(playlists_created, playlists),
+    daily_streak = cur_streak,
+    longest_streak = greatest(longest_streak, cur_streak),
+    last_played_on = today,
+    updated_at = now()
+  where user_id = uid;
+
+  -- Weekly bucket for the weekly leaderboard.
+  insert into public.weekly_stats (user_id, week_start, listen_seconds)
+  values (uid, date_trunc('week', now())::date, seconds)
+  on conflict (user_id, week_start) do update
+    set listen_seconds = public.weekly_stats.listen_seconds + excluded.listen_seconds;
+
+  perform public.check_achievements();
+end $$;
+
+revoke all on function public.report_listening_v2(int, int, int, int, int, int, int, int) from public;
+grant execute on function public.report_listening_v2(int, int, int, int, int, int, int, int) to authenticated;
+
+-- ── playlist_tracks.media_ref ───────────────────────────────
+-- Service-specific handle the client keeps alongside the id (a resolved stream
+-- reference for sources that need one). Selected on every playlist load.
+alter table public.playlist_tracks
+  add column if not exists media_ref text;
+
+create or replace function public.playlist_sync(
+  pid uuid,
+  tracks jsonb default '[]',
+  replace_all boolean default true
+) returns int language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  n int := 0;
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+  if not exists (select 1 from public.playlists where id = pid and owner_id = uid) then
+    raise exception 'not your playlist';
+  end if;
+  if jsonb_array_length(coalesce(tracks, '[]')) > 2000 then
+    raise exception 'playlist too large';
+  end if;
+
+  if replace_all then
+    delete from public.playlist_tracks where playlist_id = pid;
+  end if;
+
+  insert into public.playlist_tracks
+    (playlist_id, source, source_track_id, title, artist, album, duration,
+     cover_url, local_path, media_ref, position)
+  select
+    pid,
+    e ->> 'source',
+    e ->> 'source_track_id',
+    coalesce(nullif(btrim(e ->> 'title'), ''), '—'),
+    e ->> 'artist',
+    e ->> 'album',
+    least(greatest(coalesce((e ->> 'duration')::int, 0), 0), 86400),
+    e ->> 'cover_url',
+    e ->> 'local_path',
+    e ->> 'media_ref',
+    (ord - 1) * 10
+  from jsonb_array_elements(coalesce(tracks, '[]')) with ordinality as u(e, ord)
+  where e ->> 'source' is not null and e ->> 'source_track_id' is not null
+  on conflict (playlist_id, source, source_track_id) do update
+    set position = excluded.position,
+        title = excluded.title,
+        artist = excluded.artist,
+        duration = greatest(public.playlist_tracks.duration, excluded.duration),
+        cover_url = coalesce(excluded.cover_url, public.playlist_tracks.cover_url),
+        media_ref = coalesce(excluded.media_ref, public.playlist_tracks.media_ref);
+
+  select count(*) into n from public.playlist_tracks where playlist_id = pid;
+
+  update public.playlists set updated_at = now() where id = pid;
+
+  insert into public.user_stats (user_id) values (uid) on conflict do nothing;
+  update public.user_stats
+     set playlists_created = greatest(
+           playlists_created,
+           (select count(*) from public.playlists where owner_id = uid))
+   where user_id = uid;
+
+  return n;
+end $$;
+
+revoke all on function public.playlist_sync(uuid, jsonb, boolean) from public;
+grant execute on function public.playlist_sync(uuid, jsonb, boolean) to authenticated;
+
+-- create_playlist updated `user_stats` for a row that may not exist yet, so the
+-- Playlist Creator badge never fired for a brand new account.
+create or replace function public.create_playlist(name text, public_flag boolean default false)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  pid uuid;
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+  if (select count(*) from public.playlists where owner_id = uid) >= 200 then
+    raise exception 'playlist limit reached';
+  end if;
+  insert into public.playlists (owner_id, name, is_public)
+  values (uid, left(btrim(name), 60), public_flag)
+  returning id into pid;
+
+  insert into public.user_stats (user_id) values (uid) on conflict do nothing;
+  update public.user_stats
+     set playlists_created = greatest(
+           playlists_created,
+           (select count(*) from public.playlists where owner_id = uid))
+   where user_id = uid;
+
+  perform public.check_achievements();
+  return pid;
+end $$;
+
+grant execute on function public.create_playlist(text, boolean) to authenticated;
+
+-- ── friendships: only the addressee accepts ─────────────────
+-- The comment in 04_social claimed this; the policy allowed either side, so the
+-- sender could accept their own request and inflate the `friends` metric.
+drop policy if exists "respond to friend requests" on public.friendships;
+create policy "respond to friend requests"
+  on public.friendships for update
+  using (auth.uid() in (requester, addressee))
+  with check (
+    case
+      when status = 'accepted' then auth.uid() = addressee
+      else auth.uid() in (requester, addressee)
+    end
+  );
+
+-- ── rooms: a DJ controls playback, not ownership ────────────
+drop policy if exists "djs update room playback" on public.rooms;
+create policy "djs update playback state"
+  on public.rooms for update
+  using (public.can_dj(id) or owner_id = auth.uid())
+  with check (public.can_dj(id) or owner_id = auth.uid());
+
+create or replace function public.rooms_guard()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' then
+    return new;
+  end if;
+  -- Only the owner may rename the room or change its visibility; a DJ writing
+  -- `track`/`position`/`playing` must not be able to take it over.
+  if auth.uid() is distinct from old.owner_id then
+    new.owner_id  := old.owner_id;
+    new.join_code := old.join_code;
+    new.is_private := old.is_private;
+    new.name      := old.name;
+    new.topic     := old.topic;
+  end if;
+  new.updated_at := now();
+  return new;
+end $$;
+
+drop trigger if exists rooms_guard_trg on public.rooms;
+create trigger rooms_guard_trg
+  before update on public.rooms
+  for each row execute function public.rooms_guard();
+
+-- join_room ignored is_private entirely, so a leaked code was a full bypass of
+-- the flag. Private rooms now require an invite: a membership row created by
+-- the owner.
+create or replace function public.join_room(code text)
+returns public.rooms language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  row public.rooms;
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select * into row from public.rooms where join_code = upper(btrim(code));
+  if not found then
+    raise exception 'no such room';
+  end if;
+
+  if row.is_private and not exists (
+    select 1 from public.room_members m
+     where m.room_id = row.id and m.user_id = uid
+  ) then
+    raise exception 'this room is private';
+  end if;
+
+  insert into public.room_members (room_id, user_id) values (row.id, uid)
+  on conflict do nothing;
+
+  return row;
+end $$;
+
+grant execute on function public.join_room(text) to authenticated;
+
+-- room_members had neither an insert nor an update policy, so the `dj` role that
+-- can_dj() checks was unreachable. Promotion is the owner's call.
+create or replace function public.set_room_role(room uuid, member uuid, new_role text)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+  if new_role not in ('dj', 'listener') then
+    raise exception 'role must be dj or listener';
+  end if;
+  if not exists (select 1 from public.rooms r where r.id = room and r.owner_id = uid) then
+    raise exception 'not your room';
+  end if;
+  update public.room_members set role = new_role
+   where room_id = room and user_id = member and role <> 'owner';
+end $$;
+
+grant execute on function public.set_room_role(uuid, uuid, text) to authenticated;
+
+-- ── grant_badge is service-role only ───────────────────────
+-- The revokes in 06 are the only thing standing between this and a client
+-- handing itself Owner. Make the function itself refuse, so one stray GRANT
+-- cannot undo it.
+create or replace function public.grant_badge(target uuid, badge text)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
+    raise exception 'grant_badge requires the service role';
+  end if;
+  if not exists (select 1 from public.badges where id = badge) then
+    raise exception 'unknown badge %', badge;
+  end if;
+  insert into public.user_badges (user_id, badge_id) values (target, badge)
+  on conflict do nothing;
+  return true;
+end $$;
+
+revoke all on function public.grant_badge(uuid, text) from public;
+revoke all on function public.grant_badge(uuid, text) from authenticated;
+
+-- ── leaderboard views run as the caller ─────────────────────
+-- Without security_invoker a view executes with its owner's rights and silently
+-- bypasses RLS on its base tables — the opposite of what the comment in 02
+-- claimed. The is_public filter in the bodies is no longer the only guard.
+alter view public.leaderboard_alltime set (security_invoker = on);
+alter view public.leaderboard_weekly set (security_invoker = on);
+alter view public.leaderboard_badges set (security_invoker = on);
+
+-- ── indexes on foreign keys and lookup paths ────────────────
+-- Every one of these backs either a `where` the app runs constantly or an
+-- `on delete cascade` that would otherwise sequentially scan.
+create index if not exists playlists_owner_idx on public.playlists (owner_id);
+create index if not exists messages_sender_idx on public.messages (sender);
+create index if not exists user_badges_badge_idx on public.user_badges (badge_id);
+create index if not exists badge_codes_badge_idx on public.badge_codes (badge_id);
+create index if not exists rooms_owner_idx on public.rooms (owner_id);
+-- The weekly leaderboard sorts inside one week.
+create index if not exists weekly_stats_board_idx
+  on public.weekly_stats (week_start, listen_seconds desc);
+-- The all-time leaderboard sorts on this column.
+create index if not exists user_stats_listen_idx
+  on public.user_stats (listen_seconds desc);
+
+-- Redundant: user_badges_user_idx duplicates the primary key's leading column.
+drop index if exists public.user_badges_user_idx;
+
+
+-- ======================================================
+-- migrations/10_social2.sql
+-- ======================================================
+-- Group chats, chat images, room queue with host approval, privacy, leaderboard.
+--
+-- Depends on 04_social.sql (rooms, messages, friendships). Kept idempotent so
+-- a partial prod state can't break a re-run.
+
+-- ── privacy ─────────────────────────────────────────────────
+-- One jsonb blob on the profile, Telegram-style knobs:
+--   profile: "all" | "friends" | "none"   — who opens the profile page
+--   hours:   "all" | "friends" | "me"     — who sees listening time
+--   board:   true | false                 — appear in the leaderboard
+alter table public.profiles
+  add column if not exists privacy jsonb not null default '{}';
+
+-- ── group chats ─────────────────────────────────────────────
+create table if not exists public.chats (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null check (length(btrim(name)) between 1 and 40),
+  -- Small webp data URL kept inline; capped below so a "custom" group can
+  -- never eat the database quota.
+  avatar     text check (avatar is null or length(avatar) <= 40000),
+  about      text check (about is null or length(btrim(about)) <= 200),
+  created_by uuid not null references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table public.chats enable row level security;
+
+create table if not exists public.chat_members (
+  chat_id   uuid not null references public.chats (id) on delete cascade,
+  user_id   uuid not null references auth.users (id) on delete cascade,
+  role      text not null default 'member' check (role in ('owner','member')),
+  joined_at timestamptz not null default now(),
+  primary key (chat_id, user_id)
+);
+
+alter table public.chat_members enable row level security;
+
+create index if not exists chat_members_user_idx on public.chat_members (user_id);
+
+create or replace function public.in_chat(c uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.chat_members
+                  where chat_id = c and user_id = auth.uid())
+$$;
+
+grant execute on function public.in_chat(uuid) to authenticated;
+
+drop policy if exists "members see their chats" on public.chats;
+create policy "members see their chats"
+  on public.chats for select using (public.in_chat(id));
+
+drop policy if exists "owners create chats" on public.chats;
+create policy "owners create chats"
+  on public.chats for insert with check (auth.uid() = created_by);
+
+drop policy if exists "owners customize chats" on public.chats;
+create policy "owners customize chats"
+  on public.chats for update using (auth.uid() = created_by);
+
+drop policy if exists "owners delete chats" on public.chats;
+create policy "owners delete chats"
+  on public.chats for delete using (auth.uid() = created_by);
+
+drop policy if exists "members are listed" on public.chat_members;
+create policy "members are listed"
+  on public.chat_members for select using (
+    chat_id in (select chat_id from public.chat_members where user_id = auth.uid())
+  );
+
+drop policy if exists "members add people" on public.chat_members;
+create policy "members add people"
+  on public.chat_members for insert with check (public.in_chat(chat_id));
+
+drop policy if exists "members leave, owners remove" on public.chat_members;
+create policy "members leave, owners remove"
+  on public.chat_members for delete using (
+    auth.uid() = user_id
+    or exists (select 1 from public.chats c
+                where c.id = chat_id and c.created_by = auth.uid())
+  );
+
+-- ── messages: group-chat target + images ────────────────────
+alter table public.messages
+  add column if not exists chat_id uuid references public.chats (id) on delete cascade;
+alter table public.messages
+  add column if not exists image text;
+
+-- The original one_target pair grows a third arm; the body check learns that
+-- an image can carry a message on its own.
+alter table public.messages drop constraint if exists one_target;
+alter table public.messages add constraint one_target check (
+  (room_id   is not null and recipient is null and chat_id is null)
+  or (room_id is null and recipient is not null and chat_id is null)
+  or (room_id is null and recipient is null and chat_id is not null)
+);
+
+alter table public.messages drop constraint if exists messages_body_check;
+alter table public.messages add constraint messages_body_check check (
+  image is not null or length(btrim(body)) between 1 and 2000
+);
+
+-- Hard ceiling: ~192 KB of base64 per picture. The instance has 500 MB total,
+-- so this is the difference between "chat with photos" and "full disk in a
+-- weekend". The client compresses far below this; the cap exists so a tampered
+-- client cannot skip the compression.
+alter table public.messages drop constraint if exists messages_image_cap;
+alter table public.messages add constraint messages_image_cap check (
+  image is null or length(image) <= 196608
+);
+
+create index if not exists messages_chat_idx on public.messages (chat_id, id desc);
+
+drop policy if exists "read room chat and own dms" on public.messages;
+create policy "read room chat, group chats and own dms"
+  on public.messages for select using (
+    (room_id is not null and public.in_room(room_id))
+    or (chat_id is not null and public.in_chat(chat_id))
+    or auth.uid() in (sender, recipient)
+  );
+
+drop policy if exists "send to own rooms and to friends" on public.messages;
+create policy "send to rooms, chats and friends"
+  on public.messages for insert with check (
+    auth.uid() = sender and (
+      (room_id is not null and public.in_room(room_id))
+      or (chat_id is not null and public.in_chat(chat_id))
+      or (recipient is not null and public.is_friend(recipient))
+    )
+  );
+
+-- ── room queue + play requests ──────────────────────────────
+-- The room row holds only "now playing"; this is the line-up after it. Requests
+-- are how a listener proposes a track: a host/DJ approves it into the queue,
+-- which is the accept/decline notification the owner sees.
+create table if not exists public.room_queue (
+  id         bigserial primary key,
+  room_id    uuid not null references public.rooms (id) on delete cascade,
+  position   double precision not null default 0,
+  track      jsonb not null,
+  added_by   uuid not null references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table public.room_queue enable row level security;
+create index if not exists room_queue_room_idx on public.room_queue (room_id, position);
+
+create table if not exists public.room_requests (
+  id         bigserial primary key,
+  room_id    uuid not null references public.rooms (id) on delete cascade,
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  track      jsonb not null,
+  status     text not null default 'pending' check (status in ('pending','approved','declined')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.room_requests enable row level security;
+create index if not exists room_requests_room_idx on public.room_requests (room_id, status, id desc);
+
+drop policy if exists "queue of a visible room is readable" on public.room_queue;
+create policy "queue of a visible room is readable"
+  on public.room_queue for select using (
+    public.in_room(room_id)
+    or exists (select 1 from public.rooms r
+                where r.id = room_id and not r.is_private)
+  );
+
+drop policy if exists "djs manage the queue" on public.room_queue;
+create policy "djs manage the queue"
+  on public.room_queue for all
+  using (public.can_dj(room_id)) with check (public.can_dj(room_id));
+
+drop policy if exists "members see requests" on public.room_requests;
+create policy "members see requests"
+  on public.room_requests for select using (public.in_room(room_id));
+
+drop policy if exists "members request tracks" on public.room_requests;
+create policy "members request tracks"
+  on public.room_requests for insert with check (auth.uid() = user_id and public.in_room(room_id));
+
+-- Pending rows are immortal without this: after a decision the row is updated,
+-- and only a host/DJ may decide.
+drop policy if exists "djs decide requests, users retract own" on public.room_requests;
+create policy "djs decide requests, users retract own"
+  on public.room_requests for delete using (auth.uid() = user_id or public.can_dj(room_id));
+
+drop policy if exists "djs update requests" on public.room_requests;
+create policy "djs update requests"
+  on public.room_requests for update using (public.can_dj(room_id));
+
+-- Approving a request is "move it into the queue" in one round trip.
+create or replace function public.approve_request(req bigint)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare
+  r public.room_requests;
+begin
+  select * into r from public.room_requests where id = req;
+  if not found then
+    raise exception 'no such request';
+  end if;
+  if not public.can_dj(r.room_id) then
+    raise exception 'not a dj here';
+  end if;
+
+  update public.room_requests set status = 'approved' where id = req;
+  insert into public.room_queue (room_id, position, track, added_by)
+  values (r.room_id,
+          (select coalesce(max(position), 0) + 1
+             from public.room_queue where room_id = r.room_id),
+          r.track, r.user_id);
+  return true;
+end $$;
+
+grant execute on function public.approve_request(bigint) to authenticated;
+
+-- ── leaderboard ─────────────────────────────────────────────
+-- Lifetime hours from user_stats: weekly_stats belongs to 09_hardening, which
+-- not every installation has applied, and "total hours" is the number people
+-- actually compare. The privacy blob opts out.
+create or replace function public.leaderboard(limit_ int default 50)
+returns table (user_id uuid, username text, avatar_url text, seconds bigint, privacy jsonb)
+language sql stable security definer set search_path = public as $$
+  select u.user_id, p.username, p.avatar_url, u.listen_seconds, p.privacy
+    from public.user_stats u
+    join public.profiles p on p.id = u.user_id
+   where u.listen_seconds > 0
+     and coalesce(p.privacy ->> 'board', 'true') <> 'false'
+     -- A profile the owner hid entirely must not surface here either; the
+     -- board toggle is consent to show hours, not to un-hide the account.
+     and p.is_public
+   order by u.listen_seconds desc
+   limit greatest(coalesce(limit_, 50), 1)
+$$;
+
+grant execute on function public.leaderboard(int) to authenticated;
+
+-- ── realtime ────────────────────────────────────────────────
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['chats','chat_members','room_queue','room_requests'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
+
+
+-- ======================================================
+-- migrations/11_social_fix.sql
+-- ======================================================
+-- Repair pack for the social schema: idempotent re-creation of the policies
+-- from 10 (a partially applied 10 left the chats tables with RLS enabled and
+-- no insert policy, so creating a group chat failed with a bare RLS error),
+-- plus the missing room lifecycle pieces.
+--
+-- Safe to run on any state; everything is drop-if-exists / if-not-exists.
+
+-- ── chats: policies, recreated verbatim ────────────────────
+drop policy if exists "members see their chats" on public.chats;
+create policy "members see their chats"
+  on public.chats for select using (public.in_chat(id));
+
+drop policy if exists "owners create chats" on public.chats;
+create policy "owners create chats"
+  on public.chats for insert with check (auth.uid() = created_by);
+
+drop policy if exists "owners customize chats" on public.chats;
+create policy "owners customize chats"
+  on public.chats for update using (auth.uid() = created_by);
+
+drop policy if exists "owners delete chats" on public.chats;
+create policy "owners delete chats"
+  on public.chats for delete using (auth.uid() = created_by);
+
+-- chat_members
+drop policy if exists "members are listed" on public.chat_members;
+create policy "members are listed"
+  on public.chat_members for select using (
+    chat_id in (select chat_id from public.chat_members where user_id = auth.uid())
+  );
+
+drop policy if exists "members add people" on public.chat_members;
+create policy "members add people"
+  on public.chat_members for insert with check (public.in_chat(chat_id));
+
+drop policy if exists "members leave, owners remove" on public.chat_members;
+create policy "members leave, owners remove"
+  on public.chat_members for delete using (
+    auth.uid() = user_id
+    or exists (select 1 from public.chats c
+                where c.id = chat_id and c.created_by = auth.uid())
+  );
+
+-- messages: full read/send matrix from 10, recreated
+drop policy if exists "read room chat, group chats and own dms" on public.messages;
+create policy "read room chat, group chats and own dms"
+  on public.messages for select using (
+    (room_id is not null and public.in_room(room_id))
+    or (chat_id is not null and public.in_chat(chat_id))
+    or auth.uid() in (sender, recipient)
+  );
+
+drop policy if exists "send to rooms, chats and friends" on public.messages;
+create policy "send to rooms, chats and friends"
+  on public.messages for insert with check (
+    auth.uid() = sender and (
+      (room_id is not null and public.in_room(room_id))
+      or (chat_id is not null and public.in_chat(chat_id))
+      or (recipient is not null and public.is_friend(recipient))
+    )
+  );
+
+-- room_queue / room_requests policies
+drop policy if exists "queue of a visible room is readable" on public.room_queue;
+create policy "queue of a visible room is readable"
+  on public.room_queue for select using (
+    public.in_room(room_id)
+    or exists (select 1 from public.rooms r
+                where r.id = room_id and not r.is_private)
+  );
+
+drop policy if exists "djs manage the queue" on public.room_queue;
+create policy "djs manage the queue"
+  on public.room_queue for all
+  using (public.can_dj(room_id)) with check (public.can_dj(room_id));
+
+drop policy if exists "members see requests" on public.room_requests;
+create policy "members see requests"
+  on public.room_requests for select using (public.in_room(room_id));
+
+drop policy if exists "members request tracks" on public.room_requests;
+create policy "members request tracks"
+  on public.room_requests for insert with check (auth.uid() = user_id and public.in_room(room_id));
+
+drop policy if exists "djs decide requests, users retract own" on public.room_requests;
+create policy "djs decide requests, users retract own"
+  on public.room_requests for delete using (auth.uid() = user_id or public.can_dj(room_id));
+
+drop policy if exists "djs update requests" on public.room_requests;
+create policy "djs update requests"
+  on public.room_requests for update using (public.can_dj(room_id));
+
+-- ── group chat creation as an RPC ──────────────────────────
+-- security definer sidesteps any policy trouble on the chats insert: the
+-- caller is validated in code, and the owner membership is written in the
+-- same transaction so a half-created chat cannot exist.
+create or replace function public.create_group_chat(name text)
+returns public.chats language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  row public.chats;
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+  insert into public.chats (name, created_by)
+  values (btrim(name), uid)
+  returning * into row;
+  insert into public.chat_members (chat_id, user_id, role)
+  values (row.id, uid, 'owner');
+  return row;
+end $$;
+
+grant execute on function public.create_group_chat(text) to authenticated;
+
+-- ── leaving a room that then runs empty ────────────────────
+-- The membership goes first, then the room row if nobody is left. Doing both
+-- in one security-definer call means a listener can leave a room whose owner
+-- abandoned it — the client-side delete would fail RLS (not the owner).
+create or replace function public.leave_room(r uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.room_members
+   where room_id = r and user_id = auth.uid();
+
+  delete from public.rooms rws
+   where rws.id = r
+     and not exists (select 1 from public.room_members m where m.room_id = r);
+end $$;
+
+grant execute on function public.leave_room(uuid) to authenticated;
+
+-- Belt and braces: whichever way the last membership row disappears (kick,
+-- manual SQL, account deletion), the room does not linger as a ghost.
+create or replace function public.room_cleanup()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  delete from public.rooms r
+   where r.id = old.room_id
+     and not exists (select 1 from public.room_members m where m.room_id = old.room_id);
+  return old;
+end $$;
+
+drop trigger if exists room_empty_cleanup on public.room_members;
+create trigger room_empty_cleanup
+  after delete on public.room_members
+  for each row execute function public.room_cleanup();
+
+
+-- ======================================================
+-- migrations/12_social_fix.sql
+-- ======================================================
+-- Standalone recovery migration for installations where the social migrations
+-- were applied only partly. Unlike 11_social_fix.sql this file creates the
+-- missing social tables before touching their policies, so it can be pasted
+-- into an existing Supabase project safely.
+
+create table if not exists public.chats (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (length(btrim(name)) between 1 and 40),
+  avatar text,
+  about text,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.chats enable row level security;
+
+create table if not exists public.chat_members (
+  chat_id uuid not null references public.chats(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'member' check (role in ('owner','member')),
+  joined_at timestamptz not null default now(),
+  primary key (chat_id,user_id)
+);
+alter table public.chat_members enable row level security;
+
+create table if not exists public.room_queue (
+  id bigserial primary key,
+  room_id uuid not null references public.rooms(id) on delete cascade,
+  position double precision not null default 0,
+  track jsonb not null,
+  added_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.room_queue enable row level security;
+
+create table if not exists public.room_requests (
+  id bigserial primary key,
+  room_id uuid not null references public.rooms(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  track jsonb not null,
+  status text not null default 'pending' check (status in ('pending','approved','declined')),
+  created_at timestamptz not null default now()
+);
+alter table public.room_requests enable row level security;
+
+alter table public.messages add column if not exists chat_id uuid references public.chats(id) on delete cascade;
+alter table public.messages add column if not exists image text;
+
+create index if not exists chat_members_user_idx on public.chat_members(user_id);
+create index if not exists room_queue_room_idx on public.room_queue(room_id,position);
+create index if not exists room_requests_room_idx on public.room_requests(room_id,status,id desc);
+
+create or replace function public.in_chat(c uuid)
+returns boolean language sql stable security definer set search_path=public as $$
+  select exists(select 1 from public.chat_members where chat_id=c and user_id=auth.uid())
+$$;
+grant execute on function public.in_chat(uuid) to authenticated;
+
+drop policy if exists "members see their chats" on public.chats;
+create policy "members see their chats" on public.chats for select using (public.in_chat(id));
+drop policy if exists "owners create chats" on public.chats;
+create policy "owners create chats" on public.chats for insert with check (auth.uid()=created_by);
+drop policy if exists "owners customize chats" on public.chats;
+create policy "owners customize chats" on public.chats for update using (auth.uid()=created_by);
+drop policy if exists "owners delete chats" on public.chats;
+create policy "owners delete chats" on public.chats for delete using (auth.uid()=created_by);
+
+drop policy if exists "members are listed" on public.chat_members;
+create policy "members are listed" on public.chat_members for select using (public.in_chat(chat_id));
+drop policy if exists "members add people" on public.chat_members;
+create policy "members add people" on public.chat_members for insert with check (public.in_chat(chat_id));
+drop policy if exists "members leave, owners remove" on public.chat_members;
+create policy "members leave, owners remove" on public.chat_members for delete using (
+  auth.uid()=user_id or exists(select 1 from public.chats c where c.id=chat_id and c.created_by=auth.uid())
+);
+
+drop policy if exists "queue of a visible room is readable" on public.room_queue;
+create policy "queue of a visible room is readable" on public.room_queue for select using (
+  public.in_room(room_id) or exists(select 1 from public.rooms r where r.id=room_id and not r.is_private)
+);
+drop policy if exists "djs manage the queue" on public.room_queue;
+create policy "djs manage the queue" on public.room_queue for all
+  using (public.can_dj(room_id)) with check (public.can_dj(room_id));
+
+drop policy if exists "members see requests" on public.room_requests;
+create policy "members see requests" on public.room_requests for select using (public.in_room(room_id));
+drop policy if exists "members request tracks" on public.room_requests;
+create policy "members request tracks" on public.room_requests for insert
+  with check (auth.uid()=user_id and public.in_room(room_id));
+drop policy if exists "djs decide requests, users retract own" on public.room_requests;
+create policy "djs decide requests, users retract own" on public.room_requests for delete
+  using (auth.uid()=user_id or public.can_dj(room_id));
+drop policy if exists "djs update requests" on public.room_requests;
+create policy "djs update requests" on public.room_requests for update using (public.can_dj(room_id));
+
+create or replace function public.create_group_chat(name text)
+returns public.chats language plpgsql security definer set search_path=public as $$
+declare uid uuid:=auth.uid(); row public.chats;
+begin
+  if uid is null then raise exception 'not authenticated'; end if;
+  if length(btrim(name)) not between 1 and 40 then raise exception 'group name must be 1..40 characters'; end if;
+  insert into public.chats(name,created_by) values(btrim(name),uid) returning * into row;
+  insert into public.chat_members(chat_id,user_id,role) values(row.id,uid,'owner');
+  return row;
+end $$;
+grant execute on function public.create_group_chat(text) to authenticated;
+
+create or replace function public.approve_request(req bigint)
+returns boolean language plpgsql security definer set search_path=public as $$
+declare r public.room_requests; next_pos double precision;
+begin
+  select * into r from public.room_requests where id=req for update;
+  if not found then raise exception 'no such request'; end if;
+  if not public.can_dj(r.room_id) then raise exception 'not a dj here'; end if;
+  if r.status<>'pending' then return false; end if;
+  select coalesce(max(position),0)+1 into next_pos from public.room_queue where room_id=r.room_id;
+  update public.room_requests set status='approved' where id=req;
+  insert into public.room_queue(room_id,position,track,added_by) values(r.room_id,next_pos,r.track,r.user_id);
+  return true;
+end $$;
+grant execute on function public.approve_request(bigint) to authenticated;
+
+create or replace function public.leave_room(r uuid)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  delete from public.room_members where room_id=r and user_id=auth.uid();
+  delete from public.rooms x where x.id=r and not exists(select 1 from public.room_members m where m.room_id=r);
+end $$;
+grant execute on function public.leave_room(uuid) to authenticated;
+
+-- The room client also reads and updates the current track directly. These
+-- policies are repeated here because older installations often had rooms but
+-- no usable membership policy after a failed social migration.
+drop policy if exists "public rooms and joined rooms are visible" on public.rooms;
+create policy "public rooms and joined rooms are visible" on public.rooms for select using (
+  not is_private or public.in_room(id) or owner_id=auth.uid()
+);
+drop policy if exists "users create own rooms" on public.rooms;
+create policy "users create own rooms" on public.rooms for insert with check (auth.uid()=owner_id);
+drop policy if exists "djs update playback state" on public.rooms;
+drop policy if exists "djs update room playback" on public.rooms;
+create policy "djs update playback state" on public.rooms for update
+  using (public.can_dj(id) or owner_id=auth.uid())
+  with check (public.can_dj(id) or owner_id=auth.uid());
+drop policy if exists "owner deletes room" on public.rooms;
+create policy "owner deletes room" on public.rooms for delete using (owner_id=auth.uid());
+
+drop policy if exists "members of a visible room are listed" on public.room_members;
+create policy "members of a visible room are listed" on public.room_members for select using (
+  public.in_room(room_id) or exists(select 1 from public.rooms r where r.id=room_id and not r.is_private)
+);
+drop policy if exists "users leave rooms themselves" on public.room_members;
+create policy "users leave rooms themselves" on public.room_members for delete using (
+  auth.uid()=user_id or exists(select 1 from public.rooms r where r.id=room_id and r.owner_id=auth.uid())
+);
+
+-- Do not let a listener's client crash when the room shell is rendered on an
+-- older database: the client uses these functions and tables as one contract.
+notify pgrst, 'reload schema';
 

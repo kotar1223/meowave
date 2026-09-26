@@ -8,20 +8,55 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# custom-protocol: embeds the static frontend into the binary and serves it
+# from tauri.localhost. Without it `cargo tauri dev` (which runs cargo with
+# --no-default-features) has nothing to serve and the window stays dead —
+# this project has no devUrl/dev server, the frontend is plain static files.
+tauri = { version = "2", features = ["custom-protocol"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-keyring = { version = "3", features = ["windows-native"] }
 dotenvy = "0.15"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip", "socks"] }
-tokio = { version = "1", features = ["rt", "macros", "time"] }
+# rt-multi-thread: the stream proxy serves each request on its own thread
+# against one shared runtime, so a streaming response cannot block a seek.
+# fs/io-util/process: downloads stream to disk and ffmpeg runs off the runtime's
+# worker threads instead of blocking them.
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time", "sync", "fs", "io-util"] }
 tiny_http = "0.12"
 urlencoding = "2"
 md5 = "0.7"
+# PKCE for the Spotify sign-in: a verifier must come from a CSPRNG, and the
+# challenge is its SHA-256 in base64url. rand also mints the stream proxy's
+# access token.
+rand = "0.8"
+sha2 = "0.10"
+base64 = "0.22"
+# Opens the system browser for the authorisation step.
+open = "5"
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-opener = "2.5.4"
 tauri-plugin-updater = "2.10.1"
 tauri-plugin-process = "2.3.1"
+# Memory readout for the About panel. The window's real footprint is this
+# process plus the webview's own processes (separate executables on Windows
+# and macOS), and sysinfo walks that tree through one API on all three
+# platforms — no per-OS unsafe code in this repo.
+sysinfo = "0.39"
+
+# keyring is per-OS on purpose: each target compiles only its own backend, so
+# the Linux build does not drag in the Windows crate and vice versa.
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3", features = ["apple-native"] }
+
+# sync-secret-service talks to gnome-keyring/KWallet over DBus. It links the
+# system libdbus: build machines need libdbus-1-dev + pkg-config (CI installs
+# them), every desktop distro already ships the runtime library, and the
+# AppImage bundles it.
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", features = ["sync-secret-service"] }
 
 [profile.release]
 codegen-units = 1

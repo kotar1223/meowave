@@ -19,9 +19,11 @@ const catalog = JSON.parse(
   readFileSync(join(here, "..", "src", "assets", "badges", "badges.json"), "utf8"),
 );
 
-// Status badges are granted by hand only. Their source must be 'status', not
-// 'code', or the code minter would happily produce a redeemable Owner badge.
-const STATUS = new Set(["owner", "admin", "developer", "moderator", "tester"]);
+// Status badges are granted by hand only, and that now comes from the catalog
+// itself (`unlock: "status"`) rather than an id list duplicated in every script:
+// a single stale copy would have let the code minter produce a redeemable Owner.
+const sourceOf = (b) =>
+  b.unlock === "status" ? "status" : b.unlock === "achievement" ? "achievement" : "code";
 
 // The catalog's rarity vocabulary is wider than the original CHECK constraint;
 // migration 06 widens it. Anything unexpected is clamped rather than allowed to
@@ -39,7 +41,7 @@ function ruleOf(b) {
 }
 
 const rows = catalog.badges.map((b) => {
-  const source = STATUS.has(b.id) ? "status" : b.unlock === "achievement" ? "achievement" : "code";
+  const source = sourceOf(b);
   const rarity = RARITY.has(b.rarity) ? b.rarity : "common";
   const { metric, threshold, compare } = ruleOf(b);
   return `  (${q(b.id)}, ${q(source)}, ${q(rarity)}, ${q(metric)}, ${
@@ -75,7 +77,7 @@ writeFileSync(target, sql);
 
 const by = {};
 for (const b of catalog.badges) {
-  const s = STATUS.has(b.id) ? "status" : b.unlock === "achievement" ? "achievement" : "code";
+  const s = sourceOf(b);
   by[s] = (by[s] || 0) + 1;
 }
 

@@ -61,13 +61,16 @@ alter table public.badge_codes enable row level security;
 -- No select policy at all: nobody reads this table from the client, not even to
 -- count rows. redeem_badge_code() runs as definer and bypasses RLS.
 
+-- pgcrypto provides digest(). It has to exist *before* hash_code() is created,
+-- and hash_code needs `extensions` on its search_path — otherwise a fresh
+-- database fails with "function digest(...) does not exist".
+create extension if not exists pgcrypto with schema extensions;
+
 create or replace function public.hash_code(raw text)
-returns text language sql immutable as $$
+returns text language sql immutable
+set search_path = public, extensions as $$
   select encode(digest(upper(btrim(raw)), 'sha256'), 'hex')
 $$;
-
--- pgcrypto provides digest(); Supabase ships it, this just makes it explicit.
-create extension if not exists pgcrypto with schema extensions;
 
 create or replace function public.redeem_badge_code(raw_code text)
 returns table (badge_id text, already_owned boolean)

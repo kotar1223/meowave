@@ -53,6 +53,32 @@ pub fn client() -> Result<reqwest::Client, String> {
     b.build().map_err(|e| e.to_string())
 }
 
+/// The same client, minus the deadline — for bodies that are read for minutes
+/// instead of milliseconds: audio streaming through the local proxy and
+/// downloads to disk.
+///
+/// `timeout()` on the normal client is a TOTAL deadline: reqwest applies it
+/// from "connecting starts" until "the response body has finished". A track is
+/// several megabytes that the media element reads at its own pace (WebKit
+/// trickles a long song for minutes), so the 20 s budget ran out mid-transfer,
+/// the proxy's upstream reader errored and playback died — a bug that only
+/// showed up on long tracks and slow links, which is why it looked random.
+///
+/// A streaming client has to bound the *stalls*, not the whole transfer, so
+/// this one has no total deadline: connect and per-read are capped instead.
+pub fn media_client() -> Result<reqwest::Client, String> {
+    let mut b = reqwest::Client::builder()
+        .user_agent(UA)
+        .connect_timeout(std::time::Duration::from_secs(15))
+        // Resets on every successful read, so a slow-but-moving stream is fine
+        // while a connection that goes quiet for a minute still fails.
+        .read_timeout(std::time::Duration::from_secs(60));
+    if let Some(p) = crate::proxy::reqwest_proxy() {
+        b = b.proxy(p);
+    }
+    b.build().map_err(|e| e.to_string())
+}
+
 fn sec(ms: u64) -> u32 {
     (ms / 1000) as u32
 }
@@ -419,9 +445,19 @@ pub async fn api_search(query: String, services: Vec<String>) -> Result<SearchRe
         tasks.push(tokio::spawn(async move {
             // SoundCloud and YouTube Music work anonymously; only Yandex
             // insists on the user's own token.
-            let token = match crate::tokens::read_token(&s) {
-                Ok(t) => t.unwrap_or_default(),
-                Err(e) => return (s.clone(), Err(e)),
+            /* Tokenless services must not touch the keychain at all. On a
+               desktop with no Secret Service (minimal Linux, a container, a
+               session without D-Bus) `get_password` ERRORS instead of answering
+               "no entry", and that error failed the search for two services
+               that never needed a credential — YouTube Music and SoundCloud
+               looked broken when they were fine. */
+            let token = if crate::tokens::TOKENLESS_SERVICES.contains(&s.as_str()) {
+                String::new()
+            } else {
+                match crate::tokens::read_token(&s) {
+                    Ok(t) => t.unwrap_or_default(),
+                    Err(e) => return (s.clone(), Err(e)),
+                }
             };
             let res = match s.as_str() {
                 "ym" if token.is_empty() => Err("not connected".to_string()),

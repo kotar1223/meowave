@@ -1,0 +1,1350 @@
+.splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#101017;transition:opacity .55s ease,visibility .55s ease}.splash[hidden]{opacity:0;visibility:hidden;pointer-events:none}.splash img{width:112px;height:112px;border-radius:50%;z-index:1;box-shadow:0 0 50px rgb(255 255 255/.12)}.splash span{position:absolute;margin-top:175px;letter-spacing:.18em;text-transform:uppercase;color:#b9b9c4;font-size:.78rem}.splash-ring{position:absolute;width:190px;height:190px;border:1px solid rgb(255 255 255/.25);border-radius:50%;animation:splashPulse 1.8s ease-in-out infinite}.splash-ring:after{content:"";position:absolute;inset:-18px;border:1px solid rgb(255 255 255/.1);border-radius:50%;animation:splashPulse 1.8s .25s ease-in-out infinite}@keyframes splashPulse{0%,100%{transform:scale(.82);opacity:.25}50%{transform:scale(1.08);opacity:1}}
+/* boot: частицы рисуются ПОВЕРХ сплэша и сами собирают круг */
+html.booting #field{z-index:101;pointer-events:none}
+html.booting .splash img,html.booting .splash-ring{display:none}
+.splash span{opacity:0;animation:splashWord 1.1s .35s var(--e-io,ease) forwards}
+@keyframes splashWord{from{opacity:0;letter-spacing:.5em}to{opacity:.75;letter-spacing:.18em}}
+.splash.done{background:transparent;transition:background .5s ease,opacity .55s ease,visibility .55s ease}
+.splash.done span{animation:none;opacity:0;letter-spacing:.5em;transition:opacity .4s ease,letter-spacing .55s ease}
+
+:root{
+  /* 13.5% rather than 9%, with a faint violet cast: the window reads as a
+     deep room instead of a hole cut in the screen. Panels sit a clear step
+     above it (19.5 / 24) so lifting the background does not flatten the
+     hierarchy, and the hairlines firm up a little to keep definition. */
+  --bg:oklch(13.5% 0.014 278);
+  --surf:oklch(19.5% 0.016 278 / .62);
+  --surf-2:oklch(24% 0.018 278 / .74);
+  --line:oklch(100% 0 0 / .10);
+  --line-2:oklch(100% 0 0 / .18);
+  --text:oklch(96.5% 0.002 280);
+  --mute:oklch(71% 0.01 280);
+  --accent:oklch(97% 0.002 280);
+  --accent-soft:oklch(97% 0.002 280 / .14);
+  --accent-rgb:250 250 253;
+  --pr:250; --pg:250; --pb:253;
+
+  --glow:1; --blur:14px;
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--sp-12:48px;--sp-16:64px;
+  --r:14px; --r-lg:20px;
+  --e:cubic-bezier(0.16,1,0.3,1);
+  --e-q:cubic-bezier(0.25,1,0.5,1);
+  --e-io:cubic-bezier(0.65,0,0.35,1);
+}
+html[data-theme="light"]{
+  --bg:oklch(96.5% 0.003 280);
+  --surf:oklch(100% 0 0 / .62);
+  --surf-2:oklch(100% 0 0 / .78);
+  --line:oklch(20% 0.01 280 / .10);
+  --line-2:oklch(20% 0.01 280 / .2);
+  --text:oklch(20% 0.008 280);
+  --mute:oklch(48% 0.008 280);
+  --accent:oklch(24% 0.008 280);
+  --accent-soft:oklch(24% 0.008 280 / .1);
+  --accent-rgb:26 24 32;
+  --pr:26; --pg:24; --pb:32;
+}
+/* accent colors are applied by setAccent() via inline custom props;
+   with a colored accent the primary controls turn neon */
+html:not([data-accent="none"]) .primary,
+html:not([data-accent="none"]) .play{
+  background:var(--accent);color:oklch(14% 0.015 280);
+  box-shadow:0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb) / .4),0 0 calc(42px*var(--glow)) rgb(var(--accent-rgb) / .18);
+}
+
+/* ─── custom window chrome ───────────────────────────────────
+   The OS titlebar is gone (decorations:false), so this strip replaces it.
+   It has to sit above every surface including the fullscreen player, and it
+   must never intercept a click meant for the app: only the strip itself and
+   its buttons are interactive, and the drag region is declarative.
+
+   Height is published as --tb so the shell can offset itself without
+   hardcoding the number in three places. */
+:root{--tb:34px}
+.titlebar{position:fixed;top:0;left:0;right:0;height:var(--tb);z-index:400;
+  display:flex;align-items:center;gap:10px;padding:0 0 0 14px;
+  -webkit-app-region:drag;
+  background:linear-gradient(to bottom,oklch(0% 0 0 / .28),transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  user-select:none;-webkit-user-select:none}
+html[data-theme="light"] .titlebar{background:linear-gradient(to bottom,oklch(100% 0 0 / .45),transparent)}
+.tb-brand{display:flex;align-items:center;gap:8px;color:var(--mute);pointer-events:none}
+.tb-brand b{font-size:.74rem;font-weight:500;letter-spacing:.09em;text-transform:uppercase}
+.tb-fill{flex:1;height:100%}
+.tb-btns{display:flex;height:100%;-webkit-app-region:no-drag}
+.tb-btn{width:46px;height:100%;display:grid;place-items:center;color:var(--mute);
+  transition:background .16s var(--e-q),color .16s var(--e-q)}
+.tb-btn:hover{background:oklch(100% 0 0 / .09);color:var(--text)}
+html[data-theme="light"] .tb-btn:hover{background:oklch(0% 0 0 / .07)}
+.tb-btn.tb-close:hover{background:oklch(55% 0.2 25);color:#fff}
+.tb-btn:focus-visible{outline:none;background:oklch(100% 0 0 / .12)}
+/* A maximised window has no rounded corners to protect, so the strip goes
+   flush; restored, it follows the shell's own radius. */
+html[data-max="true"] .titlebar{background:oklch(0% 0 0 / .32)}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);overflow:hidden;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  font-weight:350;font-size:16px;line-height:1.55;letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;font-optical-sizing:auto;
+}
+h1,h2,h3,h4{font-family:"Inter Tight",Inter,sans-serif;font-weight:500;letter-spacing:-.022em;text-wrap:balance;margin:0}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+::selection{background:var(--accent-soft)}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:3px;border-radius:8px}
+.eyebrow{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:500}
+
+/* field + haze */
+#field{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%;
+  opacity:1;transition:opacity .6s var(--e);
+  /* Promote the field to its own compositor layer. Without it every frame of
+     the canvas repainted the stacking context underneath it. */
+  will-change:transform;transform:translateZ(0)}
+#field.dim{opacity:.3}
+/* Performance tiers.
+   backdrop-filter is removed rather than reduced: any non-zero radius still
+   forces a full-window composite pass every frame, which is what actually
+   kills integrated GPUs. The 90px haze blur is just as expensive, so the low
+   tier drops it too and keeps a flat gradient instead. */
+/* The low/off tiers no longer strip blur, haze or animations. Those cuts
+   made the app look broken without measurably helping, and the real cost was
+   always the particle count. */
+/* A 90px blur over a viewport-and-then-some element is the single most
+   expensive thing on the page: the compositor allocates an offscreen surface
+   larger than the window and runs a wide two-pass gaussian over it, and the
+   two children animate for 90 and 120 seconds so it is never allowed to
+   settle and be cached.
+
+   The blobs are radial gradients with soft edges — there is nothing in them
+   for a blur to soften. Rendering them at a fraction of the size and letting
+   the compositor scale the result back up produces the same haze for a small
+   fraction of the pixels: the upscale is itself a smoothing pass. */
+.haze{position:fixed;inset:-15vh -15vw;z-index:0;pointer-events:none;overflow:hidden;
+  filter:blur(24px)}
+.haze i{position:absolute;border-radius:50%;display:block;
+  background:radial-gradient(circle,oklch(100% 0 0 / .09) 0%,oklch(100% 0 0 / .05) 38%,transparent 78%)}
+html[data-theme="light"] .haze i{background:radial-gradient(circle,oklch(30% 0.02 280 / .10) 0%,oklch(30% 0.02 280 / .055) 38%,transparent 78%)}
+/* The blur radius dropped from 90px to 24px and the gradients absorbed the
+   difference: their colour stop moved outward, so each blob is soft by its own
+   shape rather than by the filter. Visually the haze is the same; the
+   compositor no longer runs a 90px two-pass gaussian over an oversized surface
+   every animated frame. */
+.haze i:nth-child(1){width:60vw;height:60vw;left:-10vw;top:-18vh;animation:d1 90s var(--e-io) infinite alternate}
+.haze i:nth-child(2){width:48vw;height:48vw;right:-8vw;bottom:-16vh;animation:d2 120s var(--e-io) infinite alternate}
+@keyframes d1{to{transform:translate3d(10vw,8vh,0) scale(1.15)}}
+@keyframes d2{to{transform:translate3d(-9vw,-7vh,0) scale(1.1)}}
+
+/* Two very soft corner glows over the dark base, so the background has depth
+   without a single filter: a flat #09090d was the "черный очень чёрный" note —
+   the eye had nothing to hold on to. Both stops die out before the centre, so
+   panels and text still sit on an even field. Dark theme only: in the light
+   theme these two would paint grey bruises on white. */
+html[data-theme="dark"] body{
+  background:
+    radial-gradient(130% 85% at 50% -25%,oklch(21% 0.03 275 / .55) 0%,transparent 62%),
+    radial-gradient(85% 65% at 108% 112%,oklch(18% 0.032 305 / .45) 0%,transparent 66%),
+    var(--bg);
+}
+
+.pane{
+  background:var(--surf);
+  -webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));
+  border:1px solid var(--line);border-radius:var(--r-lg);
+  /* A single hairline of light along the top edge. Costs nothing (a box-shadow,
+     not a filter) and is what makes a glass panel read as a surface sitting ON
+     the background rather than a rectangle punched through it. */
+  box-shadow:inset 0 1px 0 oklch(100% 0 0 / .05);
+}
+
+/* shell */
+.app{position:relative;z-index:2;height:100vh;display:grid;
+  grid-template-columns:74px 1fr;grid-template-rows:1fr auto;
+  grid-template-areas:"rail main" "rail bar";gap:var(--sp-2);padding:calc(var(--tb) + var(--sp-2)) var(--sp-2) var(--sp-2);
+  opacity:0;transition:opacity .6s var(--e)}
+.app.ready{opacity:1}
+
+.rail{grid-area:rail;display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);padding:var(--sp-4) 0}
+.mark{margin-bottom:var(--sp-6);opacity:.9}
+.navbtn{width:56px;padding:9px 0;border-radius:12px;display:grid;justify-items:center;gap:5px;color:var(--mute);
+  font-size:.62rem;letter-spacing:.03em;transition:color .2s var(--e),background .2s var(--e)}
+.navbtn{position:relative}
+.navbadge{position:absolute;top:3px;right:5px;min-width:15px;height:15px;padding:0 4px;border-radius:99px;background:var(--accent);color:var(--bg);font-size:.58rem;line-height:15px;font-weight:700}
+.navbtn:hover{color:var(--text);background:oklch(100% 0 0 / .05)}
+html[data-theme="light"] .navbtn:hover{background:oklch(20% 0.01 280 / .05)}
+.navbtn[aria-current="true"]{color:var(--text);background:var(--accent-soft)}
+/* The global :focus-visible ring lit up on the clicked rail button and read
+   as a stray border on the side of the app. The active pill already shows
+   which section is open, so the ring adds nothing here. */
+.navbtn:focus,.navbtn:focus-visible{outline:none}
+.railend{margin-top:auto}
+
+.main{grid-area:main;position:relative;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;
+  background:transparent;border:0}
+.top{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-2) var(--sp-4)}
+.search{position:relative;flex:1 1 300px;max-width:440px}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--mute)}
+.search input{width:100%;padding:11px 16px 11px 42px;border-radius:999px;background:var(--surf);
+  -webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));
+  border:1px solid var(--line);font-size:.92rem;font-weight:350;transition:border-color .2s var(--e),background .2s var(--e)}
+.search input::placeholder{color:var(--mute)}
+.search input:focus{outline:none;border-color:var(--line-2);background:var(--surf-2)}
+.srv{display:flex;gap:var(--sp-1);margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.s{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;font-size:.78rem;font-weight:450;
+  color:var(--mute);border:1px solid transparent;transition:all .2s var(--e);white-space:nowrap}
+.s .d{width:5px;height:5px;border-radius:50%;background:currentColor}
+.s:hover{color:var(--text)}
+.s[data-on="true"]{color:var(--text);border-color:var(--line-2);background:var(--surf)}
+.s[data-on="true"] .d{background:var(--accent);box-shadow:0 0 calc(7px*var(--glow)) rgb(var(--accent-rgb) / .8)}
+.s[data-conn="false"]{opacity:.4}
+
+.views{flex:1;min-height:0;position:relative}
+/* Screen switch: rise + settle + de-blur. The outgoing view simply fades under
+   it; only transform/opacity/filter animate, so the swap stays on the
+   compositor. */
+.view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:0 var(--sp-2) var(--sp-4);
+  opacity:0;transform:translateY(16px) scale(.986);filter:blur(7px);pointer-events:none;
+  transition:opacity .3s var(--e),transform .44s var(--e),filter .36s var(--e)}
+.view[data-active="true"]{opacity:1;transform:none;filter:none;pointer-events:auto}
+.view::-webkit-scrollbar{width:8px}
+.view::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+
+/* home */
+#v-home{display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:var(--sp-8);overflow:hidden}
+.hero{max-width:38ch;padding-left:var(--sp-4)}
+.hero h1{font-size:clamp(1.8rem,3.4vw,2.7rem);line-height:1.04;margin-bottom:10px}
+.hero p{color:var(--mute);font-size:.92rem;margin:0;max-width:44ch}
+.hero .row2{display:flex;align-items:center;gap:var(--sp-4);margin-top:var(--sp-6);flex-wrap:wrap}
+/* The wave heading dims but never disappears: hiding it outright made the
+   screen look empty rather than playing. */
+.hero.fade{opacity:.55;transition:opacity .6s var(--e)}
+.hero.fade h1{font-size:clamp(1.3rem,2.2vw,1.7rem);transition:font-size .5s var(--e)}
+.hero.fade p{opacity:.7}
+.wavehint{color:var(--mute);font-size:.8rem;max-width:34ch;line-height:1.45}
+.wavehint b{color:var(--text);font-weight:500}
+.wavehint[data-ready="true"] b{color:var(--accent)}
+.primary{display:inline-flex;align-items:center;gap:10px;padding:12px 22px;border-radius:999px;font-size:.9rem;font-weight:500;
+  background:var(--text);color:var(--bg);transition:transform .18s var(--e-q),opacity .2s var(--e)}
+.primary:hover{transform:translateY(-1px)}
+.primary:active{transform:none}
+.seg{display:flex;padding:3px;gap:2px;border-radius:999px;background:var(--surf);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur))}
+.seg button{padding:7px 15px;border-radius:999px;font-size:.78rem;font-weight:450;color:var(--mute);
+  transition:color .2s var(--e),background .2s var(--e);white-space:nowrap}
+.seg button:hover{color:var(--text)}
+.seg button[disabled]{opacity:.42;cursor:not-allowed}
+.seg button[disabled]:hover{color:var(--mute)}
+/* The active state is drawn by the sliding pill in .seg::before below.
+   Painting a background here too produced two overlapping highlights: a
+   stationary block plus the pill, which is what made the controls look
+   broken mid-animation. */
+
+/* headings + lists */
+.vh{display:flex;align-items:baseline;gap:var(--sp-4);padding:var(--sp-2) var(--sp-2) var(--sp-6)}
+.vh h2{font-size:1.5rem}
+.vh span{color:var(--mute);font-size:.8rem}
+.rows{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:var(--sp-4);
+  padding:10px var(--sp-3);border-radius:12px;cursor:pointer;border-top:1px solid var(--line);transition:background .18s var(--e)}
+/* Flex, not a five-column grid. The row can carry six or seven children —
+   the heart plus a remove button on local files, or plus a remove button in a
+   playlist — and a grid with five tracks dropped every extra button into an
+   implicit second row, doubling the height and parking the button under the
+   artwork. Flex lays out whatever the row actually contains. */
+.row .meta{flex:1 1 auto}
+.row .src,.row .dur,.row .heart{flex:none}
+.row:first-child{border-top:0}
+.row:hover{background:oklch(100% 0 0 / .045)}
+html[data-theme="light"] .row:hover{background:oklch(20% 0.01 280 / .04)}
+.row[data-playing="true"] .meta b{color:var(--accent);text-shadow:0 0 calc(14px*var(--glow)) rgb(var(--accent-rgb) / .45)}
+/* The playing row gets a live ring, so it is obvious what is sounding. */
+.row[data-playing="true"] .art::after{content:"";position:absolute;inset:0;border-radius:inherit;
+  box-shadow:inset 0 0 0 1.5px rgb(var(--accent-rgb) / .55);animation:pulseRing 2.4s var(--e-io) infinite}
+.row .art{position:relative}
+@keyframes pulseRing{0%,100%{opacity:.35}50%{opacity:.9}}
+.row{animation:rowIn .34s var(--e) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+/* Wave building state */
+.primary[aria-busy="true"]{opacity:.6;pointer-events:none}
+.primary[aria-busy="true"] i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.art{width:38px;height:38px;border-radius:8px;flex:none;
+  background:linear-gradient(148deg,oklch(var(--l1,54%) 0 0),oklch(var(--l2,22%) 0 0));
+  background-size:cover;background-position:center;background-repeat:no-repeat}
+html[data-theme="light"] .art{background:linear-gradient(148deg,oklch(calc(100% - var(--l1,54%)) 0 0),oklch(calc(100% - var(--l2,22%)) 0 0))}
+.meta{min-width:0}
+.meta b{display:block;font-weight:500;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .2s var(--e)}
+.meta span{display:block;color:var(--mute);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src{font-size:.7rem;color:var(--mute);letter-spacing:.02em;white-space:nowrap}
+.dur{font-variant-numeric:tabular-nums;color:var(--mute);font-size:.8rem}
+.heart{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--mute);opacity:.5;transition:all .2s var(--e)}
+.row:hover .heart{opacity:1}
+.heart[aria-pressed="true"]{opacity:1;color:var(--accent);filter:drop-shadow(0 0 calc(6px*var(--glow)) rgb(var(--accent-rgb) / .55))}
+
+/* Animated switches and sliders.
+   The segmented control keeps a sliding highlight behind the active button
+   instead of recolouring it: the eye tracks the movement, so the change reads
+   as one object moving rather than two things blinking. */
+.seg{position:relative;isolation:isolate}
+.seg button{position:relative;z-index:1}
+.seg button[aria-pressed="true"]{color:var(--bg)}
+.seg::before{content:"";position:absolute;z-index:0;top:3px;bottom:3px;
+  left:var(--sx,3px);width:var(--sw,0px);border-radius:999px;background:var(--text);
+  opacity:var(--so,0);
+  transition:left .42s var(--e),width .42s var(--e),opacity .25s var(--e)}
+
+/* Toggle switch: a real knob that travels, with a slight squash on press. */
+.sw{position:relative;width:44px;height:25px;border-radius:999px;flex:none;
+  background:var(--line-2);
+  transition:background .25s var(--e),box-shadow .25s var(--e)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;
+  background:var(--text);
+  transition:transform .3s var(--e-q),background .25s var(--e),width .18s var(--e-q)}
+.sw[aria-pressed="true"]{background:var(--accent);box-shadow:0 0 calc(14px*var(--glow)) rgb(var(--accent-rgb) / .45)}
+.sw[aria-pressed="true"]::after{transform:translateX(19px);background:var(--bg)}
+.sw:active::after{width:22px}
+.sw:focus-visible{outline:1.5px solid var(--accent);outline-offset:3px}
+
+/* Range inputs: the track fills up to the handle, so the value is readable
+   without looking at the number. */
+input[type=range]{-webkit-appearance:none;appearance:none;width:200px;max-width:46vw;
+  height:22px;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:99px;
+  background:linear-gradient(to right,var(--accent) var(--fill,50%),var(--line-2) var(--fill,50%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:14px;height:14px;border-radius:50%;background:var(--accent);margin-top:-5px;
+  box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .55);
+  transition:transform .2s var(--e-q)}
+input[type=range]::-moz-range-track{height:4px;border-radius:99px;background:var(--line-2)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .55)}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.15)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.05)}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgb(var(--accent-rgb) / .3)}
+
+/* Settings tabs */
+.stab{display:none}
+.stab[data-active="true"]{display:block;animation:stabIn .3s var(--e) both}
+@keyframes stabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Token guide */
+.guide{border-top:1px solid var(--line);margin-top:2px;padding:12px 0 4px}
+.guide ol{margin:0;padding-left:20px;color:var(--mute);font-size:.78rem;line-height:1.75}
+.guide ol b{color:var(--text);font-weight:500}
+.guide .grow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.guide code{background:var(--surf-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.74rem}
+.tabs{display:flex;gap:var(--sp-6);padding:0 var(--sp-2);border-bottom:1px solid var(--line);margin-bottom:var(--sp-6);flex-wrap:wrap}
+.tabs button{padding:0 1px 12px;color:var(--mute);font-weight:450;font-size:.95rem;position:relative}
+.tabs button[aria-selected="true"]{color:var(--text)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--accent);
+  box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .6)}
+
+.plgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--sp-4);padding:0 var(--sp-2)}
+.plc{text-align:left;display:grid;gap:10px}
+.plc .sq{aspect-ratio:1;border-radius:var(--r);background:linear-gradient(150deg,oklch(var(--l1,54%) 0 0),oklch(var(--l2,22%) 0 0));
+  transition:transform .35s var(--e)}
+html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(100% - var(--l1,54%)) 0 0),oklch(calc(100% - var(--l2,22%)) 0 0))}
+.plc:hover .sq{transform:translateY(-4px);box-shadow:0 14px 34px oklch(0% 0 0 / .4)}
+.plc .sq{background-size:cover;background-position:center}
+/* 2x2 mosaic of the first four covers. A grid rather than four positioned
+   layers so the seams stay exact at any tile size. */
+.plc .sq.mosaic{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+  gap:1px;background:var(--line);overflow:hidden}
+.plc .sq.mosaic i{display:block;background-size:cover;background-position:center;min-width:0;min-height:0}
+.plgrid .plc{animation:rowIn .36s var(--e) both}
+.plc b{font-weight:500;font-size:.9rem;display:block}
+.plc span{color:var(--mute);font-size:.75rem}
+
+/* settings */
+.panel{padding:var(--sp-6);margin:0 var(--sp-2) var(--sp-3)}
+/* Profile content is a reading column, not a full-width sheet: on a wide
+   monitor an unbounded panel stretched the banner and left the name floating
+   alone in the middle of nothing. */
+/* Full width, as asked. The reading column was there to stop the banner
+   stretching, but the banner now caps its own height, so the constraint only
+   left dead space either side on a large monitor. Panels inside still keep
+   their own comfortable line lengths. */
+#profbody{max-width:none}
+/* .stats already had a responsive grid further down; a second copy here only
+   fought with it. */
+.panel h3{font-size:1rem;margin-bottom:3px}
+.panel .ph{color:var(--mute);font-size:.8rem;margin:0 0 var(--sp-4);max-width:64ch}
+.field{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-6);padding:14px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.field:first-of-type{border-top:0}
+.field label{font-size:.9rem;font-weight:450;display:block}
+/* Status lines here carry error text of unpredictable length. Without a
+   bound they wrapped under the control and reflowed the row; the update
+   panel in particular ended up with a ragged two-line message. */
+.field small{color:var(--mute);font-size:.75rem;display:block;max-width:52ch;line-height:1.4}
+.field>div:first-child{min-width:0;flex:1 1 240px}
+/* The switch is defined once, further up. This second copy came later in the
+   file and therefore won: it overrode the size, the knob travel and the
+   press animation, which is why the toggles looked wrong. */
+.btn{padding:8px 15px;border-radius:999px;font-size:.8rem;font-weight:450;border:1px solid var(--line-2);transition:all .2s var(--e);white-space:nowrap}
+.btn:hover{background:var(--surf-2)}
+.btn.on{border-color:var(--accent);color:var(--accent)}
+/* Used by the lyrics panel, where a full-size button would dominate a body that
+   is only ~96px tall. */
+.btn.sm{padding:6px 12px;font-size:.74rem}
+/* Range styling lives in one place, further up. This block used to repeat it
+   with different values and, being later in the file, silently won — it reset
+   the track to a flat 2px line and cancelled the fill. */
+
+/* Custom accent swatch: the native colour input is hidden behind the circle,
+   so the control matches the presets instead of showing an OS widget. */
+.sws.custom{position:relative;overflow:hidden;cursor:pointer;display:inline-block}
+.sws.custom input{position:absolute;inset:-8px;width:200%;height:200%;opacity:0;cursor:pointer;border:0;padding:0}
+
+/* Remove button on imported tracks. Hidden until the row is hovered: it sits
+   next to the heart and must not invite a mis-click. */
+.heart.rm{opacity:0;transition:opacity .18s var(--e),color .18s var(--e)}
+.row:hover .heart.rm,.heart.rm:focus-visible{opacity:.75}
+.heart.rm:hover{opacity:1;color:oklch(70% 0.17 25)}
+
+/* Playlist header and the "new playlist" card. Both were rendered by the
+   playlist view but had no styles, so the header collapsed into a plain line
+   of text and the create button looked like a broken tile. */
+.plhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px}
+.plhead b{font-size:1.15rem;font-weight:500}
+.plhead span{color:var(--mute);font-size:.82rem}
+.plhead .btn:last-child{margin-left:auto}
+.btn.danger{border-color:oklch(58% 0.17 25 / .5);color:oklch(70% 0.17 25)}
+.btn.danger:hover{background:oklch(58% 0.17 25 / .12)}
+/* The dashed outline used to wrap the whole card including its label, which
+   looked like a rendering fault. The hint belongs on the artwork square only;
+   the caption then matches every other tile. */
+.plc.plnew{border:0;background:none;transition:transform .2s var(--e-q)}
+.plc.plnew:hover{transform:translateY(-2px)}
+.plc.plnew .sq{display:grid;place-items:center;color:var(--mute);
+  background:var(--surf);border:1px dashed var(--line-2);
+  transition:border-color .2s var(--e),color .2s var(--e)}
+.plc.plnew:hover .sq{color:var(--accent);border-color:var(--accent)}
+
+/* Context menu. Right-clicking a track used to open the webview's own menu
+   ("reload", "view source"), which is meaningless in a player. */
+.ctx{position:fixed;z-index:200;min-width:210px;max-height:70vh;overflow-y:auto;
+  padding:6px;border-radius:14px;display:flex;flex-direction:column;gap:1px;
+  box-shadow:0 18px 50px oklch(0% 0 0 / .5);
+  opacity:0;transform:scale(.96) translateY(-4px);transform-origin:top left;
+  transition:opacity .16s var(--e),transform .18s var(--e)}
+.ctx[data-open="true"]{opacity:1;transform:none}
+.ctx button{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:9px;
+  font-size:.84rem;text-align:left;color:var(--text);transition:background .15s var(--e)}
+.ctx button:hover{background:var(--surf-2)}
+/* A disabled entry has to look unavailable rather than simply not respond —
+   "download with processing" without ffmpeg is the case that matters. */
+.ctx button[disabled]{opacity:.4;cursor:not-allowed}
+.ctx button[disabled]:hover{background:none}
+.ctx button em{margin-left:auto;font-style:normal;color:var(--mute);font-size:.74rem}
+.ctx .sep{height:1px;background:var(--line);margin:5px 2px}
+.ctx .lbl{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--mute);padding:6px 11px 3px}
+.ctx .lbl.dim{text-transform:none;letter-spacing:0;font-size:.78rem;padding-bottom:8px}
+/* Presets as a wrapped chip grid rather than one row per preset: six stacked
+   full-width buttons made the menu taller than most windows. */
+.ctxchips{display:flex;flex-wrap:wrap;gap:4px;padding:2px 9px 6px}
+.ctxchips button{padding:5px 10px;border-radius:999px;font-size:.72rem;color:var(--mute);
+  border:1px solid var(--line);transition:all .16s var(--e)}
+.ctxchips button:hover{color:var(--text);background:var(--surf-2)}
+.ctxchips button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.ctxchips button.off{color:var(--mute);border-style:dashed}
+
+/* Badges. Owned ones are full colour; the rest stay as silhouettes so the
+   catalog doubles as a list of what is still out there. */
+.bdgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:var(--sp-4)}
+.bdg{text-align:center;display:grid;gap:6px;justify-items:center;animation:rowIn .3s var(--e) both}
+/* The art is now a cut-out with transparent corners (see assets/badges/_trim.py),
+   so the tile no longer has to hide a baked-in dark square behind a rounded
+   box. The ring and the rounded corners went with it: they were framing a
+   square that no longer exists, and a hard ring around a free-standing emblem
+   reads as a sticker. What is left is the emblem itself, breathing. */
+.bdg .bdgart{width:72px;height:72px;display:grid;place-items:center;position:relative;
+  transition:transform .25s var(--e-q)}
+.bdg:hover .bdgart{transform:translateY(-3px) scale(1.06)}
+/* `contain` with no padding: the asset already carries its own even margin, so
+   padding here would shrink the emblem a second time and make badges with more
+   built-in margin look smaller than their neighbours. */
+.bdg .bdgart img{width:100%;height:100%;display:block;object-fit:contain;object-position:center}
+.bdg b{font-size:.76rem;font-weight:500;line-height:1.25}
+.bdg span{font-size:.68rem;color:var(--mute);line-height:1.3}
+/* A locked badge is the same silhouette, drained and dimmed. With the square
+   gone there is nothing left to outline, so the state lives entirely in the
+   art. */
+.bdg[data-owned="false"] .bdgart img{filter:grayscale(1) opacity(.26)}
+.bdg[data-owned="false"] b{color:var(--mute)}
+/* The glow sits behind the cut-out instead of inside a box, so it reads as
+   light coming off the emblem rather than a lit panel it is printed on. */
+.bdg[data-owned="true"] .bdgart{background:radial-gradient(circle at 50% 45%,rgb(255 255 255 / .09),transparent 68%)}
+.bdg[data-owned="true"] .bdgart img{filter:drop-shadow(0 2px 6px rgb(0 0 0 / .45))}
+.bdg[data-owned="true"]{cursor:pointer}
+/* A pinned badge is marked on the tile, so the profile row and the grid agree. */
+/* Pinned used to be three stacked rings on the square. Against a cut-out that
+   framed empty space, so the marker follows the emblem's own outline instead. */
+.bdg[data-pin="true"] .bdgart img{filter:drop-shadow(0 0 0 var(--text)) drop-shadow(0 0 3px var(--text)) drop-shadow(0 2px 6px rgb(0 0 0 / .45))}
+.bdg[data-pin="true"] b{color:var(--text)}
+/* The row next to the name, like the profile example in the design. */
+.pinrow{display:flex;gap:6px;align-items:center;margin-top:6px;min-height:26px}
+/* Same treatment at badge-row size: no box, no ring, just the emblem. At 30px
+   a 1.5px ring plus 2px padding was most of the tile. */
+.pinb{width:30px;height:30px;display:grid;place-items:center;flex:none;
+  animation:rowIn .3s var(--e) both}
+.pinb img{width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 1px 2px rgb(0 0 0 / .4))}
+.swatches{display:flex;gap:9px;flex-wrap:wrap}
+.sws{width:30px;height:30px;border-radius:50%;border:1px solid var(--line-2);position:relative;transition:transform .2s var(--e-q)}
+.sws:hover{transform:scale(1.1)}
+.sws[aria-pressed="true"]{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--text)}
+.acc{display:flex;align-items:center;gap:var(--sp-4);padding:13px 0;border-top:1px solid var(--line)}
+.acc:first-of-type{border-top:0}
+.acc .an{flex:1;min-width:0}
+.acc .an b{display:block;font-size:.92rem;font-weight:450}
+.acc .an span{color:var(--mute);font-size:.74rem;word-break:break-all}
+.tokrow{display:flex;gap:8px;align-items:center;padding:0 0 13px;flex-wrap:wrap}
+.tokrow input{flex:1 1 220px;padding:8px 14px;border-radius:999px;background:transparent;border:1px solid var(--line-2);font-size:.8rem}
+.tokrow input:focus{outline:none;border-color:var(--accent)}
+
+/* profile */
+/* Banner: 3:1, click to replace. Animated GIFs are stored as-is, so this can
+   be a moving image. */
+.banner{display:block;position:relative;width:100%;aspect-ratio:3/1;max-height:190px;min-height:110px;
+  cursor:pointer;overflow:hidden;
+  background:linear-gradient(120deg,oklch(30% 0.03 280),oklch(18% 0.02 280));
+  border-bottom:1px solid var(--line)}
+/* Without an uploaded image the banner is just a void, and on the screenshot
+   that void filled half the window. An empty banner is a slim strip — enough
+   for the avatar overlap and the change-banner hint, nothing more. A real
+   image gets the full 3:1 area back. */
+.banner:not(:has(img)){aspect-ratio:auto;height:104px;min-height:0}
+.banner:not(:has(img)) .cam{opacity:.75;transform:none}
+/* The banner image is positioned rather than merely sized. width/height 100%
+   on a plain child depends on the parent having a resolved height, and with
+   aspect-ratio + max-height that resolution arrives too late in some webview
+   versions — the picture then rendered at its natural size in the top-left
+   corner with dead black around it, which is what the screenshot shows.
+   Absolute inset:0 has no such dependency. */
+.banner img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.banner .cam{position:absolute;inset:auto 0 0 auto;margin:12px;padding:7px 13px;border-radius:999px;
+  display:flex;align-items:center;gap:7px;font-size:.76rem;color:#fff;
+  background:oklch(0% 0 0 / .5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  opacity:0;transform:translateY(4px);transition:opacity .25s var(--e),transform .25s var(--e)}
+.banner:hover .cam{opacity:1;transform:none}
+.banner input{display:none}
+/* Only the avatar overlaps the banner. Pulling the whole header up with
+   margin-top:-46px dragged the name input under the banner's bottom edge —
+   that is the half-buried "kotyar1223" on the screenshot. Bottom alignment
+   keeps the name and email sitting on the avatar's baseline. */
+.profhead{display:flex;align-items:flex-end;gap:var(--sp-6);flex-wrap:wrap}
+.profhead .avatar{margin-top:-46px;
+  box-shadow:0 0 0 4px var(--bg),0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb) / .4)}
+.profhead>div:not(.avatar){min-width:0;flex:1;padding-bottom:2px}
+.avatar{width:104px;height:104px;border-radius:50%;position:relative;flex:none;cursor:pointer;overflow:hidden;
+  border:1px solid var(--line-2);background:linear-gradient(150deg,oklch(70% 0 0),oklch(24% 0 0));
+  box-shadow:0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb) / .4),0 0 calc(44px*var(--glow)) rgb(var(--accent-rgb) / .16),inset 0 0 0 1px oklch(100% 0 0 / .08);
+  transition:transform .3s var(--e),box-shadow .3s var(--e)}
+.avatar:hover{transform:scale(1.03);box-shadow:0 0 calc(22px*var(--glow)) rgb(var(--accent-rgb) / .55),0 0 calc(60px*var(--glow)) rgb(var(--accent-rgb) / .22)}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+/* The one-letter monogram when a profile has no picture. It had no rule at
+   all, so it rendered as an inline span in the top-left corner of the circle
+   instead of a centred initial. */
+.avatar-ph{position:absolute;inset:0;display:grid;place-items:center;
+  font-family:"Inter Tight",Inter,sans-serif;font-size:2.4rem;font-weight:500;
+  letter-spacing:-.02em;color:#fff;text-transform:uppercase}
+.avatar .cam{position:absolute;inset:0;display:grid;place-items:center;color:#fff;background:oklch(0% 0 0 / .45);
+  opacity:0;transition:opacity .2s var(--e)}
+.avatar:hover .cam{opacity:1}
+.avatar input{display:none}
+.uname{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.uname input{padding:8px 14px;border-radius:12px;background:transparent;border:1px solid var(--line);font-size:1.15rem;
+  font-family:"Inter Tight",Inter,sans-serif;font-weight:500;max-width:260px;transition:border-color .2s var(--e)}
+.uname input:focus{outline:none;border-color:var(--line-2)}
+.pmail{color:var(--mute);font-size:.8rem;margin:4px 0 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--sp-3);margin-top:var(--sp-6)}
+.stat{padding:var(--sp-4);border:1px solid var(--line);border-radius:var(--r)}
+.stat b{display:block;font-size:1.4rem;font-weight:500;font-family:"Inter Tight",Inter,sans-serif}
+.stat span{color:var(--mute);font-size:.74rem}
+.btn.danger{border-color:oklch(60% 0.18 25 / .5);color:oklch(72% 0.17 25)}
+.btn.danger:hover{background:oklch(60% 0.18 25 / .12)}
+.authform{display:grid;gap:var(--sp-3);max-width:360px}
+.authform input{padding:11px 16px;border-radius:12px;background:transparent;border:1px solid var(--line-2);font-size:.9rem}
+.authform input:focus{outline:none;border-color:var(--accent)}
+.authrow{display:flex;gap:var(--sp-2);flex-wrap:wrap;align-items:center}
+.authmsg{font-size:.8rem;color:var(--mute);min-height:1.2em;margin:0}
+.authmsg.err{color:oklch(72% 0.17 25)}
+.authmsg.ok{color:var(--accent)}
+
+/* player bar */
+.bar{grid-area:bar;position:relative;padding:0 var(--sp-4) var(--sp-3)}
+.seek{height:26px;display:flex;align-items:center;gap:12px;padding-top:6px}
+.seek .t{font-size:.72rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.track{position:relative;flex:1;height:3px;border-radius:99px;background:var(--line-2);cursor:pointer;min-width:60px}
+.track .f{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--accent);
+  box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .55),0 0 calc(26px*var(--glow)) rgb(var(--accent-rgb) / .22)}
+.track .h{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--accent);
+  opacity:0;transition:opacity .18s var(--e)}
+.track:hover .h{opacity:1}
+.barmain{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:var(--sp-4);padding-top:4px}
+.np{display:flex;align-items:center;gap:var(--sp-3);min-width:0}
+.np .art{width:42px;height:42px;border-radius:10px}
+/* Bar actions: heart, add-to-playlist, dislike. They stay dim until the bar is
+   hovered so the row does not read as three competing buttons, but the heart
+   keeps showing its state because that is information, not an affordance. */
+.npacts{display:flex;align-items:center;gap:2px;flex:none}
+.npacts[hidden]{display:none}
+.np .npic{width:30px;height:30px;opacity:.45;transition:opacity .2s var(--e),color .2s var(--e),background .2s var(--e)}
+.bar:hover .np .npic,.np .npic:focus-visible{opacity:1}
+.np .npdis[aria-pressed="true"]{opacity:1;color:oklch(70% 0.17 25)}
+.ctrls{display:flex;align-items:center;gap:var(--sp-2)}
+.ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--mute);transition:all .2s var(--e)}
+.ic:hover{color:var(--text);background:oklch(100% 0 0 / .06)}
+html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
+.ic[aria-pressed="true"]{color:var(--accent)}
+.play{width:42px;height:42px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center;
+  transition:transform .16s var(--e-q)}
+.play:hover{transform:scale(1.05)}
+.right{display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-1)}
+.right input[type=range]{width:76px}
+.eqbtn{padding:7px 13px;border-radius:999px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);
+  border:1px solid transparent;transition:all .2s var(--e)}
+.eqbtn:hover{color:var(--text)}
+.eqbtn[aria-expanded="true"]{color:var(--text);border-color:var(--line-2);background:var(--surf)}
+
+/* EQ dock */
+ .dock{position:absolute;left:50%;right:auto;width:min(760px,calc(100% - 32px));bottom:calc(100% - 4px);z-index:5;
+  padding:14px 18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;
+  opacity:0;transform:translate(-50%,14px);pointer-events:none;transition:opacity .28s var(--e),transform .34s var(--e)}
+.dock[data-open="true"]{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+/* The equaliser was tall enough to cover a third of the window when open.
+   Halving the strip keeps every band readable while leaving room for the
+   speed and loudness controls beside it. */
+.bands{display:flex;gap:10px;flex:0 1 300px;min-width:230px}
+.band{flex:1;display:grid;justify-items:center;gap:5px;min-width:18px}
+.vt{position:relative;width:3px;height:44px;border-radius:99px;background:var(--line-2);cursor:ns-resize;touch-action:none}
+.vt .f{position:absolute;left:-.5px;right:-.5px;border-radius:99px;background:var(--accent)}
+.vt .kn{position:absolute;left:50%;width:11px;height:11px;margin-left:-5.5px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 calc(9px*var(--glow)) rgb(var(--accent-rgb) / .55);transition:transform .12s var(--e)}
+.vt:hover .kn,.vt:focus-visible .kn{transform:scale(1.25)}
+.vt .z{position:absolute;left:-4px;right:-4px;top:50%;height:1px;background:var(--line)}
+.band label{font-size:.58rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.band output{font-size:.58rem;font-variant-numeric:tabular-nums;color:var(--mute)}
+
+/* Speed and loudness, beside the bands rather than in a separate panel: they
+   are adjusted while listening, so they belong where the ear is already
+   pointed. */
+.fx{display:flex;flex-direction:column;gap:8px;flex:0 1 190px;min-width:170px}
+.fxrow{display:flex;align-items:center;gap:9px}
+.fxrow>label{font-size:.68rem;color:var(--mute);letter-spacing:.05em;text-transform:uppercase;width:52px;flex:none}
+.fxrow input[type=range]{flex:1;width:auto;min-width:0}
+.fxrow output{font-size:.68rem;font-variant-numeric:tabular-nums;color:var(--text);width:52px;text-align:right;flex:none}
+.rchips{display:flex;gap:4px;flex-wrap:wrap}
+.rchips button{padding:4px 9px;border-radius:999px;font-size:.66rem;color:var(--mute);
+  border:1px solid var(--line);transition:all .18s var(--e);white-space:nowrap}
+.rchips button:hover{color:var(--text)}
+.rchips button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.presets{display:flex;gap:6px;flex-wrap:wrap;flex:0 1 auto;align-items:center}
+.pchip{padding:6px 12px;border-radius:999px;font-size:.76rem;color:var(--mute);border:1px solid transparent;transition:all .2s var(--e)}
+.pchip:hover{color:var(--text)}
+.pchip[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:var(--accent-soft);
+  box-shadow:0 0 calc(12px*var(--glow)) rgb(var(--accent-rgb) / .22)}
+.pmini{display:flex;gap:6px;align-items:center;margin-left:auto}
+.pmini input{width:120px;padding:6px 11px;border-radius:999px;background:transparent;border:1px solid var(--line-2);font-size:.76rem}
+.pmini input:focus{outline:none;border-color:var(--accent)}
+
+/* fullscreen player */
+/* A closed overlay must cost nothing.
+
+   `opacity:0` hides an element visually but keeps it composited: the GPU still
+   allocates a full-window texture for the sheet, plus a second backdrop
+   snapshot for the blur to sample, and it holds both for the entire life of the
+   process. Two of those at 1280x800 on a HiDPI screen is hundreds of megabytes
+   of VRAM for something nobody is looking at.
+
+   `content-visibility:hidden` drops the subtree's rendering work and its
+   layers, and the backdrop-filter is only attached while the panel is actually
+   open, so no snapshot exists when it is closed. */
+.fp{position:fixed;inset:var(--tb) 0 0;z-index:40;display:grid;place-items:center;padding:var(--sp-6);
+  /* The fullscreen player sits on top of the live particle field, and at a
+     light dim the field kept competing with the cover and the lyrics — the
+     "everything mixes together" report. A heavy frost instead: darker wash,
+     much wider blur, so the background reads as texture, not content. */
+  background:color-mix(in oklab,var(--bg) 84%,transparent);
+  opacity:0;pointer-events:none;content-visibility:hidden;
+  transition:opacity .35s var(--e)}
+.fp[data-open="true"]{opacity:1;pointer-events:auto;content-visibility:visible}
+/* The blur lives on an oversized ::before rather than on .fp itself. The
+   backdrop filter samples the pixels behind the element, and at the edges its
+   kernel reaches outside the element: Chromium pads those samples with black,
+   which showed up as a dark frame flickering along the window border while the
+   particle field animated underneath. Extending the filter surface 60px past
+   every edge keeps the visible area away from the padding. The ::before is
+   absolutely positioned, so it never becomes a grid item. */
+.fp[data-open="true"]::before{content:"";position:absolute;inset:-60px;z-index:-1;
+  -webkit-backdrop-filter:blur(28px) saturate(1.15);backdrop-filter:blur(28px) saturate(1.15)}
+.fpc{width:min(1080px,100%);max-height:100%;overflow:auto;padding:var(--sp-8);position:relative;
+  display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:var(--sp-8);
+  transform:translateY(20px) scale(.98);transition:transform .42s var(--e)}
+.fp[data-open="true"] .fpc{transform:none}
+.cover{aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;
+  background:linear-gradient(150deg,oklch(var(--l1,54%) 0 0),oklch(var(--l2,22%) 0 0));
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  box-shadow:0 24px 70px oklch(0% 0 0 / .5)}
+html[data-theme="light"] .cover{background:linear-gradient(150deg,oklch(calc(100% - var(--l1,54%)) 0 0),oklch(calc(100% - var(--l2,22%)) 0 0));box-shadow:0 20px 60px oklch(0% 0 0 / .18)}
+.cover .vis{position:absolute;inset:0;width:100%;height:100%}
+.fpr{display:flex;flex-direction:column;min-width:0}
+.fpr h2{font-size:clamp(1.6rem,3vw,2.3rem);line-height:1.05;margin:var(--sp-3) 0 6px}
+.fpr .by{color:var(--mute);font-size:.95rem;margin:0}
+.fpr .fpctrls{display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-6) 0 var(--sp-4)}
+.fpr .fpctrls .play{width:52px;height:52px}
+.fpseek{display:flex;align-items:center;gap:12px}
+.fpswitch{display:flex;gap:var(--sp-6);border-bottom:1px solid var(--line);margin:var(--sp-8) 0 var(--sp-4)}
+.fpswitch button{padding:0 1px 10px;font-size:.8rem;color:var(--mute);position:relative;letter-spacing:.02em}
+.fpswitch button[aria-selected="true"]{color:var(--text)}
+.fpswitch button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--accent);
+  box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .6)}
+/* overflow-x hidden: the seekable-line hit area uses a negative inline margin
+   (-6px) that makes the .lyr grid 12px wider than the panel. That triggered a
+   horizontal scrollbar pinned to the bottom of the fullscreen player — a full
+   width strip with a bright thumb, which read as junk UI. Vertical scrolling
+   is unaffected. */
+.fpbody{min-height:96px;max-height:min(34vh,290px);overflow:auto;overflow-x:hidden;padding-right:6px;overscroll-behavior:contain}
+/* Lyrics get more room than a queue list: reading three lines at a time defeats
+   the point. */
+.fpbody:has(.lyr[data-synced="true"]){max-height:min(48vh,420px)}
+/* Tab changes were instant: the queue vanished and the lyrics simply existed,
+   which reads as a glitch rather than a transition. The panel now fades and
+   lifts its new contents in. Direction is set from the tab order, so going
+   queue -> lyrics and lyrics -> queue move opposite ways instead of both
+   sliding the same direction. */
+.fpbody[data-anim="in"]{animation:fpin .3s var(--e) both}
+.fpbody[data-anim="in"][data-dir="back"]{animation-name:fpinb}
+@keyframes fpin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes fpinb{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+/* The now-playing line in the bar cross-fades on a track change instead of the
+   text snapping to a different song mid-sentence. */
+.np[data-swap="1"] .meta{animation:npswap .34s var(--e) both}
+@keyframes npswap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.np[data-swap="1"] .art{animation:npart .38s var(--e) both}
+@keyframes npart{from{opacity:.35;transform:scale(.9)}to{opacity:1;transform:none}}
+/* The full-player cover gets a longer, softer version of the same idea. */
+.fpc[data-swap="1"] .cover{animation:fpcover .5s var(--e) both}
+@keyframes fpcover{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.fpc[data-swap="1"] .fpr h2,.fpc[data-swap="1"] .fpr .by{animation:npswap .42s var(--e) both}
+.fpc,.panel,.plc,.row,.chatpane,.roompane{min-width:0}
+@media (prefers-reduced-motion: reduce){
+ .fpbody[data-anim="in"],.np[data-swap="1"] .meta,.np[data-swap="1"] .art,
+ .fpc[data-swap="1"] .cover,.fpc[data-swap="1"] .fpr h2,.fpc[data-swap="1"] .fpr .by{animation:none}
+}
+/* Queue header: what the queue was built from, plus a way to empty it. */
+.qhead{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:0 0 8px;font-size:.78rem;color:var(--mute)}
+.qhead b{color:var(--text);font-weight:520}
+/* Explicit minmax(0,…) tracks: with plain `1fr auto` the nowrap+overflow
+   cells contribute a zero minimum, so a narrow panel squeezed the title
+   column to a single letter. Fixed shares cannot collapse. */
+.q{display:grid;grid-template-columns:22px minmax(56px,1fr) minmax(0,30%) 22px;gap:12px;align-items:center;padding:8px 8px;border-radius:10px;font-size:.86rem;cursor:pointer;transition:background .18s var(--e)}
+.q:hover{background:oklch(100% 0 0 / .05)}
+/* Rows stagger in so a rebuilt queue reads as a list arriving, not as a flash.
+   Capped at 12 steps in the markup: a 200-track queue must not take 4 seconds
+   to appear. */
+.qlist .q{animation:qin .32s var(--e) both;animation-delay:calc(var(--i,0)*22ms)}
+@keyframes qin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.qrm{opacity:0;color:var(--mute);display:grid;place-items:center;width:22px;height:22px;
+  border-radius:6px;transition:opacity .16s var(--e),background .16s var(--e),color .16s var(--e)}
+.q:hover .qrm,.qrm:focus-visible{opacity:1}
+.qrm:hover{background:oklch(100% 0 0 / .08);color:var(--text)}
+html[data-theme="light"] .qrm:hover{background:oklch(0% 0 0 / .07)}
+html[data-theme="light"] .q:hover{background:oklch(20% 0.01 280 / .04)}
+.q i.n{font-style:normal;color:var(--mute);font-size:.72rem;font-variant-numeric:tabular-nums}
+.q b{font-weight:450;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q em{font-style:normal;color:var(--mute);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* A breathing dot of life for long-running background work (Whisper can take
+   minutes); a static line reads as "stuck". */
+.lypulse{animation:lypulse 1.6s ease-in-out infinite}
+@keyframes lypulse{50%{opacity:.25}}
+@media (prefers-reduced-motion: reduce){
+ .qlist .q{animation:none}
+}
+/* Rows arrive with a short stagger. A list that appears all at once reads as a
+   flash; capped so a 200-row library is not a slideshow. */
+.rows>.row{animation:rowin .3s var(--e) both}
+.rows>.row:nth-child(1){animation-delay:0ms}
+.rows>.row:nth-child(2){animation-delay:18ms}
+.rows>.row:nth-child(3){animation-delay:36ms}
+.rows>.row:nth-child(4){animation-delay:54ms}
+.rows>.row:nth-child(5){animation-delay:72ms}
+.rows>.row:nth-child(6){animation-delay:90ms}
+.rows>.row:nth-child(7){animation-delay:108ms}
+.rows>.row:nth-child(8){animation-delay:126ms}
+.rows>.row:nth-child(n+9){animation-delay:140ms}
+@keyframes rowin{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+/* Same for the tiles. */
+.plgrid>.plc{animation:tilein .34s var(--e) both}
+.plgrid>.plc:nth-child(2){animation-delay:26ms}
+.plgrid>.plc:nth-child(3){animation-delay:52ms}
+.plgrid>.plc:nth-child(4){animation-delay:78ms}
+.plgrid>.plc:nth-child(5){animation-delay:104ms}
+.plgrid>.plc:nth-child(n+6){animation-delay:120ms}
+@keyframes tilein{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+/* The empty state should not slide in from nowhere either. */
+.empty{animation:rowin .34s var(--e) both}
+@media (prefers-reduced-motion: reduce){
+ .rows>.row,.plgrid>.plc,.empty{animation:none}
+}
+
+/* The active line is drawn in the accent colour rather than plain white, so the
+   text belongs to the same palette as the rest of the player and follows a
+   custom accent automatically. Distance from the current line drives the fade,
+   which is what makes a synced lyric read as one moving focus instead of a
+   list where one row is brighter. */
+.lyr{display:grid;gap:9px;padding:2px 0 var(--sp-8);scroll-behavior:smooth}
+/* Selection has to look deliberate: the default highlight on a semi-transparent
+   line was almost invisible, so a drag read as a glitch rather than as text
+   being selected. */
+.lyr p::selection{background:var(--accent-soft);color:var(--text)}
+.lyr p[data-at]{cursor:pointer}
+.lyr p[data-at]:hover{opacity:.85;color:var(--text)}
+/* Seekable lines get a hit area wider than the glyphs, so the click target is
+   the line rather than the exact words. */
+.lyr p[data-at]{margin-inline:-6px;padding-inline:6px;border-radius:8px}
+.lyr p[data-at]:hover{background:oklch(100% 0 0 / .04)}
+html[data-theme="light"] .lyr p[data-at]:hover{background:oklch(0% 0 0 / .04)}
+.lyr p[data-at]:focus-visible{outline:1.5px solid var(--accent);outline-offset:2px}
+.lyr p{margin:0;font-size:1.02rem;color:var(--mute);opacity:.45;
+  transition:opacity .45s var(--e),color .45s var(--e),transform .45s var(--e),filter .45s var(--e);
+  will-change:opacity,transform}
+/* Synced lyrics read like a karaoke sheet rather than a paragraph: the size and
+   weight are what make the current line findable at a glance from across a
+   room, which is the whole point of showing them full-screen. */
+.lyr[data-synced="true"]{gap:6px}
+.lyr[data-synced="true"] p{font-size:1.34rem;font-weight:520;line-height:1.32;
+  font-family:"Inter Tight",Inter,system-ui,sans-serif;letter-spacing:-.01em}
+/* Unsynced lyrics have no "current line", so they are shown evenly readable
+   rather than uniformly dimmed as if something were still loading. */
+.lyr[data-synced="false"] p{opacity:.9;color:var(--text)}
+.lyr p[data-near="1"]{opacity:.62}
+.lyr p[data-near="2"]{opacity:.5}
+.lyr p[data-near="far"]{opacity:.32;filter:blur(.4px)}
+.lyr p[data-on="true"]{opacity:1;font-weight:500;transform:translateX(3px) scale(1.015);
+  transform-origin:left center;filter:none;
+  color:var(--accent);text-shadow:0 0 calc(18px*var(--glow)) rgb(var(--accent-rgb) / .35)}
+.lyr[data-synced="true"] p[data-on="true"]{font-weight:640;transform:translateX(4px) scale(1.02)}
+/* With no accent chosen --accent is near-white, and a white glow on white text
+   just looks like a smudge. */
+html[data-accent="none"] .lyr p[data-on="true"]{color:var(--text);text-shadow:none}
+.lysrc{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);
+  opacity:.7;margin-bottom:6px}
+@media (prefers-reduced-motion: reduce){
+ .lyr{scroll-behavior:auto}
+ .lyr p{transition:none}
+ .lyr p[data-on="true"]{transform:none}
+}
+.close{position:absolute;top:14px;right:14px}
+/* An empty queue or a track with no lyrics used to reserve a tall block, so
+   the fullscreen player showed a large void under the tabs. Enough padding to
+   read as deliberate, not enough to look broken. */
+.hollow{color:var(--mute);font-size:.85rem;padding:var(--sp-6) 0;text-align:center}
+/* Keep the panel from collapsing to nothing while still not stretching: the
+   grid row is sized by content, so both sides stay aligned. */
+
+/* empty */
+/* The hidden attribute only carries display:none through the UA stylesheet, so
+   any class rule with its own display silently outranks it. That is how a
+   closed dialog ended up covering the window as an invisible click trap, and
+   .app was one edit away from the same fault. One rule covers every case,
+   present and future. */
+[hidden]{display:none!important}
+
+/* In-app dialog, replacing window.prompt/confirm. Those render the webview's
+   own "tauri.localhost says" chrome, which is the single clearest tell that
+   this is a browser rather than an application. */
+/* Same reasoning as .fp: the dialog is closed almost always, so its blur is
+   attached only while it is open rather than pinning a backdrop snapshot for
+   the whole session. */
+.modalwrap{position:fixed;inset:var(--tb) 0 0;z-index:300;display:grid;place-items:center;
+  background:oklch(0% 0 0 / .5);
+  opacity:0;pointer-events:none;content-visibility:hidden;
+  transition:opacity .2s var(--e)}
+.modalwrap[data-open="true"]{content-visibility:visible;
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+/* `display:grid` above outranks the hidden attribute's built-in display:none,
+   so without this the closed dialog stayed laid out: a fully transparent
+   z-index:300 sheet over the whole window that swallowed every click. The
+   interface looked normal and was completely dead. */
+.modalwrap[hidden]{display:none}
+/* Belt and braces: even while fading in or out, only an open dialog may take
+   pointer events. */
+.modalwrap[data-open="true"]{opacity:1;pointer-events:auto}
+.modalbox{width:min(420px,92vw);padding:22px;border-radius:18px;
+  border:1px solid var(--line-2);box-shadow:0 24px 70px oklch(0% 0 0 / .55);
+  transform:scale(.94) translateY(8px);transition:transform .24s var(--e-q)}
+.modalwrap[data-open="true"] .modalbox{transform:none}
+.modalbox h3{font-size:1.02rem;font-weight:500;margin:0 0 14px}
+.modalbox label{display:block;margin:0 0 6px}
+.modalbox input{width:100%;padding:11px 14px;border-radius:11px;font-size:.9rem;
+  background:var(--surf);border:1px solid var(--line-2);color:var(--text);
+  transition:border-color .2s var(--e)}
+.modalbox input:focus{outline:none;border-color:var(--accent)}
+.modalact{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
+
+/* Image editor. The frame is fixed and the picture moves behind it, so what is
+   inside the frame is literally what gets saved — no second, invisible crop. */
+.cropbox{width:min(460px,94vw)}
+.crop-stage{position:relative;overflow:hidden;border-radius:var(--r);
+  background:oklch(8% 0 0);cursor:grab;touch-action:none;
+  border:1px solid var(--line-2)}
+.crop-stage[data-drag="true"]{cursor:grabbing}
+.crop-stage canvas{display:block;width:100%}
+/* The mask only shows the shape of the target; it must never eat the drag. */
+.crop-mask{position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 0 1px oklch(100% 0 0 / .18)}
+#cropper[data-shape="square"] .crop-mask,
+#cropper[data-shape="cover"] .crop-mask{border-radius:var(--r)}
+/* An avatar is displayed as a circle, so the editor shows a circle: cropping to
+   a square and only discovering the corners are cut afterwards is the whole
+   problem being fixed here. */
+#cropper[data-shape="square"] .crop-mask::after{content:"";position:absolute;inset:0;
+  border-radius:50%;box-shadow:0 0 0 9999px oklch(0% 0 0 / .55)}
+.primary.sm{padding:9px 18px;font-size:.84rem}
+.primary.danger{background:oklch(62% 0.19 25);color:#fff}
+
+/* This is an app, not a page: dragging across the interface should not paint a
+   blue selection over headings and buttons. Text the user may genuinely want
+   to copy is opted back in below. */
+body{-webkit-user-select:none;user-select:none}
+input,textarea,[contenteditable],.pmail,.modalbox h3,.ctx,.bdg span{
+  -webkit-user-select:text;user-select:text}
+/* Same "this is an app" rule for the remaining browser tells: the I-beam
+   cursor over labels, ghost-images when dragging artwork, and the default
+   chunky scrollbar anywhere outside .view (the fullscreen queue and lyrics
+   panels scroll too). */
+body{cursor:default}
+img{ -webkit-user-drag:none}
+/* Lite mode kills the two compositor hogs outright rather than shrinking them:
+   the 24px haze blur (an oversized offscreen surface that never settles) and
+   every backdrop-filter (any non-zero radius forces a full-window pass, which
+   is what actually chokes integrated GPUs). A global kill switch is the point. */
+html[data-lite] .haze{filter:none}
+html[data-lite] .haze i{animation:none}
+html[data-lite] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.fpbody::-webkit-scrollbar{width:8px}
+.fpbody::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+/* The webview's own context menu (Reload / View source) has no place here;
+   tracks get ours instead, wired further down. */
+
+/* Toasts. Failures used to reach the console only, so from the UI a dead
+   stream was indistinguishable from silence. */
+.toasts{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:120;
+  width:min(520px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{padding:10px 18px;border-radius:999px;font-size:.82rem;background:var(--surf-2);
+  border:1px solid var(--line-2);color:var(--text);box-shadow:0 10px 30px oklch(0% 0 0 / .35);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  max-width:100%;text-align:center;overflow-wrap:anywhere;animation:toastIn .32s var(--e) both}
+.toast.out{animation:toastOut .3s var(--e) both}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-6px) scale(.98)}}
+.empty{text-align:center;padding:var(--sp-16) var(--sp-4);max-width:40ch;margin:0 auto;color:var(--mute)}
+.empty h3{font-size:1.05rem;color:var(--text);margin:var(--sp-4) 0 6px}
+.empty p{font-size:.85rem;margin:0}
+.dots3{display:inline-flex;gap:5px;align-items:center;height:14px}
+.dots3 i{width:4px;height:4px;border-radius:50%;background:var(--mute);animation:bl 1.1s var(--e-io) infinite}
+.dots3 i:nth-child(2){animation-delay:.14s}.dots3 i:nth-child(3){animation-delay:.28s}
+@keyframes bl{0%,100%{opacity:.2}45%{opacity:1}}
+.pend{display:flex;align-items:center;gap:var(--sp-3);padding:11px var(--sp-3);border-top:1px solid var(--line);font-size:.82rem;color:var(--mute)}
+
+/* onboarding */
+.ob{position:fixed;inset:var(--tb) 0 0;z-index:60;display:grid;place-items:center;padding:var(--sp-6);transition:opacity .5s var(--e)}
+.ob[hidden]{display:none}
+.ob.out{opacity:0;pointer-events:none}
+.obc{width:min(520px,100%);padding:var(--sp-12) var(--sp-8) var(--sp-6);text-align:center;position:relative;overflow:hidden}
+.obstep{position:absolute;inset:var(--sp-12) var(--sp-8) var(--sp-6);opacity:0;transform:translateY(10px) scale(.985);
+  pointer-events:none;transition:opacity .26s var(--e),transform .34s var(--e)}
+.obstep[data-on="true"]{position:static;inset:auto;opacity:1;transform:none;pointer-events:auto}
+.obc h1{font-size:1.6rem;margin-bottom:8px}
+.obc .lead{color:var(--mute);font-size:.88rem;margin:0 auto var(--sp-8);max-width:38ch}
+.opts{display:grid;gap:var(--sp-2)}
+.opt{display:flex;align-items:center;gap:var(--sp-4);padding:14px 18px;border-radius:var(--r);border:1px solid var(--line);
+  text-align:left;transition:border-color .2s var(--e),background .2s var(--e),transform .3s var(--e),opacity .3s var(--e);
+  animation:up .5s var(--e) both;animation-delay:calc(var(--i,0) * 70ms)}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.opt:hover{border-color:var(--line-2);background:var(--surf-2)}
+.opt[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 calc(18px*var(--glow)) rgb(var(--accent-rgb) / .14)}
+.opt b{display:block;font-size:.92rem;font-weight:450}
+.opt small{color:var(--mute);font-size:.75rem}
+.opt .tick{margin-left:auto;color:var(--accent);opacity:0;transform:scale(.7);transition:all .24s var(--e-q)}
+.opt[aria-checked="true"] .tick{opacity:1;transform:none}
+.obnav{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);margin-top:var(--sp-8)}
+.prog3{display:flex;gap:6px}
+.prog3 i{width:5px;height:5px;border-radius:99px;background:var(--line-2);transition:all .4s var(--e)}
+.prog3 i[data-on="true"]{width:20px;background:var(--accent)}
+.ghost{color:var(--mute);font-size:.84rem;padding:8px 12px;border-radius:10px;transition:color .2s var(--e)}
+.ghost:hover{color:var(--text)}
+.obdone{display:grid;gap:var(--sp-2);place-items:center;padding:var(--sp-8) 0 var(--sp-4)}
+.obdone .ring{width:74px;height:74px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;
+  animation:pulse 2.6s var(--e-io) infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.06);opacity:1}}
+.obswatch{display:flex;gap:10px;justify-content:center;margin-top:var(--sp-2)}
+
+@media (max-width:1000px){
+  .fpc{grid-template-columns:1fr;padding:var(--sp-6)}
+  .cover{max-width:250px}
+}
+@media (max-width:880px){
+  .app{grid-template-columns:1fr;grid-template-areas:"main" "bar" "rail";gap:var(--sp-1);padding:var(--sp-1)}
+  .rail{flex-direction:row;justify-content:space-around;padding:var(--sp-1)}
+  .mark,.railend{display:none}
+  .barmain{grid-template-columns:1fr auto;gap:var(--sp-2)}
+  .right{display:none}
+  .top{flex-wrap:wrap}
+  .srv{margin-left:0;order:2;width:100%;justify-content:flex-start}
+  .row{gap:var(--sp-2)}
+  .row .dur,.row .src{display:none}
+   .dock{left:50%;right:auto;width:calc(100% - 16px);padding:12px;gap:12px}
+   .bands{flex:1 1 100%;min-width:0;gap:7px}
+   .fx{flex:1 1 100%;min-width:0}
+  .presets{order:-1}
+  .pmini{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;transition-duration:.08s!important}}
+
+@media (max-width:600px){
+  .top{padding-inline:0}
+  .view{padding-inline:0}
+  .vh{padding-inline:0;padding-bottom:18px}
+  .panel{margin-inline:0;padding:18px}
+  .row{gap:10px;padding-inline:8px}
+  .row .art{width:34px;height:34px}
+  .fpc{padding:18px;gap:18px}
+  .cover{width:min(68vw,240px);margin-inline:auto}
+  .fpr .fpctrls{gap:6px;margin-block:18px 14px}
+  .fpr .fpctrls .play{width:46px;height:46px}
+  .public-head{margin-top:20px}
+  .roomcols{gap:18px}
+  .msg{max-width:88%}
+}
+
+
+/* ── social: chats, rooms, top ──────────────────────────────
+   Shared row/avatar vocabulary for every social screen so a friend, a chat
+   and a leaderboard entry all read as the same app. */
+.avat{border-radius:50%;flex:none;background-size:cover;background-position:center;
+  background-image:linear-gradient(150deg,oklch(46% 0 0),oklch(20% 0 0))}
+.avat.ghost{display:grid;place-items:center;font-size:.72rem;color:var(--mute);
+  background:var(--line);font-weight:600}
+.chatrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:10px 8px;border-radius:var(--r);transition:background .18s var(--e)}
+.chatrow:hover{background:oklch(100% 0 0 / .05)}
+html[data-theme="light"] .chatrow:hover{background:oklch(0% 0 0 / .04)}
+.chatrow .meta{display:grid;min-width:0;flex:1}
+.chatrow .meta b{font-weight:500;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chatrow .meta span{color:var(--mute);font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chatrow>i{color:var(--mute)}
+.people-search{max-width:720px;margin:0 auto}
+.people-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px 8px;border-top:1px solid var(--line);text-align:left;border-radius:var(--r);animation:peoRowIn .32s var(--e) both}
+.people-row:hover{background:var(--surf-2)}
+.public-profile{max-width:720px;margin:0 auto;padding:var(--sp-6)}
+
+/* people tab switch animation */
+@keyframes peoIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes peoRowIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.peo-enter{animation:peoIn .28s var(--e) both}
+#v-people{position:relative}
+
+/* smooth tab underline */
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--accent);
+  animation:tabIn .22s var(--e) both}
+@keyframes tabIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+.tabs button{transition:color .18s var(--e)}
+.tabs button:hover{color:var(--text)}
+.public-head{display:flex;align-items:center;gap:16px;margin:28px 0 18px}
+.public-head h3{margin:0;font-size:1.25rem}
+.public-actions{min-height:38px}
+.people-search,.public-profile{margin-left:auto;margin-right:auto}
+/* The pane is the scroller, not the page.
+
+   `min-height:60vh` with no upper bound that the parent could honour meant the
+    composer sat below the fold: typing pushed the log taller, the view scrolled
+    as a whole, and the input walked off screen — the reported "you have to
+    scroll the interface to write in a chat". Pinning the pane to the height it
+    is actually given makes .chatlog the only thing that scrolls, so the header
+    and the composer stay put. */
+.chatpane{display:flex;flex-direction:column;min-height:0;height:100%}
+#chatbody{display:none}
+#chatbody.chat-open{display:flex;height:100%;position:absolute;inset:0;padding:0 var(--sp-2) var(--sp-4)}
+#chatbody.chat-open>.chatpane{flex:1}
+
+/* chat open animation */
+@keyframes chatIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+#chatbody.chat-enter{animation:chatIn .24s var(--e) both}
+
+/* chat list row animation */
+.chatrow{animation:chatRowIn .3s var(--e) both}
+@keyframes chatRowIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.chathdr{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.chathdr b{font-size:.95rem}
+.mut{color:var(--mute);font-size:.74rem}
+.grow{flex:1}
+.memstrip{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 0;
+  border-bottom:1px solid var(--line);font-size:.76rem;color:var(--mute)}
+.chatlog{flex:1;overflow:auto;padding:14px 2px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.msg{max-width:72%;align-self:flex-start;display:grid;gap:3px;padding:8px 12px;border-radius:14px 14px 14px 4px;
+  background:oklch(100% 0 0 / .06);font-size:.86rem;overflow-wrap:anywhere}
+html[data-theme="light"] .msg{background:oklch(0% 0 0 / .05)}
+.msg.mine{align-self:flex-end;border-radius:14px 14px 4px 14px;background:var(--accent-soft)}
+.msg .who{font-size:.68rem;color:var(--accent);font-weight:600}
+.msg time{font-size:.64rem;color:var(--mute);display:flex;align-items:center;gap:4px;justify-content:flex-end}
+/* Delivery ticks. One tick is sent, two is read; the colour, not the shape,
+   carries the state so it stays legible at this size. */
+.tick{font-style:normal;font-size:.7rem;letter-spacing:-.08em;color:var(--mute);transition:color .2s var(--e-q)}
+.tick.read{color:var(--accent)}
+.chatimg{max-width:min(280px,100%);border-radius:10px;display:block}
+.chatrow-input{display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.chatrow-input input{flex:1;min-width:0}
+.joinchip{display:inline-flex;align-items:center;gap:6px}
+.roompane{display:flex;flex-direction:column;gap:16px;min-height:60vh;padding:clamp(16px,3vw,28px)}
+.roomnow{display:flex;align-items:center;gap:14px;padding:12px;border:1px solid var(--line);border-radius:var(--r-lg)}
+.roomnow .art{width:52px;height:52px;border-radius:10px;flex:none}
+.roomnow .meta{display:grid;min-width:0}
+.roomnow .meta b{font-weight:560;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.roomnow .meta span{color:var(--mute);font-size:.78rem}
+.roomcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,3vw,32px)}
+.roomlog{max-height:34vh}
+.reqrow{display:flex;align-items:center;gap:10px;padding:6px 0}
+.reqrow .meta{display:grid;min-width:0;flex:1}
+.reqres{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.roomq .q{cursor:default}
+.asrow{cursor:default}
+.rank{font-size:.9rem;text-align:center;color:var(--mute)}
+.asrow.me{background:var(--accent-soft);border-radius:var(--r)}
+.bioinp{width:100%;min-height:70px;resize:vertical;background:transparent;color:var(--text);
+  border:1px solid var(--line-2);border-radius:var(--r);padding:10px;font:inherit;font-size:.86rem}
+.bioinp:focus{outline:none;border-color:var(--accent)}
+@media (max-width:900px){.roomcols{grid-template-columns:1fr}}
+
+/* Profile page after the editing moved to Settings: the name is plain text
+   and the bio sits under the pin row. */
+.unview{font-size:1.15rem;font-weight:560}
+.pbio{color:var(--text);font-size:.85rem;margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Bare inputs used to fall through to the webview's own defaults — white
+   background, beveled border — which is exactly the "browser look" the chat
+   was called out for. One element-level rule fixes every field at once;
+   component rules elsewhere still override it where they need to. */
+input:not([type=range]):not([type=file]):not([type=checkbox]):not([type=radio]),
+textarea,select{
+  background:var(--surf);color:var(--text);border:1px solid var(--line-2);
+  border-radius:10px;padding:9px 13px;font-size:.86rem;transition:border-color .18s var(--e)}
+input::placeholder,textarea::placeholder{color:var(--mute)}
+input:not([type=range]):not([type=file]):focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--accent)}
+input:not([type=range]):not([type=file])::selection,textarea::selection{
+  background:rgb(var(--accent-rgb) / .45)}
+html[data-theme="light"] input:not([type=range]):not([type=file]),
+html[data-theme="light"] textarea,html[data-theme="light"] select{background:var(--surf)}
+
+/* Room screen: member chips with kick, copyable code, the add-to-queue bar. */
+.memchip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px 3px 4px;
+  border:1px solid var(--line);border-radius:999px;font-size:.74rem;color:var(--mute)}
+.memchip i{font-style:normal;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.memchip .qrm{margin-left:2px}
+.codechip{font:inherit;font-size:.72rem;color:var(--mute);background:var(--surf);
+  border:1px dashed var(--line-2);border-radius:999px;padding:4px 10px;cursor:copy}
+.codechip:hover{color:var(--text);border-color:var(--accent)}
+.roomadd input{width:100%}
+
+/* Chat polish pass: the first cut rendered like a debug log — cramped rows,
+   hard corners, an input bar that fought the send button. This layer keeps
+   the structure and fixes the feel: roomier bubbles, soft tails, a single
+   rounded composer. */
+.chatpane{border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-5)}
+.chathdr{padding:4px 6px 12px}
+.chathdr>b{font-size:1rem;font-weight:560}
+.chatlog{padding:10px 6px;gap:12px;scrollbar-width:thin}
+.msg{padding:9px 13px;border-radius:16px 16px 16px 6px;font-size:.9rem;line-height:1.45;
+  box-shadow:0 1px 8px oklch(0% 0 0 / .12)}
+.msg.mine{border-radius:16px 16px 6px 16px}
+.msg .who{margin-bottom:3px}
+.msg time{margin-top:4px}
+.chatimg{border-radius:12px}
+.chatrow-input{gap:6px;padding-top:10px}
+.chatrow-input input{flex:1;border-radius:999px;padding:11px 16px}
+.chatrow-input .primary.sm,.chatrow-input .ic{border-radius:999px;flex:none}
+.roomlog{max-height:40vh}
+.chatrow{padding:12px 10px}
+.reqres{margin-top:8px}
+
+/* ── Notification cards ──────────────────────────────────────────────
+   notify() has been building these since the social pass, but nothing ever
+   styled them: an unstyled div in a fixed container with no dimensions is
+   invisible, which is exactly the "there is no nice notification" report.
+
+   A toast is a passive status line at the bottom; this is the thing the user
+   is meant to act on, so it lives top-right, carries an icon and a title, and
+   slides in from the edge it is anchored to. */
+.notes{position:fixed;top:calc(var(--tb) + 16px);right:16px;z-index:130;
+  display:flex;flex-direction:column;gap:10px;align-items:flex-end;
+  width:min(360px,calc(100vw - 32px));pointer-events:none}
+.note{pointer-events:auto;width:100%;display:flex;align-items:flex-start;gap:11px;
+  padding:13px 14px;border-radius:16px;background:var(--surf-2);
+  border:1px solid var(--line-2);box-shadow:0 16px 40px oklch(0% 0 0 / .42);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  animation:noteIn .42s var(--e) both}
+.note.out{animation:noteOut .3s var(--e) both}
+/* Springy entrance from the right edge, settling rather than stopping dead. */
+@keyframes noteIn{
+  from{opacity:0;transform:translateX(24px) scale(.94)}
+  60%{opacity:1;transform:translateX(-3px) scale(1.01)}
+  to{opacity:1;transform:none}}
+@keyframes noteOut{to{opacity:0;transform:translateX(20px) scale(.96)}}
+.noteic{position:relative;width:32px;height:32px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent)}
+/* The accent ring pulses once so the eye lands on the card. */
+.noteic::after{content:"";position:absolute;width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--accent);opacity:.5;animation:notePulse 1.1s var(--e) 2}
+@keyframes notePulse{to{transform:scale(1.55);opacity:0}}
+.notetxt{flex:1;min-width:0;display:grid;gap:2px;cursor:pointer}
+.notetxt b{font-size:.86rem;font-weight:560;line-height:1.3}
+.notetxt span{font-size:.78rem;color:var(--mute);overflow-wrap:anywhere}
+.notex{flex:none;color:var(--mute);opacity:.7;transition:opacity .2s var(--e-q),color .2s var(--e-q)}
+.notex:hover{opacity:1;color:var(--text)}
+@media (prefers-reduced-motion: reduce){
+  .note,.note.out{animation:none}
+  .noteic::after{animation:none;opacity:0}
+}
+
+/* ══ motion & social polish pass ════════════════════════════════════════
+   One coherent layer: everything animates with transform/opacity/filter only,
+   everything yields to prefers-reduced-motion and [data-lite]. */
+
+/* ── nav rail: a real sliding pill instead of a background that blinks ── */
+.rail{position:relative}
+.rail::before{content:"";position:absolute;z-index:0;left:9px;
+  top:var(--ry,0px);width:56px;height:var(--rh,0px);border-radius:12px;
+  background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px rgb(var(--accent-rgb)/.14),0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb)/.10);
+  opacity:0;transition:top .4s var(--e),height .4s var(--e),opacity .25s var(--e)}
+.rail.pill-on::before{opacity:1}
+.rail .mark,.rail .navbtn{position:relative;z-index:1}
+.navbtn[aria-current="true"]{background:transparent}
+/* mobile rail lays out horizontally; the pill follows whatever geometry wins */
+@media (max-width:880px){
+  .rail::before{left:var(--rx,0px);top:auto;bottom:4px;width:var(--rw,56px);height:calc(100% - 8px)}
+}
+
+/* ── buttons: lift on hover, settle on press ─────────────────────────── */
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(.97)}
+.ic:hover svg{transform:scale(1.1)}
+.ic svg{transition:transform .18s var(--e-q)}
+.ic:active svg{transform:scale(.94)}
+.primary:active{transform:scale(.98)}
+
+/* heart gets a beat when it turns on */
+@keyframes heartBeat{0%{transform:scale(1)}30%{transform:scale(1.35)}55%{transform:scale(.92)}100%{transform:scale(1)}}
+.heart svg{transition:color .2s var(--e)}
+.heart[aria-pressed="true"] svg{animation:heartBeat .5s var(--e-q)}
+.navbadge{animation:rowIn .3s var(--e) both}
+
+/* play button: a small kick whenever playback starts */
+.play svg{transition:transform .2s var(--e-q)}
+#fpc [data-act="play"]:active svg,.play:active svg{transform:scale(.85)}
+
+/* ── segmented control + dock + modal: springier arrivals ─────────────── */
+.seg::before{transition:left .46s cubic-bezier(.3,1.35,.45,1),width .46s cubic-bezier(.3,1.35,.45,1),opacity .25s var(--e)}
+.dock{transition:opacity .26s var(--e),transform .44s cubic-bezier(.26,1.35,.42,1)}
+.modalbox{transition:transform .32s cubic-bezier(.3,1.45,.45,1)}
+.toast.out{animation:toastOut .32s var(--e) both}
+@keyframes toastOut{to{opacity:0;transform:translateY(14px) scale(.96)}}
+
+/* ── fullscreen player: the cover breathes while something is playing ── */
+.fpc .cover{transition:box-shadow .6s var(--e)}
+@keyframes coverFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.008)}}
+.fpc[data-playing="true"] .cover{animation:coverFloat 7s ease-in-out infinite;
+  box-shadow:0 30px 90px oklch(0% 0 0 / .55),0 0 calc(60px*var(--glow)) rgb(var(--accent-rgb)/.13)}
+.fpc[data-playing="true"] .fpctrls .play{animation:none}
+
+/* playing row art: gentle life beyond the ring pulse */
+.row[data-playing="true"] .art{animation:artBreath 3.2s ease-in-out infinite}
+@keyframes artBreath{50%{transform:scale(1.05)}}
+
+/* hero copy arrives once the shell is ready */
+.app.ready .hero h1,.app.ready .hero p,.app.ready .hero .row2{animation:heroUp .7s var(--e) both}
+.app.ready .hero p{animation-delay:.09s}
+.app.ready .hero .row2{animation-delay:.17s}
+@keyframes heroUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ── chats & rooms: the actual feel fixes ─────────────────────────────── */
+.chatpane,.roompane{box-shadow:0 18px 50px oklch(0% 0 0 / .22)}
+.chathdr b{letter-spacing:-.01em}
+.chatlog,.roomlog{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.chatlog::-webkit-scrollbar,.roomlog::-webkit-scrollbar{width:7px}
+.chatlog::-webkit-scrollbar-thumb,.roomlog::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px}
+
+/* messages pop in on the FIRST paint of a conversation only. Every later
+   repaint (the 5 s poll) recreates the same nodes, so a blanket rule would
+   replay the entrance forever and make the log flicker — the classic "чат
+   мигает". paintChat() stamps .first only on the very first render of a
+   conversation. */
+.chatlog.first .msg{animation:msgIn .3s var(--e) both}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.msg{transition:background .2s var(--e)}
+.msg:hover{background:oklch(100% 0 0 / .09)}
+html[data-theme="light"] .msg:hover{background:oklch(0% 0 0 / .07)}
+.msg.mine:hover{background:var(--accent-soft)}
+.chatimg{cursor:zoom-in;transition:transform .25s var(--e-q)}
+.chatimg:hover{transform:scale(1.02)}
+.joinchip{border:1px solid var(--line-2);transition:border-color .2s var(--e),box-shadow .2s var(--e)}
+.joinchip:hover{border-color:var(--accent);box-shadow:0 0 calc(12px*var(--glow)) rgb(var(--accent-rgb)/.25)}
+.chatrow-input input:focus{box-shadow:0 0 0 3px rgb(var(--accent-rgb)/.14)}
+.memchip{transition:border-color .2s var(--e),color .2s var(--e)}
+.memchip:hover{border-color:var(--line-2);color:var(--text)}
+.roomnow{transition:border-color .25s var(--e)}
+.roomnow:hover{border-color:var(--line-2)}
+.codechip:active{transform:scale(.97)}
+
+/* chat list rows: slight slide toward the chevron */
+.chatrow{transition:background .18s var(--e),transform .18s var(--e)}
+.chatrow:hover{transform:translateX(2px)}
+.people-row{transition:background .18s var(--e),transform .18s var(--e)}
+.people-row:hover{transform:translateX(2px)}
+/* A friend is one line: the row itself is the button (avatar, name, bio) with
+   the two actions at its right. The wrapper had no layout of its own, so the
+   message and unfriend buttons fell onto a second line underneath a
+   full-width row — every friend read as two stacked, half-empty rows. */
+.friend-row{display:flex;align-items:center;gap:var(--sp-2);
+  border-top:1px solid var(--line)}
+.friend-row .people-row{flex:1 1 auto;min-width:0;border-top:0}
+.friend-row>.btn,.friend-row>.ic{flex:none}
+
+/* ── guards ───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce){
+  .view{filter:none;transition:opacity .15s ease}
+  .rail::before,.heart[aria-pressed="true"] svg,.row[data-playing="true"] .art,
+  .fpc[data-playing="true"] .cover,.chatlog:not(.been) .msg{animation:none}
+  .app.ready .hero h1,.app.ready .hero p,.app.ready .hero .row2{animation:none}
+  .chatrow:hover,.people-row:hover{transform:none}
+  .seg::before,.dock,.modalbox{transition-duration:.12s}
+}
+html[data-lite] .view{filter:none}
+html[data-lite] .fpc[data-playing="true"] .cover{animation:none;box-shadow:0 24px 70px oklch(0% 0 0 / .5)}
+html[data-lite] .row[data-playing="true"] .art{animation:none}
+
+/* ── scrollbars: one look on every platform ─────────────────────────────
+   Windows draws a wide classic bar, macOS an overlay one, WebKitGTK its own
+   grey bar — three different scrollbars for a single design. Thin and
+   translucent everywhere; the hand-tuned rules above still win on the
+   panels that have them. */
+*{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:oklch(100% 0 0 / .32);background-clip:content-box}
+*::-webkit-scrollbar-corner{background:transparent}
+
+/* Boot error surface: a failed start must say why, on the splash itself. */
+#booterr{position:absolute;left:50%;bottom:12vh;transform:translateX(-50%);
+  max-width:min(760px,88vw);max-height:34vh;overflow:auto;margin:0;
+  font:400 .78rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:oklch(75% .18 25);white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;
+  background:oklch(20% .04 25 / .35);border:1px solid oklch(60% .18 25 / .4);
+  border-radius:12px;padding:12px 16px;z-index:2}

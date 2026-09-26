@@ -6,6 +6,10 @@ name: Release
 # Trigger by pushing a tag:
 #   git tag v0.1.1 && git push origin v0.1.1
 #
+# The tag must match `version` in src-tauri/tauri.conf.json — the updater
+# compares that value, not the tag, so a mismatch ships an "update" that clients
+# refuse to apply. The job checks this before building.
+#
 # Required repository secrets (Settings -> Secrets and variables -> Actions):
 #   TAURI_SIGNING_PRIVATE_KEY           contents of ~/.meowave-keys/meowave.key
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  empty string if the key has no password
@@ -22,22 +26,70 @@ on:
 permissions:
   contents: write
 
+# Two tags pushed in quick succession would otherwise race for the same release.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: macos-latest
+          - os: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      # Every action is pinned by commit SHA. This job holds the signing key, so
+      # a mutable tag here means a third party can change what touches it.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.3.0
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
 
       # Rust builds dominate the runtime here; without a cache every tag pays
       # the full dependency compile again.
-      - uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: src-tauri
 
+      # Linux needs the webkit/gtk development headers; nothing else in the
+      # matrix has system prerequisites.
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config patchelf unzip
+
+      - name: Tag matches tauri.conf.json version
+        shell: pwsh
+        run: |
+          $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $tag = "${{ github.ref_name }}" -replace '^v', ''
+          if ($tag -ne $conf.version) {
+            Write-Error "tag $tag does not match tauri.conf.json version $($conf.version)"
+            exit 1
+          }
+          Write-Host "version $($conf.version) OK"
+
+      # Publishing an unbuildable or failing revision as a release is worse than
+      # a slow release.
+      - name: Test
+        working-directory: src-tauri
+        run: cargo test
+
+      # ffmpeg is bundled as a sidecar (tauri.conf.json -> bundle.externalBin).
+      # 110 MB is too much to commit, so it is fetched here and verified against
+      # the checksum the publisher ships in the same release. On macOS the
+      # script exits successfully without downloading (BtbN ships no macOS
+      # builds); the app falls back to a system ffmpeg there.
+      - name: Fetch ffmpeg
+        run: node scripts/fetch-ffmpeg.mjs
+
       - name: Build and publish
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -45,10 +97,12 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Meowave ${{ github.ref_name }}"
-          releaseBody: "Установщик ниже. Обновление внутри приложения подтянется само."
-          releaseDraft: false
+          releaseBody: "Установщики для Windows, macOS и Linux ниже. Обновление внутри приложения подтянется само."
+          # Published as a draft: the installers get a manual smoke test before
+          # anyone's updater sees it. Publish the release to roll it out.
+          releaseDraft: true
           prerelease: false
-          # Publishes latest.json alongside the installer. Without it the
-          # updater endpoint 404s and the app reports "could not fetch a valid
-          # release JSON".
+          # Publishes latest.json alongside the installers (one entry per
+          # platform). Without it the updater endpoint 404s and the app
+          # reports "could not fetch a valid release JSON".
           includeUpdaterJson: true

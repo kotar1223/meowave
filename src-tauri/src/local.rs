@@ -19,7 +19,9 @@ use serde::Serialize;
 /// so ids must be stable across runs: they're derived from the path itself.
 static FILES: Mutex<Option<HashMap<String, PathBuf>>> = Mutex::new(None);
 
-pub const EXTENSIONS: &[&str] = &["mp3", "flac", "wav", "ogg", "oga", "m4a", "aac", "opus", "webm"];
+pub const EXTENSIONS: &[&str] = &[
+    "mp3", "flac", "wav", "ogg", "oga", "m4a", "aac", "opus", "webm",
+];
 
 #[derive(Serialize, Clone)]
 pub struct LocalTrack {
@@ -58,7 +60,9 @@ fn parse_name(stem: &str) -> (String, String) {
         let bytes = cleaned.as_bytes();
         let digits = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
         if digits > 0 && digits <= 3 && cleaned.len() > digits {
-            cleaned[digits..].trim_start_matches([' ', '.', '-', '_']).trim()
+            cleaned[digits..]
+                .trim_start_matches([' ', '.', '-', '_'])
+                .trim()
         } else {
             cleaned
         }
@@ -70,15 +74,56 @@ fn parse_name(stem: &str) -> (String, String) {
     let spaced = no_num.replace('_', " ");
     let mut s = spaced.as_str().trim().to_string();
     for tag in [
-        "320kbps", "256kbps", "192kbps", "128kbps", "320 kbps", "(Official Video)",
-        "(Official Audio)", "[Official Video]", "(Lyrics)", "(Audio)", "HD", "HQ",
+        "320kbps",
+        "256kbps",
+        "192kbps",
+        "128kbps",
+        "320 kbps",
+        "(Official Video)",
+        "(Official Audio)",
+        "[Official Video]",
+        "(Lyrics)",
+        "(Audio)",
+        "(HD)",
+        "[HD]",
+        "(HQ)",
+        "[HQ]",
     ] {
         // Case-insensitive removal without pulling in a regex dependency.
+        //
+        // Two bugs lived here. First, the byte offset came from `to_lowercase()`
+        // and was then applied to the original string: for any name containing
+        // non-ASCII characters whose lowercase form has a different UTF-8 length
+        // that offset lands mid-character and `replace_range` panics, taking the
+        // whole scan with it. Matching on a per-iteration lowercase copy of the
+        // *current* string is only safe when the two share a byte layout, so the
+        // match is now located by scanning char boundaries directly.
+        //
+        // Second, bare "HD"/"HQ" matched inside ordinary words — "Shdow",
+        // "HQuartet" — so those tags are only stripped when bracketed.
+        let needle = tag.to_lowercase();
         loop {
-            let Some(at) = s.to_lowercase().find(&tag.to_lowercase()) else {
+            let hay = s.to_lowercase();
+            let Some(lower_at) = hay.find(&needle) else {
                 break;
             };
-            s.replace_range(at..at + tag.len(), "");
+            // Map the match back to the original string by counting chars, not
+            // bytes: char counts are stable across case folding for every
+            // alphabet this touches.
+            let char_at = hay[..lower_at].chars().count();
+            let char_len = tag.chars().count();
+            let Some(start) = s.char_indices().nth(char_at).map(|(i, _)| i) else {
+                break;
+            };
+            let end = s
+                .char_indices()
+                .nth(char_at + char_len)
+                .map(|(i, _)| i)
+                .unwrap_or(s.len());
+            if start >= end {
+                break;
+            }
+            s.replace_range(start..end, "");
         }
     }
     // Tidy up what the removals left behind.
@@ -88,7 +133,11 @@ fn parse_name(stem: &str) -> (String, String) {
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");
-    let s = s.trim().trim_matches(['-', '–', ' ', '.']).trim().to_string();
+    let s = s
+        .trim()
+        .trim_matches(['-', '–', ' ', '.'])
+        .trim()
+        .to_string();
     let cleaned = if s.is_empty() { no_num.to_string() } else { s };
 
     // " - " is the conventional separator, but a bare "-" is common too.
@@ -107,7 +156,9 @@ fn parse_name(stem: &str) -> (String, String) {
 /// Test-only shim: parse_name is private, and the filename parser is the
 /// only metadata source, so it needs direct coverage.
 #[cfg(test)]
-pub fn parse_name_pub(s: &str) -> (String, String) { parse_name(s) }
+pub fn parse_name_pub(s: &str) -> (String, String) {
+    parse_name(s)
+}
 
 fn is_audio(path: &Path) -> bool {
     path.extension()
@@ -161,7 +212,7 @@ pub fn local_scan(folder: String, depth: Option<u8>) -> Result<Vec<LocalTrack>, 
     }
     let mut out = Vec::new();
     walk(&root, depth.unwrap_or(3), &mut out);
-    out.sort_by(|x, y| x.path.to_lowercase().cmp(&y.path.to_lowercase()));
+    out.sort_by_key(|x| x.path.to_lowercase());
     Ok(out)
 }
 
@@ -171,7 +222,9 @@ fn walk(dir: &Path, depth: u8, out: &mut Vec<LocalTrack>) {
     if out.len() >= 5000 {
         return;
     }
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
@@ -219,6 +272,63 @@ pub fn mime_of(path: &Path) -> &'static str {
     }
 }
 
+/// Rejects a download target that we should not be writing into.
+///
+/// `folder` arrives from the frontend. It is normally a directory the user
+/// picked, but nothing in the IPC boundary guarantees that, so the checks are:
+/// absolute, not a system location, and at most one new level deep. The last
+/// rule is what stops `create_dir_all` from materialising a whole tree in an
+/// arbitrary place while still allowing the "one subfolder per playlist" case,
+/// where the parent is the directory the user just chose.
+fn validate_dir(dir: &Path) -> Result<(), String> {
+    if !dir.is_absolute() {
+        return Err("the download folder must be an absolute path".into());
+    }
+    if dir.components().any(|c| c.as_os_str() == "..") {
+        return Err("the download folder must not contain ..".into());
+    }
+    if dir.is_dir() {
+        return protect_system_dir(dir);
+    }
+    let parent = dir.parent().ok_or("invalid download folder")?;
+    if !parent.is_dir() {
+        return Err(format!(
+            "{} does not exist; pick the download folder again",
+            parent.display()
+        ));
+    }
+    protect_system_dir(dir)
+}
+
+/// Writing into the OS's own directories is never what the user meant.
+fn protect_system_dir(dir: &Path) -> Result<(), String> {
+    let lower = dir.to_string_lossy().to_lowercase().replace('/', "\\");
+    const DENY: &[&str] = &[
+        "c:\\windows",
+        "c:\\program files",
+        "c:\\program files (x86)",
+        "c:\\programdata",
+        "/etc",
+        "/bin",
+        "/sbin",
+        "/usr",
+        "/system",
+        "/library",
+    ];
+    let unixy = dir.to_string_lossy().to_lowercase();
+    for bad in DENY {
+        let hit = if bad.starts_with('/') {
+            unixy == *bad || unixy.starts_with(&format!("{bad}/"))
+        } else {
+            lower == *bad || lower.starts_with(&format!("{bad}\\"))
+        };
+        if hit {
+            return Err("that folder belongs to the system".into());
+        }
+    }
+    Ok(())
+}
+
 /// Saves a track to disk through the same resolver playback uses.
 ///
 /// Downloading is deliberately a Rust command rather than a link in the
@@ -227,14 +337,21 @@ pub fn mime_of(path: &Path) -> &'static str {
 /// browser opened an external window instead of saving a file. Going through
 /// the local proxy means the bytes arrive on exactly the path that is already
 /// known to work for playback.
+///
+/// The proxy port is read from our own state, never from the caller. It used to
+/// be an argument, which turned this command into "fetch any localhost port and
+/// write the response to a file of your choosing".
 #[tauri::command]
 pub async fn download_track(
     service: String,
     id: String,
     name: String,
     folder: Option<String>,
-    port: u16,
     hq: bool,
+    // Container the caller's webview can decode ("mp4" / "webm" / "best").
+    // YouTube Music ships both, and a Mac without Opus support should not end
+    // up with a .webm it cannot open — see ytm::pick_format.
+    fmt: Option<String>,
 ) -> Result<String, String> {
     // Sanitise: `name` is built from a track title, which routinely contains
     // characters Windows rejects outright, and could otherwise walk out of the
@@ -248,7 +365,11 @@ pub async fn download_track(
         })
         .collect();
     let stem = stem.trim().trim_end_matches('.').to_string();
-    let stem = if stem.is_empty() { "track".to_string() } else { stem };
+    let stem = if stem.is_empty() {
+        "track".to_string()
+    } else {
+        stem
+    };
     let stem: String = stem.chars().take(120).collect();
 
     let dir = match folder {
@@ -261,22 +382,46 @@ pub async fn download_track(
             base.join("Music").join("Meowave")
         }
     };
-    std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+    validate_dir(&dir)?;
+    {
+        let target = dir.clone();
+        tokio::task::spawn_blocking(move || std::fs::create_dir_all(&target))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+    }
 
+    let port = crate::stream_port_value().ok_or("the audio proxy is not running")?;
+    let fmt = fmt.unwrap_or_else(|| "best".to_string());
     let url = format!(
-        "http://127.0.0.1:{port}/stream/{}/{}?hq={}",
+        "http://127.0.0.1:{port}/stream/{}/{}?k={}&hq={}&fmt={}",
         urlencoding::encode(&service),
         urlencoding::encode(&id),
-        if hq { 1 } else { 0 }
+        crate::stream::token(),
+        if hq { 1 } else { 0 },
+        urlencoding::encode(&fmt)
     );
 
-    let resp = crate::api::client()?
+    // media_client: a download is a body read that lasts as long as the file
+    // takes, and client()'s total deadline cut every long track off.
+    let mut resp = crate::api::media_client()?
         .get(&url)
         .send()
         .await
         .map_err(|e| format!("download failed: {e}"))?;
     if !resp.status().is_success() && resp.status().as_u16() != 206 {
-        return Err(format!("service returned {}", resp.status()));
+        // The proxy explains resolve failures in the body ("no access to this
+        // track"); surfacing that instead of a bare status code is the
+        // difference between "SoundCloud deleted this upload" and a mystery
+        // "502" for a track that still shows up in search.
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        let reason = body.trim().chars().take(180).collect::<String>();
+        return Err(if reason.is_empty() {
+            format!("service returned {status}")
+        } else {
+            format!("service returned {status}: {reason}")
+        });
     }
 
     // Extension from the content type: the proxy knows what it actually served,
@@ -301,44 +446,307 @@ pub async fn download_track(
         _ => "mp3",
     };
 
-    // Never overwrite: a second download of the same title gets a suffix.
-    let mut path = dir.join(format!("{stem}.{ext}"));
-    let mut n = 2;
-    while path.exists() {
-        path = dir.join(format!("{stem} ({n}).{ext}"));
-        n += 1;
-        if n > 999 {
-            return Err("too many files with that name".into());
-        }
-    }
+    // Never overwrite: a second download of the same title gets a suffix. The
+    // mp3 that to_mp3 will produce is reserved at the same time, otherwise a
+    // .webm download could transcode over an unrelated existing .mp3.
+    let needs_mp3 = matches!(ext, "webm" | "m4a");
+    let (path, mp3_path) = reserve_names(&dir, &stem, ext, needs_mp3)?;
 
-    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
-    if bytes.is_empty() {
+    // Streamed to disk. `resp.bytes()` held the entire track in memory first,
+    // which for a FLAC album is hundreds of megabytes for no reason.
+    let mut file = tokio::fs::File::create(&path)
+        .await
+        .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+    let mut written: u64 = 0;
+    loop {
+        let chunk = match resp.chunk().await {
+            Ok(Some(c)) => c,
+            Ok(None) => break,
+            Err(e) => {
+                drop(file);
+                let _ = tokio::fs::remove_file(&path).await;
+                return Err(format!("download failed: {e}"));
+            }
+        };
+        use tokio::io::AsyncWriteExt;
+        if let Err(e) = file.write_all(&chunk).await {
+            drop(file);
+            let _ = tokio::fs::remove_file(&path).await;
+            return Err(format!("cannot write {}: {e}", path.display()));
+        }
+        written += chunk.len() as u64;
+    }
+    {
+        use tokio::io::AsyncWriteExt;
+        file.flush().await.map_err(|e| e.to_string())?;
+    }
+    drop(file);
+
+    if written == 0 {
+        let _ = tokio::fs::remove_file(&path).await;
         return Err("service returned an empty stream".into());
     }
-    std::fs::write(&path, &bytes).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
 
     // Convert to mp3 when the source container is one general-purpose players
     // choke on. Failure is not an error: the original file is already written
     // and playable in Meowave, so a missing ffmpeg costs compatibility, not the
     // download.
-    if matches!(ext, "webm" | "m4a") {
-        if let Some(mp3) = to_mp3(&path) {
+    if let Some(dst) = mp3_path {
+        let src = path.clone();
+        let converted = tokio::task::spawn_blocking(move || to_mp3(&src, &dst))
+            .await
+            .map_err(|e| e.to_string())?;
+        if let Some(mp3) = converted {
             return Ok(mp3.to_string_lossy().to_string());
         }
     }
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Picks a free `<stem>.<ext>`, and — when a transcode will follow — a free
+/// `.mp3` beside it, so neither step can clobber an existing file.
+fn reserve_names(
+    dir: &Path,
+    stem: &str,
+    ext: &str,
+    also_mp3: bool,
+) -> Result<(PathBuf, Option<PathBuf>), String> {
+    for n in 1..=999u32 {
+        let suffix = if n == 1 {
+            String::new()
+        } else {
+            format!(" ({n})")
+        };
+        let main = dir.join(format!("{stem}{suffix}.{ext}"));
+        if main.exists() {
+            continue;
+        }
+        if !also_mp3 {
+            return Ok((main, None));
+        }
+        let mp3 = dir.join(format!("{stem}{suffix}.mp3"));
+        if mp3.exists() {
+            continue;
+        }
+        return Ok((main, Some(mp3)));
+    }
+    Err("too many files with that name".into())
+}
+
+
+/// Downloads a track and bakes the current sound settings into the file.
+///
+/// The plain download saves what the service sent. This one applies what the
+/// user is actually hearing: the nine-band equaliser and the playback rate.
+/// That is the whole point of a "speedup" or "slowed" export — the effect has
+/// to survive leaving Meowave, and a normal download loses it because those
+/// live in the Web Audio graph, not in the bytes.
+///
+/// Speed is done with `atempo` rather than `asetrate`, so a 1.25× export sounds
+/// faster without turning the vocal into a chipmunk. atempo only accepts
+/// 0.5–2.0 per instance, so wider factors are chained.
+// The arguments arrive from the frontend by name, so a parameter struct would
+// only move the same eight fields behind one more type.
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+pub async fn download_processed(
+    service: String,
+    id: String,
+    name: String,
+    folder: Option<String>,
+    hq: bool,
+    // Nine gains in dB, matching FREQ in the frontend. Empty means flat.
+    gains: Vec<f32>,
+    rate: f32,
+    // Appended to the file name, e.g. "speed up", so the export is
+    // recognisable next to the original in a file manager.
+    suffix: Option<String>,
+    // Same container preference as download_track; forwarded unchanged.
+    fmt: Option<String>,
+) -> Result<String, String> {
+    if !has_ffmpeg_async().await {
+        return Err("ffmpeg-missing".into());
+    }
+
+    // Reuse the plain path for fetching: same proxy, same signing, same retry.
+    let src = download_track(service, id, name, folder, hq, fmt).await?;
+    let src = std::path::PathBuf::from(src);
+
+    let filters = build_filters(&gains, rate);
+    if filters.is_empty() {
+        // Nothing to apply; the untouched download is the correct answer
+        // rather than a pointless re-encode that only loses quality.
+        return Ok(src.to_string_lossy().to_string());
+    }
+
+    let stem = src
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("track")
+        .to_string();
+    let tag = suffix
+        .unwrap_or_default()
+        .chars()
+        .map(|c| match c {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+            c if (c as u32) < 0x20 => '_',
+            c => c,
+        })
+        .collect::<String>()
+        .trim()
+        .to_string();
+    let dir = src.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+
+    let base = if tag.is_empty() {
+        format!("{stem} (processed)")
+    } else {
+        format!("{stem} ({tag})")
+    };
+    let (dst, _) = reserve_names(&dir, &base, "mp3", false)?;
+
+    // ffmpeg is a long-running child process; on the runtime's own worker it
+    // froze every other command for the duration of the transcode.
+    let ff = ffmpeg_bin_async().await.ok_or("ffmpeg-missing")?;
+    let ok = {
+        let (src, dst, filters) = (src.clone(), dst.clone(), filters.clone());
+        tokio::task::spawn_blocking(move || {
+            std::process::Command::new(ff)
+                .args(["-y", "-loglevel", "error", "-i"])
+                .arg(&src)
+                .args(["-vn", "-af", &filters])
+                .args(["-codec:a", "libmp3lame", "-b:a", "256k"])
+                .arg(&dst)
+                .status()
+                .map(|s| s.success())
+                .map_err(|e| format!("ffmpeg failed to start: {e}"))
+        })
+        .await
+        .map_err(|e| e.to_string())??
+    };
+
+    if !ok || !dst.exists() {
+        let _ = tokio::fs::remove_file(&dst).await;
+        // The unprocessed file is still on disk and still playable, so this is
+        // a partial success, not a lost download.
+        return Err(format!(
+            "processing failed; the original is at {}",
+            src.display()
+        ));
+    }
+
+    Ok(dst.to_string_lossy().to_string())
+}
+
+/// Builds the ffmpeg filter chain for the equaliser and the rate.
+///
+/// Kept separate so the "nothing to do" case is obvious: a flat EQ at 1.0×
+/// produces an empty chain and the caller skips the re-encode entirely.
+fn build_filters(gains: &[f32], rate: f32) -> String {
+    // Same centre frequencies as the frontend's FREQ array. They have to match,
+    // or the exported file will not sound like what was playing.
+    const FREQ: [u32; 9] = [60, 150, 400, 1000, 2400, 4000, 8000, 12000, 16000];
+    let mut parts: Vec<String> = Vec::new();
+
+    for (i, f) in FREQ.iter().enumerate() {
+        let g = gains.get(i).copied().unwrap_or(0.0);
+        // Below a tenth of a dB is inaudible and only costs a filter stage.
+        if g.abs() < 0.1 {
+            continue;
+        }
+        // width_type=q with q=1.05 mirrors the BiquadFilterNode settings used
+        // for playback, so the exported curve matches the live one.
+        parts.push(format!("equalizer=f={f}:width_type=q:w=1.05:g={g:.2}"));
+    }
+
+    let r = if rate.is_finite() { rate } else { 1.0 };
+    if (r - 1.0).abs() > 0.005 {
+        let r = r.clamp(0.25, 4.0);
+        // atempo is limited to 0.5..=2.0, so anything wider is split into
+        // several stages whose product is the requested rate.
+        let mut left = r;
+        while left > 2.0 {
+            parts.push("atempo=2.0".into());
+            left /= 2.0;
+        }
+        while left < 0.5 {
+            parts.push("atempo=0.5".into());
+            left /= 0.5;
+        }
+        parts.push(format!("atempo={left:.4}"));
+    }
+
+    parts.join(",")
+}
+
 /// Locates ffmpeg without requiring it to be installed system-wide.
+///
+/// Cached: the PATH probe spawns a process, and this is called on every
+/// download and by `has_ffmpeg` on every settings render.
 fn ffmpeg_bin() -> Option<std::path::PathBuf> {
-    // Next to our own executable first: that is where a bundled copy would be.
+    static FOUND: Mutex<Option<Option<std::path::PathBuf>>> = Mutex::new(None);
+    if let Ok(guard) = FOUND.lock() {
+        if let Some(cached) = guard.as_ref() {
+            return cached.clone();
+        }
+    }
+    let found = locate_ffmpeg();
+    if let Ok(mut guard) = FOUND.lock() {
+        *guard = Some(found.clone());
+    }
+    found
+}
+
+fn locate_ffmpeg() -> Option<std::path::PathBuf> {
+    // The bundled copy first. `externalBin` in tauri.conf.json installs it right
+    // next to our own executable with the target-triple suffix stripped, so the
+    // installed layout is meowave.exe + ffmpeg.exe in one directory.
+    //
+    // Preferred over PATH deliberately: a version we ship is a version we have
+    // verified has libmp3lame, atempo and equalizer (see
+    // scripts/fetch-ffmpeg.mjs). A system ffmpeg can be an ancient build, or a
+    // shell shim, or something else entirely named ffmpeg.
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
             let local = dir.join(if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" });
-            if local.exists() {
+            if local.is_file() {
                 return Some(local);
             }
+            // `cargo tauri dev` runs from target/debug, where the sidecar is not
+            // copied; fall back to the checkout so processing works in dev too.
+            #[cfg(debug_assertions)]
+            for up in [2usize, 3] {
+                let mut root = dir.to_path_buf();
+                for _ in 0..up {
+                    root = match root.parent() {
+                        Some(p) => p.to_path_buf(),
+                        None => break,
+                    };
+                }
+                let candidate = root.join("ffmpeg").join(if cfg!(windows) {
+                    "ffmpeg-x86_64-pc-windows-msvc.exe"
+                } else {
+                    "ffmpeg"
+                });
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+    // Common fixed locations on Unix, probed before PATH: a GUI launch on
+    // macOS does not inherit a shell profile, so Homebrew's prefix
+    // (/opt/homebrew/bin) never reaches `which`. The same list covers the
+    // usual Linux install roots.
+    #[cfg(unix)]
+    for p in [
+        "/opt/homebrew/bin/ffmpeg",
+        "/usr/local/bin/ffmpeg",
+        "/usr/bin/ffmpeg",
+        "/snap/bin/ffmpeg",
+    ] {
+        let candidate = std::path::PathBuf::from(p);
+        if candidate.is_file() {
+            return Some(candidate);
         }
     }
     // Then PATH.
@@ -361,25 +769,38 @@ fn ffmpeg_bin() -> Option<std::path::PathBuf> {
     }
 }
 
+/// `ffmpeg_bin` from async context: the first call spawns `where`/`which`.
+async fn ffmpeg_bin_async() -> Option<std::path::PathBuf> {
+    tokio::task::spawn_blocking(ffmpeg_bin).await.ok().flatten()
+}
+
+async fn has_ffmpeg_async() -> bool {
+    ffmpeg_bin_async().await.is_some()
+}
+
 /// Transcodes to mp3 and removes the source. Returns None if ffmpeg is absent
 /// or the conversion fails, leaving the original untouched.
-fn to_mp3(src: &std::path::Path) -> Option<std::path::PathBuf> {
+///
+/// `dst` is chosen by the caller rather than `src.with_extension("mp3")`: that
+/// silently overwrote an unrelated `Song.mp3` whenever `Song.webm` was
+/// downloaded next to it, and then deleted the source — losing the original
+/// file outright.
+fn to_mp3(src: &std::path::Path, dst: &std::path::Path) -> Option<std::path::PathBuf> {
     let ff = ffmpeg_bin()?;
-    let dst = src.with_extension("mp3");
     let status = std::process::Command::new(ff)
         .args(["-y", "-loglevel", "error", "-i"])
         .arg(src)
         // 192k CBR: transparent enough for a re-encode of a lossy source, and
         // universally supported.
         .args(["-vn", "-codec:a", "libmp3lame", "-b:a", "192k"])
-        .arg(&dst)
+        .arg(dst)
         .status()
         .ok()?;
     if status.success() && dst.exists() {
         let _ = std::fs::remove_file(src);
-        Some(dst)
+        Some(dst.to_path_buf())
     } else {
-        let _ = std::fs::remove_file(&dst);
+        let _ = std::fs::remove_file(dst);
         None
     }
 }
@@ -387,8 +808,8 @@ fn to_mp3(src: &std::path::Path) -> Option<std::path::PathBuf> {
 /// Whether mp3 conversion is possible on this machine, so the UI can say so
 /// instead of silently producing .webm files.
 #[tauri::command]
-pub fn has_ffmpeg() -> bool {
-    ffmpeg_bin().is_some()
+pub async fn has_ffmpeg() -> bool {
+    has_ffmpeg_async().await
 }
 
 /// Opens a URL in the user's default browser.
@@ -416,8 +837,14 @@ pub fn open_external(url: String) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
     }
     #[cfg(target_os = "macos")]
-    std::process::Command::new("open").arg(u).spawn().map_err(|e| e.to_string())?;
+    std::process::Command::new("open")
+        .arg(u)
+        .spawn()
+        .map_err(|e| e.to_string())?;
     #[cfg(all(unix, not(target_os = "macos")))]
-    std::process::Command::new("xdg-open").arg(u).spawn().map_err(|e| e.to_string())?;
+    std::process::Command::new("xdg-open")
+        .arg(u)
+        .spawn()
+        .map_err(|e| e.to_string())?;
     Ok(())
 }

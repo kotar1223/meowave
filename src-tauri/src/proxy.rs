@@ -66,7 +66,8 @@ const NEVER: &[&str] = &[
     "127.0.0.1",
 ];
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+// Every field's default is its type's default: off, empty, off, empty.
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(default)]
 pub struct ProxyConfig {
     /// Master switch. False on a fresh install.
@@ -82,17 +83,6 @@ pub struct ProxyConfig {
     pub all_traffic: bool,
     /// Extra domain suffixes the user wants tunnelled.
     pub extra_hosts: Vec<String>,
-}
-
-impl Default for ProxyConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            url: String::new(),
-            all_traffic: false,
-            extra_hosts: Vec::new(),
-        }
-    }
 }
 
 static CONFIG: RwLock<Option<ProxyConfig>> = RwLock::new(None);
@@ -163,7 +153,7 @@ fn normalise(raw: &str) -> Result<String, String> {
     Ok(with_scheme)
 }
 
-fn host_matches(host: &str, suffix: &str) -> bool {
+pub fn host_matches(host: &str, suffix: &str) -> bool {
     let h = host.trim_end_matches('.').to_ascii_lowercase();
     let s = suffix.trim().trim_start_matches('.').to_ascii_lowercase();
     if s.is_empty() {
@@ -286,18 +276,28 @@ async fn probe(url: &str) -> Result<bool, String> {
 /// ones that actually carry traffic.
 #[tauri::command]
 pub async fn proxy_detect() -> Vec<Found> {
+    // The TCP probes are blocking, and ten of them at 120 ms each would hold a
+    // runtime worker for over a second. They run together off the runtime, then
+    // only the open ports get the (async) reachability test.
+    let open: Vec<(u16, &'static str)> = tokio::task::spawn_blocking(|| {
+        KNOWN_PORTS
+            .iter()
+            .filter(|(port, _)| port_open(*port))
+            .map(|(port, likely)| (*port, *likely))
+            .collect()
+    })
+    .await
+    .unwrap_or_default();
+
     let mut out = Vec::new();
-    for (port, likely) in KNOWN_PORTS {
-        if !port_open(*port) {
-            continue;
-        }
+    for (port, likely) in open {
         // socks5h so DNS resolution happens at the exit node.
         let url = format!("socks5h://127.0.0.1:{port}");
         let works = probe(&url).await.unwrap_or(false);
         out.push(Found {
             url,
-            port: *port,
-            likely: (*likely).to_string(),
+            port,
+            likely: likely.to_string(),
             works,
         });
     }
