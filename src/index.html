@@ -177,6 +177,7 @@
           <h3 data-i18n="set.acc">Аккаунты</h3>
           <p class="ph" data-i18n="set.acc.s">SoundCloud и YouTube Music работают без входа. Для Yandex Music нужен токен — инструкция ниже. Токены уходят в системный keychain.</p>
           <div id="accounts"></div>
+          <div id="ymacc" style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px"></div>
           <div id="sppanel" style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px" hidden>
             <h3>Spotify</h3>
             <div id="spbody"></div>
@@ -296,6 +297,30 @@
           <div class="field">
             <div><label data-i18n="set.lang">Язык</label></div>
             <div class="seg" id="lang" role="group"><button data-v="ru" aria-pressed="true">Русский</button><button data-v="en">English</button></div>
+          </div>
+          <div class="panel pane" style="margin-top:18px">
+            <h3 data-i18n="ly.custom.t">Крупная лирика</h3>
+            <p class="ph" data-i18n="ly.custom.s">Размер и вес строк влияют на режим большой лирики</p>
+            <div class="field">
+              <div><label data-i18n="ly.size">Размер строк</label><small><span id="ly-size-v">44px</span></small></div>
+              <input type="range" id="ly-size" min="24" max="88" value="44">
+            </div>
+            <div class="field">
+              <div><label data-i18n="ly.weight">Жирность</label><small><span id="ly-weight-v">640</span></small></div>
+              <input type="range" id="ly-weight" min="300" max="800" step="20" value="640">
+            </div>
+            <div class="field">
+              <div><label data-i18n="ly.glow">Свечение активной строки</label><small><span id="ly-glow-v">100%</span></small></div>
+              <input type="range" id="ly-glow" min="0" max="200" value="100">
+            </div>
+            <div class="field">
+              <div><label>Обложка (режим лирики)</label><small><span id="ly-cov-v">320px</span></small></div>
+              <input type="range" id="ly-cov" min="220" max="520" value="320">
+            </div>
+            <div class="field">
+              <div><label>Междустрочный зазор</label><small><span id="ly-gap-v">14px</span></small></div>
+              <input type="range" id="ly-gap" min="4" max="40" value="14">
+            </div>
           </div>
         </div>
         </div>
@@ -439,6 +464,22 @@
                 <button data-v="off" aria-pressed="true" data-i18n="px.v.off">Выкл</button>
                 <button data-v="on" data-i18n="px.v.on">Вкл</button>
               </div>
+            </div>
+          </div>
+          <div class="panel pane">
+            <h3 data-i18n="dc.t">Discord Rich Presence</h3>
+            <p class="ph" data-i18n="dc.s">Что слушаешь — видно в профиле Discord. Нужен запущенный Discord и DISCORD_CLIENT_ID в .env.</p>
+            <div class="field">
+              <div><label data-i18n="dc.on">Показывать в Discord</label><small id="dc-state">—</small></div>
+              <button class="sw" id="dc-on" aria-pressed="false" aria-label="discord"></button>
+            </div>
+            <div class="field" style="align-items:flex-start;flex-direction:column">
+              <div><label data-i18n="dc.tmpl">Шаблон статуса</label><small data-i18n="dc.tmpl.s">Подстановки: {title} {artist} {album} {service} {status} {elapsed} {remaining}</small></div>
+              <input id="dc-template" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="{artist} — {title} · {service}">
+            </div>
+            <div class="grow" style="margin-top:8px">
+              <button class="btn" id="dc-save" data-i18n="dc.save">Сохранить</button>
+              <button class="btn" id="dc-test" data-i18n="dc.test">Проверить</button>
             </div>
           </div>
           <div class="panel pane">

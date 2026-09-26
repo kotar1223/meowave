@@ -92,7 +92,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "wave.ready":"В избранном {n} треков — волна подберёт похожее и запустится сразу.",
 "wave.need.toast":"Отметьте сердцем ещё {n} трека — по ним волна и подбирает музыку",
 "wave.empty":"Не удалось собрать подборку, попробуйте позже",
-"loc.svc":"Мои файлы","loc.svc.src":"с диска","np.none":"Нет трека","np.none.s":"Подключите сервис и выполните поиск",
+"loc.svc":"Мои файлы","loc.svc.src":"с диска","np.none":"Нет трека","np.none.s":"Подключите сервис и выполните поиск","np.playing":"Слушает","np.paused":"Пауза",
 "lib.loc":"Мои файлы","lib.art":"Артисты",
 "loc.addfolder":"Добавить папку","loc.clear":"Очистить","loc.clear.ask":"Убрать все локальные треки из библиотеки? Файлы на диске не удаляются.","loc.cleared":"Локальные треки убраны","loc.removed":"Трек убран из библиотеки","loc.none.t":"Пока пусто","loc.none.s":"Добавьте файлы или папку — они читаются прямо с диска.",
 "art.none.t":"Артистов пока нет","art.none.s":"Послушайте что-нибудь или добавьте треки в избранное.","art.follow":"Отслеживать","art.unfollow":"Не отслеживать",
@@ -130,6 +130,13 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "ym.g1":"Войдите в свой аккаунт на music.yandex.ru","ym.g2":"Откройте инструменты разработчика:",
 "ym.g3":"Перейдите в","ym.g4":"Найдите ключ","ym.g5":"Скопируйте значение и вставьте в поле выше",
 "ym.open":"Открыть Яндекс Музыку","ym.docs":"Документация",
+"ym.acc.desc":"Вход по аккаунту: откроется страница Яндекса, войдите — и библиотека подключится. Токен хранится в системном keychain.",
+"ym.acc.login":"Войти через аккаунт Яндекса","ym.acc.browser":"Открываю браузер для входа…","ym.acc.wait":"После входа на странице-помощнике вернитесь в Meowave — библиотека подтянется сама", "ym.acc.library":"Синхронизировать библиотеку (лайки и плейлисты)",
+ "dc.t":"Discord Rich Presence","dc.s":"Что слушаешь — видно в профиле Discord. Нужен запущенный Discord и DISCORD_CLIENT_ID в .env.",
+ "dc.on":"Показывать в Discord","dc.on.ok":"Discord найден","dc.on.no":"Discord не запущен (обновится, когда появится)",
+ "dc.tmpl":"Шаблон статуса","dc.tmpl.s":"Подстановки: {title} {artist} {album} {service} {status} {elapsed} {remaining}",
+ "dc.save":"Сохранить","dc.test":"Проверить","dc.saved":"Шаблон сохранён","dc.sent":"Отправлено в Discord","dc.fail":"Discord не отвечает — проверь, что он запущен",
+ "fp.mode":"Переключить вид плеера","ly.custom.t":"Крупная лирика","ly.custom.s":"Размер и вес строк влияют на режим большой лирики","ly.size":"Размер строк","ly.weight":"Жирность","ly.glow":"Свечение активной строки","ly.font":"Шрифт",
 "loc.t":"Локальные треки","loc.s":"Файлы не копируются и никуда не отправляются — читаются с диска напрямую. Теги берутся из имени файла.",
 "loc.add":"Добавить файлы","loc.folder":"Добавить папку","loc.folder.s":"Со всеми вложенными",
 "loc.fmt":"mp3, flac, wav, ogg, m4a","loc.pick":"Выбрать…",
@@ -197,7 +204,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "wave.ready":"{n} favorites — the wave will find similar music and start right away.",
 "wave.need.toast":"Heart {n} more track(s) — the wave builds its picks from them",
 "wave.empty":"Could not build a selection, try again later",
-"loc.svc":"My Files","loc.svc.src":"from disk","np.none":"No track","np.none.s":"Connect a service and search for music",
+"loc.svc":"My Files","loc.svc.src":"from disk","np.none":"No track","np.none.s":"Connect a service and search for music","np.playing":"Listening","np.paused":"Paused",
 "lib.loc":"My Files","lib.art":"Artists",
 "loc.addfolder":"Add folder","loc.clear":"Clear","loc.clear.ask":"Remove all local tracks from the library? Files on disk are kept.","loc.cleared":"Local tracks removed","loc.removed":"Track removed from the library","loc.none.t":"Nothing here yet","loc.none.s":"Add files or a folder — they are read straight off the disk.",
 "art.none.t":"No artists yet","art.none.s":"Play something or add tracks to favorites.","art.follow":"Follow","art.unfollow":"Unfollow",
@@ -235,6 +242,13 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "ym.g1":"Sign in to your account at music.yandex.ru","ym.g2":"Open developer tools:",
 "ym.g3":"Go to","ym.g4":"Find the key","ym.g5":"Copy the value and paste it in the field above",
 "ym.open":"Open Yandex Music","ym.docs":"Documentation",
+"ym.acc.desc":"Sign in with your Yandex account: a Yandex page opens, you sign in, and the library connects. The token lives in the OS keychain.",
+"ym.acc.login":"Sign in with your Yandex account","ym.acc.browser":"Opening the browser for sign-in…","ym.acc.wait":"Once signed in on the helper page, come back to Meowave — the library will sync automatically", "ym.acc.library":"Sync library (likes and playlists)",
+ "dc.t":"Discord Rich Presence","dc.s":"Shows what you are listening to on your Discord profile. Needs Discord running and DISCORD_CLIENT_ID in .env.",
+ "dc.on":"Show in Discord","dc.on.ok":"Discord detected","dc.on.no":"Discord is not running (updates will resume when it starts)",
+ "dc.tmpl":"Status template","dc.tmpl.s":"Placeholders: {title} {artist} {album} {service} {status} {elapsed} {remaining}",
+ "dc.save":"Save","dc.test":"Test","dc.saved":"Template saved","dc.sent":"Sent to Discord","dc.fail":"Discord is not responding — check that it is running",
+ "fp.mode":"Switch the player view","ly.custom.t":"Large lyrics","ly.custom.s":"Line size and weight drive the large-lyrics mode","ly.size":"Line size","ly.weight":"Weight","ly.glow":"Active line glow","ly.font":"Font",
 "loc.t":"Local tracks","loc.s":"Files are never copied or uploaded — they are read straight off the disk. Tags come from the file name.",
 "loc.add":"Add files","loc.folder":"Add folder","loc.folder.s":"Including subfolders",
 "loc.fmt":"mp3, flac, wav, ogg, m4a","loc.pick":"Choose…",
@@ -414,6 +428,19 @@ const ACCENTS=[
 const EMPTY_TRACK={id:"empty",s:"ytm",t:"",a:"Meowave",al:"",d:0,mode:"empty",art:null};
 const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,
  shuffle:false,repeat:false,vol:.8,muted:false,quality:"high",
+ /* Per-service on/off switches, {ytm:true,sc:false,...}. Filled by restore()
+    and kept in sync by the header chip clicks; initServices() applies it after
+    the keychain answers. */
+ svcOn:null,
+ /* Discord Rich Presence: on/off + the user's status template. Sent to Rust
+    on change; discord_update fires from track events and the minute timer. */
+ discord:{on:false,tmpl:"{artist} — {title} · {service}"},
+ /* Fullscreen player layout: "stage" (centered cover, mockup 1) or "lyric"
+    (cover left, oversized lyrics right, mockup 2). */
+ fpMode:"stage",
+ /* Large-lyrics customization: px size, weight, glow multiplier, cover size,
+    font family. Applied as CSS variables by applyLyVars(). */
+ ly:{size:44,weight:640,glow:1,cov:320,gap:14,font:""},
  glow:1,blur:14,theme:"dark",accent:"none",dens:2200,pspeed:.35,
  /* One explicit switch for weak machines. No auto-detection: the automatic
    tier system misjudged real hardware and its cuts looked like breakage, so
@@ -476,6 +503,12 @@ function closeModal(ok){
 function showModal({title,label,value="",confirm,cancel,input=true,danger=false}){
  const el=document.getElementById("modal");
  if(!el)return Promise.resolve(null);
+ /* Only one dialog can be shown at a time — the DOM holds a single #modal.
+    A second showModal while one is open used to overwrite the global resolver
+    and the first Promise never settled, hanging whatever awaited it. Now the
+    previous dialog is dismissed (null) first, which is exactly what the
+    askText/askConfirm contract already treats as "cancelled". */
+ if(modalRes){const prev=modalRes;modalRes=null;prev(null)}
  clearTimeout(el._hide);
  el.hidden=false;
  document.getElementById("modal-title").textContent=title||"";
@@ -996,10 +1029,18 @@ window.addEventListener("focus",()=>{setFocused(true);setRender(true)});
 raf=requestAnimationFrame(frame)
 
 /* render */
+/* White service marks, inline and on currentColor (no CDN — the vendored-icon
+   principle). Cutouts use --surf so the mark reads as a stamp on the chip in
+   both themes. */
+const SVC_ICONS={
+ ytm:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="3.5" width="22" height="17" rx="5" fill="currentColor" opacity=".92"/><path d="M10 8.8v6.4l5.6-3.2z" fill="var(--surf)"/></svg>`,
+ sc:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor" opacity=".95"><rect x="1" y="10.5" width="1.6" height="6.5" rx=".8"/><rect x="3.6" y="9" width="1.6" height="8" rx=".8"/><rect x="6.2" y="7.5" width="1.6" height="9.5" rx=".8"/><path d="M9 17h1.6V6.5l-.9 1z"/><path d="M11.6 17h9.2a3.2 3.2 0 1 0-.55-6.35A6 6 0 0 0 11.6 9z"/></g></svg>`,
+ ym:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor" opacity=".92"/><path d="M8.2 17.4c1.3-.4 2.5-1.3 3.7-2.8-1.6-.2-2.8-.7-3.6-1.5-1.5-1.5-1.6-3.7-.2-5.6.8-1.2 2-2.2 3.4-2.9-.3.6-.4 1.2-.2 1.9.3.9 1.3 1.4 2.8 1.6 2.5.4 3.9 1.7 4.2 3.5.3 2.3-1.6 4.6-4.4 5.4-1.9.6-4 .7-5.7.4z" fill="var(--surf)"/></svg>`,
+ local:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`};
 function renderSrv(){
  /* Names go through svc() so the localised ones resolve. */
  document.getElementById("srv").innerHTML=SERVICES.map(s=>
-  `<button class="s" data-svc="${s.id}" data-conn="${s.conn}" data-on="${!!(s.conn&&s.on)}"><span class="d"></span>${esc(svc(s.id).name)}</button>`).join("")}
+  `<button class="s" data-svc="${s.id}" data-conn="${s.conn}" data-on="${!!(s.conn&&s.on)}" title="${esc(svc(s.id).name)}">${SVC_ICONS[s.id]||""}<span class="d"></span>${esc(svc(s.id).name)}</button>`).join("")}
 let tokOpen=null;
 function renderAccounts(){
  document.getElementById("accounts").innerHTML=SERVICES.map(s=>s.free?`
@@ -1010,7 +1051,8 @@ function renderAccounts(){
   ${tokOpen===s.id?`<div class="tokrow"><input id="tok-${s.id}" type="password" placeholder="${t("tok.ph")}" autocomplete="off">
    <button class="btn" data-toksave="${s.id}">${t("tok.save")}</button><small style="color:var(--mute);font-size:.72rem">${t("tok.hint")}</small></div>
    ${s.id==="ym"?ymGuide():""}`:""}`).join("")}
-/* Where to get the Yandex token; the bare field gave no hint. */
+/* Where to get the Yandex token. The one-click flow (ymAcc) usually replaces
+   this; the manual path stays for when the loopback page is unreachable. */
 function ymGuide(){
  return `<div class="guide">
   <ol>
@@ -1475,7 +1517,7 @@ function paint(){
  document.getElementById("tcur").textContent=fmt(S.pos);
  const ff=document.querySelector("#fptrack .f");
  if(ff){ff.style.width=p+"%";document.querySelector("#fptrack .h").style.left=p+"%";document.getElementById("fpcur").textContent=fmt(S.pos)}
- if(S.fpTab==="lyrics")syncLyrics()}
+ if(S.fpMode==="lyric"||S.fpTab==="lyrics")syncLyrics()}
 let queue=[];
 /* Track key the full player last drew, so a re-render caused by a seek, a
    favourite toggle or a language switch does not replay the cover animation —
@@ -1486,12 +1528,43 @@ function renderFP(){
  const key=trackKey(tr);
  const swapped=fpLastKey!==null&&fpLastKey!==key;
  fpLastKey=key;
- document.getElementById("fpc").innerHTML=`
+ /* The layout follows the two mockups: mode "stage" centers a big glowing
+    cover with the track below it; mode "lyric" puts the cover left and the
+    oversized lyrics right. The toggle lives on S.fpMode (persisted).
+    Queue stays available in both as the bottom tab when not in lyric mode. */
+ const lyricMode=S.fpMode==="lyric";
+ const art=coverStyle(tr.art,tr.l1,tr.l2);
+ document.getElementById("fpc").innerHTML=lyricMode?`
   <button class="ic close" id="fpclose" aria-label="close"><i data-lucide="x" width="17" height="17"></i></button>
-  <div class="cover" ${coverStyle(tr.art,tr.l1,tr.l2)}><canvas class="vis" id="vis"></canvas></div>
-  <div class="fpr">
+  <div class="fpc-grid">
+   <div class="cover fpcover-lg" ${art}><canvas class="vis" id="vis"></canvas>
+    <div class="fpmeta">
+     <div class="eyebrow">${t("now")} · ${svc(tr.s).name}</div>
+     <h2>${esc(tr.t)}</h2><p class="by">${esc(tr.a)}</p>
+     <div class="fpseek"><span class="t" id="fpcur">${fmt(S.pos)}</span>
+      <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
+      <span class="t">${fmt(S.dur)}</span></div>
+     <div class="fpctrls">
+      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}"><i data-lucide="shuffle" width="16" height="16"></i></button>
+      <button class="ic" data-act="prev"><i data-lucide="skip-back" width="18" height="18"></i></button>
+      <button class="play" data-act="play"><i data-lucide="${S.playing?"pause":"play"}" width="18" height="18"></i></button>
+      <button class="ic" data-act="next"><i data-lucide="skip-forward" width="18" height="18"></i></button>
+      <button class="ic" data-act="repeat" aria-pressed="${S.repeat}"><i data-lucide="repeat" width="16" height="16"></i></button>
+      <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}"><i data-lucide="heart" width="16" height="16"></i></button>
+      <button class="ic" id="fp-mode" title="${t("fp.mode")}"><i data-lucide="panel-left-close" width="16" height="16"></i></button>
+     </div>
+    </div>
+   </div>
+   <div class="lyr lyr-big" id="fplyr" data-synced="true"></div>
+  </div>`:`
+  <button class="ic close" id="fpclose" aria-label="close"><i data-lucide="x" width="17" height="17"></i></button>
+  <div class="cover fpcover-stage" ${art}><canvas class="vis" id="vis"></canvas></div>
+  <div class="fpr fpr-stage">
    <div class="eyebrow">${t("now")} · ${svc(tr.s).name}${svc(tr.s).lossless&&S.quality==="lossless"?" · lossless":""}</div>
    <h2>${esc(tr.t)}</h2><p class="by">${esc(tr.a)} · ${esc(tr.al)}</p>
+   <div class="fpseek"><span class="t" id="fpcur">${fmt(S.pos)}</span>
+    <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
+    <span class="t">${fmt(S.dur)}</span></div>
    <div class="fpctrls">
     <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}"><i data-lucide="shuffle" width="17" height="17"></i></button>
     <button class="ic" data-act="prev"><i data-lucide="skip-back" width="20" height="20"></i></button>
@@ -1499,17 +1572,22 @@ function renderFP(){
     <button class="ic" data-act="next"><i data-lucide="skip-forward" width="20" height="20"></i></button>
     <button class="ic" data-act="repeat" aria-pressed="${S.repeat}"><i data-lucide="repeat" width="17" height="17"></i></button>
     <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" style="opacity:1;margin-left:4px"><i data-lucide="heart" width="17" height="17"></i></button>
+    <button class="ic" id="fp-mode" title="${t("fp.mode")}"><i data-lucide="panel-left-open" width="17" height="17"></i></button>
    </div>
-   <div class="fpseek"><span class="t" id="fpcur" style="font-size:.72rem;color:var(--mute)">${fmt(S.pos)}</span>
-    <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
-    <span class="t" style="font-size:.72rem;color:var(--mute)">${fmt(S.dur)}</span></div>
    <div class="fpswitch" role="tablist">
     <button role="tab" data-fptab="queue" aria-selected="${S.fpTab==="queue"}">${t("queue")}</button>
     <button role="tab" data-fptab="lyrics" aria-selected="${S.fpTab==="lyrics"}">${t("lyrics")}</button>
    </div>
    <div class="fpbody" id="fpbody"></div>
   </div>`;
- renderFPBody();
+ /* Lyric mode renders the oversized sheet itself instead of the tab body. */
+ if(lyricMode)renderLyricSheet();
+ else renderFPBody();
+ /* Mode lives on the container so CSS can reshape the whole layout. */
+ document.getElementById("fpc").dataset.mode=S.fpMode;
+ applyLyVars();
+ document.getElementById("fp-mode")?.addEventListener("click",()=>{
+  S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()});
  wireSeek("fptrack");
  /* innerHTML above replaced the panel, so the attribute lands on fresh nodes
     and the animation runs from its first frame without needing a reflow. */
@@ -1520,6 +1598,21 @@ function renderFP(){
  if(vis.c){const r=vis.c.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);
   vis.c.width=r.width*d;vis.c.height=r.height*d;vis.g=vis.c.getContext("2d")}
  icons()}
+/* The oversized lyric sheet (mockup 2): reuses the LYRICS cache and the sync
+   engine, paints into #fplyr. syncLyrics() already targets any .lyr container
+   through the #lyr id — so the sheet re-uses that id on purpose. */
+function renderLyricSheet(){
+ const el=document.getElementById("fplyr");if(!el)return;
+ const tr=S.current,L=lyricsFor(tr);
+ if(!tr||tr.mode==="empty"){el.innerHTML=`<p class="hollow">${t("q.none")}</p>`;return}
+ if(!L||L.state==="idle"){el.innerHTML=`<p class="hollow">${t("ly.load")}</p>`;fetchLyrics(tr);return}
+ if(L.state==="loading"){el.innerHTML=`<p class="hollow">${t("ly.load")}</p>`;return}
+ if(L.state==="transcribing"){el.innerHTML=`<p class="hollow">${t("ly.gen")}</p>`;return}
+ if(L.state==="error"){el.innerHTML=`<p class="hollow">${t("ly.err")}</p>`;return}
+ if(!L.lines?.length){el.innerHTML=`<p class="hollow">${t("ly.none")}</p>`;return}
+ el.dataset.synced=String(!!L.synced);
+ el.innerHTML=L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("");
+ lyLast=-1;syncLyrics(true)}
 /* Restarts the panel animation. Removing the attribute and reading offsetWidth
    forces the browser to drop the finished animation before it is reapplied;
    without the reflow the second identical assignment is a no-op and the second
@@ -1609,11 +1702,11 @@ function lySeekFrom(el){
  /* The highlight would otherwise wait for the next tick. */
  lyUserScroll=0;syncLyrics(true)}
 document.addEventListener("click",e=>{
- const p=e.target.closest?.("#lyr p[data-at]");
+ const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at]");
  if(p)lySeekFrom(p)});
 document.addEventListener("keydown",e=>{
  if(e.key!=="Enter"&&e.key!==" ")return;
- const p=e.target.closest?.("#lyr p[data-at]");
+ const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at]");
  if(p){e.preventDefault();lySeekFrom(p)}});
 
 async function fetchLyrics(tr){
@@ -1639,7 +1732,10 @@ async function fetchLyrics(tr){
    scrolling lyric look like it was flickering rather than gliding. */
 let lyLast=-1;
 function syncLyrics(force){
- const L=lyricsFor(S.current),box=document.getElementById("lyr");
+ const L=lyricsFor(S.current);
+ /* Two containers can host the sheet: the tab body (#lyr) and the oversized
+    lyric mode (#fplyr). Whichever is in the DOM receives the sync. */
+ const box=document.getElementById("fplyr")||document.getElementById("lyr");
  if(!L?.lines?.length||!box)return;
  if(!L.synced){if(force)lyLast=-1;return}
 
@@ -2180,7 +2276,10 @@ document.getElementById("q").addEventListener("focus",()=>go("search"));
 document.getElementById("srv").addEventListener("click",e=>{
  const b=e.target.closest("[data-svc]");if(!b)return;const s=svc(b.dataset.svc);
  if(!s.conn)return go("settings");
- s.on=!s.on;renderSrv();if(S.view==="search")search(document.getElementById("q").value)});
+ /* Every connected service is now switchable: off removes it from search,
+    the wave and the queue pool without signing out. Persisted in save(). */
+ s.on=!s.on;renderSrv();save();pushPrefs?.();
+ if(S.view==="search")search(document.getElementById("q").value)});
 /* The "by artist / similar" switch is gone: the wave is always seeded from
    favorite tracks now. */
 document.getElementById("libtabs").addEventListener("click",e=>{
@@ -2193,7 +2292,8 @@ function showSettingsTab(id){
  document.querySelectorAll("#settabs [data-stab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.stab===id));
  document.querySelectorAll(".stab").forEach(p=>p.dataset.active=(p.dataset.stab===id));
  if(id==="lib")refreshCacheSize();
- if(id==="net")pxLoad();
+ if(id==="net"){pxLoad();paintDiscord()}
+ if(id==="look")paintLyPanel();
  /* Widths are only measurable once the panel is displayed. */
  requestAnimationFrame(()=>{paintAllSegs();paintAllRanges()})}
 document.body.addEventListener("click",e=>{
@@ -2641,6 +2741,11 @@ document.getElementById("lite").onclick=()=>{S.lite=!S.lite;applyLite();save()};
 let obDone=false;
 function save(){try{localStorage.setItem("meowave",JSON.stringify({
  lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,pspeed:S.pspeed,
+ /* User's per-service switches; null until first use, so a fresh install
+    keeps the "connected = on" default. */
+ svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
+  ?Object.fromEntries(SERVICES.filter(s=>!s.local).map(s=>[s.id,s.on])):null,
+ discord:{on:S.discord.on,tmpl:S.discord.tmpl},fpMode:S.fpMode,ly:S.ly,
  lite:S.lite,litePrev,quality:S.quality,vol:S.vol,eq:S.eq,preset:S.preset,custom:S.custom,
   sp:{on:S.sp.on,speed:S.sp.speed,rad:S.sp.rad,elev:S.sp.elev},ob:obDone,listen:Math.round(S.listen),
  /* Store whole tracks: an id alone is useless because TRACKS starts empty on
@@ -2716,6 +2821,14 @@ function restore(){try{
   if(d.blur===0||d.blur===8)S.blur=14;
   if(d.dens===260||d.dens===500||d.dens===900||d.dens===1200)S.dens=2200}
  if(d.listen)S.listen=d.listen;
+ /* Service switches must land before initServices() runs (it reads SVC_ON); */
+ if(d.svcOn&&typeof d.svcOn==="object")S.svcOn=d.svcOn;
+ if(d.discord&&typeof d.discord==="object"){
+  S.discord.on=!!d.discord.on;
+  if(typeof d.discord.tmpl==="string"&&d.discord.tmpl)S.discord.tmpl=d.discord.tmpl}
+ if(d.fpMode)S.fpMode=d.fpMode==="lyric"?"lyric":"stage";
+ /* Typo-proof: unknown values fall back to the centered stage. */
+ if(d.ly&&typeof d.ly==="object")Object.assign(S.ly,d.ly);
  obDone=!!d.ob;
 }catch(e){}}
 document.getElementById("sp-on").onclick=()=>{initAudio();S.sp.on=!S.sp.on;applySpatial();save()};
@@ -2806,7 +2919,13 @@ if(TAURI){
   const win=(W.getCurrentWindow?.()||W.getCurrent?.()||null);
   document.getElementById("tb-min")?.addEventListener("click",()=>win?.minimize?.());
   document.getElementById("tb-max")?.addEventListener("click",()=>win?.toggleMaximize?.());
-  document.getElementById("tb-close")?.addEventListener("click",()=>win?.close?.());
+  document.getElementById("tb-close")?.addEventListener("click",async()=>{
+   /* Wait for the pending listening/favorites flush (bounded) before closing,
+      so the last minute of statistics is not cut off mid-request. The window
+      events pagehide/beforeunload also fire, but a destroyed webview cannot
+      finish an in-flight request — this is the one that actually waits. */
+   try{await flushOnClose()}catch(_){}
+   win?.close?.()});
   /* Keep a data-max attribute on <html> so CSS can style the titlebar when
      the window is maximised (no rounded corners needed). */
   const syncMax=async()=>{try{const m=await win?.isMaximized?.();document.documentElement.dataset.max=m?"true":"false"}catch(e){}};
@@ -2998,7 +3117,13 @@ async function initServices(){
      assignment below switched it off on every start — local files then vanished
      from search, from the queue and from next(). A local provider is connected
      by definition. */
-  SERVICES.forEach(s=>{if(s.local)return;s.conn=ids.includes(s.id);s.on=s.conn});
+  /* The user's on/off choices win over the default "connected = on": restore()
+     fills SVC_ON from storage, and a service that was deliberately switched
+     off stays off across restarts (a first run has no stored map yet). */
+  SERVICES.forEach(s=>{
+   if(s.local)return;
+   s.conn=ids.includes(s.id);
+   s.on=S.svcOn&&s.id in S.svcOn?!!S.svcOn[s.id]&&s.conn:s.conn});
   renderSrv();renderAccounts();icons();
  }catch(e){console.warn("keychain unavailable:",e)}}
 
@@ -3126,6 +3251,7 @@ function noteListening(dt){
  REPORT.last=now}
 function noteTrackStart(tr){
  if(!tr||tr.mode==="empty")return;
+ dcPush();
  const key=tr.s+":"+tr.id;
  if(!REPORT.ids.has(key)){REPORT.ids.add(key);REPORT.tracks++}
  /* No genre metadata comes back from any of the services, so the album is the
@@ -3159,13 +3285,27 @@ async function flushListening(force){
   syncAchievements();
  }catch(e){console.warn("report_listening:",e.message||e)}}
 setInterval(()=>flushListening(false),60000);
+/* Presence refresh: the elapsed timestamp has to move even mid-track. */
+setInterval(()=>{if(S.playing)dcPush()},60000);
 /* Listening time only reached localStorage when something else happened to call
    save(). A long session that ended with a crash, a kill or an update lost every
    minute of it — which is exactly the "hours are not saved" report. A minute is
    cheap: this is one small JSON write. */
 setInterval(()=>save(),60000);
-/* A closing window must not lose the current batch. */
-window.addEventListener("beforeunload",()=>{save();flushListening(true);flushFavorites()});
+/* A closing window must not lose the current batch. The flushes are awaited
+   because a fire-and-forget POST dies mid-flight once the webview is torn
+   down; the Rust side closes on CloseRequested, so ending the request first
+   is what actually gets the batch to the server. Wrapped in a rejectable
+   promise: without the catch an aborted keepalive fetch would surface as an
+   unhandled rejection here and the close would still proceed. */
+let closing=false;
+async function flushOnClose(){
+ if(closing)return;closing=true;
+ try{await Promise.race([
+  Promise.allSettled([flushListening(true),flushFavorites()]),
+  new Promise(r=>setTimeout(r,2500))])}catch(_){}
+ save()}
+window.addEventListener("beforeunload",()=>{save();flushOnClose()});
 /* beforeunload does not fire reliably when a window is destroyed by the OS or
    the updater; pagehide and the hidden transition do. */
 window.addEventListener("pagehide",()=>{save();flushListening(true)});
@@ -5459,6 +5599,90 @@ async function renderFriendsBox(){
  icons()}
 
 /* ── privacy settings ───────────────────────────────────── */
+/* ── Large-lyrics customization ────────────────────────────
+   Writes the CSS variables the lyric sheet reads; the panel sliders update
+   live, save() persists. An empty font falls back to the Inter Tight stack. */
+function applyLyVars(){
+ const r=document.documentElement.style;
+ r.setProperty("--ly-size",S.ly.size);
+ r.setProperty("--ly-weight",S.ly.weight);
+ r.setProperty("--ly-glow",S.ly.glow);
+ r.setProperty("--ly-cov",S.ly.cov);
+ r.setProperty("--ly-gap",S.ly.gap);
+ r.setProperty("--ly-font",S.ly.font?`'${S.ly.font}'`:'')}
+function paintLyPanel(){
+ const on=id=>document.getElementById(id);
+ const size=on("ly-size"),weight=on("ly-weight"),glow=on("ly-glow"),cov=on("ly-cov"),gap=on("ly-gap");
+ if(!size)return;
+ size.value=S.ly.size;on("ly-size-v").textContent=S.ly.size+"px";
+ weight.value=S.ly.weight;on("ly-weight-v").textContent=S.ly.weight;
+ glow.value=S.ly.glow*100;on("ly-glow-v").textContent=Math.round(S.ly.glow*100)+"%";
+ cov.value=S.ly.cov;on("ly-cov-v").textContent=S.ly.cov+"px";
+ gap.value=S.ly.gap;on("ly-gap-v").textContent=S.ly.gap+"px"}
+["ly-size","ly-weight","ly-glow","ly-cov","ly-gap"].forEach(id=>{
+ const el=document.getElementById(id);if(!el)return;
+ el.oninput=()=>{
+  const v=+el.value;
+  if(id==="ly-size")S.ly.size=v;
+  if(id==="ly-weight")S.ly.weight=v;
+  if(id==="ly-glow")S.ly.glow=v/100;
+  if(id==="ly-cov")S.ly.cov=v;
+  if(id==="ly-gap")S.ly.gap=v;
+  applyLyVars();
+  const map={"ly-size":"ly-size-v","ly-weight":"ly-weight-v","ly-glow":"ly-glow-v","ly-cov":"ly-cov-v","ly-gap":"ly-gap-v"};
+  const lab=document.getElementById(map[id]);
+  if(lab)lab.textContent=id==="ly-glow"?Math.round(S.ly.glow*100)+"%":id==="ly-size"?S.ly.size+"px":id==="ly-cov"?S.ly.cov+"px":id==="ly-gap"?S.ly.gap+"px":S.ly.weight;
+  save()}});
+/* ── Discord Rich Presence ─────────────────────────────────
+   Rust owns the IPC connection and the 15 s throttle; here only the settings
+   and the "what is playing right now" snapshot live. dcPush is intentionally
+   chatty: Rust de-duplicates and rate-limits, so extra calls are free. */
+function dcVars(tr){
+ const now=Math.floor(S.pos),rem=Math.max(0,Math.floor(S.dur-S.pos));
+ const mm=x=>Math.floor(x/60)+":"+String(x%60).padStart(2,"0");
+ return {title:tr?.t||"",artist:tr?.a||"",album:tr?.al||"",
+  service:tr?svc(tr.s).name:"",status:S.playing?t("np.playing"):t("np.paused"),
+  elapsed:mm(now),remaining:mm(rem),
+  /* Raw unix times for Discord's timestamps block. */
+  _start:Math.floor(Date.now()/1000-now),_end:Math.floor(Date.now()/1000+rem)};
+}
+function dcPush(){
+ if(!TAURI||!S.discord.on)return;
+ const v=dcVars(S.current);
+ const d={...v,
+  elapsed:S.playing?Math.floor(Date.now()/1000)-v._start:undefined,
+  remaining:S.playing&&S.dur>0?v._end-Math.floor(Date.now()/1000):undefined,
+  art:S.current?.art||null};
+ inv("discord_update",{data:d}).catch(()=>{})}
+async function paintDiscord(){
+ const sw=document.getElementById("dc-on"),inp=document.getElementById("dc-template"),
+  st=document.getElementById("dc-state");
+ if(!sw)return;
+ inp.value=S.discord.tmpl;
+ sw.setAttribute("aria-pressed",S.discord.on);
+ if(TAURI){
+  const ok=await inv("discord_available").catch(()=>false);
+  st.textContent=ok?t("dc.on.ok"):t("dc.on.no")}
+ else st.textContent="—"}
+document.getElementById("dc-on")?.addEventListener("click",async()=>{
+ S.discord.on=!S.discord.on;save();
+ const sw=document.getElementById("dc-on");sw.setAttribute("aria-pressed",S.discord.on);
+ try{await inv("discord_configure",{enabled:S.discord.on,template:S.discord.tmpl})}catch(e){}
+ if(S.discord.on)dcPush();else inv("discord_clear").catch(()=>{})});
+document.getElementById("dc-save")?.addEventListener("click",async()=>{
+ S.discord.tmpl=document.getElementById("dc-template").value.trim()||S.discord.tmpl;
+ save();toast(t("dc.saved"));
+ try{await inv("discord_configure",{enabled:S.discord.on,template:S.discord.tmpl})}catch(e){}
+ if(S.discord.on)dcPush()});
+document.getElementById("dc-test")?.addEventListener("click",async()=>{
+ const tmpl0=S.discord.tmpl;
+ S.discord.tmpl=document.getElementById("dc-template").value.trim()||tmpl0;
+ try{await inv("discord_configure",{enabled:true,template:S.discord.tmpl});
+  S.discord.on=true;save();dcPush();toast(t("dc.sent"))}
+ catch(e){toast(t("dc.fail"))}});
+if(TAURI)setTimeout(()=>{
+ inv("discord_configure",{enabled:S.discord.on,template:S.discord.tmpl}).catch(()=>{});
+ paintDiscord()},2500);
 function paintPrivacy(){
  if(!sbUser){document.getElementById("pv-profile")&&(document.querySelector('[data-stab="priv"]').style.opacity=.5);return}
  const pv=sbProfile?.privacy||{};
@@ -5517,6 +5741,57 @@ function fillProfileSettings(){
   const {error}=await sb.from("profiles").upsert({id:sbUser.id,username:un.value.trim()});
   toast(error?error.message:t("pr.name.saved"));
   if(!error)sbProfile={...sbProfile,username:un.value.trim()}}}
+/* ── Yandex Music account: one-click sign-in + library sync ──
+   Defined here (past every helper it calls) but logically part of Accounts.
+   The one-click flow opens a Yandex page and a local helper page; the token
+   lands in the keychain and initServices() picks it up on the next poll. */
+let YM={panel:false};
+async function renderYmAcc(){
+ const host=document.getElementById("ymacc");if(!host||!TAURI)return;
+ const conn=svc("ym").conn;
+ if(!conn){
+  host.innerHTML=`<h3 style="margin:0 0 6px">Yandex Music</h3>
+   <p class="ph" style="margin:0 0 10px">${t("ym.acc.desc")}</p>
+   <button class="btn" id="ym-login">${t("ym.acc.login")}</button>`;
+  document.getElementById("ym-login").onclick=async()=>{
+   toast(t("ym.acc.browser"));
+   try{
+    await inv("ym_login_start");
+    toast(t("ym.acc.wait"),9000);
+    /* Poll rather than assume: the paste page stores the token whenever the
+       user finishes, then initServices() flips the row to connected. */
+    let tries=0;
+    const poll=setInterval(async()=>{
+     tries++;
+     await initServices();
+     if(svc("ym").conn||tries>20){
+      clearInterval(poll);
+      renderAccounts();icons();renderYmAcc()}
+    },3000);
+   }catch(e){toast(String(e.message||e),5200)}};
+  return}
+ host.innerHTML=`<h3 style="margin:0 0 6px">Yandex Music</h3>
+  <p class="ph" style="margin:0 0 10px">${t("connected")} · keychain: meowave/ym</p>
+  <button class="btn" id="ym-lib">${t("ym.acc.library")}</button>
+  <div id="ymlists" style="margin-top:10px"></div>`;
+ document.getElementById("ym-lib").onclick=async()=>{
+  const btn=document.getElementById("ym-lib");btn.disabled=true;
+  try{
+   const liked=await inv("ym_liked_tracks").catch(e=>{toast(String(e.message||e));return []});
+   await importRows(liked,"ym",t("lib.fav"),true);
+   const pls=await inv("ym_playlists").catch(()=>[]);
+   const box=document.getElementById("ymlists");
+   if(box)box.innerHTML=(pls||[]).map(p=>
+    `<div class="chatrow asrow" style="grid-template-columns:auto 1fr auto">
+     <span class="avat ghost">♫</span>
+     <span class="meta"><b>${esc(p.name)}</b><span>${p.total} ${t("tracks")}</span></span>
+     <button class="btn sm" data-ymimp="${esc(p.id)}" data-ymname="${esc(p.name)}">${t("sp.import")}</button></div>`).join("")
+    ||`<p class="ph">${t("sp.nolists")}</p>`;
+   box?.querySelectorAll("[data-ymimp]").forEach(b=>b.onclick=async()=>{
+    const rows=await inv("ym_playlist_tracks",{kind:b.dataset.ymimp}).catch(()=>[]);
+    await importRows(rows,"ym",b.dataset.ymname,false)});
+  }finally{btn.disabled=false}}}
+
 document.getElementById("set-bio-save")?.addEventListener("click",async()=>{
  if(!sbUser)return;
  const v=document.getElementById("set-bio").value.trim();
@@ -5647,34 +5922,48 @@ async function renderSpotify(){
 
 /* Matching is sequential on purpose: a burst of searches trips YouTube's
    guest quota and half the playlist arrives unmatched. */
+/* Cross-service import core: rows of {t,a,al,d[,i]} in, favorites/playlists
+   out. Rows that carry a native playable id (Yandex) are imported directly;
+   the rest are matched to YouTube Music by name, like the Spotify importer.
+   Sequential matching stays: parallel searches trip YouTube's guest quota. */
 const SP_IMPORT_MAX=200;
-async function importSpotifyPlaylist(pid,name){
- const rows=await inv("spotify_playlist_tracks",{pid}).catch(e=>{toast(String(e.message||e));return null});
+async function importRows(rows,svcId,name,asFavorites){
  if(!rows||!rows.length)return toast(t("sp.empty"));
- /* Say when the list is cut, rather than reporting "done: N of N" against a
-    count the import never attempted. */
  const take=rows.slice(0,SP_IMPORT_MAX);
  if(rows.length>take.length)toast(t("sp.capped").replace("{n}",take.length),6500);
  toast(t("sp.importing").replace("{n}",take.length),6000);
- /* Awaited, and awaited for real: newPlaylist() is async, so without `await`
-    plId was a Promise, `PLAYLISTS.find(p=>p.id===plId)` never matched and
-    addToPlaylist() added every track to nothing — an empty playlist and a
-    toast that reported success anyway. */
- const plId=await newPlaylist(name);
- if(!plId)return;
- const pl=PLAYLISTS.find(p=>p.id===plId);
+ let plId=null,pl=null;
+ if(!asFavorites){
+  plId=await newPlaylist(name||"Import");
+  if(!plId)return;
+  pl=PLAYLISTS.find(p=>p.id===plId)}
  let ok=0;
  for(const r of take){
-  const q=`${r.a||""} ${r.t||""}`.trim();
-  if(!q)continue;
-  const hits=await searchRemote(q).catch(()=>[]);
-  const hit=(hits||[]).find(x=>x.s==="ytm");
-  /* Counted only when the track really landed: the counter used to go up
-     whatever addToPlaylist decided, duplicates included. */
-  if(hit&&pl&&!pl.tracks.some(x=>String(x.id)===String(hit.id)&&x.s===hit.s)){
+  let hit=null;
+  if(r.i&&svcId){
+   /* Native id: the track is directly playable on its home service. */
+   hit={id:String(r.i),s:svcId,t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:svcId==="ym"?"local":"web"};
+   const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
+   if(known)hit=known;else TRACKS.push(hit)}
+  else{
+   const q=`${r.a||""} ${r.t||""}`.trim();
+   if(!q)continue;
+   const hits=await searchRemote(q).catch(()=>[]);
+   hit=(hits||[]).find(x=>x.s==="ytm")}
+  if(!hit)continue;
+  if(asFavorites){
+   if(!hit.fav){hit.fav=true;hit.favAt=Date.now();queueFav(hit,true);
+    if(!TRACKS.some(x=>x.id===hit.id&&x.s===hit.s))TRACKS.push(hit);ok++}}
+  else if(pl&&!pl.tracks.some(x=>String(x.id)===String(hit.id)&&x.s===hit.s)){
    await addToPlaylist(plId,hit);ok++}
-  await new Promise(res=>setTimeout(res,150))}
- renderLib();
+  await new Promise(res=>setTimeout(res,120))}
+ save();renderLib();renderWaveHint();
  toast(t("sp.imported").replace("{ok}",ok).replace("{n}",take.length),5200)}
 
-if(TAURI)setTimeout(renderSpotify,800);
+/* The Spotify importer now rides on the same core as the Yandex one. */
+async function importSpotifyPlaylist(pid,name){
+ const rows=await inv("spotify_playlist_tracks",{pid}).catch(e=>{toast(String(e.message||e));return null});
+ if(!rows||!rows.length)return toast(t("sp.empty"));
+ await importRows(rows,null,name,false)}
+
+if(TAURI){setTimeout(renderSpotify,800);setTimeout(renderYmAcc,900)}

@@ -510,9 +510,9 @@ fn pick_format<'a>(audio: &[&'a Value], hq: bool, fmt: &str) -> Option<&'a Value
         None => audio.to_vec(),
     };
     if hq {
-        pool.into_iter().max_by_key(|f| bitrate(*f))
+        pool.into_iter().max_by_key(|f| bitrate(f))
     } else {
-        pool.into_iter().min_by_key(|f| bitrate(*f))
+        pool.into_iter().min_by_key(|f| bitrate(f))
     }
 }
 
@@ -637,7 +637,7 @@ mod tests {
     /// an error for a format the caller merely hoped for.
     #[test]
     fn missing_container_falls_back_instead_of_failing() {
-        let webm_only = vec![json!({
+        let webm_only = [json!({
             "mimeType":"audio/webm; codecs=\"opus\"","bitrate":165002,"url":"only"
         })];
         let refs: Vec<&serde_json::Value> = webm_only.iter().collect();

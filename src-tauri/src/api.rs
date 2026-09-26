@@ -134,7 +134,9 @@ fn sec(ms: u64) -> u32 {
    authenticated with the user's own OAuth token from the keychain.
    It hands back a direct file URL, so we play it ourselves (mode: "local").  */
 
-const YM_API: &str = "https://api.music.yandex.net";
+/// Public for ymlib.rs, which adds account/library reads (likes, playlists)
+/// on top of the same API the search/stream paths use.
+pub const YM_API: &str = "https://api.music.yandex.net";
 /// Salt for the file URL signature. A constant baked into the Yandex client,
 /// not a secret of ours.
 const YM_SALT: &str = "XGRlBW9FXlekgbPrRHuSiA";

@@ -195,6 +195,11 @@ html[data-theme="light"] .navbtn:hover{background:oklch(20% 0.01 280 / .05)}
 .s{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;font-size:.78rem;font-weight:450;
   color:var(--mute);border:1px solid transparent;transition:all .2s var(--e);white-space:nowrap}
 .s .d{width:5px;height:5px;border-radius:50%;background:currentColor}
+/* White service mark inside the header chip: painted with currentColor, so it
+   follows the chip's states. The dot now only echoes the enabled state. */
+.s .sic{display:block;flex:none;opacity:.9}
+.s[data-on="true"] .sic{opacity:1}
+.s[data-conn="false"] .sic{opacity:.5}
 .s:hover{color:var(--text)}
 .s[data-on="true"]{color:var(--text);border-color:var(--line-2);background:var(--surf)}
 .s[data-on="true"] .d{background:var(--accent);box-shadow:0 0 calc(7px*var(--glow)) rgb(var(--accent-rgb) / .8)}
@@ -684,6 +689,51 @@ html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
   display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:var(--sp-8);
   transform:translateY(20px) scale(.98);transition:transform .42s var(--e)}
 .fp[data-open="true"] .fpc{transform:none}
+/* ── stage mode (mockup 1): everything centered, big glowing cover ── */
+.fpc[data-mode="stage"]{width:min(760px,100%);grid-template-columns:1fr;justify-items:center;text-align:center}
+.fpc[data-mode="stage"] .fpr-stage{align-items:center}
+.fpc[data-mode="stage"] .fpseek{width:min(560px,100%)}
+.fpc[data-mode="stage"] .fpswitch{justify-content:center}
+.fpc[data-mode="stage"] .fpbody{width:min(640px,100%)}
+/* The stage cover breathes: soft halo behind, slow float while playing. */
+.cover-stage{width:min(340px,60vw)}
+.fpc[data-mode="stage"] .fpcover-stage{
+  width:min(340px,58vw);box-shadow:0 30px 90px oklch(0% 0 0/.55),0 0 calc(90px*var(--glow)) rgb(var(--accent-rgb)/.14)}
+.fpc[data-mode="stage"][data-playing="true"] .fpcover-stage{animation:coverfloat 7s ease-in-out infinite}
+@keyframes coverfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.fpr-stage h2{font-size:clamp(1.8rem,3.4vw,2.6rem)}
+/* ── lyric mode (mockup 2): cover left, oversized lyrics right ── */
+.fpc[data-mode="lyric"]{width:min(1280px,100%);align-items:stretch}
+.fpc-grid{display:grid;grid-template-columns:minmax(0,calc(var(--ly-cov,320)*1px)) minmax(0,1fr);
+  gap:var(--sp-8);align-items:stretch}
+.cover-fpcover-lg{display:flex;flex-direction:column;justify-content:flex-end}
+.fpcover-lg{position:relative}
+.fpcover-lg .fpmeta{position:absolute;inset:auto 0 0 0;padding:var(--sp-6);
+  display:flex;flex-direction:column;gap:10px;border-radius:inherit;
+  background:linear-gradient(to top,oklch(10% 0 0/.78),oklch(10% 0 0/.25) 55%,transparent);color:#fff}
+.fpcover-lg .fpmeta h2{font-size:clamp(1.2rem,1.8vw,1.6rem);margin:0}
+.fpcover-lg .fpmeta .by{color:rgb(255 255 255/.72);font-size:.85rem;margin:0}
+.fpcover-lg .fpmeta .eyebrow{color:rgb(255 255 255/.5)}
+.fpcover-lg .fpmeta .fpseek,.fpcover-lg .fpmeta .t{color:rgb(255 255 255/.8)}
+.fpcover-lg .fpmeta .fpctrls{margin:0}
+.fpcover-lg .fpmeta .ic,.fpcover-lg .fpmeta .heart{color:#fff}
+/* The oversized lyric sheet. Size/weight/glow come from the customization
+   variables so the settings panel can reshape it live. */
+.lyr-big{align-self:center;max-height:100%;overflow:auto;overflow-x:hidden;
+  padding-right:8px;overscroll-behavior:contain;display:grid;gap:calc(var(--ly-gap,14)*1px);
+  font-family:var(--ly-font,"Inter Tight"),Inter,system-ui,sans-serif;
+  scrollbar-width:thin}
+.lyr-big p{margin:0;font-size:calc(var(--ly-size,44)*1px);line-height:1.18;
+  font-weight:var(--ly-weight,640);letter-spacing:-.022em;color:var(--mute);opacity:.34;
+  transition:opacity .4s var(--e),color .4s var(--e),transform .4s var(--e),filter .4s var(--e);
+  will-change:opacity,transform}
+.lyr-big p[data-near="1"]{opacity:.5}
+.lyr-big p[data-near="2"]{opacity:.38}
+.lyr-big p[data-near="far"]{opacity:.24}
+.lyr-big p[data-on="true"]{opacity:1;color:var(--text);transform:translateX(6px);
+  text-shadow:0 0 calc(26px*var(--glow)*var(--ly-glow,1)) rgb(var(--accent-rgb)/.45)}
+html[data-accent="none"] .lyr-big p[data-on="true"]{text-shadow:0 0 calc(26px*var(--glow)*var(--ly-glow,1)) rgb(255 255 255/.22)}
+@media (max-width:900px){.fpc-grid{grid-template-columns:1fr}.cover-fpcover-lg{min-height:280px}}
 .cover{aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;
   background:linear-gradient(150deg,oklch(var(--l1,54%) 0 0),oklch(var(--l2,22%) 0 0));
   background-size:cover;background-position:center;background-repeat:no-repeat;

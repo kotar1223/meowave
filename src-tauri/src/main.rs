@@ -3,6 +3,7 @@
 
 mod api;
 mod config;
+mod discord;
 mod local;
 mod lyrics;
 mod mem;
@@ -12,6 +13,7 @@ mod spotify;
 mod stream;
 mod tokens;
 mod update;
+mod ymlib;
 mod ytm;
 
 use std::sync::OnceLock;
@@ -363,6 +365,16 @@ fn main() {
             spotify::spotify_available,
             spotify::spotify_playlists,
             spotify::spotify_playlist_tracks,
+            ymlib::ym_available,
+            ymlib::ym_login_start,
+            ymlib::ym_finish,
+            ymlib::ym_playlists,
+            ymlib::ym_playlist_tracks,
+            ymlib::ym_liked_tracks,
+            discord::discord_available,
+            discord::discord_configure,
+            discord::discord_update,
+            discord::discord_clear,
             stream_info,
         ])
         // Only a minimised window stops rendering. Tying this to focus was a
