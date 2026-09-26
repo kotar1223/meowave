@@ -340,6 +340,9 @@ pub fn proxy_set(cfg: ProxyConfig) -> Result<ProxyConfig, String> {
     if let Ok(mut g) = CONFIG.write() {
         *g = Some(next.clone());
     }
+    // The HTTP clients were built against the old routing; drop them so the
+    // next request picks the new one up (see api::reset_clients).
+    crate::api::reset_clients();
     Ok(next)
 }
 

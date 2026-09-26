@@ -916,12 +916,21 @@ function draw(lvl){
 
 /* cover visualiser */
 const vis={c:null,g:null};
+/* getComputedStyle() forces a style recalculation, and drawVis() runs on every
+   frame the fullscreen player is open — so reading one variable through it cost
+   a recalc per frame for a value that only ever changes with the theme
+   (--text is defined exactly twice, both on data-theme; see app.css). */
+let visText=null,visTextTheme=null;
+function visColor(){
+ const de=document.documentElement,th=de.dataset.theme;
+ if(visTextTheme!==th){visTextTheme=th;visText=getComputedStyle(de).getPropertyValue("--text").trim()}
+ return visText}
 function drawVis(){
  if(!particlesEnabled)return;
  if(!vis.c)return;const c=vis.c,g=vis.g,w=c.width,h=c.height;
  g.clearRect(0,0,w,h);
- const b=bins(48),cs=getComputedStyle(document.documentElement);
- g.strokeStyle=cs.getPropertyValue("--text").trim();g.globalAlpha=.55;g.lineWidth=1.5*(devicePixelRatio||1);
+ const b=bins(48);
+ g.strokeStyle=visColor();g.globalAlpha=.55;g.lineWidth=1.5*(devicePixelRatio||1);
  g.beginPath();
  for(let i=0;i<b.length;i++){const x=(i/(b.length-1))*w,y=h*.78-b[i]*h*.5;i?g.lineTo(x,y):g.moveTo(x,y)}
  g.stroke();g.globalAlpha=1}

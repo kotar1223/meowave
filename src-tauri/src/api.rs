@@ -39,18 +39,62 @@ pub struct ServiceError {
     pub message: String,
 }
 
-pub fn client() -> Result<reqwest::Client, String> {
-    let mut b = reqwest::Client::builder()
-        .user_agent(UA)
-        .timeout(std::time::Duration::from_secs(20));
-    // Optional and off by default. The proxy carries its own routing rules, so
-    // only the blocked hosts go through it — Yandex and our 127.0.0.1 stream
-    // proxy stay direct. Every network path in the app funnels through this
-    // one constructor, which is why the switch works everywhere at once.
-    if let Some(p) = crate::proxy::reqwest_proxy() {
-        b = b.proxy(p);
+/// One client per configuration instead of one per request.
+///
+/// Every call used to build a fresh `reqwest::Client` — a new connection pool,
+/// a new resolver, a new TLS setup — and throw it away after a single request.
+/// So every search, every lyric lookup, every cover relay and every stream
+/// resolved a fresh DNS + TCP + TLS handshake instead of reusing one that was
+/// already warm, and the cover relay (one request per artwork on the page) paid
+/// that price the most.
+///
+/// A client is cheap to clone — the pool lives behind an Arc — and it is only
+/// as valid as the routing it was built with, so `proxy_set` drops both slots
+/// and the next request rebuilds them (`reset_clients`).
+static CLIENT: std::sync::RwLock<Option<reqwest::Client>> = std::sync::RwLock::new(None);
+static MEDIA: std::sync::RwLock<Option<reqwest::Client>> = std::sync::RwLock::new(None);
+
+fn reuse(
+    slot: &std::sync::RwLock<Option<reqwest::Client>>,
+    build: impl FnOnce() -> Result<reqwest::Client, String>,
+) -> Result<reqwest::Client, String> {
+    if let Ok(g) = slot.read() {
+        if let Some(c) = g.as_ref() {
+            return Ok(c.clone());
+        }
     }
-    b.build().map_err(|e| e.to_string())
+    let built = build()?;
+    if let Ok(mut g) = slot.write() {
+        *g = Some(built.clone());
+    }
+    Ok(built)
+}
+
+/// Drops both clients so the next request rebuilds them against the current
+/// proxy settings; without this a cached client would keep routing traffic the
+/// old way for the rest of the session.
+pub fn reset_clients() {
+    for slot in [&CLIENT, &MEDIA] {
+        if let Ok(mut g) = slot.write() {
+            *g = None;
+        }
+    }
+}
+
+pub fn client() -> Result<reqwest::Client, String> {
+    reuse(&CLIENT, || {
+        let mut b = reqwest::Client::builder()
+            .user_agent(UA)
+            .timeout(std::time::Duration::from_secs(20));
+        // Optional and off by default. The proxy carries its own routing rules, so
+        // only the blocked hosts go through it — Yandex and our 127.0.0.1 stream
+        // proxy stay direct. Every network path in the app funnels through this
+        // one constructor, which is why the switch works everywhere at once.
+        if let Some(p) = crate::proxy::reqwest_proxy() {
+            b = b.proxy(p);
+        }
+        b.build().map_err(|e| e.to_string())
+    })
 }
 
 /// The same client, minus the deadline — for bodies that are read for minutes
@@ -67,16 +111,18 @@ pub fn client() -> Result<reqwest::Client, String> {
 /// A streaming client has to bound the *stalls*, not the whole transfer, so
 /// this one has no total deadline: connect and per-read are capped instead.
 pub fn media_client() -> Result<reqwest::Client, String> {
-    let mut b = reqwest::Client::builder()
-        .user_agent(UA)
-        .connect_timeout(std::time::Duration::from_secs(15))
-        // Resets on every successful read, so a slow-but-moving stream is fine
-        // while a connection that goes quiet for a minute still fails.
-        .read_timeout(std::time::Duration::from_secs(60));
-    if let Some(p) = crate::proxy::reqwest_proxy() {
-        b = b.proxy(p);
-    }
-    b.build().map_err(|e| e.to_string())
+    reuse(&MEDIA, || {
+        let mut b = reqwest::Client::builder()
+            .user_agent(UA)
+            .connect_timeout(std::time::Duration::from_secs(15))
+            // Resets on every successful read, so a slow-but-moving stream is fine
+            // while a connection that goes quiet for a minute still fails.
+            .read_timeout(std::time::Duration::from_secs(60));
+        if let Some(p) = crate::proxy::reqwest_proxy() {
+            b = b.proxy(p);
+        }
+        b.build().map_err(|e| e.to_string())
+    })
 }
 
 fn sec(ms: u64) -> u32 {
