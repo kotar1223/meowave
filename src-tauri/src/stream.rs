@@ -191,14 +191,18 @@ fn host_ok(request: &tiny_http::Request, port: u16) -> bool {
 /// let any page that guessed the port read the body cross-origin. Now they are
 /// added after the token check, so an unauthenticated caller gets a bare 403.
 fn cors(resp_origin: Option<&str>) -> Vec<Header> {
-    vec![
+    let mut h = vec![
         header("Access-Control-Allow-Origin", resp_origin.unwrap_or("*")),
         header(
             "Access-Control-Expose-Headers",
-            "Content-Range, Content-Length, Accept-Ranges",
+            "Content-Range, Content-Length, Accept-Ranges, Content-Type, Authorization, apikey",
         ),
         header("Vary", "Origin"),
-    ]
+    ];
+    if resp_origin.is_some() {
+        h.push(header("Access-Control-Allow-Credentials", "true"));
+    }
+    h
 }
 
 fn origin_of(request: &tiny_http::Request) -> Option<String> {
@@ -310,9 +314,15 @@ fn handle(
                 .map_err(|e| e.to_string());
         }
         let mut resp = Response::empty(StatusCode(204))
-            .with_header(header("Access-Control-Allow-Headers", "Range"))
-            .with_header(header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS"))
-            .with_header(header("Access-Control-Max-Age", "600"));
+            .with_header(header(
+                "Access-Control-Allow-Headers",
+                "Range, Authorization, apikey, Content-Type, Accept, Prefer, X-Client-Info, X-Supabase-Api-Version, Accept-Profile, Content-Profile",
+            ))
+            .with_header(header(
+                "Access-Control-Allow-Methods",
+                "GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS",
+            ))
+            .with_header(header("Access-Control-Max-Age", "86400"));
         for h in cors(origin.as_deref()) {
             resp = resp.with_header(h);
         }
@@ -325,7 +335,16 @@ fn handle(
             .map_err(|e| e.to_string());
     }
 
-    // Only GET and HEAD from here on. HEAD used to fall through to GET and got
+    // Supabase relay: /relay/<percent-encoded url>. The webview's network
+    // stack fails fast on machines with an IPv6 address but no v6 route
+    // ("Load failed" on every sign-in), while reqwest falls back to v4
+    // properly. Method, auth headers and body are forwarded; the host is
+    // whitelisted so this stays a Supabase relay, not an open proxy.
+    if let Some(raw) = path.strip_prefix("/relay/") {
+        return serve_relay(rt, raw, query, origin.as_deref(), request);
+    }
+
+    // Only GET and HEAD from here on (audio streams and cover images). HEAD used to fall through to GET and got
     // a body it must not have.
     let head_only = request.method() == &tiny_http::Method::Head;
     if request.method() != &tiny_http::Method::Get && !head_only {
@@ -349,15 +368,6 @@ fn handle(
     // before the /stream/ shape below, since the encoded url contains slashes.
     if let Some(raw) = path.strip_prefix("/img/") {
         return serve_img(rt, raw, head_only, origin.as_deref(), request);
-    }
-
-    // Supabase relay: /relay/<percent-encoded url>. The webview's network
-    // stack fails fast on machines with an IPv6 address but no v6 route
-    // ("Load failed" on every sign-in), while reqwest falls back to v4
-    // properly. Method, auth headers and body are forwarded; the host is
-    // whitelisted so this stays a Supabase relay, not an open proxy.
-    if let Some(raw) = path.strip_prefix("/relay/") {
-        return serve_relay(rt, raw, query, request);
     }
 
     let parts: Vec<&str> = path.trim_start_matches('/').split('/').collect();
@@ -795,10 +805,14 @@ fn serve_relay(
     rt: &tokio::runtime::Runtime,
     raw: &str,
     _query: &str,
+    origin: Option<&str>,
     mut request: tiny_http::Request,
 ) -> Result<(), String> {
     let fail = |request: tiny_http::Request, code: u16, msg: &str| {
-        let resp = Response::from_string(msg.to_string()).with_status_code(StatusCode(code));
+        let mut resp = Response::from_string(msg.to_string()).with_status_code(StatusCode(code));
+        for h in cors(origin) {
+            resp = resp.with_header(h);
+        }
         request.respond(resp).map_err(|e| e.to_string())
     };
 
@@ -845,12 +859,13 @@ fn serve_relay(
     }
 
     let mut body = Vec::new();
-    let len = request.body_length().unwrap_or(0);
-    if len > 0 {
-        if len > 4 * 1024 * 1024 {
+    if method != reqwest::Method::GET && method != reqwest::Method::HEAD {
+        use std::io::Read;
+        let mut reader = request.as_reader().take(4 * 1024 * 1024 + 1);
+        let _ = reader.read_to_end(&mut body);
+        if body.len() > 4 * 1024 * 1024 {
             return fail(request, 413, "body too large");
         }
-        let _ = request.as_reader().read_to_end(&mut body);
     }
 
     let sent = rt.block_on(async move {
@@ -884,7 +899,7 @@ fn serve_relay(
         try_header("Content-Type", &ctype)
             .unwrap_or_else(|| header("Content-Type", "application/json")),
     ];
-    for h in cors(None) {
+    for h in cors(origin) {
         out_headers.push(h);
     }
 

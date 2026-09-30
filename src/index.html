@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru" data-theme="dark" data-accent="none">
 <head>
 <!-- lucide and supabase-js are bundled locally, not from a CDN: the CDN is
@@ -30,7 +30,7 @@
      real titlebar, and the buttons call the window API directly. -->
 <div class="titlebar" id="titlebar" data-tauri-drag-region>
   <span class="tb-brand" data-tauri-drag-region>
-    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h2.4l2.1-7 2.6 14 2.6-11 2.4 8 2-4h5.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <img src="./icons/icon.png" width="16" height="16" alt="Meowave" class="tb-icon" data-tauri-drag-region>
     <b data-tauri-drag-region>Meowave</b>
   </span>
   <span class="tb-fill" data-tauri-drag-region></span>
@@ -49,7 +49,7 @@
 <div class="ob" id="ob">
   <div class="obc pane">
     <section class="obstep" data-on="true" data-step="0">
-      <div class="eyebrow" style="margin-bottom:18px">Meowave</div>
+      <div class="eyebrow" style="margin-bottom:18px;display:inline-flex;align-items:center;gap:8px"><img src="./icons/icon.png" width="20" height="20" style="border-radius:5px" alt=""> Meowave</div>
       <h1 data-i18n="ob.lang.t">Язык интерфейса</h1>
       <p class="lead" data-i18n="ob.lang.s">Меняется в любой момент в настройках.</p>
       <div class="opts" id="oblang" role="radiogroup"></div>
@@ -83,7 +83,7 @@
 <div class="app" id="app" aria-hidden="true">
 
   <nav class="rail pane">
-    <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h2.4l2.1-7 2.6 14 2.6-11 2.4 8 2-4h5.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="mark" title="Meowave"><img src="./icons/icon.png" width="28" height="28" alt="Meowave" class="rail-logo"></span>
     <button class="navbtn" data-nav="home" aria-current="true"><i data-lucide="audio-lines" width="18" height="18"></i><span data-i18n="nav.home">Волна</span></button>
     <button class="navbtn" data-nav="search"><i data-lucide="search" width="18" height="18"></i><span data-i18n="nav.search">Поиск</span></button>
     <button class="navbtn" data-nav="library"><i data-lucide="list-music" width="18" height="18"></i><span data-i18n="nav.library">Медиа</span></button>
@@ -314,11 +314,11 @@
               <input type="range" id="ly-glow" min="0" max="200" value="100">
             </div>
             <div class="field">
-              <div><label>Обложка (режим лирики)</label><small><span id="ly-cov-v">320px</span></small></div>
+              <div><label data-i18n="ly.cov">Обложка (режим лирики)</label><small><span id="ly-cov-v">320px</span></small></div>
               <input type="range" id="ly-cov" min="220" max="520" value="320">
             </div>
             <div class="field">
-              <div><label>Междустрочный зазор</label><small><span id="ly-gap-v">14px</span></small></div>
+              <div><label data-i18n="ly.gap">Междустрочный зазор</label><small><span id="ly-gap-v">14px</span></small></div>
               <input type="range" id="ly-gap" min="4" max="40" value="14">
             </div>
           </div>
@@ -503,8 +503,13 @@
 
         <div class="stab" data-stab="about">
           <div class="panel pane">
-            <h3>Meowave</h3>
-            <p class="ph"><span data-i18n="about.ver">Версия</span> <span id="appver">0.1.0</span></p>
+            <div class="about-brand-header">
+              <img src="./icons/icon.png" width="52" height="52" alt="Meowave" class="about-app-icon">
+              <div>
+                <h3 style="margin:0 0 2px">Meowave</h3>
+                <p class="ph" style="margin:0"><span data-i18n="about.ver">Версия</span> <span id="appver">0.1.0</span></p>
+              </div>
+            </div>
             <!-- The real footprint of the window: our process plus the
                  webview's own processes, which live outside it on Windows and
                  macOS. Read on demand rather than polled. -->
@@ -585,7 +590,7 @@
   </footer>
 </div>
 
-<div class="fp" id="fp"><div class="fpc pane" id="fpc"></div></div>
+<div class="fp" id="fp"><div class="fp-bg" id="fpbg"></div><div class="fp-volumetric" id="fpvolumetric" aria-hidden="true"><i></i><i></i><i></i></div><div class="fp-vignette" aria-hidden="true"></div><div class="fpc" id="fpc"></div></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="notes" id="notes" aria-live="polite"></div>
 <!-- Image editor. Shared by the avatar, the banner and playlist covers: the

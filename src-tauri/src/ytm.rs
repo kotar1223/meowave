@@ -391,9 +391,26 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
 
     'clients: for (client, ua) in PLAYER_CLIENTS {
         for attempt in 0..2u8 {
-            let r = player_response(video_id, visitor.as_deref(), client, ua).await?;
+            let r = match player_response(video_id, visitor.as_deref(), client, ua).await {
+                Ok(res) => res,
+                Err(_) => continue,
+            };
             remember_visitor(&r);
-            let good = status_of(&r) == "OK";
+            let has_playable_audio = r
+                .pointer("/streamingData/adaptiveFormats")
+                .and_then(|f| f.as_array())
+                .map(|formats| {
+                    formats.iter().any(|f| {
+                        f.get("mimeType")
+                            .and_then(|m| m.as_str())
+                            .map(|m| m.starts_with("audio/"))
+                            .unwrap_or(false)
+                            && f.get("url").and_then(|u| u.as_str()).is_some()
+                    })
+                })
+                .unwrap_or(false);
+
+            let good = status_of(&r) == "OK" && has_playable_audio;
             resp = Some(r);
             if good {
                 ok = true;
@@ -647,5 +664,24 @@ mod tests {
         );
         // No audio formats at all is still an error, not a silent success.
         assert!(pick_format(&[], true, "best").is_none());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn live_ytm_test() {
+        let res = super::search("eminem without me").await;
+        match &res {
+            Ok(tracks) => {
+                println!("SEARCH OK, got {} tracks", tracks.len());
+                for (i, tr) in tracks.iter().take(3).enumerate() {
+                    let st = super::stream(&tr.id, false, "best").await;
+                    match st {
+                        Ok(pick) => println!("Track {} ({}: {}) STREAM OK: mime={}", i, tr.id, tr.t, pick.mime),
+                        Err(e) => println!("Track {} ({}: {}) STREAM ERR: {e}", i, tr.id, tr.t),
+                    }
+                }
+            }
+            Err(e) => println!("SEARCH ERR: {e}"),
+        }
     }
 }

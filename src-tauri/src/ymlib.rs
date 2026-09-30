@@ -248,7 +248,13 @@ fn ym_row(v: &serde_json::Value) -> Option<serde_json::Value> {
         .unwrap_or("")
         .to_string();
     let d = v.get("durationMs").and_then(|x| x.as_u64()).unwrap_or(0) as f64 / 1000.0;
-    Some(serde_json::json!({ "i": id, "t": t, "a": a, "al": al, "d": d }))
+    let exp = v
+        .get("contentWarning")
+        .and_then(|x| x.as_str())
+        .map(|s| s == "explicit")
+        .unwrap_or(false)
+        || v.get("explicit").and_then(|x| x.as_bool()).unwrap_or(false);
+    Some(serde_json::json!({ "i": id, "t": t, "a": a, "al": al, "d": d, "exp": exp }))
 }
 
 fn ym_api(path: &str, token: &str) -> reqwest::RequestBuilder {

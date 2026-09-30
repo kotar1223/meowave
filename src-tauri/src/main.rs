@@ -359,6 +359,7 @@ fn main() {
             local::download_track,
             local::download_processed,
             lyrics::lyrics_get,
+            lyrics::lyrics_search_genius,
             spotify::spotify_login,
             spotify::spotify_logout,
             spotify::spotify_me,

@@ -214,18 +214,253 @@ async fn from_lrclib(
     Ok(None)
 }
 
-/// Looks up lyrics for one track, best source first.
+/// Cleans raw HTML snippet from Genius data-lyrics-container into plain lines.
+pub fn clean_html_lyrics(chunk: &str) -> String {
+    let with_newlines = chunk
+        .replace("<br/>", "\n")
+        .replace("<br />", "\n")
+        .replace("<br>", "\n")
+        .replace("</p>", "\n")
+        .replace("</div>", "\n");
+
+    let mut in_tag = false;
+    let mut text = String::with_capacity(with_newlines.len());
+    for ch in with_newlines.chars() {
+        if ch == '<' {
+            in_tag = true;
+        } else if ch == '>' {
+            in_tag = false;
+        } else if !in_tag {
+            text.push(ch);
+        }
+    }
+
+    let decoded = text
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&#x27;", "'")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", " ")
+        .replace("&#8217;", "'")
+        .replace("&#8216;", "'")
+        .replace("&#8220;", "\"")
+        .replace("&#8221;", "\"");
+
+    let filtered_lines: Vec<&str> = decoded
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| {
+            if l.is_empty() {
+                return false;
+            }
+            if l.ends_with("Contributors")
+                || l.contains("Translations")
+                || l.ends_with(" Lyrics")
+                || l.eq_ignore_ascii_case("lyrics")
+                || l.starts_with("Embed")
+                || l.ends_with("Embed")
+                || l.contains("You might also like")
+            {
+                return false;
+            }
+            true
+        })
+        .collect();
+
+    filtered_lines.join("\n")
+}
+
+fn find_matching_div_end(html: &str, start: usize, max_end: usize) -> usize {
+    let mut depth = 1;
+    let mut i = start;
+    let bytes = html.as_bytes();
+    let limit = max_end.min(bytes.len());
+
+    while i < limit && depth > 0 {
+        if bytes[i..limit].starts_with(b"<div") {
+            let next_ch = bytes.get(i + 4);
+            if next_ch == Some(&b' ') || next_ch == Some(&b'>') || next_ch == Some(&b'/') {
+                depth += 1;
+                i += 4;
+                continue;
+            }
+        } else if bytes[i..limit].starts_with(b"</div>") {
+            depth -= 1;
+            if depth == 0 {
+                return i;
+            }
+            i += 6;
+            continue;
+        }
+        i += 1;
+    }
+    limit
+}
+
+/// Extracts lyrics from a full Genius page HTML.
+pub fn extract_genius_lyrics(html: &str) -> String {
+    let mut out = Vec::new();
+    let marker = "data-lyrics-container=\"true\"";
+    let mut offset = 0;
+
+    while let Some(pos) = html[offset..].find(marker) {
+        let start_marker = offset + pos;
+        let tag_close = match html[start_marker..].find('>') {
+            Some(i) => start_marker + i + 1,
+            None => break,
+        };
+
+        let next_container = html[tag_close..]
+            .find("data-lyrics-container=\"true\"")
+            .map(|i| tag_close + i);
+
+        let max_bound = match next_container {
+            Some(np) => np,
+            None => {
+                let candidates = [
+                    html[tag_close..].find("class=\"LyricsEditDesktop"),
+                    html[tag_close..].find("<div class=\"SongHeader"),
+                    html[tag_close..].find("class=\"Sidebar"),
+                ];
+                candidates
+                    .into_iter()
+                    .flatten()
+                    .min()
+                    .map(|c| tag_close + c)
+                    .unwrap_or(html.len().min(tag_close + 12000))
+            }
+        };
+
+        let end_slice = find_matching_div_end(html, tag_close, max_bound);
+
+        let chunk = &html[tag_close..end_slice];
+        let cleaned = clean_html_lyrics(chunk);
+        if !cleaned.trim().is_empty() {
+            out.push(cleaned);
+        }
+
+        offset = match next_container {
+            Some(next_pos) => next_pos,
+            None => {
+                if end_slice > tag_close {
+                    end_slice
+                } else {
+                    html[tag_close..]
+                        .chars()
+                        .next()
+                        .map(|c| tag_close + c.len_utf8())
+                        .unwrap_or(html.len())
+                }
+            }
+        };
+    }
+
+    out.join("\n\n")
+}
+
+/// Looks up lyrics on Genius via public search API and page scrape.
+async fn from_genius(artist: &str, title: &str) -> Result<Option<Vec<Line>>, String> {
+    let c = client()?;
+    let query = if artist.is_empty() {
+        title.to_string()
+    } else {
+        format!("{artist} {title}")
+    };
+    let q = format!(
+        "https://genius.com/api/search/multi?q={}",
+        urlencoding::encode(&query)
+    );
+
+    let resp = c
+        .get(&q)
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("genius search: {e}"))?;
+
+    if !resp.status().is_success() {
+        return Ok(None);
+    }
+
+    let json: Value = resp.json().await.map_err(|e| format!("genius json: {e}"))?;
+    let mut page_url: Option<String> = None;
+
+    if let Some(sections) = json.pointer("/response/sections").and_then(|s| s.as_array()) {
+        for s in sections {
+            let stype = s.get("type").and_then(|t| t.as_str()).unwrap_or("");
+            if stype == "song" || stype == "top_hit" {
+                if let Some(hits) = s.get("hits").and_then(|h| h.as_array()) {
+                    for h in hits {
+                        if let Some(result) = h.get("result") {
+                            if let Some(url) = result.get("url").and_then(|u| u.as_str()) {
+                                if url.starts_with("https://genius.com/") && !url.contains("/albums/") {
+                                    page_url = Some(url.to_string());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if page_url.is_some() {
+                break;
+            }
+        }
+    }
+
+    let Some(url) = page_url else {
+        return Ok(None);
+    };
+
+    let page_resp = c
+        .get(&url)
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
+        .send()
+        .await
+        .map_err(|e| format!("genius page: {e}"))?;
+
+    if !page_resp.status().is_success() {
+        return Ok(None);
+    }
+
+    let html = page_resp.text().await.map_err(|e| format!("genius html: {e}"))?;
+    let text = extract_genius_lyrics(&html);
+    let lines = plain_lines(&text);
+    if lines.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(lines))
+    }
+}
+
+/// Looks up lyrics for one track, best source first (LRCLIB -> Genius -> YTM).
 #[tauri::command]
 pub async fn lyrics_get(
-    service: String,
-    id: String,
-    artist: String,
-    title: String,
-    album: String,
-    duration: u32,
+    service: Option<String>,
+    id: Option<String>,
+    artist: Option<String>,
+    title: Option<String>,
+    album: Option<String>,
+    duration: Option<u32>,
 ) -> Result<Lyrics, String> {
-    // Synced beats correct-but-static, so LRCLIB is tried first for everything;
-    // YouTube's own text is the fallback that is always right but never timed.
+    let service = service.unwrap_or_default();
+    let id = id.unwrap_or_default();
+    let artist = artist.unwrap_or_default();
+    let title = title.unwrap_or_default();
+    let album = album.unwrap_or_default();
+    let duration = duration.unwrap_or(0);
+
+    // 1. Synced lyrics from LRCLIB first
     if !artist.trim().is_empty() && !title.trim().is_empty() {
         if let Ok(Some((synced, lines))) =
             from_lrclib(artist.trim(), title.trim(), album.trim(), duration).await
@@ -238,6 +473,18 @@ pub async fn lyrics_get(
         }
     }
 
+    // 2. Genius search
+    if !artist.trim().is_empty() && !title.trim().is_empty() {
+        if let Ok(Some(lines)) = from_genius(artist.trim(), title.trim()).await {
+            return Ok(Lyrics {
+                source: "genius".into(),
+                synced: false,
+                lines,
+            });
+        }
+    }
+
+    // 3. YouTube Music internal lyrics fallback
     if service == "ytm" {
         if let Ok(Some(text)) = from_ytm(&id).await {
             let lines = plain_lines(&text);
@@ -253,3 +500,76 @@ pub async fn lyrics_get(
 
     Ok(Lyrics::none())
 }
+
+/// Explicit Genius search endpoint for user queries.
+#[tauri::command]
+pub async fn lyrics_search_genius(
+    artist: Option<String>,
+    title: Option<String>,
+    query: Option<String>,
+) -> Result<Lyrics, String> {
+    let q = query.unwrap_or_default();
+    let (a, t) = if !q.trim().is_empty() {
+        ("", q.as_str())
+    } else {
+        (artist.as_deref().unwrap_or(""), title.as_deref().unwrap_or(""))
+    };
+    if let Ok(Some(lines)) = from_genius(a, t).await {
+        return Ok(Lyrics {
+            source: "genius".into(),
+            synced: false,
+            lines,
+        });
+    }
+    Ok(Lyrics::none())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_lrc_lines() {
+        let lrc = "[00:12.34] Hello world\n[00:15.67] Second line";
+        let lines = parse_lrc(lrc);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].text, "Hello world");
+        assert_eq!(lines[0].at, Some(12.34));
+    }
+
+    #[test]
+    fn cleans_html_genius_lyrics() {
+        let chunk = "<div>[Verse 1]<br/>I wish I was special<br>You&#x27;re so fucking special<br/>You might also like<br/>14 Contributors<br/>Creep Lyrics<br/>25Embed</div>";
+        let cleaned = clean_html_lyrics(chunk);
+        assert!(cleaned.contains("[Verse 1]"));
+        assert!(cleaned.contains("I wish I was special"));
+        assert!(cleaned.contains("You're so fucking special"));
+        assert!(!cleaned.contains("You might also like"));
+        assert!(!cleaned.contains("14 Contributors"));
+        assert!(!cleaned.contains("Creep Lyrics"));
+        assert!(!cleaned.contains("Embed"));
+    }
+
+    #[test]
+    fn extracts_multi_container_lyrics() {
+        let html = r#"
+            <div data-lyrics-container="true">Line 1<br/>Line 2</div>
+            <div class="separator">advertisement</div>
+            <div data-lyrics-container="true">Line 3<br/>Line 4</div>
+            <div class="LyricsEditDesktop">footer</div>
+        "#;
+        let extracted = extract_genius_lyrics(html);
+        assert!(extracted.contains("Line 1\nLine 2"));
+        assert!(extracted.contains("Line 3\nLine 4"));
+        assert!(!extracted.contains("advertisement"));
+        assert!(!extracted.contains("footer"));
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn live_genius_test() {
+        let r = lyrics_search_genius(Some("Radiohead".into()), Some("Creep".into()), None).await;
+        println!("GENIUS RESULT: {:?}", r.map(|l| (l.source, l.lines.len())));
+    }
+}
+

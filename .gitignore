@@ -47,3 +47,9 @@ src.rar
 # Tauri only auto-merges `tauri.local.conf.json` (with the dots), so this
 # `tauri.local.json` is inert — kept on disk, kept out of the repository.
 src-tauri/tauri.local.json
+
+# Scratch files, agent progress & mockups
+AGENT_PROGRESS.md
+/Pasted image*.png
+/smoke-test*.png
+

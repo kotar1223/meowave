@@ -193,7 +193,7 @@ html[data-theme="light"] .navbtn:hover{background:oklch(20% 0.01 280 / .05)}
 .search input:focus{outline:none;border-color:var(--line-2);background:var(--surf-2)}
 .srv{display:flex;gap:var(--sp-1);margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 .s{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;font-size:.78rem;font-weight:450;
-  color:var(--mute);border:1px solid transparent;transition:all .2s var(--e);white-space:nowrap}
+  color:var(--mute);border:1px solid transparent;transition:color .2s var(--e),border-color .2s var(--e),background .2s var(--e),transform .2s var(--e);white-space:nowrap}
 .s .d{width:5px;height:5px;border-radius:50%;background:currentColor}
 /* White service mark inside the header chip: painted with currentColor, so it
    follows the chip's states. The dot now only echoes the enabled state. */
@@ -282,9 +282,10 @@ html[data-theme="light"] .art{background:linear-gradient(148deg,oklch(calc(100% 
 .meta{min-width:0}
 .meta b{display:block;font-weight:500;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .2s var(--e)}
 .meta span{display:block;color:var(--mute);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.src{font-size:.7rem;color:var(--mute);letter-spacing:.02em;white-space:nowrap}
+.src{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;color:var(--mute);letter-spacing:.02em;white-space:nowrap}
+.src .sic{width:12px;height:12px;flex:none;opacity:.75}
 .dur{font-variant-numeric:tabular-nums;color:var(--mute);font-size:.8rem}
-.heart{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--mute);opacity:.5;transition:all .2s var(--e)}
+.heart{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--mute);opacity:.5;transition:color .2s var(--e),opacity .2s var(--e),transform .2s var(--e),filter .2s var(--e)}
 .row:hover .heart{opacity:1}
 .heart[aria-pressed="true"]{opacity:1;color:var(--accent);filter:drop-shadow(0 0 calc(6px*var(--glow)) rgb(var(--accent-rgb) / .55))}
 
@@ -386,7 +387,7 @@ html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(1
 /* The switch is defined once, further up. This second copy came later in the
    file and therefore won: it overrode the size, the knob travel and the
    press animation, which is why the toggles looked wrong. */
-.btn{padding:8px 15px;border-radius:999px;font-size:.8rem;font-weight:450;border:1px solid var(--line-2);transition:all .2s var(--e);white-space:nowrap}
+.btn{padding:8px 15px;border-radius:999px;font-size:.8rem;font-weight:450;border:1px solid var(--line-2);transition:color .2s var(--e),border-color .2s var(--e),background-color .2s var(--e),transform .2s var(--e),box-shadow .2s var(--e);white-space:nowrap}
 .btn:hover{background:var(--surf-2)}
 .btn.on{border-color:var(--accent);color:var(--accent)}
 /* Used by the lyrics panel, where a full-size button would dominate a body that
@@ -600,7 +601,7 @@ html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(1
 .bar:hover .np .npic,.np .npic:focus-visible{opacity:1}
 .np .npdis[aria-pressed="true"]{opacity:1;color:oklch(70% 0.17 25)}
 .ctrls{display:flex;align-items:center;gap:var(--sp-2)}
-.ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--mute);transition:all .2s var(--e)}
+.ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--mute);transition:color .2s var(--e),background-color .2s var(--e),transform .2s var(--e)}
 .ic:hover{color:var(--text);background:oklch(100% 0 0 / .06)}
 html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
 .ic[aria-pressed="true"]{color:var(--accent)}
@@ -610,7 +611,7 @@ html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
 .right{display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-1)}
 .right input[type=range]{width:76px}
 .eqbtn{padding:7px 13px;border-radius:999px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);
-  border:1px solid transparent;transition:all .2s var(--e)}
+  border:1px solid transparent;transition:color .2s var(--e),border-color .2s var(--e),background-color .2s var(--e),transform .2s var(--e)}
 .eqbtn:hover{color:var(--text)}
 .eqbtn[aria-expanded="true"]{color:var(--text);border-color:var(--line-2);background:var(--surf)}
 
@@ -643,11 +644,11 @@ html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
 .fxrow output{font-size:.68rem;font-variant-numeric:tabular-nums;color:var(--text);width:52px;text-align:right;flex:none}
 .rchips{display:flex;gap:4px;flex-wrap:wrap}
 .rchips button{padding:4px 9px;border-radius:999px;font-size:.66rem;color:var(--mute);
-  border:1px solid var(--line);transition:all .18s var(--e);white-space:nowrap}
+  border:1px solid var(--line);transition:color .18s var(--e),border-color .18s var(--e),background-color .18s var(--e);white-space:nowrap}
 .rchips button:hover{color:var(--text)}
 .rchips button[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
 .presets{display:flex;gap:6px;flex-wrap:wrap;flex:0 1 auto;align-items:center}
-.pchip{padding:6px 12px;border-radius:999px;font-size:.76rem;color:var(--mute);border:1px solid transparent;transition:all .2s var(--e)}
+.pchip{padding:6px 12px;border-radius:999px;font-size:.76rem;color:var(--mute);border:1px solid transparent;transition:color .2s var(--e),border-color .2s var(--e),background-color .2s var(--e),transform .2s var(--e)}
 .pchip:hover{color:var(--text)}
 .pchip[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:var(--accent-soft);
   box-shadow:0 0 calc(12px*var(--glow)) rgb(var(--accent-rgb) / .22)}
@@ -667,85 +668,192 @@ html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
    `content-visibility:hidden` drops the subtree's rendering work and its
    layers, and the backdrop-filter is only attached while the panel is actually
    open, so no snapshot exists when it is closed. */
-.fp{position:fixed;inset:var(--tb) 0 0;z-index:40;display:grid;place-items:center;padding:var(--sp-6);
-  /* The fullscreen player sits on top of the live particle field, and at a
-     light dim the field kept competing with the cover and the lyrics — the
-     "everything mixes together" report. A heavy frost instead: darker wash,
-     much wider blur, so the background reads as texture, not content. */
-  background:color-mix(in oklab,var(--bg) 84%,transparent);
+.fp{position:fixed;inset:var(--tb) 0 0;z-index:40;display:flex;align-items:center;justify-content:center;
+  padding:0;margin:0;background:var(--bg);
   opacity:0;pointer-events:none;content-visibility:hidden;
-  transition:opacity .35s var(--e)}
+  transition:opacity .35s var(--e);overflow:hidden}
 .fp[data-open="true"]{opacity:1;pointer-events:auto;content-visibility:visible}
-/* The blur lives on an oversized ::before rather than on .fp itself. The
-   backdrop filter samples the pixels behind the element, and at the edges its
-   kernel reaches outside the element: Chromium pads those samples with black,
-   which showed up as a dark frame flickering along the window border while the
-   particle field animated underneath. Extending the filter surface 60px past
-   every edge keeps the visible area away from the padding. The ::before is
-   absolutely positioned, so it never becomes a grid item. */
-.fp[data-open="true"]::before{content:"";position:absolute;inset:-60px;z-index:-1;
-  -webkit-backdrop-filter:blur(28px) saturate(1.15);backdrop-filter:blur(28px) saturate(1.15)}
-.fpc{width:min(1080px,100%);max-height:100%;overflow:auto;padding:var(--sp-8);position:relative;
-  display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:var(--sp-8);
-  transform:translateY(20px) scale(.98);transition:transform .42s var(--e)}
+.fp-bg{position:absolute;inset:-60px;background-size:cover;background-position:center;
+  filter:blur(75px) saturate(1.8) brightness(0.42);opacity:0.85;pointer-events:none;z-index:0;
+  transform:scale(1.15);transition:background-image .7s ease,opacity .4s ease}
+html[data-lite] .fp-bg{display:none}
+
+/* 3D Volumetric dynamic lighting */
+.fp-volumetric{position:absolute;inset:-20%;overflow:hidden;pointer-events:none;z-index:1;
+  filter:blur(60px);opacity:.9;mix-blend-mode:screen;will-change:transform}
+.fp-volumetric i{position:absolute;border-radius:50%;opacity:.75;will-change:transform}
+.fp-volumetric i:nth-child(1){width:60vw;height:60vw;top:5%;left:12%;
+  background:radial-gradient(circle,rgb(var(--fp-tint,var(--accent-rgb,135 90 230))/.75) 0%,transparent 70%);
+  animation:orbFloat1 22s ease-in-out infinite alternate}
+.fp-volumetric i:nth-child(2){width:70vw;height:70vw;bottom:0%;right:8%;
+  background:radial-gradient(circle,rgb(var(--fp-tint-2,90 60 190)/.65) 0%,transparent 70%);
+  animation:orbFloat2 26s ease-in-out infinite alternate}
+.fp-volumetric i:nth-child(3){width:50vw;height:50vw;top:35%;left:35%;
+  background:radial-gradient(circle,rgb(var(--accent-rgb,160 110 250)/.55) 0%,transparent 65%);
+  animation:orbFloat3 18s ease-in-out infinite alternate}
+@keyframes orbFloat1{
+  0%{transform:translate3d(-8%,-8%,0) scale(1) rotate(0deg)}
+  50%{transform:translate3d(12%,10%,0) scale(1.15) rotate(90deg)}
+  100%{transform:translate3d(4%,-12%,0) scale(.95) rotate(180deg)}}
+@keyframes orbFloat2{
+  0%{transform:translate3d(8%,12%,0) scale(1) rotate(0deg)}
+  50%{transform:translate3d(-12%,-8%,0) scale(1.18) rotate(-100deg)}
+  100%{transform:translate3d(-4%,10%,0) scale(.92) rotate(-200deg)}}
+@keyframes orbFloat3{
+  0%{transform:translate3d(0,0,0) scale(.95) rotate(0deg)}
+  50%{transform:translate3d(-15%,12%,0) scale(1.12) rotate(60deg)}
+  100%{transform:translate3d(12%,-8%,0) scale(1.02) rotate(120deg)}}
+
+.fp-vignette{position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse at center, rgba(10,10,14,0.1) 20%, rgba(8,8,12,0.55) 65%, rgba(4,4,6,0.92) 100%);
+  box-shadow:inset 0 0 100px 30px rgba(0,0,0,.7)}
+html[data-lite] .fp-volumetric{display:none}
+
+.fp::before{display:none}
+.fpc{position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:var(--sp-6);box-sizing:border-box;overflow:hidden;
+  transform:translateY(16px) scale(.985);transition:transform .38s var(--e)}
 .fp[data-open="true"] .fpc{transform:none}
-/* ── stage mode (mockup 1): everything centered, big glowing cover ── */
-.fpc[data-mode="stage"]{width:min(760px,100%);grid-template-columns:1fr;justify-items:center;text-align:center}
-.fpc[data-mode="stage"] .fpr-stage{align-items:center}
-.fpc[data-mode="stage"] .fpseek{width:min(560px,100%)}
-.fpc[data-mode="stage"] .fpswitch{justify-content:center}
-.fpc[data-mode="stage"] .fpbody{width:min(640px,100%)}
-/* The stage cover breathes: soft halo behind, slow float while playing. */
-.cover-stage{width:min(340px,60vw)}
-.fpc[data-mode="stage"] .fpcover-stage{
-  width:min(340px,58vw);box-shadow:0 30px 90px oklch(0% 0 0/.55),0 0 calc(90px*var(--glow)) rgb(var(--accent-rgb)/.14)}
+.fpclose-btn{position:fixed;top:calc(var(--tb) + 20px);right:28px;z-index:50;
+  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:oklch(100% 0 0 / .08);color:#fff;border:1px solid oklch(100% 0 0 / .06);cursor:pointer;
+  transition:background .2s var(--e),transform .2s var(--e),color .2s var(--e)}
+.fpclose-btn:hover{background:oklch(100% 0 0 / .16);color:#fff;transform:scale(1.06)}
+.fpclose-btn:active{transform:scale(0.94)}
+.fp-badge-exp{display:inline-flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.65);margin-left:6px;vertical-align:middle;flex-shrink:0}
+
+/* ── stage mode (mockup 1): centered cover, sleek info & controls ── */
+.fpc[data-mode="stage"] .fp-stage-content{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:100%;max-width:520px;text-align:center;
+  animation:fpin .4s var(--e) both}
+.fpcover-stage{width:min(380px,42vh,85vw);aspect-ratio:1;border-radius:18px;
+  box-shadow:0 28px 85px rgba(0,0,0,.6),0 0 calc(70px*var(--glow)) rgb(var(--accent-rgb,255 255 255)/.15);
+  cursor:pointer;transition:transform .3s var(--e),box-shadow .3s var(--e)}
+.fpcover-stage:hover{transform:scale(1.02)}
 .fpc[data-mode="stage"][data-playing="true"] .fpcover-stage{animation:coverfloat 7s ease-in-out infinite}
 @keyframes coverfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.fpr-stage h2{font-size:clamp(1.8rem,3.4vw,2.6rem)}
-/* ── lyric mode (mockup 2): cover left, oversized lyrics right ── */
-.fpc[data-mode="lyric"]{width:min(1280px,100%);align-items:stretch}
-.fpc-grid{display:grid;grid-template-columns:minmax(0,calc(var(--ly-cov,320)*1px)) minmax(0,1fr);
-  gap:var(--sp-8);align-items:stretch}
-.cover-fpcover-lg{display:flex;flex-direction:column;justify-content:flex-end}
-.fpcover-lg{position:relative}
-.fpcover-lg .fpmeta{position:absolute;inset:auto 0 0 0;padding:var(--sp-6);
-  display:flex;flex-direction:column;gap:10px;border-radius:inherit;
-  background:linear-gradient(to top,oklch(10% 0 0/.78),oklch(10% 0 0/.25) 55%,transparent);color:#fff}
-.fpcover-lg .fpmeta h2{font-size:clamp(1.2rem,1.8vw,1.6rem);margin:0}
-.fpcover-lg .fpmeta .by{color:rgb(255 255 255/.72);font-size:.85rem;margin:0}
-.fpcover-lg .fpmeta .eyebrow{color:rgb(255 255 255/.5)}
-.fpcover-lg .fpmeta .fpseek,.fpcover-lg .fpmeta .t{color:rgb(255 255 255/.8)}
-.fpcover-lg .fpmeta .fpctrls{margin:0}
-.fpcover-lg .fpmeta .ic,.fpcover-lg .fpmeta .heart{color:#fff}
-/* The oversized lyric sheet. Size/weight/glow come from the customization
-   variables so the settings panel can reshape it live. */
-.lyr-big{align-self:center;max-height:100%;overflow:auto;overflow-x:hidden;
-  padding-right:8px;overscroll-behavior:contain;display:grid;gap:calc(var(--ly-gap,14)*1px);
+.fp-meta-stage{display:flex;flex-direction:column;align-items:center;width:100%;margin-top:22px}
+.fp-title-row{display:inline-flex;align-items:center;justify-content:center;max-width:100%}
+.fp-title{font-size:clamp(1.3rem,2.4vw,1.75rem);font-weight:700;color:#fff;margin:0;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fp-artist{font-size:clamp(.92rem,1.2vw,1.05rem);color:rgba(255,255,255,.65);margin:6px 0 0;font-weight:450;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpseek-stage{width:min(380px,42vh,85vw);margin-top:20px}
+.fpctrls-stage{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px}
+
+/* ── lyric mode (mockup 2): cover left, centered oversized lyrics right ── */
+.fpc[data-mode="lyric"]{padding:0 40px}
+.fp-lyric-grid{display:grid;grid-template-columns:minmax(260px,calc(var(--ly-cov,340)*1px)) 1fr;
+  gap:clamp(40px,6vw,90px);align-items:center;width:min(1380px,94vw);height:100%;max-height:min(88vh,840px);
+  margin:auto;animation:fpin .4s var(--e) both}
+.fp-lyric-left{display:flex;flex-direction:column;align-items:center;text-align:center;width:100%}
+.fpcover-lg{width:100%;aspect-ratio:1;border-radius:18px;
+  box-shadow:0 24px 75px rgba(0,0,0,.6),0 0 calc(60px*var(--glow)) rgb(var(--accent-rgb,255 255 255)/.12);
+  cursor:pointer;transition:transform .3s var(--e)}
+.fpcover-lg:hover{transform:scale(1.02)}
+.fpc[data-mode="lyric"][data-playing="true"] .fpcover-lg{animation:coverfloat 7s ease-in-out infinite}
+.fp-meta-lyric{display:flex;flex-direction:column;align-items:center;width:100%;margin-top:16px}
+.fp-meta-lyric .fp-title{font-size:clamp(0.95rem,1.3vw,1.18rem);font-weight:600;margin:0;line-height:1.25}
+.fp-meta-lyric .fp-artist{font-size:clamp(0.8rem,1vw,0.92rem);color:rgba(255,255,255,.55);margin:4px 0 0;font-weight:400}
+.fp-meta-lyric .fp-badge-exp{color:rgba(255,255,255,.55);margin-left:5px}
+.fp-meta-lyric .fp-badge-exp svg{width:12px;height:12px}
+.fpseek-lyric{width:100%;margin-top:16px}
+.fpctrls-lyric{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px}
+
+.fp-lyric-right{height:100%;max-height:min(84vh,800px);display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 14%,black 86%,transparent 100%);
+  mask-image:linear-gradient(to bottom,transparent 0%,black 14%,black 86%,transparent 100%)}
+html[data-lite] .fp-lyric-right{-webkit-mask-image:none;mask-image:none}
+
+/* The oversized lyric sheet */
+.lyr-big{width:100%;height:100%;overflow-y:auto;overflow-x:hidden;text-align:center;
+  padding:42vh 20px;box-sizing:border-box;display:flex;flex-direction:column;gap:calc(var(--ly-gap,18)*1px);
   font-family:var(--ly-font,"Inter Tight"),Inter,system-ui,sans-serif;
-  scrollbar-width:thin}
-.lyr-big p{margin:0;font-size:calc(var(--ly-size,44)*1px);line-height:1.18;
-  font-weight:var(--ly-weight,640);letter-spacing:-.022em;color:var(--mute);opacity:.34;
-  transition:opacity .4s var(--e),color .4s var(--e),transform .4s var(--e),filter .4s var(--e);
-  will-change:opacity,transform}
-.lyr-big p[data-near="1"]{opacity:.5}
-.lyr-big p[data-near="2"]{opacity:.38}
-.lyr-big p[data-near="far"]{opacity:.24}
-.lyr-big p[data-on="true"]{opacity:1;color:var(--text);transform:translateX(6px);
-  text-shadow:0 0 calc(26px*var(--glow)*var(--ly-glow,1)) rgb(var(--accent-rgb)/.45)}
-html[data-accent="none"] .lyr-big p[data-on="true"]{text-shadow:0 0 calc(26px*var(--glow)*var(--ly-glow,1)) rgb(255 255 255/.22)}
-@media (max-width:900px){.fpc-grid{grid-template-columns:1fr}.cover-fpcover-lg{min-height:280px}}
+  scrollbar-width:none;-ms-overflow-style:none}
+.lyr-big::-webkit-scrollbar{display:none}
+.lyr-big[data-empty="true"],
+.lyr-big:has(.lyr-empty){padding:0;overflow:hidden;justify-content:center}
+.lyr-header{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:540px;margin:0 auto 16px;padding:0 8px}
+.lyr-badge{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.65);background:oklch(100% 0 0/.08);padding:3px 10px;border-radius:999px;backdrop-filter:blur(6px)}
+.lyr-big p{margin:0;font-size:calc(var(--ly-size,44)*1px);line-height:1.32;
+  font-weight:var(--ly-weight,700);letter-spacing:-.02em;color:rgba(255,255,255,.88);opacity:.28;
+  transform:scale(.94);
+  transition:opacity .35s var(--e),transform .35s var(--e),filter .35s var(--e);
+  will-change:opacity,transform,filter;user-select:text;cursor:pointer}
+.lyr-big p[data-at]:hover{opacity:.88;transform:scale(1.0);filter:none}
+.lyr-big p[data-near="1"]{opacity:.65;transform:scale(.97);filter:none}
+.lyr-big p[data-near="2"]{opacity:.45;transform:scale(.94);filter:blur(.5px)}
+.lyr-big p[data-near="far"]{opacity:.22;transform:scale(.91);filter:blur(1.4px)}
+.lyr-big[data-synced="true"] p{
+  background:linear-gradient(90deg,#ffffff var(--karaoke-pct,0%),rgba(255,255,255,.32) var(--karaoke-pct,0%));
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.lyr-big[data-synced="true"] p[data-on="true"]{
+  opacity:1;transform:scale(1.06);
+  filter:drop-shadow(0 0 calc(20px*var(--glow)*var(--ly-glow,1)) rgba(255,255,255,.9))
+         drop-shadow(0 0 calc(44px*var(--glow)*var(--ly-glow,1)) rgb(var(--fp-tint,var(--accent-rgb,255 255 255))/.55)) !important}
+html[data-accent="none"] .lyr-big[data-synced="true"] p[data-on="true"]{
+  filter:drop-shadow(0 0 calc(20px*var(--glow)*var(--ly-glow,1)) rgba(255,255,255,.9))
+         drop-shadow(0 0 calc(44px*var(--glow)*var(--ly-glow,1)) rgba(255,255,255,.35)) !important}
+.lyr-big[data-synced="false"] p{
+  background:none;-webkit-background-clip:unset;background-clip:unset;
+  color:rgba(255,255,255,.88);-webkit-text-fill-color:rgba(255,255,255,.88);opacity:.82;transform:none}
+.lyr-empty{margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+
+@media (max-width:900px){
+  .fp-lyric-grid{grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:20px;height:100%}
+  .fpcover-lg{width:min(220px,30vh)}
+  .fp-lyric-right{max-height:48vh}
+  .lyr-big{padding:20vh 12px}
+}
+
+/* Seek bar in Fullscreen */
+.fpseek{position:relative;width:100%}
+.fpseek .track{position:relative;width:100%;height:3.5px;background:oklch(100% 0 0/.16);border-radius:999px;cursor:pointer;transition:height .15s ease}
+.fpseek .track:hover{height:5.5px}
+.fpseek .track .f{position:absolute;inset:0 auto 0 0;border-radius:999px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.35)}
+.fpseek .track .h{position:absolute;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#fff;opacity:0;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:opacity .15s ease,transform .15s ease}
+.fpseek .track:hover .h{opacity:1}
+.fpseek-times{display:flex;justify-content:space-between;width:100%;margin-top:6px;height:14px;pointer-events:none}
+.fpseek-times .t{font-size:.75rem;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums;opacity:0;transition:opacity .2s ease}
+.fpseek:hover .fpseek-times .t,
+.fpc[data-active="true"] .fpseek-times .t{opacity:1}
+
+/* Controls in Fullscreen */
+.fpctrls{display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transform:translateY(6px);
+  transition:opacity .35s var(--e),transform .35s var(--e)}
+.fpc[data-active="true"] .fpctrls,
+.fpc:hover .fpctrls,
+.fpc[data-playing="false"] .fpctrls{
+  opacity:1;pointer-events:auto;transform:translateY(0)}
+.fpctrls .ic{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.72);background:transparent;border:none;cursor:pointer;
+  transition:color .2s ease,transform .2s ease,background .2s ease}
+.fpctrls .ic:hover{color:#fff;background:oklch(100% 0 0/.08);transform:scale(1.08)}
+.fpctrls .ic:active{transform:scale(.95)}
+.fpctrls .ic[aria-pressed="true"]{color:var(--accent);text-shadow:0 0 calc(12px*var(--glow)) rgb(var(--accent-rgb)/.6)}
+.fpctrls .play{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:#fff;color:#111113;border:none;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.35);
+  transition:transform .2s ease,background .2s ease,box-shadow .2s ease}
+.fpctrls .play:hover{transform:scale(1.06);box-shadow:0 6px 24px rgba(0,0,0,.45)}
+.fpctrls .play:active{transform:scale(.96)}
+.fpctrls .heart{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.72);background:transparent;border:none;cursor:pointer;
+  transition:color .2s ease,transform .2s ease}
+.fpctrls .heart:hover{color:#fff;transform:scale(1.08)}
+.fpctrls .heart[aria-pressed="true"]{color:#f43f5e;filter:drop-shadow(0 0 10px rgba(244,63,94,.5))}
 .cover{aspect-ratio:1;border-radius:var(--r-lg);position:relative;overflow:hidden;
   background:linear-gradient(150deg,oklch(var(--l1,54%) 0 0),oklch(var(--l2,22%) 0 0));
   background-size:cover;background-position:center;background-repeat:no-repeat;
   box-shadow:0 24px 70px oklch(0% 0 0 / .5)}
 html[data-theme="light"] .cover{background:linear-gradient(150deg,oklch(calc(100% - var(--l1,54%)) 0 0),oklch(calc(100% - var(--l2,22%)) 0 0));box-shadow:0 20px 60px oklch(0% 0 0 / .18)}
-.cover .vis{position:absolute;inset:0;width:100%;height:100%}
+.cover .vis{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .fpr{display:flex;flex-direction:column;min-width:0}
 .fpr h2{font-size:clamp(1.6rem,3vw,2.3rem);line-height:1.05;margin:var(--sp-3) 0 6px}
 .fpr .by{color:var(--mute);font-size:.95rem;margin:0}
-.fpr .fpctrls{display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-6) 0 var(--sp-4)}
-.fpr .fpctrls .play{width:52px;height:52px}
-.fpseek{display:flex;align-items:center;gap:12px}
 .fpswitch{display:flex;gap:var(--sp-6);border-bottom:1px solid var(--line);margin:var(--sp-8) 0 var(--sp-4)}
 .fpswitch button{padding:0 1px 10px;font-size:.8rem;color:var(--mute);position:relative;letter-spacing:.02em}
 .fpswitch button[aria-selected="true"]{color:var(--text)}
@@ -1303,8 +1411,9 @@ html[data-theme="light"] textarea,html[data-theme="light"] select{background:var
 .seg::before{transition:left .46s cubic-bezier(.3,1.35,.45,1),width .46s cubic-bezier(.3,1.35,.45,1),opacity .25s var(--e)}
 .dock{transition:opacity .26s var(--e),transform .44s cubic-bezier(.26,1.35,.42,1)}
 .modalbox{transition:transform .32s cubic-bezier(.3,1.45,.45,1)}
-.toast.out{animation:toastOut .32s var(--e) both}
-@keyframes toastOut{to{opacity:0;transform:translateY(14px) scale(.96)}}
+/* (V1) toastOut lives only at line ~994 — a second copy of this rule and
+   keyframes further down the file silently overrode the first one and made
+   the exit animation fight itself. */
 
 /* ── fullscreen player: the cover breathes while something is playing ── */
 .fpc .cover{transition:box-shadow .6s var(--e)}
@@ -1398,3 +1507,32 @@ html[data-lite] .row[data-playing="true"] .art{animation:none}
   color:oklch(75% .18 25);white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;
   background:oklch(20% .04 25 / .35);border:1px solid oklch(60% .18 25 / .4);
   border-radius:12px;padding:12px 16px;z-index:2}
+
+/* ── Better-UI tactile press & polished elements ── */
+button:active, .ic:active, .chip:active, [role="button"]:active { transform: scale(0.96) !important }
+.play:active { transform: scale(0.94) !important }
+
+/* Titlebar & rail brand marks */
+.tb-icon { width: 16px; height: 16px; border-radius: 4px; margin-right: 6px; vertical-align: middle; display: inline-block }
+.rail-logo { width: 28px; height: 28px; border-radius: 8px; display: block }
+.about-app-icon { width: 64px; height: 64px; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,.35); margin-bottom: 12px }
+
+/* Empty states with app branding */
+.empty-art { position: relative; width: 56px; height: 56px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center }
+.empty-brand-icon { width: 48px; height: 48px; border-radius: 14px; opacity: .9; box-shadow: 0 8px 20px rgba(0,0,0,.3) }
+.empty-sub-icon { position: absolute; right: -4px; bottom: -4px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg-pane); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.3) }
+
+/* Auth card with tabbed sign-in/up */
+.auth-card { max-width: 440px; margin: 24px auto; padding: var(--sp-8); border-radius: var(--r-xl); background: var(--bg-pane); border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(0,0,0,.35); text-align: center }
+.auth-header { margin-bottom: 18px }
+.auth-app-icon { width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 12px; display: block; box-shadow: 0 8px 24px rgba(0,0,0,.3) }
+.auth-tabs { display: flex; gap: 4px; padding: 4px; background: var(--bg-card); border-radius: 12px; margin: 16px 0 }
+.auth-tab-btn { flex: 1; padding: 8px 14px; border: none; background: transparent; color: var(--mute); font-weight: 500; font-size: .88rem; border-radius: 9px; cursor: pointer; transition: color .2s var(--e), background .2s var(--e), transform .2s var(--e), box-shadow .2s var(--e) }
+.auth-tab-btn:hover { color: var(--text) }
+.auth-tab-btn.active { background: var(--bg-pane); color: var(--text); font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.18) }
+.auth-field { margin-bottom: 12px; text-align: left }
+.auth-field input { width: 100%; box-sizing: border-box }
+
+/* Track row service icon */
+.row .svc-ico { width: 16px; height: 16px; flex-shrink: 0; opacity: .7; transition: opacity .2s var(--e) }
+.row:hover .svc-ico { opacity: 1 }

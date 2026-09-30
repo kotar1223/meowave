@@ -25,11 +25,20 @@ const OPCODE_CLOSE: u32 = 2;
 /// One update per 15 s: inside Discord's 5-per-20 s budget with margin.
 const MIN_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
 
+#[cfg(unix)]
 struct Ipc {
     stream: std::os::unix::net::UnixStream,
 }
 
+#[cfg(windows)]
+struct Ipc {
+    // A named-pipe client opens through the ordinary filesystem API, so
+    // std::fs::File is enough — no winapi crate, no async runtime plumbing.
+    stream: std::fs::File,
+}
+
 impl Ipc {
+    #[cfg(unix)]
     fn connect() -> Option<Self> {
         // The client creates run/discord-ipc-0 first; higher numbers appear
         // when several clients run (canary, ptb). XDG_RUNTIME_DIR first, /tmp
@@ -47,6 +56,23 @@ impl Ipc {
                 if let Ok(stream) = std::os::unix::net::UnixStream::connect(&path) {
                     return Some(Self { stream });
                 }
+            }
+        }
+        None
+    }
+
+    #[cfg(windows)]
+    fn connect() -> Option<Self> {
+        // Same socket namespace as the official SDK: the first Discord client
+        // owns \\.\pipe\discord-ipc-0, secondary installs take the next slot.
+        for n in 0..10 {
+            let path = format!(r"\\.\pipe\discord-ipc-{n}");
+            if let Ok(stream) = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&path)
+            {
+                return Some(Self { stream });
             }
         }
         None

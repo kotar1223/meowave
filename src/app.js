@@ -61,6 +61,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "connect":"Подключить","disconnect":"Отключить","connected":"Подключено","noauth":"Не подключено","eq.name":"Свой пресет","acc.none":"Без цвета",
 "nav.profile":"Профиль","pr.email":"Email","pr.pass":"Пароль","pr.signin":"Войти","pr.signup":"Создать аккаунт","pr.magic":"Magic link",
 "pr.auth.t":"Вход в аккаунт","pr.auth.s":"Email и пароль или magic link на почту. Данные защищены Row Level Security на стороне Supabase.",
+"pr.auth.up.title":"Создайте аккаунт для синхронизации библиотеки и статистики","pr.auth.in.title":"Войдите в аккаунт Meowave","pr.auth.guest":"Продолжить без аккаунта","pr.auth.guest.ok":"Гостевой профиль активен","ly.search_genius":"Искать на Genius","ly.genius_prompt":"Поиск текста на Genius (Артист Название):","ly.found_genius":"Текст найден на Genius","ly.src.genius":"Genius",
 "pr.magic.sent":"Ссылка для входа отправлена на почту","pr.hours":"Часы прослушивания","pr.genre":"Любимый жанр","pr.favs":"В избранном",
 "pr.logout":"Выйти","pr.del":"Удалить аккаунт","pr.del.confirm":"Точно удалить? Нажмите ещё раз — это необратимо",
 "mem.t":"Память","mem.s":"Сколько окно занимает на самом деле","mem.btn":"Замерить","mem.work":"Считаю…","mem.self":"приложение","mem.webv":"вебвью","mem.heap":"JS-стек","unit.mb":"МБ",
@@ -136,7 +137,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
  "dc.on":"Показывать в Discord","dc.on.ok":"Discord найден","dc.on.no":"Discord не запущен (обновится, когда появится)",
  "dc.tmpl":"Шаблон статуса","dc.tmpl.s":"Подстановки: {title} {artist} {album} {service} {status} {elapsed} {remaining}",
  "dc.save":"Сохранить","dc.test":"Проверить","dc.saved":"Шаблон сохранён","dc.sent":"Отправлено в Discord","dc.fail":"Discord не отвечает — проверь, что он запущен",
- "fp.mode":"Переключить вид плеера","ly.custom.t":"Крупная лирика","ly.custom.s":"Размер и вес строк влияют на режим большой лирики","ly.size":"Размер строк","ly.weight":"Жирность","ly.glow":"Свечение активной строки","ly.font":"Шрифт",
+ "fp.mode":"Переключить вид плеера","ly.custom.t":"Крупная лирика","ly.custom.s":"Размер и вес строк влияют на режим большой лирики","ly.size":"Размер строк","ly.weight":"Жирность","ly.glow":"Свечение активной строки","ly.cov":"Обложка (режим лирики)","ly.gap":"Междустрочный зазор","ly.font":"Шрифт",
 "loc.t":"Локальные треки","loc.s":"Файлы не копируются и никуда не отправляются — читаются с диска напрямую. Теги берутся из имени файла.",
 "loc.add":"Добавить файлы","loc.folder":"Добавить папку","loc.folder.s":"Со всеми вложенными",
 "loc.fmt":"mp3, flac, wav, ogg, m4a","loc.pick":"Выбрать…",
@@ -173,6 +174,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "connect":"Connect","disconnect":"Disconnect","connected":"Connected","noauth":"Not connected","eq.name":"Custom preset","acc.none":"No color",
 "nav.profile":"Profile","pr.email":"Email","pr.pass":"Password","pr.signin":"Sign in","pr.signup":"Create account","pr.magic":"Magic link",
 "pr.auth.t":"Sign in","pr.auth.s":"Email + password or a magic link. Data is guarded by Supabase Row Level Security.",
+"pr.auth.up.title":"Create an account to sync library and stats","pr.auth.in.title":"Sign in to your Meowave account","pr.auth.guest":"Continue without account","pr.auth.guest.ok":"Guest profile active","ly.search_genius":"Search on Genius","ly.genius_prompt":"Search Genius for lyrics (Artist Title):","ly.found_genius":"Lyrics found on Genius","ly.src.genius":"Genius",
 "pr.magic.sent":"Sign-in link sent to your inbox","pr.hours":"Hours listened","pr.genre":"Favorite genre","pr.favs":"Favorites",
 "pr.logout":"Sign out","pr.del":"Delete account","pr.del.confirm":"Really delete? Click again — this is irreversible",
 "mem.t":"Memory","mem.s":"What the window really costs","mem.btn":"Measure","mem.work":"Measuring…","mem.self":"app","mem.webv":"webview","mem.heap":"JS heap","unit.mb":"MB",
@@ -248,7 +250,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
  "dc.on":"Show in Discord","dc.on.ok":"Discord detected","dc.on.no":"Discord is not running (updates will resume when it starts)",
  "dc.tmpl":"Status template","dc.tmpl.s":"Placeholders: {title} {artist} {album} {service} {status} {elapsed} {remaining}",
  "dc.save":"Save","dc.test":"Test","dc.saved":"Template saved","dc.sent":"Sent to Discord","dc.fail":"Discord is not responding — check that it is running",
- "fp.mode":"Switch the player view","ly.custom.t":"Large lyrics","ly.custom.s":"Line size and weight drive the large-lyrics mode","ly.size":"Line size","ly.weight":"Weight","ly.glow":"Active line glow","ly.font":"Font",
+ "fp.mode":"Switch the player view","ly.custom.t":"Large lyrics","ly.custom.s":"Line size and weight drive the large-lyrics mode","ly.size":"Line size","ly.weight":"Weight","ly.glow":"Active line glow","ly.cov":"Cover size (lyric mode)","ly.gap":"Line gap","ly.font":"Font",
 "loc.t":"Local tracks","loc.s":"Files are never copied or uploaded — they are read straight off the disk. Tags come from the file name.",
 "loc.add":"Add files","loc.folder":"Add folder","loc.folder.s":"Including subfolders",
 "loc.fmt":"mp3, flac, wav, ogg, m4a","loc.pick":"Choose…",
@@ -358,8 +360,8 @@ function applyI18n(){
 /* free:true — works without any sign-in (guest InnerTube / public client_id),
    so these have no token row and are connected from the first launch. */
 const SERVICES=[
- {id:"ytm",name:"YouTube Music",conn:false,free:true,lossless:false,redir:"guest",lat:[360,880]},
- {id:"sc",name:"SoundCloud",conn:false,free:true,lossless:false,redir:"public client_id",lat:[280,640]},
+ {id:"ytm",name:"YouTube Music",conn:true,free:true,lossless:false,redir:"guest",lat:[360,880]},
+ {id:"sc",name:"SoundCloud",conn:true,free:true,lossless:false,redir:"public client_id",lat:[280,640]},
  {id:"ym",name:"Yandex Music",conn:false,free:false,lossless:true,redir:"meowave://callback",lat:[400,1020]},
  /* Local files are one more service to the UI, minus network and search. */
  /* name/redir are resolved through i18n at render time (see svc()): a literal
@@ -426,7 +428,7 @@ const ACCENTS=[
 /* Title is resolved through i18n when rendered, not stored: a literal here
    stayed Russian under an English interface. */
 const EMPTY_TRACK={id:"empty",s:"ytm",t:"",a:"Meowave",al:"",d:0,mode:"empty",art:null};
-const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,
+const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,guest:false,
  shuffle:false,repeat:false,vol:.8,muted:false,quality:"high",
  /* Per-service on/off switches, {ytm:true,sc:false,...}. Filled by restore()
     and kept in sync by the header chip clicks; initServices() applies it after
@@ -1033,10 +1035,13 @@ raf=requestAnimationFrame(frame)
    principle). Cutouts use --surf so the mark reads as a stamp on the chip in
    both themes. */
 const SVC_ICONS={
- ytm:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="3.5" width="22" height="17" rx="5" fill="currentColor" opacity=".92"/><path d="M10 8.8v6.4l5.6-3.2z" fill="var(--surf)"/></svg>`,
- sc:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor" opacity=".95"><rect x="1" y="10.5" width="1.6" height="6.5" rx=".8"/><rect x="3.6" y="9" width="1.6" height="8" rx=".8"/><rect x="6.2" y="7.5" width="1.6" height="9.5" rx=".8"/><path d="M9 17h1.6V6.5l-.9 1z"/><path d="M11.6 17h9.2a3.2 3.2 0 1 0-.55-6.35A6 6 0 0 0 11.6 9z"/></g></svg>`,
- ym:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor" opacity=".92"/><path d="M8.2 17.4c1.3-.4 2.5-1.3 3.7-2.8-1.6-.2-2.8-.7-3.6-1.5-1.5-1.5-1.6-3.7-.2-5.6.8-1.2 2-2.2 3.4-2.9-.3.6-.4 1.2-.2 1.9.3.9 1.3 1.4 2.8 1.6 2.5.4 3.9 1.7 4.2 3.5.3 2.3-1.6 4.6-4.4 5.4-1.9.6-4 .7-5.7.4z" fill="var(--surf)"/></svg>`,
- local:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`};
+ ytm:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5.5" stroke="currentColor" stroke-width="1.6"/><polygon points="10.5,9 15.5,12 10.5,15" fill="currentColor"/></svg>`,
+ sc:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 7a4 4 0 0 1 3.9 3.1A3.5 3.5 0 0 1 20 13.5a3.5 3.5 0 0 1-3.5 3.5h-5V7zm-2 10H8.5V8.5H10V17zm-3 0H5.5V10.5H7V17zm-3 0H2.5V12.5H4V17zm-3 0H0V14.5H1V17z"/></svg>`,
+ ym:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.6 6.8L21 9.4l-5.2 4.4 1.8 6.8L12 17l-5.6 3.6 1.8-6.8-5.2-4.4 6.4-.6L12 2z"/></svg>`,
+ sp:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M16.5 10.2c-2.8-1.7-7.4-1.8-10.1-1-.4.1-.9-.1-1-.5s.1-.9.5-1c3.1-.9 8.2-.8 11.4 1.1.4.2.5.7.3 1.1-.2.4-.7.5-1.1.3zm.2 2.8c-.2.4-.7.5-1.1.3-2.3-1.4-5.8-1.8-8.5-1-.4.1-.8-.1-1-.5-.1-.4.1-.8.5-1 3.1-.9 7-.5 9.7 1.1.4.3.5.7.4 1.1zm-1.3 2.7c-.2.3-.6.4-.9.2-1.9-1.2-4.4-1.4-7.2-.8-.3.1-.7-.1-.8-.4s.1-.7.4-.8c3.2-.7 5.9-.4 8.1.9.3.2.4.6.4.9z" fill="var(--surf,#111115)"/></svg>`,
+ local:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="11" cy="14" r="2"/><path d="M13 14V10"/></svg>`,
+ genius:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.5c-.8 2-2.8 3.5-5.5 3.5-3.6 0-6.5-2.9-6.5-6.5S8.4 5 12 5c2.4 0 4.4 1.3 5.4 3.2l-2.2 1.3c-.6-1.2-1.8-2-3.2-2-2.2 0-4 1.8-4 4s1.8 4 4 4c1.4 0 2.6-.7 3.3-1.8h-3.3v-2.4h5.8v3.2z"/></svg>`
+};
 function renderSrv(){
  /* Names go through svc() so the localised ones resolve. */
  document.getElementById("srv").innerHTML=SERVICES.map(s=>
@@ -1201,7 +1206,7 @@ function row(tr,extra="",removable=false,rmPid=null){
  return `<div class="row" data-track="${esc(tr.id)}" data-svc="${esc(tr.s)}" data-playing="${isCur(tr)}">
   <span class="art" ${coverStyle(tr.art,tr.l1,tr.l2)}></span>
   <span class="meta"><b>${esc(tr.t)}</b><span>${esc(tr.a)}${tr.al?" · "+esc(tr.al):""}${extra?" · "+esc(extra):""}</span></span>
-  <span class="src">${esc(svc(tr.s).name)}</span><span class="dur">${fmt(tr.d)}</span>
+  <span class="src">${SVC_ICONS[tr.s]||""}<span class="src-txt">${esc(svc(tr.s).name)}</span></span><span class="dur">${fmt(tr.d)}</span>
   <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" aria-label="fav"><i data-lucide="heart" width="14" height="14"></i></button>
   ${removable?`<button class="heart rm" data-rmlocal="${esc(tr.id)}" aria-label="remove"><i data-lucide="x" width="14" height="14"></i></button>`:""}
   ${rmPid?`<button class="heart rm" data-rmpl="${esc(rmPid)}" data-rmtrack="${esc(tr.id)}" data-rmsvc="${esc(tr.s)}" aria-label="remove from playlist" title="${esc(t("plctx.rmtrack"))}"><i data-lucide="x" width="14" height="14"></i></button>`:""}</div>`}
@@ -1270,7 +1275,7 @@ async function clearLocal(){
  LOCAL_PATHS=[];
  save();renderLib();renderLocalInfo();renderWaveHint();
  toast(t("loc.cleared"))}
-const empty=(ic,h,p)=>`<div class="empty"><i data-lucide="${ic}" width="26" height="26"></i><h3>${h}</h3><p>${p}</p></div>`;
+const empty=(ic,h,p)=>`<div class="empty"><div class="empty-art"><img src="./icons/icon.png" class="empty-brand-icon" width="44" height="44" alt=""><div class="empty-sub-icon"><i data-lucide="${ic}" width="18" height="18"></i></div></div><h3>${h}</h3><p>${p}</p></div>`;
 /* Playlist artwork.
 
    A single stretched cover told you nothing about the playlist and looked
@@ -1511,13 +1516,19 @@ function renderNP(){
   b.dis.setAttribute("aria-pressed",String(isDisliked(tr)))}
 
  dur.textContent=empty?"0:00":fmt(S.dur)}
+function isExplicit(tr){
+ if(!tr)return false;
+ if(tr.exp||tr.explicit||tr.contentWarning==="explicit")return true;
+ if(/\b(explicit|explicito|parental)\b|18\+/i.test(tr.al||"")||/\b(explicit)\b|18\+/i.test(tr.t||""))return true;
+ return false}
+
 function paint(){
  const p=S.dur>0?Math.min(1,S.pos/S.dur)*100:0;
  const f=document.querySelector("#btrack .f");if(f){f.style.width=p+"%";document.querySelector("#btrack .h").style.left=p+"%"}
  document.getElementById("tcur").textContent=fmt(S.pos);
  const ff=document.querySelector("#fptrack .f");
- if(ff){ff.style.width=p+"%";document.querySelector("#fptrack .h").style.left=p+"%";document.getElementById("fpcur").textContent=fmt(S.pos)}
- if(S.fpMode==="lyric"||S.fpTab==="lyrics")syncLyrics()}
+ if(ff){ff.style.width=p+"%";document.querySelector("#fptrack .h")?.style.setProperty("left",p+"%");const c=document.getElementById("fpcur");if(c)c.textContent=fmt(S.pos)}
+ if((fp.dataset.open==="true"&&S.fpMode==="lyric")||document.getElementById("lyr"))syncLyrics()}
 let queue=[];
 /* Track key the full player last drew, so a re-render caused by a seek, a
    favourite toggle or a language switch does not replay the cover animation —
@@ -1528,72 +1539,93 @@ function renderFP(){
  const key=trackKey(tr);
  const swapped=fpLastKey!==null&&fpLastKey!==key;
  fpLastKey=key;
- /* The layout follows the two mockups: mode "stage" centers a big glowing
-    cover with the track below it; mode "lyric" puts the cover left and the
-    oversized lyrics right. The toggle lives on S.fpMode (persisted).
-    Queue stays available in both as the bottom tab when not in lyric mode. */
- const lyricMode=S.fpMode==="lyric";
- const art=coverStyle(tr.art,tr.l1,tr.l2);
+ const L=lyricsFor(tr);
+ if(!L||L.state==="idle"){fetchLyrics(tr)}
+ const hasLyrics=!!(L&&L.state==="done"&&L.lines?.length>0);
+ const lyricMode=S.fpMode==="lyric"&&hasLyrics;
+ const art=coverStyle(tr?.art,tr?.l1,tr?.l2);
+ const u=cssUrlRaw(tr?.art);
+ const fpbg=document.getElementById("fpbg");
+ if(fpbg){
+  if(u){fpbg.style.backgroundImage=`url('${u}')`;fpbg.style.display=""}
+  else{fpbg.style.backgroundImage="";fpbg.style.display="none"}}
+ const expBadge=isExplicit(tr)?`<span class="fp-badge-exp" title="Explicit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="11.5" r="1" fill="currentColor"/><path d="M8 4.2v4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>`:"";
  document.getElementById("fpc").innerHTML=lyricMode?`
-  <button class="ic close" id="fpclose" aria-label="close"><i data-lucide="x" width="17" height="17"></i></button>
-  <div class="fpc-grid">
-   <div class="cover fpcover-lg" ${art}><canvas class="vis" id="vis"></canvas>
-    <div class="fpmeta">
-     <div class="eyebrow">${t("now")} · ${svc(tr.s).name}</div>
-     <h2>${esc(tr.t)}</h2><p class="by">${esc(tr.a)}</p>
-     <div class="fpseek"><span class="t" id="fpcur">${fmt(S.pos)}</span>
+  <button class="ic close fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
+  <div class="fp-lyric-grid">
+   <div class="fp-lyric-left">
+    <div class="cover fpcover-lg" ${art}><canvas class="vis" id="vis"></canvas></div>
+    <div class="fp-meta-lyric">
+     <div class="fp-title-row">
+      <h2 class="fp-title">${esc(tr?.t||"")}</h2>${expBadge}
+     </div>
+     <p class="fp-artist">${esc(tr?.a||"—")}</p>
+     <div class="fpseek fpseek-lyric">
       <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
-      <span class="t">${fmt(S.dur)}</span></div>
-     <div class="fpctrls">
-      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}"><i data-lucide="shuffle" width="16" height="16"></i></button>
-      <button class="ic" data-act="prev"><i data-lucide="skip-back" width="18" height="18"></i></button>
-      <button class="play" data-act="play"><i data-lucide="${S.playing?"pause":"play"}" width="18" height="18"></i></button>
-      <button class="ic" data-act="next"><i data-lucide="skip-forward" width="18" height="18"></i></button>
-      <button class="ic" data-act="repeat" aria-pressed="${S.repeat}"><i data-lucide="repeat" width="16" height="16"></i></button>
-      <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}"><i data-lucide="heart" width="16" height="16"></i></button>
-      <button class="ic" id="fp-mode" title="${t("fp.mode")}"><i data-lucide="panel-left-close" width="16" height="16"></i></button>
+      <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t">${fmt(S.dur)}</span></div>
+     </div>
+     <div class="fpctrls fpctrls-lyric">
+      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><i data-lucide="shuffle" width="17" height="17"></i></button>
+      <button class="ic" data-act="prev" title="${t("np.prev")}"><i data-lucide="skip-back" width="19" height="19"></i></button>
+      <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><i data-lucide="${S.playing?"pause":"play"}" width="20" height="20"></i></button>
+      <button class="ic" data-act="next" title="${t("np.next")}"><i data-lucide="skip-forward" width="19" height="19"></i></button>
+      <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><i data-lucide="repeat" width="17" height="17"></i></button>
+      <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><i data-lucide="heart" width="17" height="17"></i></button>
+      <button class="ic" id="fp-mode" title="${t("fp.mode")}"><i data-lucide="disc" width="17" height="17"></i></button>
      </div>
     </div>
    </div>
-   <div class="lyr lyr-big" id="fplyr" data-synced="true"></div>
+   <div class="fp-lyric-right">
+    <div class="lyr lyr-big" id="fplyr" data-synced="true"></div>
+   </div>
   </div>`:`
-  <button class="ic close" id="fpclose" aria-label="close"><i data-lucide="x" width="17" height="17"></i></button>
-  <div class="cover fpcover-stage" ${art}><canvas class="vis" id="vis"></canvas></div>
-  <div class="fpr fpr-stage">
-   <div class="eyebrow">${t("now")} · ${svc(tr.s).name}${svc(tr.s).lossless&&S.quality==="lossless"?" · lossless":""}</div>
-   <h2>${esc(tr.t)}</h2><p class="by">${esc(tr.a)} · ${esc(tr.al)}</p>
-   <div class="fpseek"><span class="t" id="fpcur">${fmt(S.pos)}</span>
-    <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
-    <span class="t">${fmt(S.dur)}</span></div>
-   <div class="fpctrls">
-    <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}"><i data-lucide="shuffle" width="17" height="17"></i></button>
-    <button class="ic" data-act="prev"><i data-lucide="skip-back" width="20" height="20"></i></button>
-    <button class="play" data-act="play"><i data-lucide="${S.playing?"pause":"play"}" width="20" height="20"></i></button>
-    <button class="ic" data-act="next"><i data-lucide="skip-forward" width="20" height="20"></i></button>
-    <button class="ic" data-act="repeat" aria-pressed="${S.repeat}"><i data-lucide="repeat" width="17" height="17"></i></button>
-    <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" style="opacity:1;margin-left:4px"><i data-lucide="heart" width="17" height="17"></i></button>
-    <button class="ic" id="fp-mode" title="${t("fp.mode")}"><i data-lucide="panel-left-open" width="17" height="17"></i></button>
+  <button class="ic close fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
+  <div class="fp-stage-content">
+   <div class="cover fpcover-stage" ${art}><canvas class="vis" id="vis"></canvas></div>
+   <div class="fp-meta-stage">
+    <div class="fp-title-row">
+     <h2 class="fp-title">${esc(tr?.t||"")}</h2>${expBadge}
+    </div>
+    <p class="fp-artist">${esc(tr?.a||"—")}</p>
+    <div class="fpseek fpseek-stage">
+     <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
+     <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t">${fmt(S.dur)}</span></div>
+     </div>
+    <div class="fpctrls fpctrls-stage">
+     <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><i data-lucide="shuffle" width="18" height="18"></i></button>
+     <button class="ic" data-act="prev" title="${t("np.prev")}"><i data-lucide="skip-back" width="20" height="20"></i></button>
+     <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><i data-lucide="${S.playing?"pause":"play"}" width="22" height="22"></i></button>
+     <button class="ic" data-act="next" title="${t("np.next")}"><i data-lucide="skip-forward" width="20" height="20"></i></button>
+     <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><i data-lucide="repeat" width="18" height="18"></i></button>
+     <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><i data-lucide="heart" width="18" height="18"></i></button>
+     <button class="ic" id="fp-mode" title="${hasLyrics?t("lyrics"):t("ly.search_genius")}"><i data-lucide="${hasLyrics?"mic-2":"search"}" width="18" height="18"></i></button>
+    </div>
    </div>
-   <div class="fpswitch" role="tablist">
-    <button role="tab" data-fptab="queue" aria-selected="${S.fpTab==="queue"}">${t("queue")}</button>
-    <button role="tab" data-fptab="lyrics" aria-selected="${S.fpTab==="lyrics"}">${t("lyrics")}</button>
-   </div>
-   <div class="fpbody" id="fpbody"></div>
   </div>`;
- /* Lyric mode renders the oversized sheet itself instead of the tab body. */
  if(lyricMode)renderLyricSheet();
  else renderFPBody();
- /* Mode lives on the container so CSS can reshape the whole layout. */
- document.getElementById("fpc").dataset.mode=S.fpMode;
+ document.getElementById("fpc").dataset.mode=lyricMode?"lyric":"stage";
  applyLyVars();
  document.getElementById("fp-mode")?.addEventListener("click",()=>{
-  S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()});
+  if(lyricMode){
+   S.fpMode="stage";save();renderFP();
+  }else if(hasLyrics){
+   S.fpMode="lyric";save();renderFP();
+  }else{
+   searchGeniusPrompt(tr);
+  }
+ });
+ document.querySelector(".fpcover-stage")?.addEventListener("click",()=>{
+  if(hasLyrics){S.fpMode="lyric";save();renderFP()}
+  else searchGeniusPrompt(tr);
+ });
+ document.querySelector(".fpcover-lg")?.addEventListener("click",()=>{
+  S.fpMode="stage";save();renderFP()});
  wireSeek("fptrack");
- /* innerHTML above replaced the panel, so the attribute lands on fresh nodes
-    and the animation runs from its first frame without needing a reflow. */
-  const c=document.getElementById("fpc");
-  if(swapped)c.dataset.swap="1";else c.removeAttribute("data-swap");
-  c.dataset.playing=S.playing?"true":"false";
+ const c=document.getElementById("fpc");
+ if(swapped)c.dataset.swap="1";else c.removeAttribute("data-swap");
+ c.dataset.playing=S.playing?"true":"false";
+ fpWake();
  vis.c=document.getElementById("vis");
  if(vis.c){const r=vis.c.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);
   vis.c.width=r.width*d;vis.c.height=r.height*d;vis.g=vis.c.getContext("2d")}
@@ -1604,15 +1636,39 @@ function renderFP(){
 function renderLyricSheet(){
  const el=document.getElementById("fplyr");if(!el)return;
  const tr=S.current,L=lyricsFor(tr);
- if(!tr||tr.mode==="empty"){el.innerHTML=`<p class="hollow">${t("q.none")}</p>`;return}
- if(!L||L.state==="idle"){el.innerHTML=`<p class="hollow">${t("ly.load")}</p>`;fetchLyrics(tr);return}
- if(L.state==="loading"){el.innerHTML=`<p class="hollow">${t("ly.load")}</p>`;return}
- if(L.state==="transcribing"){el.innerHTML=`<p class="hollow">${t("ly.gen")}</p>`;return}
- if(L.state==="error"){el.innerHTML=`<p class="hollow">${t("ly.err")}</p>`;return}
- if(!L.lines?.length){el.innerHTML=`<p class="hollow">${t("ly.none")}</p>`;return}
+ if(!tr||tr.mode==="empty"){
+  el.dataset.empty="true";
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("q.none")}</p></div>`;return}
+ if(!L||L.state==="idle"){
+  el.dataset.empty="true";
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow lypulse">${t("ly.load")}</p></div>`;fetchLyrics(tr);return}
+ if(L.state==="loading"){
+  el.dataset.empty="true";
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow lypulse">${t("ly.load")}</p></div>`;return}
+ if(L.state==="transcribing"){
+  el.dataset.empty="true";
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.gen")}<br><small id="lyprog" class="lypulse" style="opacity:.7;font-size:.85rem">${L.progress||""}</small><br><small style="opacity:.5;font-size:.75rem">${t("ly.slow")}</small></p></div>`;return}
+ if(L.state==="error"){
+  el.dataset.empty="true";
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.err")}</p><div style="display:flex;gap:8px;margin-top:14px;justify-content:center"><button class="btn sm" id="lyretry">${t("ly.retry")}</button><button class="btn sm" id="lygenius">${t("ly.search_genius")}</button></div></div>`;
+  document.getElementById("lyretry")?.addEventListener("click",()=>{LYRICS.delete(trackKey(tr));renderLyricSheet()});
+  document.getElementById("lygenius")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+  return}
+ if(!L.lines?.length){
+  el.dataset.empty="true";
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.none")}</p><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center"><button class="btn sm" id="lygenius">${t("ly.search_genius")}</button><button class="btn sm" id="lygen">${t("ly.gen")}</button></div></div>`;
+  document.getElementById("lygenius")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+  document.getElementById("lygen")?.addEventListener("click",()=>transcribeLyrics(tr));
+  return}
+ el.dataset.empty="false";
  el.dataset.synced=String(!!L.synced);
- el.innerHTML=L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("");
- lyLast=-1;syncLyrics(true)}
+ const badge=L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):t("ly.src.lrc");
+ el.innerHTML=`<div class="lyr-header"><span class="lyr-badge">${esc(badge)}${L.synced?" · "+t("ly.seek"):" · "+t("ly.plain")}</span><button class="btn sm text" id="lygenius-alt" title="${t("ly.search_genius")}"><i data-lucide="search" width="13" height="13"></i> Genius</button></div>`
+  +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("");
+ document.getElementById("lygenius-alt")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+ el.scrollTop=0;
+ lyLast=-1;syncLyrics(true);
+ icons()}
 /* Restarts the panel animation. Removing the attribute and reading offsetWidth
    forces the browser to drop the finished animation before it is reapplied;
    without the reflow the second identical assignment is a no-op and the second
@@ -1651,7 +1707,7 @@ function renderFPBody(anim){
    Three sources, tried in order and cached per track for the session:
      1. LRCLIB — free, no key, and the only one of the three with per-line
         timings, so it is preferred even for YouTube tracks.
-     2. YouTube Music's own lyrics tab — always correct, never timed.
+     2. Genius / YouTube Music's own lyrics tab — accurate lyrics.
      3. Whisper, in the browser, on the audio already being played — for
         SoundCloud rips and local files that neither database knows.
 
@@ -1666,8 +1722,6 @@ function renderLyrics(){
  const el=document.getElementById("fpbody");if(!el)return;
  const tr=S.current;
  const L=lyricsFor(tr);
- /* Nothing is playing yet: the placeholder track has no artist and no id, so a
-    lookup would only spin "Looking for lyrics…" forever. */
  if(!tr||tr.mode==="empty"){el.innerHTML=`<p class="hollow">${t("q.none")}</p>`;return}
 
  if(!L||L.state==="idle"){el.innerHTML=`<p class="hollow">${t("ly.load")}</p>`;fetchLyrics(tr);return}
@@ -1675,22 +1729,22 @@ function renderLyrics(){
  if(L.state==="transcribing"){
   el.innerHTML=`<p class="hollow">${t("ly.gen")}<br><small id="lyprog" class="lypulse" style="opacity:.6">${L.progress||""}</small><br><small style="opacity:.45">${t("ly.slow")}</small></p>`;return}
  if(L.state==="error"){
-  el.innerHTML=`<p class="hollow">${t("ly.err")}<br><button class="btn sm" id="lyretry" style="margin-top:10px">${t("ly.retry")}</button></p>`;
+  el.innerHTML=`<p class="hollow">${t("ly.err")}<br><div style="display:flex;gap:6px;justify-content:center;margin-top:10px"><button class="btn sm" id="lyretry">${t("ly.retry")}</button><button class="btn sm" id="lygenius-side">${t("ly.search_genius")}</button></div></p>`;
   document.getElementById("lyretry").onclick=()=>{LYRICS.delete(trackKey(tr));renderLyrics()};
+  document.getElementById("lygenius-side")?.addEventListener("click",()=>searchGeniusPrompt(tr));
   return}
  if(!L.lines?.length){
-  el.innerHTML=`<p class="hollow">${t("ly.none")}<br><button class="btn sm" id="lygen" style="margin-top:10px">${t("ly.gen")}</button></p>`;
-  const g=document.getElementById("lygen");
-  if(g)g.onclick=()=>transcribeLyrics(tr);
+  el.innerHTML=`<p class="hollow">${t("ly.none")}<br><div style="display:flex;gap:6px;justify-content:center;margin-top:10px"><button class="btn sm" id="lygenius-side">${t("ly.search_genius")}</button><button class="btn sm" id="lygen">${t("ly.gen")}</button></div></p>`;
+  document.getElementById("lygenius-side")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+  document.getElementById("lygen")?.addEventListener("click",()=>transcribeLyrics(tr));
   return}
 
- const badge=L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):t("ly.src.lrc");
+ const badge=L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):t("ly.src.lrc");
  el.innerHTML=`<div class="lyr" id="lyr" data-synced="${!!L.synced}">`
-  +`<div class="lysrc">${esc(badge)}${L.synced?" · "+t("ly.seek"):" · "+t("ly.plain")}</div>`
-  /* Timed lines are seek targets: clicking one jumps there, which is what makes
-     lyrics usable for finding a part of a song rather than just reading. */
+  +`<div class="lysrc" style="display:flex;align-items:center;justify-content:space-between"><span>${esc(badge)}${L.synced?" · "+t("ly.seek"):" · "+t("ly.plain")}</span><button class="btn sm text" id="lyr-genius-btn" style="padding:2px 8px;font-size:.72rem">Genius</button></div>`
   +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("")
   +`</div>`;
+ document.getElementById("lyr-genius-btn")?.addEventListener("click",()=>searchGeniusPrompt(tr));
  lyLast=-1;
  syncLyrics(true)}
 
@@ -1699,21 +1753,50 @@ function lySeekFrom(el){
  const at=parseFloat(el?.dataset.at||"");
  if(!isFinite(at))return;
  seekSeconds(at);
- /* The highlight would otherwise wait for the next tick. */
  lyUserScroll=0;syncLyrics(true)}
 document.addEventListener("click",e=>{
- const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at]");
+ const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at],.lyr-big p[data-at]");
  if(p)lySeekFrom(p)});
 document.addEventListener("keydown",e=>{
  if(e.key!=="Enter"&&e.key!==" ")return;
- const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at]");
+ const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at],.lyr-big p[data-at]");
  if(p){e.preventDefault();lySeekFrom(p)}});
+
+function sameTrack(a,b){return !!a&&!!b&&String(a.id)===String(b.id)&&a.s===b.s}
+
+async function searchGeniusPrompt(tr){
+ if(!tr||tr.mode==="empty")return;
+ const defQ=`${tr.a||""} ${tr.t||""}`.trim();
+ const q=await askText(t("ly.genius_prompt")||"Search Genius for lyrics (Artist Title):", defQ);
+ if(!q||!q.trim())return;
+ toast(t("ly.load"));
+ try{
+  if(!TAURI){toast("Desktop only");return}
+  const res=await inv("lyrics_search_genius",{query:q.trim()});
+  if(res&&res.lines&&res.lines.length){
+   const key=trackKey(tr);
+   const lines=res.lines.filter(l=>l.text!==undefined);
+   LYRICS.set(key,{state:"done",source:"genius",synced:false,lines});
+   toast(t("ly.found_genius")||"Lyrics found on Genius");
+   S.fpMode="lyric";save();
+   if(fp.dataset.open==="true")renderFP();
+   else if(S.fpTab==="lyrics")renderLyrics();
+  }else{
+   toast(t("ly.none"));
+  }
+ }catch(e){
+  console.warn("searchGeniusPrompt:",e);
+  toast(t("ly.err"));
+ }
+}
 
 async function fetchLyrics(tr){
  if(!tr||tr.mode==="empty")return;
  const key=trackKey(tr),my=++lyReq;
  LYRICS.set(key,{state:"loading"});
- renderLyrics();
+ if(fp.dataset.open==="true"){
+  if(S.fpMode==="lyric")renderFP();
+  else if(S.fpTab==="lyrics")renderLyrics()}
  try{
   const res=TAURI?await inv("lyrics_get",{
    service:tr.s||"",id:String(tr.id||""),artist:tr.a||"",title:tr.t||"",
@@ -1725,7 +1808,9 @@ async function fetchLyrics(tr){
   console.warn("lyrics:",e);
   if(my!==lyReq)return;
   LYRICS.set(key,{state:"error"})}
- if(S.fpTab==="lyrics"&&sameTrack(tr,S.current))renderLyrics()}
+ if(sameTrack(tr,S.current)){
+  if(fp.dataset.open==="true")renderFP();
+  else if(S.fpTab==="lyrics")renderLyrics()}}
 
 /* Highlight follows the clock. Only the changed lines are touched — rewriting
    every <p> on each tick restarted the CSS transitions, which is what made a
@@ -1733,49 +1818,63 @@ async function fetchLyrics(tr){
 let lyLast=-1;
 function syncLyrics(force){
  const L=lyricsFor(S.current);
- /* Two containers can host the sheet: the tab body (#lyr) and the oversized
-    lyric mode (#fplyr). Whichever is in the DOM receives the sync. */
- const box=document.getElementById("fplyr")||document.getElementById("lyr");
+ const isFpLyric=fp.dataset.open==="true"&&S.fpMode==="lyric";
+ const box=isFpLyric?document.getElementById("fplyr"):(document.getElementById("lyr")||document.getElementById("fplyr"));
  if(!L?.lines?.length||!box)return;
  if(!L.synced){if(force)lyLast=-1;return}
 
- /* The rate control retimes the audio, but the timestamps describe the track
-    at 1x. S.pos is already the element's own clock, so nothing to correct. */
  let idx=-1;
  for(let i=0;i<L.lines.length;i++){
   const at=L.lines[i].at;
   if(at==null)continue;
   if(S.pos+.15>=at)idx=i;else break}
+
+ const kids=box.querySelectorAll("p[data-i]");
+
+ /* Smooth karaoke progressive text fill */
+ if(idx>=0&&idx<L.lines.length){
+  const curLine=L.lines[idx];
+  const nextLine=L.lines[idx+1];
+  const start=curLine.at||0;
+  const dur=nextLine&&nextLine.at!=null?(nextLine.at-start):Math.min(6,Math.max(2,(S.dur||start+4)-start));
+  const elapsed=Math.max(0,S.pos-start);
+  const pct=Math.min(100,Math.max(0,(elapsed/Math.max(0.2,dur))*100));
+  const curEl=kids[idx];
+  if(curEl)curEl.style.setProperty("--karaoke-pct",`${pct.toFixed(1)}%`);
+ }
+
  if(idx===lyLast&&!force)return;
  lyLast=idx;
 
- const kids=box.querySelectorAll("p");
  kids.forEach((p,i)=>{
   const on=i===idx;
-  if((p.dataset.on==="true")!==on)p.dataset.on=on;
-  /* Neighbours fade in as the line approaches instead of every line sitting at
-     the same dead grey. */
-  const near=Math.abs(i-idx);
+  if((p.dataset.on==="true")!==on){
+   p.dataset.on=on;
+  }
+  if(!on)p.style.setProperty("--karaoke-pct",i<idx?"100%":"0%");
+  const near=idx===-1?(i+1):Math.abs(i-idx);
   const step=near===0?"0":near<=2?String(near):"far";
   if(p.dataset.near!==step)p.dataset.near=step});
 
- /* Autoscroll is suspended while the user is doing something in the panel:
-    selecting a line, or having scrolled it by hand. Otherwise the next tick
-    yanks the view away mid-selection. */
- const sc=box.parentElement;
+ const isFpLyr=box.id==="fplyr";
+ const sc=isFpLyr?box:box.parentElement;
  if(!sc)return;
- if(!force&&(lySelecting(box)||performance.now()-lyUserScroll<4000))return;
+ if(!force&&(lySelecting(box)||performance.now()-lyUserScroll<2500))return;
 
- /* Position measured from the rects, not offsetTop: offsetTop is relative to
-    the nearest *positioned* ancestor, which is not the scroller, so the value
-    could exceed the content height and slam the panel to the bottom. That is
-    the "jumps to the very end" bug. */
+ if(idx===-1){
+  if(sc.scrollTop>10&&force)sc.scrollTo({top:0,behavior:"auto"});
+  return}
+
  const cur=kids[idx];
  if(cur){
   const delta=cur.getBoundingClientRect().top-sc.getBoundingClientRect().top;
   const want=sc.scrollTop+delta-sc.clientHeight/2+cur.offsetHeight/2;
   const to=Math.max(0,Math.min(want,sc.scrollHeight-sc.clientHeight));
-  if(Math.abs(sc.scrollTop-to)>2)sc.scrollTo({top:to,behavior:force?"auto":"smooth"})}}
+  if(Math.abs(sc.scrollTop-to)>2){
+   sc.scrollTo({top:to,behavior:force?"auto":"smooth"});
+  }
+ }
+}
 
 /* True while a selection covers part of the lyrics. */
 function lySelecting(box){
@@ -1787,9 +1886,11 @@ function lySelecting(box){
    own programmatic scrolls are ignored via a flag. */
 let lyUserScroll=0;
 document.addEventListener("pointerdown",e=>{
- if(e.target.closest?.("#lyr"))lyUserScroll=performance.now()},true);
+ if(e.target.closest?.("#lyr,#fplyr,.lyr-big"))lyUserScroll=performance.now()},true);
 document.addEventListener("wheel",e=>{
- if(e.target.closest?.(".fpbody"))lyUserScroll=performance.now()},{passive:true,capture:true});
+ if(e.target.closest?.(".fpbody,#lyr,#fplyr,.lyr-big"))lyUserScroll=performance.now()},{passive:true,capture:true});
+document.addEventListener("touchmove",e=>{
+ if(e.target.closest?.("#lyr,#fplyr,.lyr-big"))lyUserScroll=performance.now()},{passive:true,capture:true});
 
 /* AI transcription — the last resort, for SoundCloud rips and local files no
    lyrics database has ever seen.
@@ -1875,7 +1976,8 @@ async function transcribeLyrics(tr){
   const el=document.getElementById("lyprog");
   if(el)el.textContent=(cur.progress||"")+" · "+Math.floor(s/60)+":"+String(s%60).padStart(2,"0")},1000);
  LYRICS.set(key,{state:"transcribing",progress:t("ly.listen")});
- renderLyrics();
+ if(fp.dataset.open==="true"&&S.fpMode==="lyric")renderLyricSheet();
+ else renderLyrics();
  try{
   const pipe=await whisperPipe(setProgress);
   if(my!==lyReq)return;
@@ -1912,7 +2014,9 @@ async function transcribeLyrics(tr){
   console.warn("transcribe:",e);
   if(my!==lyReq)return;
   LYRICS.set(key,{state:"error"})}
- if(sameTrack(tr,S.current)&&S.fpTab==="lyrics")renderLyrics()}
+ if(sameTrack(tr,S.current)){
+  if(fp.dataset.open==="true"&&S.fpMode==="lyric")renderLyricSheet();
+  else if(S.fpTab==="lyrics")renderLyrics()}}
 
 /* Whisper splits on pauses, so a sung line arrives as three fragments and the
    panel reads like a stutter. Fragments that start within a couple of seconds of
@@ -2002,7 +2106,6 @@ function toggle(){
  else if(A.ctx){S.playing?A.ctx.suspend():A.ctx.resume();S.playing=!S.playing}
  else S.playing=!S.playing;
  sync()}
-const sameTrack=(a,b)=>!!a&&!!b&&String(a.id)===String(b.id)&&a.s===b.s;
 
 /* The queue is now what actually plays next.
 
@@ -2649,9 +2752,24 @@ function setRepeat(on){
    getBoundingClientRect, and measuring it while hidden returns zeros — the
    canvas would come out 0x0 and the visualiser would silently never draw.
    Opening first gives the subtree a layout to measure. */
-function openFP(){fp.dataset.open="true";renderFP()}
+let fpIdleTimer=null;
+function fpWake(){
+ const c=document.getElementById("fpc");
+ if(!c)return;
+ c.dataset.active="true";
+ clearTimeout(fpIdleTimer);
+ if(S.playing){
+  fpIdleTimer=setTimeout(()=>{
+   if(fp.dataset.open==="true"&&S.playing)c.dataset.active="false";
+  },3500);
+ }
+}
+function openFP(){if(S.current)adaptAccent(S.current);fp.dataset.open="true";renderFP();fpWake()}
 function closeFP(){
  fp.dataset.open="false";
+ clearTimeout(fpIdleTimer);
+ const fpbg=document.getElementById("fpbg");
+ if(fpbg)fpbg.style.backgroundImage="";
  /* The full player is the largest surface in the app: a cover, a canvas and a
     blurred sheet. Once closed it is not coming back this second, so its canvas
     backing store is released rather than parked on the GPU. renderFP()
@@ -2659,8 +2777,10 @@ function closeFP(){
  if(vis.c){vis.c.width=vis.c.height=1}
  vis.c=null;vis.g=null}
 document.getElementById("expand").onclick=openFP;
+fp.addEventListener("pointermove",fpWake);
+fp.addEventListener("pointerdown",fpWake);
 fp.addEventListener("click",e=>{
- if(e.target===fp||e.target.closest("#fpclose"))return closeFP();
+ if(e.target===fp||e.target.id==="fpbg"||e.target.id==="fpc"||e.target.closest("#fpclose"))return closeFP();
  const tb=e.target.closest("[data-fptab]");
  if(tb){
   if(S.fpTab===tb.dataset.fptab)return;
@@ -2844,7 +2964,7 @@ addEventListener("keydown",e=>{
   if(document.getElementById("cropper")?.dataset.open==="true")return;
   if(e.code==="Space"){e.preventDefault();toggle()}
   if(e.key==="Escape")closeFP();
-  if(e.key.toLowerCase()==="l"&&fp.dataset.open==="true"){S.fpTab="lyrics";renderFP()}
+  if(e.key.toLowerCase()==="l"&&fp.dataset.open==="true"){S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()}
   if(e.key.toLowerCase()==="e")eqbtn.click();
   if(e.shiftKey&&e.key==="ArrowRight")next();
   if(e.shiftKey&&e.key==="ArrowLeft")prev()});
@@ -3131,6 +3251,7 @@ async function initServices(){
 let sb=null,sbUser=null,sbProfile=null,sbStats=null,delArmed=false;
 async function initSupabase(){
   try{
+   if(!STREAM_PORT)await ensureStreamPort();
    const cfg=TAURI?await inv("get_supabase_config")
     :{url:localStorage.getItem("mw.sb.url"),anon_key:localStorage.getItem("mw.sb.key")};
    if(!cfg?.url||!cfg?.anon_key)throw new Error("no supabase config");
@@ -3144,9 +3265,16 @@ async function initSupabase(){
    /* Route every Supabase call through our own relay: the webview's network
       stack dies on machines with an IPv6 address but no v6 route ("Load
       failed" on sign-in), while the Rust side falls back to v4 properly. */
-   const supaFetch=(url,opts={})=>{
-    if(STREAM_PORT&&typeof url==="string"&&url.startsWith("https://")){
-     url=`http://127.0.0.1:${STREAM_PORT}/relay/${encodeURIComponent(url)}?k=${encodeURIComponent(STREAM_KEY)}`}
+   const supaFetch=async (url,opts={})=>{
+    if(!STREAM_PORT)await ensureStreamPort();
+    const rawUrl=typeof url==="string"?url:(url?.url||url?.href||url?.toString?.()||"");
+    if(STREAM_PORT&&rawUrl.startsWith("https://")){
+     const proxied=`http://127.0.0.1:${STREAM_PORT}/relay/${encodeURIComponent(rawUrl)}?k=${encodeURIComponent(STREAM_KEY)}`;
+     if(typeof url==="object"&&url instanceof Request){
+      return fetch(new Request(proxied, url), opts);
+     }
+     return fetch(proxied,opts);
+    }
     return fetch(url,opts)};
    sb=createClient(cfg.url,cfg.anon_key,{
     global:{fetch:supaFetch},
@@ -3314,6 +3442,7 @@ function authMsg(msg,cls){const el=document.getElementById("authmsg");if(el){el.
 async function doAuth(kind){
  const email=(document.getElementById("au-email")?.value||"").trim();
  const pass=document.getElementById("au-pass")?.value||"";
+ const user=(document.getElementById("au-user")?.value||"").trim();
  if(!email)return authMsg(t("pr.email")+"?","err");
  try{
   if(kind==="magic"){
@@ -3321,10 +3450,13 @@ async function doAuth(kind){
    if(error)throw error;
    return authMsg(t("pr.magic.sent"),"ok")}
   if(!pass)return authMsg(t("pr.pass")+"?","err");
-  const {error}=kind==="in"
+  const {data,error}=kind==="in"
    ?await sb.auth.signInWithPassword({email,password:pass})
-   :await sb.auth.signUp({email,password:pass,...(ANDROID?{options:{emailRedirectTo:MOBILE.auth.redirectTo,data:{username:null,is_public:false}}}:{})});
+   :await sb.auth.signUp({email,password:pass,options:{data:{username:user||null,is_public:false},...(ANDROID?{emailRedirectTo:MOBILE.auth.redirectTo}:{})}});
   if(error)throw error;
+  if(kind==="up"&&data?.user&&!data.session){
+   authMsg(t("pr.magic.sent"),"ok");
+  }
  }catch(e){authMsg(e.message||String(e),"err")}}
 /* кроп по центру + ресайз до 256px на клиенте, затем в Storage bucket "avatars" */
 /* Avatars and banners.
@@ -3833,10 +3965,13 @@ function renderDislikes(){
    accent instead of resetting the whole interface to grey. */
 let accentAdaptCache={};
 function adaptAccent(tr){
- if(S.accent!=="adaptive")return;
  if(!tr||!tr.art)return;
  const hit=accentAdaptCache[trackKey(tr)];
- if(hit)return applyAccentRgb(hit);
+ if(hit){
+  document.documentElement.style.setProperty("--fp-tint",hit.raw.join(" "));
+  if(hit.raw2)document.documentElement.style.setProperty("--fp-tint-2",hit.raw2.join(" "));
+  if(S.accent==="adaptive")applyAccentRgb(hit.ui);
+  return}
  const img=new Image();
  img.crossOrigin="anonymous";
  img.onload=()=>{
@@ -3846,6 +3981,7 @@ function adaptAccent(tr){
    g.drawImage(img,0,0,16,16);
    const d=g.getImageData(0,0,16,16).data;
    let best=null,bestScore=-1;
+   let secondBest=null,secondScore=-1;
    for(let i=0;i<d.length;i+=4){
     const r=d[i],gg=d[i+1],b=d[i+2],a=d[i+3];
     if(a<200)continue;
@@ -3857,14 +3993,24 @@ function adaptAccent(tr){
     /* Saturation matters more than brightness, but a mid-tone reads better on
        both themes than a very dark or very bright pixel of the same hue. */
     const score=sat*2+(1-Math.abs(mx/255-.62));
-    if(score>bestScore){bestScore=score;best=[r,gg,b]}}
+    if(score>bestScore){
+     if(best&&Math.hypot(best[0]-r,best[1]-gg,best[2]-b)>45){
+      secondBest=best;secondScore=bestScore;
+     }
+     bestScore=score;best=[r,gg,b];
+    }else if(score>secondScore&&best&&Math.hypot(best[0]-r,best[1]-gg,best[2]-b)>45){
+     secondScore=score;secondBest=[r,gg,b];
+    }}
    if(!best)return;
+   const second=secondBest||[Math.min(255,best[0]+35),Math.max(0,best[1]-25),Math.min(255,best[2]+55)];
    const rgb=liftForUi(best);
-   accentAdaptCache[trackKey(tr)]=rgb;
+   accentAdaptCache[trackKey(tr)]={raw:best,raw2:second,ui:rgb};
    /* The cache is per session and bounded: covers change constantly. */
    const keys=Object.keys(accentAdaptCache);
    if(keys.length>200)delete accentAdaptCache[keys[0]];
-   if(sameTrack(tr,S.current))applyAccentRgb(rgb);
+   document.documentElement.style.setProperty("--fp-tint",best.join(" "));
+   document.documentElement.style.setProperty("--fp-tint-2",second.join(" "));
+   if(S.accent==="adaptive"&&sameTrack(tr,S.current))applyAccentRgb(rgb);
   }catch(e){/* a cover served without CORS taints the canvas; keep the accent */}};
   img.onerror=()=>{};
   /* Through the relay when available: same-origin bytes keep the canvas
@@ -4549,24 +4695,84 @@ async function redeemCode(){
   const hit=Object.keys(key).find(k=>m.includes(k));
   say(hit?t(key[hit]):m,"err")}}
 
+let authTab="in";
 function renderProfile(){
  const box=document.getElementById("profbody");if(!box)return;
  if(!sb){box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${t("pr.nosupa")}</p></div>`;return}
  if(!sbUser){
-  box.innerHTML=`<div class="panel pane"><h3>${t("pr.auth.t")}</h3><p class="ph">${t("pr.auth.s")}</p>
+  if(S.guest){
+   const favs=TRACKS.filter(x=>x.fav).length;
+   box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
+     <div class="banner" style="background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))"></div>
+     <div style="padding:var(--sp-6)">
+     <div class="profhead">
+      <span class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--bg-pane);box-shadow:0 4px 12px rgba(0,0,0,0.3)">
+       <img src="./icons/icon.png" style="width:48px;height:48px;border-radius:12px" alt="">
+      </span>
+      <div>
+       <div class="uname"><b class="unview">${t("pr.auth.guest")}</b> <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
+       <p class="pbio" style="margin-top:4px;color:var(--mute);font-size:0.85rem">${t("pr.auth.guest.desc")||"Локальный профиль Meowave"}</p>
+      </div>
+     </div>
+     <div class="stats" style="margin-top:16px">
+      <div class="stat"><b>${fmtListen(S.listen||0)}</b><span>${t("pr.hours")}</span></div>
+      <div class="stat"><b>${favs}</b><span>${t("pr.favs")}</span></div>
+      <div class="stat"><b>${OWNED.size}</b><span>${t("pr.badges")}</span></div>
+     </div>
+     </div>
+    </div>
+    <div class="panel pane" style="text-align:center">
+     <h3 style="margin:0 0 8px">${t("pr.auth.t")}</h3>
+     <p class="ph" style="margin:0 0 14px">${t("pr.auth.s")}</p>
+     <button class="primary" id="guest-to-auth">${t("pr.signin")} / ${t("pr.signup")}</button>
+    </div>`;
+   document.getElementById("guest-to-auth")?.addEventListener("click",()=>{
+    S.guest=false;save();renderProfile();
+   });
+   return}
+
+  box.innerHTML=`<div class="panel pane auth-card">
+   <div class="auth-header">
+    <img src="./icons/icon.png" class="auth-app-icon" alt="Meowave">
+    <h3 style="margin:0 0 6px">${authTab==="in"?t("pr.auth.in.title"):t("pr.auth.up.title")}</h3>
+    <p class="ph" style="margin:0">${t("pr.auth.s")}</p>
+   </div>
+   <div class="auth-tabs">
+    <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="au-tab-in">${t("pr.signin")}</button>
+    <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="au-tab-up">${t("pr.signup")}</button>
+   </div>
    <div class="authform">
-    <input id="au-email" type="email" placeholder="${t("pr.email")}" autocomplete="email">
-    <input id="au-pass" type="password" placeholder="${t("pr.pass")}" autocomplete="current-password">
-    <div class="authrow">
-     <button class="primary" id="au-in">${t("pr.signin")}</button>
-     <button class="btn" id="au-up">${t("pr.signup")}</button>
+    <div class="auth-field">
+     <input id="au-email" type="email" placeholder="${t("pr.email")}" autocomplete="email">
+    </div>
+    ${authTab==="up"?`
+    <div class="auth-field">
+     <input id="au-user" type="text" placeholder="${t("pr.name.ph")}" autocomplete="username">
+    </div>`:""}
+    <div class="auth-field">
+     <input id="au-pass" type="password" placeholder="${t("pr.pass")}" autocomplete="${authTab==='in'?'current-password':'new-password'}">
+    </div>
+    <div class="authrow" style="margin-top:10px">
+     <button class="primary" id="au-submit">${authTab==="in"?t("pr.signin"):t("pr.signup")}</button>
      <button class="btn" id="au-magic">${t("pr.magic")}</button>
     </div>
+    <div style="margin-top:16px;text-align:center">
+     <button class="btn text sm" id="au-guest" style="color:var(--mute);text-decoration:underline">${t("pr.auth.guest")}</button>
+    </div>
     <p class="authmsg" id="authmsg"></p>
-   </div></div>`;
-  document.getElementById("au-in").onclick=()=>doAuth("in");
-  document.getElementById("au-up").onclick=()=>doAuth("up");
-  document.getElementById("au-magic").onclick=()=>doAuth("magic");
+   </div>
+  </div>`;
+  document.getElementById("au-tab-in")?.addEventListener("click",()=>{authTab="in";renderProfile()});
+  document.getElementById("au-tab-up")?.addEventListener("click",()=>{authTab="up";renderProfile()});
+  document.getElementById("au-submit")?.addEventListener("click",()=>doAuth(authTab));
+  document.getElementById("au-magic")?.addEventListener("click",()=>doAuth("magic"));
+  const onEnter=(e)=>{if(e.key==="Enter"){e.preventDefault();doAuth(authTab)}};
+  document.getElementById("au-email")?.addEventListener("keydown",onEnter);
+  document.getElementById("au-pass")?.addEventListener("keydown",onEnter);
+  document.getElementById("au-user")?.addEventListener("keydown",onEnter);
+  document.getElementById("au-guest")?.addEventListener("click",()=>{
+   S.guest=true;save();toast(t("pr.auth.guest.ok")||"Гостевой профиль активен");renderProfile();
+  });
   return}
  const p=sbProfile||{},favs=TRACKS.filter(x=>x.fav).length;
  /* Whichever is larger: the account total the server has confirmed, or this
@@ -5844,6 +6050,7 @@ document.getElementById("sp-elev").value=Math.round(S.sp.elev*100);
 document.getElementById("sp-elev-v").textContent=Math.round(S.sp.elev*100);
 ["sp-on","sp3d"].forEach(id=>document.getElementById(id)?.setAttribute("aria-pressed",String(S.sp.on)));
 applyI18n();
+applyLyVars();paintLyPanel();
 renderBands();renderNP();paint();sync();go("home");search("");
 showSettingsTab(S.stab);renderWaveHint();renderLocalInfo();renderDislikes();
 /* Restore a custom accent before the first paint, or the field builds its
