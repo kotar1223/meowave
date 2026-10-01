@@ -6511,7 +6511,7 @@ document.getElementById("sp-elev-v").textContent=Math.round(S.sp.elev*100);
 ["sp-on","sp3d"].forEach(id=>document.getElementById(id)?.setAttribute("aria-pressed",String(S.sp.on)));
 applyI18n();
 applyLyVars();paintLyPanel();
-applyFPSettings();initFPSettings();initHoverCard();initImportModal();initWaveCurated();
+applyFPSettings();initFPSettings();initHoverCard();initImportModal();
 renderBands();renderNP();paint();sync();go("home");search("");
 showSettingsTab(S.stab);renderWaveHint();renderLocalInfo();renderDislikes();
 /* Restore a custom accent before the first paint, or the field builds its
@@ -6747,43 +6747,6 @@ function initImportModal(){
   closeImportModal();
   const plTitle=detectedImportSvc==="sp"?"Spotify Import":(detectedImportSvc==="ytm"?"YouTube Music Import":"SoundCloud Import");
   importRows(importedStagingTracks,detectedImportSvc,plTitle,asFav);
- });
-}
-
-async function launchWaveByQuery(query){
- if(!query)return;
- await ensureStreamPort();
- toast((LANG==="ru"?"Запуск волны: ":"Starting wave: ")+query+"...");
- try{
-  const r=await searchRemote(query).catch(()=>[]);
-  const pool=(r||[]).filter(x=>!isDisliked(x)&&svc(x.s).on);
-  if(!pool.length){
-   return toast(t("wave.empty")||"Ничего не найдено");
-  }
-  pool.forEach(x=>{
-   if(!TRACKS.some(y=>String(y.id)===String(x.id)&&y.s===x.s))TRACKS.push(x);
-  });
-  for(let i=pool.length-1;i>0;i--){
-   const j=Math.floor(Math.random()*(i+1));
-   [pool[i],pool[j]]=[pool[j],pool[i]];
-  }
-  WAVE=pool;
-  await setTrack(pool[0],true,true,"wave");
-  if(fp.dataset.open==="true")renderFPBody();
- }catch(e){
-  console.warn("launchWaveByQuery error:",e);
-  toast(String(e.message||e));
- }
-}
-
-function initWaveCurated(){
- document.getElementById("wave-moods")?.addEventListener("click",e=>{
-  const chip=e.target.closest(".wave-chip");
-  if(chip?.dataset?.waveQ)launchWaveByQuery(chip.dataset.waveQ);
- });
- document.getElementById("wave-artists")?.addEventListener("click",e=>{
-  const chip=e.target.closest(".wave-chip");
-  if(chip?.dataset?.waveQ)launchWaveByQuery(chip.dataset.waveQ);
  });
 }
 

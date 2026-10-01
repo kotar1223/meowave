@@ -1881,68 +1881,6 @@ button:active, .ic:active, .chip:active, [role="button"]:active { transform: sca
   transform: none !important;
 }
 
-/* ── Wave Page Curated Recommendations & Moods ── */
-.wave-curated {
-  margin-top: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  max-width: 720px;
-}
-.wave-sec {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.wave-sec-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.84rem;
-  font-weight: 650;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--mute);
-}
-.wave-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.wave-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: oklch(100% 0 0 / 0.05);
-  border: 1px solid oklch(100% 0 0 / 0.08);
-  border-radius: 999px;
-  padding: 7px 16px;
-  font-size: 0.84rem;
-  font-weight: 550;
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.2s var(--e);
-  backdrop-filter: blur(8px);
-}
-.wave-chip:hover {
-  background: oklch(100% 0 0 / 0.12);
-  border-color: oklch(100% 0 0 / 0.2);
-  color: #ffffff;
-  transform: translateY(-1.5px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-}
-.wave-chip:active {
-  transform: scale(0.96);
-}
-.wave-artist-pill .wave-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent, #a78bfa);
-  box-shadow: 0 0 8px var(--accent, #a78bfa);
-}
-
 /* ── Universal Playlist Import Modal ── */
 .importbox {
   max-width: 480px;
