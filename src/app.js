@@ -4966,7 +4966,7 @@ async function redeemCode(){
   const hit=Object.keys(key).find(k=>m.includes(k));
   say(hit?t(key[hit]):m,"err")}}
 
-let authTab="in";
+let authTab="in", authMethod="standard";
 function renderProfile(savedVals={}){
  const box=document.getElementById("profbody");if(!box)return;
  if(!sb){box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${t("pr.nosupa")}</p></div>`;return}
@@ -5003,13 +5003,30 @@ function renderProfile(savedVals={}){
    return}
 
   box.innerHTML=`<div class="panel pane quasar-auth-card">
+   <!-- Auth Method Toggle: Standard vs Quasar ID -->
+   <div class="auth-method-switcher" style="display:flex;padding:3px;background:oklch(100% 0 0 / .06);border:1px solid oklch(100% 0 0 / .08);border-radius:12px;margin-bottom:18px">
+    <button class="auth-method-btn ${authMethod==='standard'?'active':''}" id="m-btn-std" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='standard'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='standard'?'#fff':'var(--mute)'}">
+     🐾 ${LANG==="ru"?"Обычный вход (Meowave)":"Standard (Meowave)"}
+    </button>
+    <button class="auth-method-btn ${authMethod==='quasar'?'active':''}" id="m-btn-qsr" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='quasar'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='quasar'?'#fff':'var(--mute)'}">
+     ✨ Quasar ID
+    </button>
+   </div>
+
+   ${authMethod==="standard"?`
+   <div class="auth-header" style="text-align:center;margin-bottom:16px">
+    <img src="./icons/icon.png" class="auth-app-icon" style="width:48px;height:48px;border-radius:12px;margin:0 auto 10px;display:block" alt="Meowave">
+    <h3 style="margin:0 0 4px">${authTab==="in"?(LANG==="ru"?"Вход в аккаунт Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
+    <p class="ph" style="margin:0;font-size:0.84rem">${LANG==="ru"?"Синхронизация медиатеки, плейлистов, часов и бейджей":"Sync library, playlists, listening hours and badges"}</p>
+   </div>
+   `:`
    <div class="quasar-brand">
     <div class="quasar-logo-wrap">
      <i data-lucide="sparkles" width="24" height="24" style="color:var(--accent,#a78bfa)"></i>
     </div>
     <div class="quasar-title-block">
      <span class="quasar-badge">Quasar ID Network</span>
-     <h3>${authTab==="in"?t("pr.signin"):t("pr.signup")}</h3>
+     <h3>${authTab==="in"?(LANG==="ru"?"Вход через Quasar ID":"Sign in via Quasar ID"):(LANG==="ru"?"Создать аккаунт Quasar ID":"Register Quasar ID")}</h3>
     </div>
    </div>
    <p class="ph" style="margin:0 0 16px;font-size:0.86rem">${t("soc.auth")}</p>
@@ -5027,23 +5044,25 @@ function renderProfile(savedVals={}){
      <div><b>${LANG==="ru"?"Единый Quasar ID":"Single Quasar ID"}</b><span>${LANG==="ru"?"Один аккаунт для комнат, личных чатов, друзей и облака":"Single identity for rooms, private chats, friends and cloud"}</span></div>
     </div>
    </div>
+   `}
+
    <div class="auth-tabs" style="margin-bottom:16px">
-    <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="au-tab-in">${t("pr.signin")}</button>
-    <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="au-tab-up">${t("pr.signup")}</button>
+    <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="au-tab-in">${authMethod==='standard'?(LANG==="ru"?"Войти":"Sign In"):(LANG==="ru"?"Вход Quasar ID":"Quasar Sign In")}</button>
+    <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="au-tab-up">${authMethod==='standard'?(LANG==="ru"?"Создать аккаунт":"Create Account"):(LANG==="ru"?"Регистрация Quasar ID":"Quasar Register")}</button>
    </div>
    <div class="authform">
     <div class="auth-field">
-     <input id="au-email" type="email" placeholder="${t("pr.email")}" autocomplete="email" value="${esc(savedVals?.email||"")}">
+     <input id="au-email" type="email" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Email или ID":"Quasar Email or ID"):t("pr.email")}" autocomplete="email" value="${esc(savedVals?.email||"")}">
     </div>
     ${authTab==="up"?`
     <div class="auth-field">
-     <input id="au-user" type="text" placeholder="${t("pr.name.ph")}" autocomplete="username" value="${esc(savedVals?.user||"")}">
+     <input id="au-user" type="text" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Никнейм":"Quasar Username"):t("pr.name.ph")}" autocomplete="username" value="${esc(savedVals?.user||"")}">
     </div>`:""}
     <div class="auth-field">
      <input id="au-pass" type="password" placeholder="${t("pr.pass")}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(savedVals?.pass||"")}">
     </div>
     <div class="auth-actions" style="margin-top:14px">
-     <button class="primary auth-submit-btn" id="au-submit">${authTab==="in"?t("pr.signin"):t("pr.signup")}</button>
+     <button class="primary auth-submit-btn" id="au-submit">${authTab==="in"?(authMethod==='quasar'?(LANG==="ru"?"Войти по Quasar ID":"Sign in with Quasar ID"):t("pr.signin")):(authMethod==='quasar'?(LANG==="ru"?"Зарегистрироваться в Quasar ID":"Register with Quasar ID"):t("pr.signup"))}</button>
      <button class="btn ghost sm" id="au-magic">${t("pr.magic")}</button>
     </div>
     <div style="margin-top:14px;text-align:center">
@@ -5059,6 +5078,8 @@ function renderProfile(savedVals={}){
    const pass=document.getElementById("au-pass")?.value||"";
    renderProfile({email,user,pass});
   };
+  document.getElementById("m-btn-std")?.addEventListener("click",()=>{authMethod="standard";rePaintProf()});
+  document.getElementById("m-btn-qsr")?.addEventListener("click",()=>{authMethod="quasar";rePaintProf()});
   document.getElementById("au-tab-in")?.addEventListener("click",()=>{authTab="in";rePaintProf()});
   document.getElementById("au-tab-up")?.addEventListener("click",()=>{authTab="up";rePaintProf()});
   document.getElementById("au-submit")?.addEventListener("click",()=>doAuth(authTab));
@@ -5191,13 +5212,30 @@ const needAuth=(box,saved={})=>{
  if(!box)return;
  box.innerHTML=`
  <div class="panel pane quasar-auth-card">
+  <!-- Auth Method Toggle: Standard vs Quasar ID -->
+  <div class="auth-method-switcher" style="display:flex;padding:3px;background:oklch(100% 0 0 / .06);border:1px solid oklch(100% 0 0 / .08);border-radius:12px;margin-bottom:18px">
+   <button class="auth-method-btn ${authMethod==='standard'?'active':''}" id="qm-btn-std" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='standard'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='standard'?'#fff':'var(--mute)'}">
+    🐾 ${LANG==="ru"?"Обычный вход (Meowave)":"Standard (Meowave)"}
+   </button>
+   <button class="auth-method-btn ${authMethod==='quasar'?'active':''}" id="qm-btn-qsr" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='quasar'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='quasar'?'#fff':'var(--mute)'}">
+    ✨ Quasar ID
+   </button>
+  </div>
+
+  ${authMethod==="standard"?`
+  <div class="auth-header" style="text-align:center;margin-bottom:16px">
+   <img src="./icons/icon.png" class="auth-app-icon" style="width:48px;height:48px;border-radius:12px;margin:0 auto 10px;display:block" alt="Meowave">
+   <h3 style="margin:0 0 4px">${authTab==="in"?(LANG==="ru"?"Вход в аккаунт Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
+   <p class="ph" style="margin:0;font-size:0.84rem">${LANG==="ru"?"Синхронизация медиатеки, комнат, чатов и профиля":"Sync library, rooms, chats and profile"}</p>
+  </div>
+  `:`
   <div class="quasar-brand">
    <div class="quasar-logo-wrap">
     <i data-lucide="sparkles" width="24" height="24" style="color:var(--accent,#a78bfa)"></i>
    </div>
    <div class="quasar-title-block">
     <span class="quasar-badge">Quasar ID Network</span>
-    <h3>${authTab==="in"?t("pr.signin"):t("pr.signup")}</h3>
+    <h3>${authTab==="in"?(LANG==="ru"?"Вход через Quasar ID":"Sign in via Quasar ID"):(LANG==="ru"?"Создать аккаунт Quasar ID":"Register Quasar ID")}</h3>
    </div>
   </div>
   <p class="ph" style="margin:0 0 16px;font-size:0.86rem">${t("soc.auth")}</p>
@@ -5215,23 +5253,25 @@ const needAuth=(box,saved={})=>{
     <div><b>${LANG==="ru"?"Единый Quasar ID":"Single Quasar ID"}</b><span>${LANG==="ru"?"Один аккаунт для комнат, личных чатов, друзей и облака":"Single identity for rooms, private chats, friends and cloud"}</span></div>
    </div>
   </div>
+  `}
+
   <div class="auth-tabs" style="margin-bottom:16px">
-   <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="qau-tab-in">${t("pr.signin")}</button>
-   <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="qau-tab-up">${t("pr.signup")}</button>
+   <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="qau-tab-in">${authMethod==='standard'?(LANG==="ru"?"Войти":"Sign In"):(LANG==="ru"?"Вход Quasar ID":"Quasar Sign In")}</button>
+   <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="qau-tab-up">${authMethod==='standard'?(LANG==="ru"?"Создать аккаунт":"Create Account"):(LANG==="ru"?"Регистрация Quasar ID":"Quasar Register")}</button>
   </div>
   <div class="authform">
    <div class="auth-field">
-    <input id="qau-email" type="email" placeholder="${t("pr.email")}" autocomplete="email" value="${esc(saved.email||"")}">
+    <input id="qau-email" type="email" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Email или ID":"Quasar Email or ID"):t("pr.email")}" autocomplete="email" value="${esc(saved.email||"")}">
    </div>
    ${authTab==="up"?`
    <div class="auth-field">
-    <input id="qau-user" type="text" placeholder="${t("pr.name.ph")}" autocomplete="username" value="${esc(saved.user||"")}">
+    <input id="qau-user" type="text" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Никнейм":"Quasar Username"):t("pr.name.ph")}" autocomplete="username" value="${esc(saved.user||"")}">
    </div>`:""}
    <div class="auth-field">
     <input id="qau-pass" type="password" placeholder="${t("pr.pass")}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(saved.pass||"")}">
    </div>
    <div class="auth-actions" style="margin-top:14px">
-    <button class="primary auth-submit-btn" id="qau-submit">${authTab==="in"?t("pr.signin"):t("pr.signup")}</button>
+    <button class="primary auth-submit-btn" id="qau-submit">${authTab==="in"?(authMethod==='quasar'?(LANG==="ru"?"Войти по Quasar ID":"Sign in with Quasar ID"):t("pr.signin")):(authMethod==='quasar'?(LANG==="ru"?"Зарегистрироваться в Quasar ID":"Register with Quasar ID"):t("pr.signup"))}</button>
     <button class="btn ghost sm" id="qau-magic">${t("pr.magic")}</button>
    </div>
    <p class="authmsg" id="qauthmsg" style="margin-top:8px"></p>
@@ -5244,6 +5284,8 @@ const needAuth=(box,saved={})=>{
   const pass=box.querySelector("#qau-pass")?.value||"";
   needAuth(box,{email,user,pass});
  };
+ box.querySelector("#qm-btn-std")?.addEventListener("click",()=>{authMethod="standard";rePaint()});
+ box.querySelector("#qm-btn-qsr")?.addEventListener("click",()=>{authMethod="quasar";rePaint()});
  box.querySelector("#qau-tab-in")?.addEventListener("click",()=>{authTab="in";rePaint()});
  box.querySelector("#qau-tab-up")?.addEventListener("click",()=>{authTab="up";rePaint()});
  const submitAuth=async(kind)=>{
