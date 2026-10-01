@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const UA: &str = "Meowave/0.1 (+https://github.com/meowave)";
+pub const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36";
 
 /// One track shape for the frontend, whichever service it came from.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -314,6 +315,7 @@ pub async fn sc_client_id() -> Result<String, String> {
     let c = client()?;
     let html = c
         .get("https://soundcloud.com/")
+        .header(reqwest::header::USER_AGENT, BROWSER_UA)
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -335,7 +337,7 @@ pub async fn sc_client_id() -> Result<String, String> {
     scripts.reverse();
 
     for url in scripts.iter().take(8) {
-        let Ok(resp) = c.get(url).send().await else { continue };
+        let Ok(resp) = c.get(url).header(reqwest::header::USER_AGENT, BROWSER_UA).send().await else { continue };
         let Ok(js) = resp.text().await else { continue };
         for marker in ["client_id:\"", "client_id=", "\"client_id\":\""] {
             if let Some(pos) = js.find(marker) {
@@ -368,14 +370,14 @@ async fn sc_req(c: &reqwest::Client, url: &str, token: &str) -> Result<reqwest::
         } else {
             format!("OAuth {t}")
         };
-        return Ok(c.get(url).header("Authorization", v));
+        return Ok(c.get(url).header("Authorization", v).header(reqwest::header::USER_AGENT, BROWSER_UA));
     }
     let id = if t.len() >= 24 && t.chars().all(|ch| ch.is_ascii_alphanumeric()) {
         t.to_string()
     } else {
         sc_client_id().await?
     };
-    Ok(c.get(url).query(&[("client_id", id)]))
+    Ok(c.get(url).query(&[("client_id", id)]).header(reqwest::header::USER_AGENT, BROWSER_UA))
 }
 
 pub async fn sc_search(token: &str, query: &str) -> Result<Vec<Track>, String> {
@@ -559,3 +561,174 @@ pub async fn api_probe_service(service: String) -> Result<bool, String> {
         other => Err(format!("unknown service: {other}")),
     }
 }
+
+/// Fetch tracks from a SoundCloud playlist or set.
+#[tauri::command]
+pub async fn sc_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String> {
+    let raw = url_or_id.trim();
+    let client_id = sc_client_id().await?;
+    let c = client()?;
+    let url = if raw.starts_with("http://") || raw.starts_with("https://") {
+        format!("{SC_API}/resolve?url={}&client_id={client_id}", urlencoding::encode(raw))
+    } else {
+        format!("{SC_API}/playlists/{raw}?client_id={client_id}")
+    };
+
+    let resp: serde_json::Value = c
+        .get(&url)
+        .header(reqwest::header::USER_AGENT, BROWSER_UA)
+        .send()
+        .await
+        .map_err(|e| format!("network: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("SoundCloud error: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("bad response: {e}"))?;
+
+    let raw_tracks = resp
+        .get("tracks")
+        .and_then(|t| t.as_array())
+        .ok_or_else(|| "playlist has no tracks".to_string())?;
+
+    let mut full_tracks: Vec<Track> = Vec::new();
+    let mut stub_ids: Vec<String> = Vec::new();
+
+    for t in raw_tracks {
+        if let Some(title) = t.get("title").and_then(|v| v.as_str()) {
+            if let Some(id) = t.get("id").map(|v| v.to_string().trim_matches('"').to_string()) {
+                full_tracks.push(Track {
+                    id,
+                    s: "sc".into(),
+                    t: title.into(),
+                    a: t.pointer("/user/username").and_then(|u| u.as_str()).unwrap_or("—").into(),
+                    al: t.pointer("/publisher_metadata/album_title").and_then(|x| x.as_str()).unwrap_or("").into(),
+                    d: sec(t.get("duration").and_then(|d| d.as_u64()).unwrap_or(0)),
+                    art: t.get("artwork_url").and_then(|a| a.as_str()).map(|a| a.replace("-large.", "-t500x500.")),
+                    mode: "local".into(),
+                });
+            }
+        } else if let Some(id) = t.get("id").map(|v| v.to_string().trim_matches('"').to_string()) {
+            if stub_ids.len() < 100 {
+                stub_ids.push(id);
+            }
+        }
+    }
+
+    if !stub_ids.is_empty() {
+        for chunk in stub_ids.chunks(50) {
+            let ids_param = chunk.join(",");
+            let tracks_url = format!("{SC_API}/tracks?ids={ids_param}&client_id={client_id}");
+            if let Ok(r) = c.get(&tracks_url).header(reqwest::header::USER_AGENT, BROWSER_UA).send().await {
+                if let Ok(items) = r.json::<Vec<serde_json::Value>>().await {
+                    for v in items {
+                        if let Some(id) = v.get("id").map(|x| x.to_string().trim_matches('"').to_string()) {
+                            let title = v.get("title").and_then(|x| x.as_str()).unwrap_or("—");
+                            let artist = v.pointer("/user/username").and_then(|x| x.as_str()).unwrap_or("—");
+                            let album = v.pointer("/publisher_metadata/album_title").and_then(|x| x.as_str()).unwrap_or("");
+                            let duration = sec(v.get("duration").and_then(|d| d.as_u64()).unwrap_or(0));
+                            let art = v.get("artwork_url").and_then(|a| a.as_str()).map(|a| a.replace("-large.", "-t500x500."));
+                            full_tracks.push(Track {
+                                id,
+                                s: "sc".into(),
+                                t: title.into(),
+                                a: artist.into(),
+                                al: album.into(),
+                                d: duration,
+                                art,
+                                mode: "local".into(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    full_tracks.truncate(200);
+    Ok(full_tracks)
+}
+
+/// Fetch public Spotify playlist tracks without account or login.
+#[tauri::command]
+pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String> {
+    let raw = url_or_id.trim();
+    let id = if raw.contains("playlist/") {
+        raw.split("playlist/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
+    } else if raw.contains("playlist:") {
+        raw.split("playlist:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+    } else {
+        raw
+    };
+
+    let embed_url = format!("https://open.spotify.com/embed/playlist/{id}");
+    let c = client()?;
+    let html = c
+        .get(&embed_url)
+        .header(reqwest::header::USER_AGENT, BROWSER_UA)
+        .send()
+        .await
+        .map_err(|e| format!("network: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("Spotify error: {e}"))?
+        .text()
+        .await
+        .map_err(|e| format!("reading Spotify page: {e}"))?;
+
+    let json_str = if let Some(start) = html.find("<script id=\"__NEXT_DATA__\"") {
+        let after = &html[start..];
+        if let Some(tag_close) = after.find('>') {
+            let content = &after[tag_close + 1..];
+            content.find("</script>").map(|end| &content[..end])
+        } else { None }
+    } else if let Some(start) = html.find("<script id=\"initial-state\"") {
+        let after = &html[start..];
+        if let Some(tag_close) = after.find('>') {
+            let content = &after[tag_close + 1..];
+            content.find("</script>").map(|end| &content[..end])
+        } else { None }
+    } else {
+        None
+    };
+
+    let json_str = json_str.ok_or_else(|| "could not find playlist JSON data in Spotify page".to_string())?;
+    let data: serde_json::Value = serde_json::from_str(json_str).map_err(|e| format!("parsing Spotify JSON: {e}"))?;
+
+    let entity = data.pointer("/props/pageProps/state/data/entity")
+        .or_else(|| data.pointer("/props/pageProps/entity"))
+        .ok_or_else(|| "no playlist entity found in Spotify page".to_string())?;
+
+    let track_list = entity.get("trackList")
+        .and_then(|t| t.as_array())
+        .ok_or_else(|| "no trackList found in Spotify playlist".to_string())?;
+
+    let mut tracks = Vec::new();
+    for tr in track_list {
+        let title = tr.get("title").and_then(|t| t.as_str()).unwrap_or("").trim();
+        if title.is_empty() { continue; }
+        let artist = tr.get("subtitle").and_then(|s| s.as_str()).unwrap_or("—").trim();
+        let duration_ms = tr.get("duration").and_then(|d| d.as_u64()).unwrap_or(0);
+        let uri = tr.get("uri").and_then(|u| u.as_str()).unwrap_or("");
+        let track_id = uri.strip_prefix("spotify:track:").unwrap_or(uri);
+
+        tracks.push(Track {
+            id: track_id.to_string(),
+            s: "sp".into(),
+            t: title.to_string(),
+            a: artist.to_string(),
+            al: String::new(),
+            d: (duration_ms / 1000) as u32,
+            art: None,
+            mode: "web".into(),
+        });
+    }
+
+    Ok(tracks)
+}
+
+/// Fetch tracks from a YouTube Music playlist by URL or ID.
+#[tauri::command]
+pub async fn ytm_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String> {
+    crate::ytm::playlist(&url_or_id).await
+}
+

@@ -35,6 +35,7 @@ pub const VR_UA: &str =
 /// audio formats and every one of them a plain `url` (verified against a batch
 /// of ids — both mp4 and webm containers, ranged GET returns 206).
 const ANDROID_UA: &str = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip";
+pub const WEB_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36";
 
 /// UA for the media fetch itself: googlevideo only serves a stream to a client
 /// that looks like one of Google's own players, so the bytes are pulled with
@@ -42,18 +43,22 @@ const ANDROID_UA: &str = "com.google.android.youtube/20.10.38 (Linux; U; Android
 pub const MEDIA_UA: &str = ANDROID_UA;
 
 /// Clients tried against the player endpoint, first that answers OK wins.
-///
-/// Google rotates *which* guest client is still allowed to answer
-/// anonymously, so the playback identity is a list rather than a constant:
-/// when one of them starts returning LOGIN_REQUIRED / UNPLAYABLE the next is
-/// tried before the track is reported as broken. That turns the next bump on
-/// this treadmill into a one-line edit instead of a release where YouTube
-/// Music does not play at all.
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
     ("ANDROID", ANDROID_UA),
     ("ANDROID_VR", VR_UA),
     ("ANDROID_MUSIC", MUSIC_UA),
 ];
+
+fn web_remix_ctx() -> Value {
+    json!({
+        "client": {
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20240726.01.00",
+            "hl": "en",
+            "gl": "US"
+        }
+    })
+}
 
 fn music_ctx() -> Value {
     json!({
@@ -192,6 +197,7 @@ fn collect<'a>(v: &'a Value, out: &mut Vec<&'a Value>) {
             for key in [
                 "musicTwoColumnItemRenderer",
                 "musicResponsiveListItemRenderer",
+                "musicListItemWrapperModel",
             ] {
                 if let Some(item) = map.get(key) {
                     out.push(item);
@@ -248,8 +254,36 @@ fn flex_runs(item: &Value) -> Vec<String> {
 }
 
 fn parse_item(item: &Value) -> Option<Track> {
-    // Only song/video rows carry a watch endpoint with a videoId. Albums,
-    // artists and playlists point at a browse endpoint and get dropped here.
+    // 1. Android Modern Element Renderers (musicListItemWrapperModel)
+    if let Some(data) = item.get("musicListItemData").or_else(|| item.pointer("/model/musicListItemWrapperModel/musicListItemData")) {
+        let id = data.pointer("/onTap/innertubeCommand/watchEndpoint/videoId")
+            .or_else(|| data.pointer("/playbackEndpoint/watchEndpoint/videoId"))
+            .or_else(|| data.pointer("/navigationEndpoint/watchEndpoint/videoId"))
+            .and_then(|v| v.as_str())?
+            .to_string();
+        let title = data.get("title").and_then(|v| v.as_str())?.to_string();
+        let subtitle = data.get("subtitle").and_then(|v| v.as_str()).unwrap_or("");
+        let parts: Vec<&str> = subtitle.split('•').map(|p| p.trim()).collect();
+        let artist = parts.get(1).copied().unwrap_or(parts.first().copied().unwrap_or("—")).to_string();
+        let art = data.pointer("/thumbnail/image/sources")
+            .and_then(|s| s.as_array())
+            .and_then(|s| s.last())
+            .and_then(|s| s.get("url"))
+            .and_then(|u| u.as_str())
+            .map(|u| u.to_string());
+        return Some(Track {
+            id,
+            s: "ytm".into(),
+            t: title,
+            a: artist,
+            al: String::new(),
+            d: 0,
+            art,
+            mode: "local".into(),
+        });
+    }
+
+    // 2. Web Responsive List Items and Two-Column Items
     let id = item
         .pointer("/navigationEndpoint/watchEndpoint/videoId")
         .or_else(|| item.pointer("/overlay/musicItemThumbnailOverlayRenderer/content/musicPlayButtonRenderer/playNavigationEndpoint/watchEndpoint/videoId"))
@@ -257,7 +291,6 @@ fn parse_item(item: &Value) -> Option<Track> {
         .and_then(|v| v.as_str())?
         .to_string();
 
-    // Two-column layout: title + subtitle. List layout: flex columns.
     let two_col_title = runs_text(item.get("title"));
     let (title, meta) = if two_col_title.is_empty() {
         let cols = flex_runs(item);
@@ -271,7 +304,6 @@ fn parse_item(item: &Value) -> Option<Track> {
         return None;
     }
 
-    // "Artist • Album • 3:41" — the fields present vary per result type.
     let parts: Vec<&str> = meta.split('•').map(|p| p.trim()).filter(|p| !p.is_empty()).collect();
     let artist = parts.first().copied().unwrap_or("—").to_string();
     let duration = parts
@@ -308,24 +340,61 @@ fn parse_item(item: &Value) -> Option<Track> {
     })
 }
 
-/// Search restricted to songs (`EgWKAQIIAWoK...` is the songs-only filter the
-/// web client sends).
+/// Search YouTube Music songs. Tries WEB_REMIX first, falls back to ANDROID_MUSIC.
 pub async fn search(query: &str) -> Result<Vec<Track>, String> {
+    // 1. Try WEB_REMIX client first: reliable and structured response
+    let web_body = json!({
+        "context": web_remix_ctx(),
+        "query": query,
+        "params": "EgWKAQIIAWoKEAoQAxAEEAkQBQ=="
+    });
+    if let Ok(resp) = post(MUSIC_API, "search", WEB_UA, None, web_body).await {
+        let mut items = Vec::new();
+        collect(&resp, &mut items);
+        let mut tracks: Vec<Track> = items.iter().filter_map(|i| parse_item(i)).collect();
+        if !tracks.is_empty() {
+            let mut seen = std::collections::HashSet::new();
+            tracks.retain(|t| seen.insert(t.id.clone()));
+            tracks.truncate(25);
+            return Ok(tracks);
+        }
+    }
+
+    // 2. Fall back to ANDROID_MUSIC client
     let body = json!({
         "context": music_ctx(),
         "query": query,
         "params": "EgWKAQIIAWoKEAoQAxAEEAkQBQ=="
     });
     let resp = post(MUSIC_API, "search", MUSIC_UA, None, body).await?;
-
     let mut items = Vec::new();
     collect(&resp, &mut items);
-
     let mut tracks: Vec<Track> = items.iter().filter_map(|i| parse_item(i)).collect();
-    // The same video shows up in several shelves; keep the first occurrence.
     let mut seen = std::collections::HashSet::new();
     tracks.retain(|t| seen.insert(t.id.clone()));
     tracks.truncate(25);
+    Ok(tracks)
+}
+
+/// Fetch tracks from a YouTube Music playlist by URL or ID.
+pub async fn playlist(raw: &str) -> Result<Vec<Track>, String> {
+    let id = if raw.contains("list=") {
+        raw.split("list=").nth(1).and_then(|s| s.split('&').next()).unwrap_or(raw).trim()
+    } else {
+        raw.trim()
+    };
+    let browse_id = if id.starts_with("VL") { id.to_string() } else { format!("VL{id}") };
+    let body = json!({
+        "context": web_remix_ctx(),
+        "browseId": browse_id
+    });
+    let resp = post(MUSIC_API, "browse", WEB_UA, None, body).await?;
+    let mut items = Vec::new();
+    collect(&resp, &mut items);
+    let mut tracks: Vec<Track> = items.iter().filter_map(|i| parse_item(i)).collect();
+    let mut seen = std::collections::HashSet::new();
+    tracks.retain(|t| seen.insert(t.id.clone()));
+    tracks.truncate(100);
     Ok(tracks)
 }
 

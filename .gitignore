@@ -53,3 +53,6 @@ AGENT_PROGRESS.md
 /Pasted image*.png
 /smoke-test*.png
 
+# Python bytecode
+__pycache__/
+*.pyc

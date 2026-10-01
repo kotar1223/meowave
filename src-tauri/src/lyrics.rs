@@ -465,10 +465,15 @@ pub async fn lyrics_get(
         if let Ok(Some((synced, lines))) =
             from_lrclib(artist.trim(), title.trim(), album.trim(), duration).await
         {
+            let (final_synced, final_lines) = if !synced && duration > 10 {
+                (true, sync_lines(lines, duration))
+            } else {
+                (synced, lines)
+            };
             return Ok(Lyrics {
                 source: "lrclib".into(),
-                synced,
-                lines,
+                synced: final_synced,
+                lines: final_lines,
             });
         }
     }
@@ -476,10 +481,15 @@ pub async fn lyrics_get(
     // 2. Genius search
     if !artist.trim().is_empty() && !title.trim().is_empty() {
         if let Ok(Some(lines)) = from_genius(artist.trim(), title.trim()).await {
+            let (synced, timed_lines) = if duration > 10 {
+                (true, sync_lines(lines, duration))
+            } else {
+                (false, lines)
+            };
             return Ok(Lyrics {
                 source: "genius".into(),
-                synced: false,
-                lines,
+                synced,
+                lines: timed_lines,
             });
         }
     }
@@ -489,10 +499,15 @@ pub async fn lyrics_get(
         if let Ok(Some(text)) = from_ytm(&id).await {
             let lines = plain_lines(&text);
             if !lines.is_empty() {
+                let (synced, timed_lines) = if duration > 10 {
+                    (true, sync_lines(lines, duration))
+                } else {
+                    (false, lines)
+                };
                 return Ok(Lyrics {
                     source: "ytm".into(),
-                    synced: false,
-                    lines,
+                    synced,
+                    lines: timed_lines,
                 });
             }
         }
@@ -501,12 +516,47 @@ pub async fn lyrics_get(
     Ok(Lyrics::none())
 }
 
+/// Distributes line timestamps smoothly across the track duration
+/// so Genius or plain lyrics have synchronized karaoke timings.
+pub fn sync_lines(lines: Vec<Line>, duration: u32) -> Vec<Line> {
+    if lines.is_empty() || duration == 0 {
+        return lines;
+    }
+    let total_secs = duration as f64;
+    let intro_secs = (total_secs * 0.04).clamp(3.0, 10.0);
+    let outro_secs = (total_secs * 0.04).clamp(3.0, 8.0);
+    let usable_secs = (total_secs - intro_secs - outro_secs).max(5.0);
+
+    let weights: Vec<f64> = lines
+        .iter()
+        .map(|l| (l.text.chars().count() as f64).clamp(8.0, 80.0))
+        .collect();
+    let total_weight: f64 = weights.iter().sum();
+    if total_weight <= 0.0 {
+        return lines;
+    }
+
+    let mut current_time = intro_secs;
+    let mut out = Vec::with_capacity(lines.len());
+    for (i, line) in lines.into_iter().enumerate() {
+        let stamp = (current_time * 10.0).round() / 10.0;
+        let line_dur = (weights[i] / total_weight) * usable_secs;
+        current_time += line_dur;
+        out.push(Line {
+            at: Some(stamp),
+            text: line.text,
+        });
+    }
+    out
+}
+
 /// Explicit Genius search endpoint for user queries.
 #[tauri::command]
 pub async fn lyrics_search_genius(
     artist: Option<String>,
     title: Option<String>,
     query: Option<String>,
+    duration: Option<u32>,
 ) -> Result<Lyrics, String> {
     let q = query.unwrap_or_default();
     let (a, t) = if !q.trim().is_empty() {
@@ -515,10 +565,16 @@ pub async fn lyrics_search_genius(
         (artist.as_deref().unwrap_or(""), title.as_deref().unwrap_or(""))
     };
     if let Ok(Some(lines)) = from_genius(a, t).await {
+        let dur = duration.unwrap_or(0);
+        let (synced, timed_lines) = if dur > 10 {
+            (true, sync_lines(lines, dur))
+        } else {
+            (false, lines)
+        };
         return Ok(Lyrics {
             source: "genius".into(),
-            synced: false,
-            lines,
+            synced,
+            lines: timed_lines,
         });
     }
     Ok(Lyrics::none())
@@ -565,10 +621,26 @@ mod tests {
         assert!(!extracted.contains("footer"));
     }
 
+    #[test]
+    fn tests_sync_lines_timing_order() {
+        let lines = vec![
+            Line { at: None, text: "First line".into() },
+            Line { at: None, text: "Second longer line here".into() },
+            Line { at: None, text: "Third line".into() },
+        ];
+        let synced = sync_lines(lines, 180);
+        assert_eq!(synced.len(), 3);
+        assert!(synced[0].at.is_some());
+        assert!(synced[1].at.is_some());
+        assert!(synced[2].at.is_some());
+        assert!(synced[0].at.unwrap() < synced[1].at.unwrap());
+        assert!(synced[1].at.unwrap() < synced[2].at.unwrap());
+    }
+
     #[tokio::test]
     #[ignore]
     async fn live_genius_test() {
-        let r = lyrics_search_genius(Some("Radiohead".into()), Some("Creep".into()), None).await;
+        let r = lyrics_search_genius(Some("Radiohead".into()), Some("Creep".into()), None, Some(238)).await;
         println!("GENIUS RESULT: {:?}", r.map(|l| (l.source, l.lines.len())));
     }
 }
