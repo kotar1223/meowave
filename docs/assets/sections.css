@@ -122,10 +122,31 @@ footer{position:relative;z-index:2;border-top:1px solid var(--line);margin-top:v
 .fin a:hover{color:var(--text)}
 .fin .sp{margin-left:auto}
 
+/* Interactive Palette Selector */
+.palette-demo{display:flex;flex-direction:column;gap:var(--sp-4);padding:var(--sp-6);margin-bottom:var(--sp-8)}
+.palette-strip-web{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.palette-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;
+  background:var(--surf);border:1px solid var(--line);font-size:.85rem;font-weight:500;
+  cursor:pointer;white-space:nowrap;transition:all .2s var(--e)}
+.palette-pill:hover{transform:translateY(-2px);border-color:var(--line-2);background:var(--surf-2)}
+.palette-pill.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);background:var(--surf-2)}
+.palette-dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+
+/* Highlight badge */
+.badge-tag{display:inline-block;padding:3px 8px;border-radius:6px;font-size:.72rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;background:var(--accent-soft);color:var(--accent);margin-bottom:6px}
+
+/* Enhanced mock player styling */
+.mock .mplay{background:var(--accent) !important;box-shadow:0 0 calc(12px*var(--glow)) rgb(var(--accent-rgb)/.5)}
+.mock .mseek::after{background:var(--accent) !important}
+.mock .mrow[data-on="true"] .mart{background:linear-gradient(135deg,var(--accent),oklch(20% 0.01 280)) !important}
+.mock .meq b{background:var(--accent) !important}
+
 @media (max-width:720px){
   section{padding:var(--sp-12) 0}
-  .navlinks a{display:none}
+  .navlinks a:not(:last-child){display:none}
   .hero{min-height:auto;padding-top:var(--sp-12)}
   .mock{grid-template-columns:1fr;grid-template-areas:"main" "bar"}
   .mock .mrail{display:none}
 }
+

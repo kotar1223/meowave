@@ -270,17 +270,43 @@ async fn ym_token() -> Result<String, String> {
         .ok_or_else(|| "нет токена Яндекс Музыки — войдите в аккаунт".to_string())
 }
 
+async fn ym_uid(token: &str) -> Result<String, String> {
+    let v: serde_json::Value = ym_api("/account/status", token)
+        .send()
+        .await
+        .map_err(|e| format!("network: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("Yandex: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("bad response: {e}"))?;
+    extract_uid(&v).ok_or_else(|| "не удалось получить uid пользователя Яндекс Музыки".to_string())
+}
+
+pub(crate) fn extract_uid(v: &serde_json::Value) -> Option<String> {
+    v.pointer("/result/account/uid")
+        .or_else(|| v.pointer("/result/account/id"))
+        .or_else(|| v.pointer("/result/default_email"))
+        .and_then(|u| match u {
+            serde_json::Value::Number(n) => Some(n.to_string()),
+            serde_json::Value::String(s) if !s.trim().is_empty() => Some(s.trim().to_string()),
+            _ => None,
+        })
+}
+
 /// Liked tracks: /tracks are returned as {id, albumId} pairs plus a `tracks`
 /// array of full objects; page through the library (50 likes per call).
 #[tauri::command]
 pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
     let token = ym_token().await?;
+    let uid = ym_uid(&token).await?;
     let mut full: Vec<serde_json::Value> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     // The likes endpoint has no cursor; it returns the whole library. Bound it
     // defensively all the same: 60 pages × 50 = far past any honest library.
     for page in 0..60u32 {
-        let v: serde_json::Value = ym_api(&format!("/users/likes/tracks?page={page}&per-page=50"), &token)
+        let before_len = full.len();
+        let v: serde_json::Value = ym_api(&format!("/users/{uid}/likes/tracks?page={page}&per-page=50"), &token)
             .send()
             .await
             .map_err(|e| format!("network: {e}"))?
@@ -308,7 +334,7 @@ pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
                 }
             }
         }
-        // Older responses put the ids only in library.tracks; resolve them.
+        // Older responses put the ids only in library.tracks; resolve them in batches of 50.
         if full.is_empty() {
             let ids: Vec<String> = library_ids
                 .iter()
@@ -322,26 +348,31 @@ pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
             if ids.is_empty() {
                 break;
             }
-            let batch = ids.join(",");
-            let v2: serde_json::Value = ym_api(&format!("/tracks/{batch}"), &token)
-                .send()
-                .await
-                .map_err(|e| format!("network: {e}"))?
-                .error_for_status()
-                .map_err(|e| format!("Yandex: {e}"))?
-                .json()
-                .await
-                .map_err(|e| format!("bad response: {e}"))?;
-            if let Some(rows) = v2.pointer("/result").and_then(|x| x.as_array()) {
-                for tr in rows {
-                    if let Some(row) = ym_row(tr) {
-                        let key = row["i"].as_str().unwrap_or("").to_string();
-                        if seen.insert(key) {
-                            full.push(row);
+            for chunk in ids.chunks(50) {
+                let batch = chunk.join(",");
+                let v2: serde_json::Value = ym_api(&format!("/tracks/{batch}"), &token)
+                    .send()
+                    .await
+                    .map_err(|e| format!("network: {e}"))?
+                    .error_for_status()
+                    .map_err(|e| format!("Yandex: {e}"))?
+                    .json()
+                    .await
+                    .map_err(|e| format!("bad response: {e}"))?;
+                if let Some(rows) = v2.pointer("/result").and_then(|x| x.as_array()) {
+                    for tr in rows {
+                        if let Some(row) = ym_row(tr) {
+                            let key = row["i"].as_str().unwrap_or("").to_string();
+                            if seen.insert(key) {
+                                full.push(row);
+                            }
                         }
                     }
                 }
             }
+        }
+        if full.len() == before_len {
+            break;
         }
     }
     Ok(full)
@@ -351,7 +382,8 @@ pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
 #[tauri::command]
 pub async fn ym_playlists() -> Result<Vec<YmPlaylist>, String> {
     let token = ym_token().await?;
-    let v: serde_json::Value = ym_api("/playlists/list", &token)
+    let uid = ym_uid(&token).await?;
+    let v: serde_json::Value = ym_api(&format!("/users/{uid}/playlists/list"), &token)
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -392,11 +424,12 @@ pub async fn ym_playlists() -> Result<Vec<YmPlaylist>, String> {
 #[tauri::command]
 pub async fn ym_playlist_tracks(kind: String) -> Result<Vec<serde_json::Value>, String> {
     let token = ym_token().await?;
+    let uid = ym_uid(&token).await?;
     let mut out: Vec<serde_json::Value> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for page in 0..40u32 {
         let v: serde_json::Value = ym_api(
-            &format!("/playlists/{kind}?page={page}&per-page=100&mix=extra"),
+            &format!("/users/{uid}/playlists/{kind}?page={page}&per-page=100&mix=extra"),
             &token,
         )
         .send()
@@ -465,4 +498,69 @@ pub async fn ym_playlist_tracks(kind: String) -> Result<Vec<serde_json::Value>, 
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_uid_number() {
+        let v = serde_json::json!({
+            "result": {
+                "account": {
+                    "uid": 123456789
+                }
+            }
+        });
+        assert_eq!(extract_uid(&v), Some("123456789".to_string()));
+    }
+
+    #[test]
+    fn test_extract_uid_string() {
+        let v = serde_json::json!({
+            "result": {
+                "account": {
+                    "uid": "987654321"
+                }
+            }
+        });
+        assert_eq!(extract_uid(&v), Some("987654321".to_string()));
+    }
+
+    #[test]
+    fn test_extract_uid_fallback_id() {
+        let v = serde_json::json!({
+            "result": {
+                "account": {
+                    "id": 55555
+                }
+            }
+        });
+        assert_eq!(extract_uid(&v), Some("55555".to_string()));
+    }
+
+    #[test]
+    fn test_ym_row_parsing() {
+        let tr = serde_json::json!({
+            "id": 4242,
+            "title": "Space Song",
+            "artists": [
+                { "name": "Beach House" }
+            ],
+            "albums": [
+                {
+                    "title": "Depression Cherry",
+                    "coverUri": "avatars.yandex.net/get-music-content/123/%%"
+                }
+            ],
+            "durationMs": 320000
+        });
+        let row = ym_row(&tr).expect("parsed row");
+        assert_eq!(row["i"], "4242");
+        assert_eq!(row["t"], "Space Song");
+        assert_eq!(row["a"], "Beach House");
+        assert_eq!(row["al"], "Depression Cherry");
+        assert_eq!(row["d"].as_f64().unwrap(), 320.0);
+    }
 }

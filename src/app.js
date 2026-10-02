@@ -369,6 +369,7 @@ const SERVICES=[
  {id:"ytm",name:"YouTube Music",conn:true,free:true,lossless:false,redir:"guest",lat:[360,880]},
  {id:"sc",name:"SoundCloud",conn:true,free:true,lossless:false,redir:"public client_id",lat:[280,640]},
  {id:"ym",name:"Yandex Music",conn:false,free:false,lossless:true,redir:"meowave://callback",lat:[400,1020]},
+ {id:"sp",name:"Spotify",conn:false,free:false,lossless:false,redir:"http://localhost:8080/callback",lat:[250,500]},
  /* Local files are one more service to the UI, minus network and search. */
  /* name/redir are resolved through i18n at render time (see svc()): a literal
     here stayed Russian with the interface set to English. */
@@ -449,7 +450,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
  /* Large-lyrics customization: px size, weight, glow multiplier, cover size,
     font family. Applied as CSS variables by applyLyVars(). */
  ly:{size:44,weight:640,glow:1,cov:320,gap:14,font:""},
- fpBgMode:"dynamic",fpGlow:100,fpBlur:75,lyKaraoke:"karaoke",fpWobble:true,profileTrack:null,
+ fpBgMode:"dynamic",fpGlow:100,fpBlur:75,lyKaraoke:"karaoke",fpWobble:true,fpZoom:"normal",fpDrift:true,profileTrack:null,
  glow:1,blur:14,theme:"dark",accent:"none",dens:2200,pspeed:.35,
  /* One explicit switch for weak machines. No auto-detection: the automatic
    tier system misjudged real hardware and its cuts looked like breakage, so
@@ -566,6 +567,8 @@ const A={ctx:null,src:null,audio:null,media:null,bands:[],pan:null,air:null,conv
 function ensureAudioEl(){
  if(A.audio)return A.audio;
  const au=A.audio=document.createElement("audio");
+ au.id="meowave-audio";au.style.display="none";
+ if(!document.body.contains(au))document.body.appendChild(au);
  au.crossOrigin="anonymous";au.preload="auto";
  au.addEventListener("loadedmetadata",()=>A.onMeta?.());
  au.addEventListener("durationchange",()=>A.onMeta?.());
@@ -664,6 +667,24 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
  if(A.audio&&!A.media){A.media=ctx.createMediaElementSource(A.audio);A.media.connect(A.bands[0])}}
 function load(tr,auto){
  if(!tr||tr.mode==="empty")return;
+ if(tr.s==="sp"&&!tr._resolved){
+  const q=`${tr.a||""} ${tr.t||""}`.trim();
+  searchRemote(q).then(hits=>{
+   const match=(hits||[]).find(x=>x.s==="ytm"||x.s==="sc")||hits?.[0];
+   if(match){
+    tr._resolved=true;
+    tr._resolvedId=match.id;
+    tr._resolvedSvc=match.s;
+    const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
+    load(resolvedTrack,auto);
+   }else{
+    toast(LANG==="ru"?"Не удалось найти аудиопоток для Spotify трека":"Could not find playable audio stream for Spotify track");
+   }
+  }).catch(()=>{
+   toast(LANG==="ru"?"Ошибка разрешения Spotify трека":"Error resolving Spotify track");
+  });
+  return;
+ }
  initAudio();if(!A.ctx)return;
  /* Stop a generated source (test tone); the <audio> element keeps living. */
  if(A.src&&A.src!==A.audio){try{A.src.stop()}catch(e){}try{A.src.disconnect()}catch(e){}A.src=null}
@@ -1002,16 +1023,9 @@ function frame(now){
  if(S.playing&&S.current?.mode!=="local"){S.pos+=dt;S.listen+=dt;noteListening(dt);if(S.pos>=S.dur){S.repeat?S.pos=0:next()}paint()}
  const curPos=(A.audio&&S.current?.mode==="local"&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
  if(S.playing)syncKaraokeFrame(curPos);
- const hoverCard=document.getElementById("mw-hover-card");
- if(hoverCard&&!hoverCard.hidden&&hoverCard.classList.contains("visible")){
-  const pc=S.dur>0?Math.min(100,Math.max(0,(curPos/S.dur)*100)):0;
-  const fillEl=document.getElementById("mwh-fill");
-  const curEl=document.getElementById("mwh-cur");
-  const durEl=document.getElementById("mwh-dur");
-  if(fillEl)fillEl.style.width=`${pc.toFixed(1)}%`;
-  if(curEl)curEl.textContent=fmt(curPos);
-  if(durEl)durEl.textContent=fmt(S.dur);
- }
+
+
+
  raf=requestAnimationFrame(frame)
 }
 function syncKaraokeFrame(curPos){
@@ -1093,10 +1107,25 @@ function renderAccounts(){
   <div class="acc"><span class="an"><b>${esc(svc(s.id).name)}</b><span>${t("nologin")} · ${esc(svc(s.id).redir||"")}</span></span>
   <span class="btn on" aria-disabled="true">${t("ready")}</span></div>`:`
   <div class="acc"><span class="an"><b>${esc(svc(s.id).name)}</b><span>${s.conn?t("connected")+" · keychain: meowave/"+s.id:t("noauth")}</span></span>
-  <button class="btn ${s.conn?"on":""}" data-acc="${s.id}">${s.conn?t("disconnect"):t("connect")}</button></div>
-  ${tokOpen===s.id?`<div class="tokrow"><input id="tok-${s.id}" type="password" placeholder="${t("tok.ph")}" autocomplete="off">
+  <div style="display:flex;gap:6px;align-items:center">
+   ${s.id==="sp"&&!s.conn?`<button class="btn sm" data-sp-cid-toggle="true" title="${LANG==="ru"?"Настроить Client ID":"Configure Client ID"}"><i data-lucide="key" width="13" height="13"></i> Client ID</button>`:""}
+   <button class="btn ${s.conn?"on":""}" data-acc="${s.id}">${s.conn?t("disconnect"):t("connect")}</button>
+  </div></div>
+  ${tokOpen===s.id?(s.id==="sp"?spGuide():`<div class="tokrow"><input id="tok-${s.id}" type="password" placeholder="${t("tok.ph")}" autocomplete="off">
    <button class="btn" data-toksave="${s.id}">${t("tok.save")}</button><small style="color:var(--mute);font-size:.72rem">${t("tok.hint")}</small></div>
-   ${s.id==="ym"?ymGuide():""}`:""}`).join("")}
+   ${s.id==="ym"?ymGuide():""}`):""}`).join("")}
+function spGuide(){
+ return `<div class="guide" style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surf);border:1px solid var(--line);border-radius:12px;margin:6px 0 12px">
+  <div style="font-size:.82rem;color:var(--text)"><b>Spotify Client ID</b>: ${LANG==="ru"?"укажите Client ID из дашборда Spotify:":"set Spotify Client ID for OAuth:"}</div>
+  <div class="tokrow" style="padding:0;margin:0">
+   <input id="sp-cid-keychain" type="text" placeholder="Spotify Client ID" value="${esc(SP_CLIENT_ID||"")}" autocomplete="off">
+   <button class="btn" id="sp-cid-keychain-save">${t("tok.save")||"Сохранить"}</button>
+  </div>
+  <small style="color:var(--mute);font-size:.72rem">${LANG==="ru"?"Redirect URI в настройках приложения Spotify:":"Redirect URI in Spotify app settings:"} <code>http://localhost:8080/callback</code></small>
+  <div class="grow" style="margin-top:4px">
+   <button class="btn sm" data-open-url="https://developer.spotify.com/dashboard">${LANG==="ru"?"Открыть Spotify Dashboard":"Open Spotify Dashboard"}</button>
+  </div>
+ </div>`}
 /* Where to get the Yandex token. The one-click flow (ymAcc) usually replaces
    this; the manual path stays for when the loopback page is unreachable. */
 function ymGuide(){
@@ -1113,31 +1142,91 @@ function ymGuide(){
    <button class="btn" data-open-url="https://yandex.ru/dev/music/">${t("ym.docs")}</button>
   </div></div>`}
 function renderSwatches(){
- const html=ACCENTS.map(([id,c])=>`<button class="sws" data-sw="${id}" aria-pressed="${S.accent===id}"
-  style="background:${id==="none"?"transparent":c}" title="${id==="none"?t("acc.none"):id}">
-  ${id==="none"?'<span style="position:absolute;inset:9px;border-radius:50%;background:var(--mute)"></span>':""}</button>`).join("")
- /* Takes its colour from the artwork. The whole implementation was already here
-    (adaptAccent / liftForUi / applyAccentRgb) but there was no way to select it,
-    and setAccent("adaptive") found no entry and wiped the accent instead. */
- +`<button class="sws" data-sw="adaptive" aria-pressed="${S.accent==="adaptive"}"
-   title="${t("acc.adaptive")} — ${t("acc.adaptive.s")}"
-   style="background:conic-gradient(from 210deg,#f472b6,#818cf8,#22d3ee,#a3e635,#fbbf24,#f472b6)">
-   <span style="position:absolute;inset:9px;border-radius:50%;background:var(--panel)"></span></button>`
- /* Any colour at all, not just the twelve presets. The native picker is used
-    rather than a hand-built one: it is the control people already know, and it
-    supports the OS eyedropper. */
- +`<label class="sws custom" title="${t("acc.custom")}" style="background:${S.accent==="custom"?S.customAccent:"conic-gradient(from 0deg,#f87171,#fbbf24,#4ade80,#22d3ee,#818cf8,#e879f9,#f87171)"}">
-   <input type="color" id="accpick" value="${S.customAccent||"#a78bfa"}"></label>`;
- document.getElementById("accent").innerHTML=html;
- const ob=document.getElementById("obaccent");if(ob)ob.innerHTML=html;
- /* input fires continuously while the user drags inside the OS picker.
-    Re-rendering the swatches on every tick destroyed the <input> that owns
-    the open dialog, so the picker snapped shut after the first movement —
-    "нажимаешь и оно сразу выбирается". While picking, only the colour is
-    applied live; the swatch row is rebuilt once, when the dialog closes. */
- document.querySelectorAll("#accpick, .sws.custom input").forEach(el=>{
+ const meta={
+  adaptive:{name:LANG==="ru"?"Адаптивная (Обложка)":"Adaptive (Artwork)",c:"#818cf8",grad:"conic-gradient(from 210deg,#f472b6,#818cf8,#22d3ee,#a3e635,#fbbf24,#f472b6)"},
+  none:{name:LANG==="ru"?"Монохром":"Monochrome",c:"#9ca3af",grad:"#9ca3af"},
+  violet:{name:"Material Purple",c:"#9d8df1",grad:"#9d8df1"},
+  indigo:{name:"Electric Indigo",c:"#707bfb",grad:"#707bfb"},
+  blue:{name:"Ocean Sky",c:"#38bdf8",grad:"#38bdf8"},
+  cyan:{name:"Cyber Cyan",c:"#2dd4bf",grad:"#2dd4bf"},
+  teal:{name:"Nordic Teal",c:"#14b8a6",grad:"#14b8a6"},
+  emerald:{name:"Neon Emerald",c:"#34d399",grad:"#34d399"},
+  amber:{name:"Solar Amber",c:"#f59e0b",grad:"#f59e0b"},
+  coral:{name:"Sunset Coral",c:"#f97316",grad:"#f97316"},
+  rose:{name:"Vibrant Rose",c:"#f43f5e",grad:"#f43f5e"},
+  pink:{name:"Neon Pink",c:"#ec4899",grad:"#ec4899"},
+  custom:{name:LANG==="ru"?"Свой цвет":"Custom Color",c:S.customAccent||"#a78bfa",grad:S.customAccent||"#a78bfa"}
+ };
+
+ const cardHtml=(id,color,title,isCustom=false,isAdaptive=false)=>{
+  const active=S.accent===id;
+  const bg=isAdaptive?meta.adaptive.grad:color;
+  return `
+  <div class="palette-card" data-sw="${id}" aria-pressed="${active}" style="--card-accent:${color}">
+   <div class="palette-card-head">
+    <span class="palette-title">${esc(title)}</span>
+    <span class="palette-check"><i data-lucide="check" width="12" height="12"></i></span>
+   </div>
+   <div class="mini-player-window">
+    <div class="mpw-header">
+     <span class="mpw-dot"></span><span class="mpw-dot"></span><span class="mpw-dot"></span>
+    </div>
+    <div class="mpw-body">
+     <div class="mpw-art" style="background:${bg}">
+      <i data-lucide="music" width="14" height="14"></i>
+     </div>
+     <div class="mpw-info">
+      <div class="mpw-line-1"></div>
+      <div class="mpw-line-2"></div>
+     </div>
+     <div class="mpw-btn" style="background:${color}">
+      <i data-lucide="play" width="10" height="10" style="margin-left:1px"></i>
+     </div>
+    </div>
+    <div class="mpw-bar">
+     <div class="mpw-fill" style="background:${color}"></div>
+    </div>
+   </div>
+   <div class="palette-tones-strip">
+    <span class="tone-chip" style="background:${color}" title="Primary"></span>
+    <span class="tone-chip" style="background:${color};opacity:.45" title="Container"></span>
+    <span class="tone-chip" style="background:${color};opacity:.2" title="Surface Tint"></span>
+    <span class="tone-chip" style="background:${color};filter:brightness(1.2)" title="Accent"></span>
+   </div>
+   ${isCustom?`<input type="color" class="palette-custom-input" id="accpick" value="${S.customAccent||"#a78bfa"}" title="${t("acc.custom")}">`:""}
+  </div>`;
+ };
+
+ let cards = [];
+ cards.push(cardHtml("adaptive", meta.adaptive.c, meta.adaptive.name, false, true));
+ ACCENTS.forEach(([id, c]) => {
+  const m = meta[id] || { name: id, c };
+  cards.push(cardHtml(id, m.c, m.name, false, false));
+ });
+ cards.push(cardHtml("custom", meta.custom.c, meta.custom.name, true, false));
+
+ const html = cards.join("");
+ const el1 = document.getElementById("accent"); if(el1) el1.innerHTML = html;
+ const el2 = document.getElementById("obaccent"); if(el2) el2.innerHTML = html;
+ [el1, el2].forEach(el => {
+  if (el && !el._hasWheel) {
+   el._hasWheel = true;
+   el.addEventListener("wheel", (e) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+     el.scrollLeft += e.deltaY;
+     e.preventDefault();
+    }
+   }, { passive: false });
+  }
+ });
+ icons();
+
+ document.querySelectorAll("#accpick, .palette-custom-input").forEach(el=>{
+  el.onclick=e=>e.stopPropagation();
   el.oninput=e=>applyCustomAccent(e.target.value);
-  el.onchange=e=>{applyCustomAccent(e.target.value);renderSwatches();save();pushPrefs()}})}
+  el.onchange=e=>{applyCustomAccent(e.target.value);renderSwatches();save();pushPrefs()};
+ });
+}
 
 /* Port *and* token for the local stream proxy. Declared this early because
    cssUrlRaw routes remote covers through the relay, and cover rendering runs
@@ -1453,45 +1542,62 @@ function openPl(i){
 let tok=0;
 async function search(v,silent){
  const box=document.getElementById("sres"),cnt=document.getElementById("scount"),q=(v||"").trim().toLowerCase(),my=++tok;
- if(!q){cnt.textContent="";box.innerHTML=empty("search",t("s.idle.t"),t("s.idle.s"));icons();return}
+ if(!q){
+  cnt.textContent="";
+  box.innerHTML=empty("search",t("s.idle.t"),t("s.idle.s"));
+  box.classList.remove("searching");
+  icons();
+  return;
+ }
+
+ /* Debounce typing without destroying the DOM on every letter */
+ await new Promise(r=>setTimeout(r,260));
+ if(my!==tok)return;
+
  const act=SERVICES.filter(s=>s.conn&&s.on&&!s.local);
- cnt.textContent=act.length?`${t("s.ing")}: ${act.map(s=>svc(s.id).name).join(", ")}`:t("s.nosvc");
- box.innerHTML=act.map(s=>`<div class="pend" data-p="${s.id}"><span class="dots3"><i></i><i></i><i></i></span>${esc(svc(s.id).name)}</div>`).join("")
-  +`<div class="rows" id="hits" data-listctx="search"></div>`;
- /* Local files resolve instantly, so show them before the network answers. */
+ cnt.innerHTML=act.length?`<span class="search-spinner"></span>${t("s.ing")}: ${esc(act.map(s=>svc(s.id).name).join(", "))}`:t("s.nosvc");
+ box.classList.add("searching");
+
+ /* Local files resolve instantly */
  const localHits=SERVICES.find(s=>s.id==="local")?.on
   ?TRACKS.filter(x=>x.s==="local"&&(x.t+" "+x.a+" "+x.al).toLowerCase().includes(q))
   :[];
- const list0=box.querySelector("#hits");
- if(list0&&localHits.length)list0.insertAdjacentHTML("beforeend",localHits.map(x=>row(x)).join(""));
- /* The visible order is the play order for the "search" context. */
- SEARCH_HITS=localHits.slice();
 
- /* Debounced here rather than in searchRemote(): this is the only caller that
-    fires per keystroke. */
- await new Promise(r=>setTimeout(r,180));
- if(my!==tok)return;
- const remote=await searchRemote(q);
+  /* Check for direct public URL imports pasted into the search box */
+  let remote=[];
+  if(/spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/i.test(q)){
+   cnt.innerHTML=`<span class="search-spinner"></span>Spotify: ${t("ly.load")||"..."}`;
+   remote=await inv("spotify_public_playlist_tracks",{urlOrId:q}).catch(()=>[]);
+  }else if(/music\.youtube\.com|youtube\.com\/playlist/i.test(q)){
+   cnt.innerHTML=`<span class="search-spinner"></span>YouTube Music: ${t("ly.load")||"..."}`;
+   remote=await inv("ytm_playlist_tracks",{urlOrId:q}).catch(()=>[]);
+  }else if(/soundcloud\.com/i.test(q)){
+   cnt.innerHTML=`<span class="search-spinner"></span>SoundCloud: ${t("ly.load")||"..."}`;
+   remote=await inv("sc_playlist_tracks",{urlOrId:q}).catch(()=>[]);
+  }else{
+   remote=await searchRemote(q);
+  }
  if(my!==tok)return;
 
- /* Render whatever actually arrived instead of walking the active-service
-    list: results from a service missing from act were silently dropped,
-    which is why search sometimes looked empty despite a good response. */
  const fresh=[];
  remote.forEach(x=>{
   const known=TRACKS.find(y=>String(y.id)===String(x.id)&&y.s===x.s);
   if(known){Object.assign(known,{...x,fav:known.fav});fresh.push(known)}
-  else{TRACKS.push(x);fresh.push(x)}});
+  else{TRACKS.push(x);fresh.push(x)}
+ });
 
- box.querySelectorAll(".pend").forEach(p=>p.remove());
- const list=box.querySelector("#hits");
- if(list&&fresh.length)list.insertAdjacentHTML("beforeend",fresh.map(x=>row(x)).join(""));
- SEARCH_HITS=[...localHits,...fresh];
-
- const found=fresh.length+localHits.length;
+ const allHits=[...localHits,...fresh];
+ SEARCH_HITS=allHits;
+ box.classList.remove("searching");
+ const found=allHits.length;
  cnt.textContent=`${t("s.found")}: ${found}`;
- if(!found)box.innerHTML=empty("circle-slash",t("s.none.t"),t("s.none.s"));
- icons()}
+ if(!found){
+  box.innerHTML=empty("circle-slash",t("s.none.t"),t("s.none.s"));
+ }else{
+  box.innerHTML=`<div class="rows" id="hits" data-listctx="search">${allHits.map(x=>row(x)).join("")}</div>`;
+ }
+ icons();
+}
 /* The bar is built once and then updated field by field.
 
    Rewriting #np's innerHTML was the flicker: every renderNP() threw away the
@@ -1557,8 +1663,7 @@ function renderNP(){
   b.heart.setAttribute("aria-pressed",String(!!tr.fav));
   b.dis.setAttribute("aria-pressed",String(isDisliked(tr)))}
 
- dur.textContent=empty?"0:00":fmt(S.dur);
- updateHoverCardMeta()}
+ dur.textContent=empty?"0:00":fmt(S.dur)}
 function isExplicit(tr){
  if(!tr)return false;
  if(tr.exp||tr.explicit||tr.contentWarning==="explicit")return true;
@@ -1571,87 +1676,8 @@ function paint(){
  document.getElementById("tcur").textContent=fmt(S.pos);
  const ff=document.querySelector("#fptrack .f");
  if(ff){ff.style.width=p+"%";document.querySelector("#fptrack .h")?.style.setProperty("left",p+"%");const c=document.getElementById("fpcur");if(c)c.textContent=fmt(S.pos)}
+ const lcur=document.getElementById("lyric-cur-time");if(lcur)lcur.textContent=fmt(S.pos);
  if((fp.dataset.open==="true"&&S.fpMode==="lyric")||document.getElementById("lyr"))syncLyrics()}
-let hoverCardTimer=null;
-function showHoverCard(e){
- clearTimeout(hoverCardTimer);
- const card=document.getElementById("mw-hover-card");
- const target=(e&&e.currentTarget)||document.querySelector(".mark");
- if(!card||!target)return;
- const r=target.getBoundingClientRect();
- if(target.classList.contains("tb-brand")||target.closest?.(".tb-brand")){
-  card.style.left=`${Math.max(12,Math.round(r.left))}px`;
-  card.style.top=`${Math.round(r.bottom+8)}px`;
- }else{
-  card.style.left=`${Math.round(r.right+12)}px`;
-  card.style.top=`${Math.max(12,Math.round(r.top-8))}px`;
- }
- updateHoverCardMeta();
- card.hidden=false;
- card.classList.add("visible");
- card.setAttribute("aria-hidden","false");
-}
-function hideHoverCard(){
- clearTimeout(hoverCardTimer);
- hoverCardTimer=setTimeout(()=>{
-  const card=document.getElementById("mw-hover-card");
-  if(!card)return;
-  card.classList.remove("visible");
-  card.setAttribute("aria-hidden","true");
-  setTimeout(()=>{if(!card.classList.contains("visible"))card.hidden=true},220);
- },250);
-}
-function updateHoverCardMeta(){
- const card=document.getElementById("mw-hover-card");
- if(!card)return;
- const tr=S.current;
- const empty=!tr||tr.mode==="empty";
- const titleEl=document.getElementById("mwh-title");
- const artistEl=document.getElementById("mwh-artist");
- const coverEl=document.getElementById("mwh-cover");
- const playBtn=document.getElementById("mwh-play");
- if(titleEl)titleEl.textContent=empty?"Meowave":(tr.t||"Meowave");
- if(artistEl)artistEl.textContent=empty?(LANG==="ru"?"Ничего не играет":"Nothing playing"):(tr.a||"—");
- if(coverEl){
-  const u=tr?.art?cssUrlRaw(tr.art):null;
-  if(u&&!empty){
-   coverEl.style.backgroundImage=`url('${u}')`;
-   coverEl.classList.remove("empty");
-  }else{
-   coverEl.style.backgroundImage="";
-   coverEl.classList.add("empty");
-  }
- }
- if(playBtn){
-  playBtn.innerHTML=`<i data-lucide="${S.playing?"pause":"play"}" width="16" height="16"></i>`;
-  icons();
- }
-}
-function initHoverCard(){
- const mark=document.querySelector(".mark");
- const tbBrand=document.querySelector(".tb-brand");
- const card=document.getElementById("mw-hover-card");
- if(!card)return;
- [mark,tbBrand].filter(Boolean).forEach(el=>{
-  el.addEventListener("mouseenter",showHoverCard);
-  el.addEventListener("mouseleave",hideHoverCard);
- });
- card.addEventListener("mouseenter",()=>clearTimeout(hoverCardTimer));
- card.addEventListener("mouseleave",hideHoverCard);
- document.getElementById("mwh-prev")?.addEventListener("click",e=>{e.stopPropagation();prev()});
- document.getElementById("mwh-play")?.addEventListener("click",e=>{e.stopPropagation();toggle()});
- document.getElementById("mwh-next")?.addEventListener("click",e=>{e.stopPropagation();next()});
- document.getElementById("mwh-seek")?.addEventListener("click",e=>{
-  e.stopPropagation();
-  if(!S.dur)return;
-  const rect=e.currentTarget.getBoundingClientRect();
-  const p=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-  seekSeconds(p*S.dur);
- });
- card.querySelector(".mwh-body")?.addEventListener("click",()=>{
-  hideHoverCard();openFP();
- });
-}
 let queue=[];
 /* Track key the full player last drew, so a re-render caused by a seek, a
    favourite toggle or a language switch does not replay the cover animation —
@@ -1675,8 +1701,9 @@ function renderFP(){
  const expBadge=isExplicit(tr)?`<span class="fp-badge-exp" title="Explicit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="11.5" r="1" fill="currentColor"/><path d="M8 4.2v4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>`:"";
  document.getElementById("fpc").innerHTML=lyricMode?`
   <div class="fp-actions-top">
+   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><i data-lucide="maximize" width="17" height="17"></i></button>
    <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><i data-lucide="sliders" width="18" height="18"></i></button>
-   <button class="ic close fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
+   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
   </div>
   <div class="fp-lyric-grid">
    <div class="fp-lyric-left">
@@ -1706,8 +1733,9 @@ function renderFP(){
    </div>
   </div>`:`
   <div class="fp-actions-top">
+   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><i data-lucide="maximize" width="17" height="17"></i></button>
    <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><i data-lucide="sliders" width="18" height="18"></i></button>
-   <button class="ic close fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
+   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
   </div>
   <div class="fp-stage-content">
    <div class="cover fpcover-stage" ${art}><canvas class="vis" id="vis"></canvas></div>
@@ -1750,6 +1778,7 @@ function renderFP(){
  });
  document.querySelector(".fpcover-lg")?.addEventListener("click",()=>{
   S.fpMode="stage";save();renderFP()});
+ document.getElementById("fp-fullscreen-toggle")?.addEventListener("click",toggleAppFullscreen);
  wireSeek("fptrack");
  const c=document.getElementById("fpc");
  if(swapped){
@@ -1758,6 +1787,8 @@ function renderFP(){
   c.dataset.swap="1";
  }else c.removeAttribute("data-swap");
  c.dataset.playing=S.playing?"true":"false";
+ c.dataset.zoom=S.fpZoom||"normal";
+ c.dataset.drift=String(S.fpDrift!==false);
  fpWake();
  vis.c=document.getElementById("vis");
  if(vis.c){const r=vis.c.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);
@@ -1783,23 +1814,28 @@ function renderLyricSheet(){
   el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.gen")}<br><small id="lyprog" class="lypulse" style="opacity:.7;font-size:.85rem">${L.progress||""}</small><br><small style="opacity:.5;font-size:.75rem">${t("ly.slow")}</small></p></div>`;return}
  if(L.state==="error"){
   el.dataset.empty="true";
-  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.err")}</p><div style="display:flex;gap:8px;margin-top:14px;justify-content:center"><button class="btn sm" id="lyretry">${t("ly.retry")}</button><button class="btn sm" id="lygenius">${t("ly.search_genius")}</button></div></div>`;
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.err")}</p><div style="display:flex;gap:8px;margin-top:14px;justify-content:center"><button class="btn sm" id="lyretry">${t("ly.retry")}</button><button class="btn sm" id="lygenius">${t("ly.search_genius")}</button><button class="btn sm" id="lycustom">${LANG==="ru"?"Свой текст":"Custom"}</button></div></div>`;
   document.getElementById("lyretry")?.addEventListener("click",()=>{LYRICS.delete(trackKey(tr));renderLyricSheet()});
   document.getElementById("lygenius")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+  document.getElementById("lycustom")?.addEventListener("click",()=>openLyricEditor(tr));
   return}
  if(!L.lines?.length){
   el.dataset.empty="true";
-  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.none")}</p><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center"><button class="btn sm" id="lygenius">${t("ly.search_genius")}</button><button class="btn sm" id="lygen">${t("ly.gen")}</button></div></div>`;
+  el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("ly.none")}</p><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center"><button class="btn sm" id="lygenius">${t("ly.search_genius")}</button><button class="btn sm" id="lygen">${t("ly.gen")}</button><button class="btn sm" id="lycustom">${LANG==="ru"?"Свой текст / Тайминги":"Custom / Timings"}</button></div></div>`;
   document.getElementById("lygenius")?.addEventListener("click",()=>searchGeniusPrompt(tr));
   document.getElementById("lygen")?.addEventListener("click",()=>transcribeLyrics(tr));
+  document.getElementById("lycustom")?.addEventListener("click",()=>openLyricEditor(tr));
   return}
  el.dataset.empty="false";
  el.dataset.synced=String(!!L.synced);
  el.dataset.karaoke=S.lyKaraoke||"karaoke";
- const badge=L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):t("ly.src.lrc");
- el.innerHTML=`<div class="lyr-header"><span class="lyr-badge">${esc(badge)}${L.synced?" · "+t("ly.seek"):" · "+t("ly.plain")}</span><button class="btn sm text" id="lygenius-alt" title="${t("ly.search_genius")}"><i data-lucide="search" width="13" height="13"></i> Genius</button></div>`
+ const badge=L.source==="custom"?(LANG==="ru"?"Свой текст":"Custom"):L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):"";
+ const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-alt" title="${LANG==="ru"?"Автоматически распределить тайминги":"Auto-distribute timestamps across track"}"><i data-lucide="wand-2" width="13" height="13"></i> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
+ el.innerHTML=`<div class="lyr-header">${badge?`<span class="lyr-badge">${esc(badge)}</span>`:""}<div style="display:flex;gap:6px;margin-left:auto">${syncBtn}<button class="btn sm text" id="lygenius-alt" title="${t("ly.search_genius")}"><i data-lucide="search" width="13" height="13"></i> Genius</button><button class="btn sm text" id="lyr-edit-alt" title="${LANG==="ru"?"Редактировать текст и тайминги":"Edit lyrics & timings"}"><i data-lucide="timer" width="13" height="13"></i> ${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
   +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("");
+ document.getElementById("lyr-sync-alt")?.addEventListener("click",()=>autoSyncLyrics(tr,L));
  document.getElementById("lygenius-alt")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+ document.getElementById("lyr-edit-alt")?.addEventListener("click",()=>openLyricEditor(tr));
  el.scrollTop=0;
  lyLast=-1;syncLyrics(true);
  icons()}
@@ -1850,7 +1886,190 @@ function renderFPBody(anim){
 const LYRICS=new Map();          /* trackKey -> {state,source,synced,lines} */
 let lyReq=0;                     /* rejects results from a previous track */
 
-function lyricsFor(tr){return tr?LYRICS.get(trackKey(tr)):null}
+function lyricsFor(tr){
+ if(!tr||tr.mode==="empty")return null;
+ const key=trackKey(tr);
+ const custom=localStorage.getItem("mw.custom_lyrics."+key);
+ if(custom){
+  try{
+   const parsed=JSON.parse(custom);
+   if(parsed&&parsed.lines)return {state:"done",source:parsed.source||"custom",synced:!!parsed.synced,lines:parsed.lines};
+  }catch(e){}
+ }
+ return LYRICS.get(key);
+}
+
+function parseLrc(text){
+ const lines=[];
+ const rawLines=(text||"").split(/\r?\n/);
+ const timeRegex=/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+ let hasTime=false;
+ for(const line of rawLines){
+  const trimmed=line.trim();
+  if(!trimmed)continue;
+  let match;
+  let lastIdx=0;
+  const times=[];
+  timeRegex.lastIndex=0;
+  while((match=timeRegex.exec(trimmed))!==null){
+   const min=parseInt(match[1],10);
+   const sec=parseInt(match[2],10);
+   const ms=match[3]?parseFloat("0."+match[3]):0;
+   times.push(min*60+sec+ms);
+   lastIdx=timeRegex.lastIndex;
+  }
+  const textPart=trimmed.slice(lastIdx).trim();
+  if(times.length>0){
+   hasTime=true;
+   for(const at of times){
+    lines.push({at,text:textPart});
+   }
+  }else{
+   lines.push({text:trimmed});
+  }
+ }
+ if(hasTime){
+  lines.sort((a,b)=>(a.at??0)-(b.at??0));
+ }
+ return {synced:hasTime,lines};
+}
+
+function formatLrc(L){
+ if(!L||!L.lines||!L.lines.length)return "";
+ return L.lines.map(l=>{
+  if(l.at!=null){
+   const m=Math.floor(l.at/60);
+   const s=Math.floor(l.at%60);
+   const ms=Math.floor((l.at%1)*100);
+   return `[${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}.${String(ms).padStart(2,"0")}] ${l.text||""}`;
+  }
+  return l.text||"";
+ }).join("\n");
+}
+
+let lyricEditorTrack=null;
+function openLyricEditor(tr){
+ tr=tr||S.current;
+ if(!tr||tr.mode==="empty")return;
+ lyricEditorTrack=tr;
+ const modal=document.getElementById("lyric-edit-modal");
+ if(!modal)return;
+ const L=lyricsFor(tr);
+ const txt=document.getElementById("lyric-edit-text");
+ if(txt)txt.value=formatLrc(L);
+ const title=document.getElementById("lyric-edit-title");
+ if(title)title.textContent=(LANG==="ru"?"Редактор текста: ":"Lyric Editor: ")+`${tr.a||""} — ${tr.t||""}`;
+ modal.hidden=false;
+ modal.dataset.open="true";
+ const curTime=document.getElementById("lyric-cur-time");
+ if(curTime)curTime.textContent=fmt(S.pos||0);
+ icons();
+}
+
+function closeLyricEditor(){
+ const modal=document.getElementById("lyric-edit-modal");
+ if(!modal)return;
+ modal.hidden=true;
+ modal.dataset.open="false";
+ lyricEditorTrack=null;
+}
+
+function initLyricEditor(){
+ document.getElementById("lyric-edit-close")?.addEventListener("click",closeLyricEditor);
+ document.getElementById("lyric-edit-cancel")?.addEventListener("click",closeLyricEditor);
+ document.getElementById("lyric-edit-modal")?.addEventListener("click",e=>{
+  if(e.target===document.getElementById("lyric-edit-modal"))closeLyricEditor();
+ });
+ document.getElementById("lyric-clear-times")?.addEventListener("click",()=>{
+  const txt=document.getElementById("lyric-edit-text");
+  if(!txt)return;
+  txt.value=txt.value.replace(/\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]\s*/g,"");
+  toast(LANG==="ru"?"Метки времени очищены":"Timestamps cleared");
+ });
+ document.getElementById("lyric-auto-time")?.addEventListener("click",()=>{
+  const txt=document.getElementById("lyric-edit-text");
+  if(!txt)return;
+  const raw=txt.value.replace(/\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?\]\s*/g,"");
+  const rawLines=raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  if(!rawLines.length)return toast(LANG==="ru"?"Нет строк текста для расстановки таймингов":"No lyrics lines to timestamp");
+  const tr=lyricEditorTrack||S.current;
+  const totalSec=S.dur>5?S.dur:(tr?.d>5?tr.d:180);
+  const intro=Math.min(12,Math.max(4,totalSec*0.06));
+  const available=Math.max(10,totalSec-intro-6);
+  const step=available/rawLines.length;
+  const timed=rawLines.map((l,i)=>{
+   const at=intro+(i*step);
+   const m=Math.floor(at/60);
+   const s=Math.floor(at%60);
+   const ms=Math.floor((at%1)*100);
+   return `[${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}.${String(ms).padStart(2,"0")}] ${l}`;
+  });
+  txt.value=timed.join("\n");
+  toast(LANG==="ru"?"Авто-тайминги распределены по треку":"Auto-timings distributed across track");
+ });
+ document.getElementById("lyric-stamp-btn")?.addEventListener("click",()=>{
+  const txt=document.getElementById("lyric-edit-text");
+  if(!txt)return;
+  const cur=S.pos||0;
+  const m=Math.floor(cur/60);
+  const s=Math.floor(cur%60);
+  const ms=Math.floor((cur%1)*100);
+  const stamp=`[${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}.${String(ms).padStart(2,"0")}] `;
+  const start=txt.selectionStart||0;
+  const end=txt.selectionEnd||0;
+  txt.value=txt.value.slice(0,start)+stamp+txt.value.slice(end);
+  txt.selectionStart=txt.selectionEnd=start+stamp.length;
+  txt.focus();
+ });
+ document.getElementById("lyric-reset-btn")?.addEventListener("click",()=>{
+  const tr=lyricEditorTrack||S.current;
+  if(tr){
+   const key=trackKey(tr);
+   localStorage.removeItem("mw.custom_lyrics."+key);
+   LYRICS.delete(key);
+   fetchLyrics(tr);
+  }
+  closeLyricEditor();
+  toast(LANG==="ru"?"Сброшено на оригинальный текст":"Reset to original lyrics");
+ });
+ document.getElementById("lyric-edit-save")?.addEventListener("click",()=>{
+  const tr=lyricEditorTrack||S.current;
+  const txt=document.getElementById("lyric-edit-text");
+  if(!tr||!txt)return;
+  const key=trackKey(tr);
+  const parsed=parseLrc(txt.value);
+  const data={source:"custom",synced:parsed.synced,lines:parsed.lines};
+  try{
+   localStorage.setItem("mw.custom_lyrics."+key,JSON.stringify(data));
+  }catch(e){}
+  LYRICS.set(key,{state:"done",...data});
+  closeLyricEditor();
+  toast(parsed.synced?(LANG==="ru"?"Текст и тайминги сохранены":"Lyrics & timings saved"):(LANG==="ru"?"Текст сохранён":"Lyrics saved"));
+  if(fp.dataset.open==="true")renderFP();
+  else if(S.fpTab==="lyrics")renderLyrics();
+ });
+}
+
+function autoSyncLyrics(tr,L){
+ if(!tr||!L||!L.lines?.length)return;
+ const key=trackKey(tr);
+ const totalSec=S.dur>5?S.dur:(tr.d>5?tr.d:180);
+ const intro=Math.min(12,Math.max(4,totalSec*0.06));
+ const available=Math.max(10,totalSec-intro-6);
+ const clean=L.lines.filter(l=>l.text&&l.text.trim());
+ if(!clean.length)return;
+ const step=available/clean.length;
+ const timed=clean.map((l,i)=>{
+  const at=Math.round((intro+(i*step))*100)/100;
+  return {text:l.text.trim(),at};
+ });
+ const data={source:L.source||"genius",synced:true,lines:timed};
+ try{localStorage.setItem("mw.custom_lyrics."+key,JSON.stringify(data))}catch(_){}
+ LYRICS.set(key,{state:"done",...data});
+ toast(LANG==="ru"?"Тайминги применены к треку!":"Timings synced with track!");
+ if(fp.dataset.open==="true")renderFP();
+ else if(S.fpTab==="lyrics")renderLyrics();
+}
 
 function renderLyrics(){
  const el=document.getElementById("fpbody");if(!el)return;
@@ -1863,24 +2082,30 @@ function renderLyrics(){
  if(L.state==="transcribing"){
   el.innerHTML=`<p class="hollow">${t("ly.gen")}<br><small id="lyprog" class="lypulse" style="opacity:.6">${L.progress||""}</small><br><small style="opacity:.45">${t("ly.slow")}</small></p>`;return}
  if(L.state==="error"){
-  el.innerHTML=`<p class="hollow">${t("ly.err")}<br><div style="display:flex;gap:6px;justify-content:center;margin-top:10px"><button class="btn sm" id="lyretry">${t("ly.retry")}</button><button class="btn sm" id="lygenius-side">${t("ly.search_genius")}</button></div></p>`;
+  el.innerHTML=`<p class="hollow">${t("ly.err")}<br><div style="display:flex;gap:6px;justify-content:center;margin-top:10px"><button class="btn sm" id="lyretry">${t("ly.retry")}</button><button class="btn sm" id="lygenius-side">${t("ly.search_genius")}</button><button class="btn sm" id="lycustom-side">${LANG==="ru"?"Свой текст":"Custom"}</button></div></p>`;
   document.getElementById("lyretry").onclick=()=>{LYRICS.delete(trackKey(tr));renderLyrics()};
   document.getElementById("lygenius-side")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+  document.getElementById("lycustom-side")?.addEventListener("click",()=>openLyricEditor(tr));
   return}
  if(!L.lines?.length){
-  el.innerHTML=`<p class="hollow">${t("ly.none")}<br><div style="display:flex;gap:6px;justify-content:center;margin-top:10px"><button class="btn sm" id="lygenius-side">${t("ly.search_genius")}</button><button class="btn sm" id="lygen">${t("ly.gen")}</button></div></p>`;
+  el.innerHTML=`<p class="hollow">${t("ly.none")}<br><div style="display:flex;gap:6px;justify-content:center;margin-top:10px"><button class="btn sm" id="lygenius-side">${t("ly.search_genius")}</button><button class="btn sm" id="lygen">${t("ly.gen")}</button><button class="btn sm" id="lycustom-side">${LANG==="ru"?"Свой текст / Тайминги":"Custom / Timings"}</button></div></p>`;
   document.getElementById("lygenius-side")?.addEventListener("click",()=>searchGeniusPrompt(tr));
   document.getElementById("lygen")?.addEventListener("click",()=>transcribeLyrics(tr));
+  document.getElementById("lycustom-side")?.addEventListener("click",()=>openLyricEditor(tr));
   return}
 
- const badge=L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):t("ly.src.lrc");
+ const badge=L.source==="custom"?(LANG==="ru"?"Свой текст":"Custom"):L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):"";
+ const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-btn" style="padding:2px 8px;font-size:.72rem"><i data-lucide="wand-2" width="12" height="12"></i> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
  el.innerHTML=`<div class="lyr" id="lyr" data-synced="${!!L.synced}" data-karaoke="${esc(S.lyKaraoke||"karaoke")}">`
-  +`<div class="lysrc" style="display:flex;align-items:center;justify-content:space-between"><span>${esc(badge)}${L.synced?" · "+t("ly.seek"):" · "+t("ly.plain")}</span><button class="btn sm text" id="lyr-genius-btn" style="padding:2px 8px;font-size:.72rem">Genius</button></div>`
+  +`<div class="lysrc" style="display:flex;align-items:center;justify-content:space-between"><span>${badge?esc(badge):""}</span><div style="display:flex;gap:6px">${syncBtn}<button class="btn sm text" id="lyr-genius-btn" style="padding:2px 8px;font-size:.72rem">Genius</button><button class="btn sm text" id="lyr-edit-btn" style="padding:2px 8px;font-size:.72rem">${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
   +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("")
   +`</div>`;
+ document.getElementById("lyr-sync-btn")?.addEventListener("click",()=>autoSyncLyrics(tr,L));
  document.getElementById("lyr-genius-btn")?.addEventListener("click",()=>searchGeniusPrompt(tr));
+ document.getElementById("lyr-edit-btn")?.addEventListener("click",()=>openLyricEditor(tr));
  lyLast=-1;
- syncLyrics(true)}
+ syncLyrics(true);
+ icons()}
 
 /* Click or Enter on a timed line seeks to it. */
 function lySeekFrom(el){
@@ -1911,7 +2136,7 @@ async function searchGeniusPrompt(tr){
    const key=trackKey(tr);
    const lines=res.lines.filter(l=>l.text!==undefined);
    LYRICS.set(key,{state:"done",source:"genius",synced:false,lines});
-   toast(t("ly.found_genius")||"Lyrics found on Genius");
+   toast(LANG==="ru"?"Текст найден на Genius. Нажмите «Синхронизировать» для добавления таймингов":"Lyrics found on Genius. Click «Auto-sync» to add timings", 4500);
    S.fpMode="lyric";save();
    if(fp.dataset.open==="true")renderFP();
    else if(S.fpTab==="lyrics")renderLyrics();
@@ -2444,6 +2669,60 @@ function setPlayIcon(btn,name,size){
  window.lucide&&lucide.createIcons({nameAttr:"data-lucide",attrs:{}});
  const made=btn.firstElementChild;
  if(made)made.dataset.icon=name}
+function initMediaSession(){
+ ensureAudioEl();
+ if(window.__TAURI__?.event?.listen){
+  window.__TAURI__.event.listen("meowave://media-action",(e)=>{
+   if(e.payload==="prev")prev();
+   else if(e.payload==="play_pause")toggle();
+   else if(e.payload==="next")next();
+  });
+ }
+ if(!('mediaSession' in navigator))return;
+ try{
+  navigator.mediaSession.setActionHandler('play',()=>{if(!S.playing)toggle()});
+  navigator.mediaSession.setActionHandler('pause',()=>{if(S.playing)toggle()});
+  navigator.mediaSession.setActionHandler('previoustrack',()=>prev());
+  navigator.mediaSession.setActionHandler('nexttrack',()=>next());
+  navigator.mediaSession.setActionHandler('seekto',details=>{if(details.seekTime!=null)seekSeconds(details.seekTime)});
+  navigator.mediaSession.setActionHandler('seekforward',details=>{seekSeconds(Math.min(S.dur||0,S.pos+(details.seekOffset||10)))});
+  navigator.mediaSession.setActionHandler('seekbackward',details=>{seekSeconds(Math.max(0,S.pos-(details.seekOffset||10)))});
+ }catch(e){console.warn("mediaSession handlers:",e)}
+}
+
+function updateMediaSession(tr){
+ if(!('mediaSession' in navigator))return;
+ if(!tr||tr.mode==="empty"){
+  try{navigator.mediaSession.playbackState="none"}catch(_){}
+  return;
+ }
+ try{
+  const u=tr.art?cssUrlRaw(tr.art):"";
+  const artUrl=u?(u.startsWith("http")?u:(location.origin+"/"+u)):(location.origin+"/icons/icon.png");
+  navigator.mediaSession.metadata=new MediaMetadata({
+   title:tr.t||"Meowave",
+   artist:tr.a||"—",
+   album:tr.al||"Meowave",
+   artwork:[
+    {src:artUrl,sizes:'96x96',type:'image/png'},
+    {src:artUrl,sizes:'128x128',type:'image/png'},
+    {src:artUrl,sizes:'256x256',type:'image/png'},
+    {src:artUrl,sizes:'512x512',type:'image/png'}
+   ]
+  });
+  navigator.mediaSession.playbackState=S.playing?"playing":"paused";
+  if(S.dur>0&&Number.isFinite(S.dur)&&navigator.mediaSession.setPositionState){
+   try{
+    navigator.mediaSession.setPositionState({
+     duration:S.dur,
+     playbackRate:Math.max(0.1,S.rate||1),
+     position:Math.min(S.dur,Math.max(0,S.pos||0))
+    });
+   }catch(_){}
+  }
+ }catch(e){console.warn("updateMediaSession:",e)}
+}
+
 function sync(){
   const name=S.playing?"pause":"play";
   setPlayIcon(document.getElementById("play"),name,18);
@@ -2451,7 +2730,12 @@ function sync(){
   F.mode=BOOT.done?(S.playing?"flow":"cloud"):"gather";
   const fpc=document.getElementById("fpc");
   if(fpc)fpc.dataset.playing=S.playing?"true":"false";
-  setPlayIcon(document.querySelector('#fpc [data-act="play"]'),name,20)}
+  setPlayIcon(document.querySelector('#fpc [data-act="play"]'),name,20);
+  updateMediaSession(S.current);
+  if(window.__TAURI__){
+   inv("taskbar_set_playing",{playing:!!S.playing}).catch(()=>{});
+  }
+}
 
 /* nav */
 function go(v){
@@ -2595,9 +2879,60 @@ document.body.addEventListener("click",e=>{
   saveToken(id,v).then(()=>{const s=svc(id);s.conn=true;s.on=true;tokOpen=null;renderAccounts();renderSrv();icons()})
    .catch(err=>console.error("token save failed",err));
   return}
+ const spCidToggle=e.target.closest("[data-sp-cid-toggle]");
+ if(spCidToggle){
+  tokOpen=tokOpen==="sp"?null:"sp";
+  renderAccounts();icons();return;
+ }
+ const spCidBtn=e.target.closest("#sp-cid-keychain-save");
+ if(spCidBtn){
+  const inp=document.getElementById("sp-cid-keychain");
+  const v=(inp?.value||"").trim();
+  inv("spotify_set_client_id",{clientId:v}).then(()=>{
+   SP_CLIENT_ID=v;
+   toast(LANG==="ru"?"Client ID сохранён":"Client ID saved");
+   tokOpen=null;
+   renderAccounts();renderSpotify();icons();
+  }).catch(err=>toast(String(err.message||err)));
+  return;
+ }
  const a=e.target.closest("[data-acc]");
  if(a){const s=svc(a.dataset.acc);
   if(s.free)return;
+  if(s.id==="sp"){
+   (async()=>{
+    if(s.conn){
+     await inv("spotify_logout").catch(()=>{});
+     SP={me:null,lists:null};
+     await initServices();
+     renderSpotify();
+    }else{
+     let cid=SP_CLIENT_ID||(await inv("spotify_get_client_id").catch(()=>""))||"";
+     if(!cid){
+      const entered=prompt(LANG==="ru"
+       ?"Введите Client ID Spotify (из developer.spotify.com/dashboard, Redirect URI: http://localhost:8080/callback):"
+       :"Enter Spotify Client ID (from developer.spotify.com/dashboard, Redirect URI: http://localhost:8080/callback):");
+      if(entered&&entered.trim()){
+       await inv("spotify_set_client_id",{clientId:entered.trim()}).catch(()=>{});
+       SP_CLIENT_ID=entered.trim();
+       cid=SP_CLIENT_ID;
+      }else{
+       tokOpen="sp";
+       renderAccounts();icons();
+       return;
+      }
+     }
+     toast(t("sp.browser"));
+     try{
+      SP.me=await inv("spotify_login");
+      await initServices();
+      renderSpotify();
+     }catch(err){toast(String(err.message||err),5200)}
+    }
+    renderAccounts();renderSrv();icons();
+   })();
+   return;
+  }
   if(s.conn){deleteToken(s.id).catch(()=>{});s.conn=false;s.on=false;tokOpen=null}
   else tokOpen=tokOpen===s.id?null:s.id;
   renderAccounts();renderSrv();icons();
@@ -2620,7 +2955,7 @@ document.body.addEventListener("click",e=>{
   const u=px.dataset.pxuse;
   const f=document.getElementById("px-url");if(f)f.value=u;
   pxSave({url:u,enabled:true});return}
- const sw=e.target.closest("[data-sw]");if(sw){setAccent(sw.dataset.sw);return}});
+ const sw=e.target.closest("[data-sw]");if(sw){if(e.target.closest("input"))return;setAccent(sw.dataset.sw);return}});
 /* The wave is seeded from favorite TRACKS (it used to key off artists).
    It needs at least WAVE_MIN of them, or there is nothing to build on. */
 const WAVE_MIN=5;
@@ -2915,6 +3250,11 @@ function applyFPSettings(){
  fpEl.dataset.wobble=String(S.fpWobble!==false);
  fpEl.style.setProperty("--fp-glow",((S.fpGlow??100)/100).toString());
  fpEl.style.setProperty("--fp-blur",`${S.fpBlur??75}px`);
+ const fpc=document.getElementById("fpc");
+ if(fpc){
+  fpc.dataset.zoom=S.fpZoom||"normal";
+  fpc.dataset.drift=String(S.fpDrift!==false);
+ }
  const fill=S.lyKaraoke||"karaoke";
  const fplyr=document.getElementById("fplyr");
  if(fplyr)fplyr.dataset.karaoke=fill;
@@ -2949,6 +3289,18 @@ function syncFPSettingsUI(){
  pop.querySelectorAll("#fp-fill-mode-group .seg-btn").forEach(btn=>{
   btn.classList.toggle("active",btn.dataset.fill===fillMode);
  });
+
+ const zoomMode=S.fpZoom||"normal";
+ pop.querySelectorAll("#fp-zoom-mode-group .seg-btn").forEach(btn=>{
+  btn.classList.toggle("active",btn.dataset.zoom===zoomMode);
+ });
+
+ const driftSw=document.getElementById("fp-drift-sw");
+ if(driftSw){
+  const on=S.fpDrift!==false;
+  driftSw.classList.toggle("on",on);
+  driftSw.setAttribute("aria-pressed",String(on));
+ }
 
  const wobbleSw=document.getElementById("fp-wobble-sw");
  if(wobbleSw){
@@ -3004,6 +3356,16 @@ function initFPSettings(){
   S.lyKaraoke=btn.dataset.fill;
   applyFPSettings();syncFPSettingsUI();save();
   lyLast=-1;syncLyrics(true);
+ });
+ document.getElementById("fp-zoom-mode-group")?.addEventListener("click",e=>{
+  const btn=e.target.closest(".seg-btn");
+  if(!btn)return;
+  S.fpZoom=btn.dataset.zoom;
+  applyFPSettings();syncFPSettingsUI();save();renderFP();
+ });
+ document.getElementById("fp-drift-sw")?.addEventListener("click",()=>{
+  S.fpDrift=!(S.fpDrift!==false);
+  applyFPSettings();syncFPSettingsUI();save();renderFP();
  });
  document.getElementById("fp-wobble-sw")?.addEventListener("click",()=>{
   S.fpWobble=!(S.fpWobble!==false);
@@ -3088,6 +3450,10 @@ function setAccent(id){
   spriteCache={};renderSwatches();save();pushPrefs();
   adaptAccent(S.current);
   return}
+ if(id==="custom"){
+  applyCustomAccent(S.customAccent||"#a78bfa");
+  renderSwatches();save();pushPrefs();
+  return}
  if(id==="none"||!a||!a[2]){
   ["--accent","--accent-soft","--accent-rgb","--pr","--pg","--pb"].forEach(p=>st.removeProperty(p))}
  else{const[r,g,b]=a[2].split(" ");
@@ -3127,7 +3493,7 @@ function save(){try{localStorage.setItem("meowave",JSON.stringify({
     keeps the "connected = on" default. */
  svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
   ?Object.fromEntries(SERVICES.filter(s=>!s.local).map(s=>[s.id,s.on])):null,
- discord:{on:S.discord.on,tmpl:S.discord.tmpl},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,profileTrack:S.profileTrack||null,
+ discord:{on:S.discord.on,tmpl:S.discord.tmpl},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,profileTrack:S.profileTrack||null,
  lite:S.lite,litePrev,quality:S.quality,vol:S.vol,eq:S.eq,preset:S.preset,custom:S.custom,
   sp:{on:S.sp.on,speed:S.sp.speed,rad:S.sp.rad,elev:S.sp.elev},ob:obDone,listen:Math.round(S.listen),
  /* Store whole tracks: an id alone is useless because TRACKS starts empty on
@@ -3216,6 +3582,8 @@ function restore(){try{
  if(d.fpBlur!=null)S.fpBlur=d.fpBlur;
  if(d.lyKaraoke)S.lyKaraoke=d.lyKaraoke;
  if(d.fpWobble!==undefined)S.fpWobble=!!d.fpWobble;
+ if(d.fpZoom)S.fpZoom=d.fpZoom;
+ if(d.fpDrift!==undefined)S.fpDrift=!!d.fpDrift;
  if(d.profileTrack&&typeof d.profileTrack==="object")S.profileTrack=d.profileTrack;
  obDone=!!d.ob;
 }catch(e){}}
@@ -3225,13 +3593,22 @@ document.getElementById("sp-rad").oninput=e=>{S.sp.rad=e.target.value/100;docume
 document.getElementById("sp-elev").oninput=e=>{S.sp.elev=e.target.value/100;document.getElementById("sp-elev-v").textContent=e.target.value;save()};
 
 addEventListener("keydown",e=>{
-  if(e.target.matches("input"))return;
+  if(e.target.matches("input, textarea"))return;
   /* An open dialog owns Escape: the modal's own handler closes it, and the
      fullscreen player behind it must not close in the same keystroke. */
   if(document.getElementById("modal")?.dataset.open==="true")return;
   if(document.getElementById("cropper")?.dataset.open==="true")return;
+  if(document.getElementById("lyric-edit-modal")?.dataset.open==="true"){
+   if(e.key==="Escape"){e.preventDefault();closeLyricEditor()}
+   return;
+  }
   if(e.code==="Space"){e.preventDefault();toggle()}
-  if(e.key==="Escape")closeFP();
+  if(e.key==="Escape"){
+   if(document.documentElement.dataset.fullscreen==="true"){
+    toggleAppFullscreen();
+   }
+   closeFP();
+  }
   if(e.key.toLowerCase()==="l"&&fp.dataset.open==="true"){S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()}
   if(e.key.toLowerCase()==="e")eqbtn.click();
   if(e.shiftKey&&e.key==="ArrowRight")next();
@@ -3297,6 +3674,28 @@ TAURI_EVENT?.listen?.("meowave://focus",e=>setFocused(!!e.payload))
 
 /* Titlebar buttons (min/max/close). The strip itself is a drag region via
    data-tauri-drag-region, so only the buttons need explicit handlers. */
+async function toggleAppFullscreen(){
+ if(TAURI){
+  try{
+   const W=window.__TAURI__?.window||{};
+   const win=(W.getCurrentWindow?.()||W.getCurrent?.()||null);
+   if(win?.isFullscreen&&win?.setFullscreen){
+    const isFs=await win.isFullscreen();
+    await win.setFullscreen(!isFs);
+    document.documentElement.dataset.fullscreen=(!isFs).toString();
+    return;
+   }
+  }catch(e){console.warn("fullscreen:",e)}
+ }
+ if(!document.fullscreenElement){
+  document.documentElement.requestFullscreen?.().catch(()=>{});
+  document.documentElement.dataset.fullscreen="true";
+ }else{
+  document.exitFullscreen?.().catch(()=>{});
+  document.documentElement.dataset.fullscreen="false";
+ }
+}
+
 if(TAURI){
   /* Tauri v2 renamed the getter: the global bundle ships getCurrentWindow(),
      and the v1-era getCurrent() is gone from some builds — dereferencing it
@@ -3306,6 +3705,7 @@ if(TAURI){
   const W=window.__TAURI__.window||{};
   const win=(W.getCurrentWindow?.()||W.getCurrent?.()||null);
   document.getElementById("tb-min")?.addEventListener("click",()=>win?.minimize?.());
+  document.getElementById("tb-fs")?.addEventListener("click",toggleAppFullscreen);
   document.getElementById("tb-max")?.addEventListener("click",()=>win?.toggleMaximize?.());
   document.getElementById("tb-close")?.addEventListener("click",async()=>{
    /* Wait for the pending listening/favorites flush (bounded) before closing,
@@ -3320,6 +3720,12 @@ if(TAURI){
   syncMax();
   win?.onMaximizedChange?.(e=>{document.documentElement.dataset.max=e.payload?"true":"false"});
 }
+window.addEventListener("keydown",e=>{
+ if(e.key==="F11"){
+  e.preventDefault();
+  toggleAppFullscreen();
+ }
+});
 
 /* Persistent storage lives in %LOCALAPPDATA%\Meowave (see paths.rs). In a plain
    browser there's no Rust side, so fall back to localStorage. */
@@ -3499,8 +3905,14 @@ async function saveToken(id,tok){if(TAURI)return inv("set_service_token",{servic
 async function deleteToken(id){if(TAURI)return inv("delete_service_token",{service:id});localStorage.removeItem("mw.tok."+id)}
 async function initServices(){
  try{
-  const ids=TAURI?await inv("list_connected_services")
+  let ids=TAURI?await inv("list_connected_services")
    :SERVICES.map(s=>s.id).filter(id=>localStorage.getItem("mw.tok."+id));
+  if(TAURI){
+   try{
+    const spMe=await inv("spotify_me").catch(()=>null);
+    if(spMe&&!ids.includes("sp"))ids.push("sp");
+   }catch(_){}
+  }
   /* "local" is not a keychain service and Rust never reports it, so the blanket
      assignment below switched it off on every start — local files then vanished
      from search, from the queue and from next(). A local provider is connected
@@ -5002,73 +5414,69 @@ function renderProfile(savedVals={}){
    });
    return}
 
-  box.innerHTML=`<div class="panel pane quasar-auth-card">
-   <!-- Auth Method Toggle: Standard vs Quasar ID -->
-   <div class="auth-method-switcher" style="display:flex;padding:3px;background:oklch(100% 0 0 / .06);border:1px solid oklch(100% 0 0 / .08);border-radius:12px;margin-bottom:18px">
-    <button class="auth-method-btn ${authMethod==='standard'?'active':''}" id="m-btn-std" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='standard'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='standard'?'#fff':'var(--mute)'}">
-     🐾 ${LANG==="ru"?"Обычный вход (Meowave)":"Standard (Meowave)"}
-    </button>
-    <button class="auth-method-btn ${authMethod==='quasar'?'active':''}" id="m-btn-qsr" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='quasar'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='quasar'?'#fff':'var(--mute)'}">
-     ✨ Quasar ID
-    </button>
+  box.innerHTML=`<div class="panel pane quasar-auth-card" style="position:relative;overflow:hidden">
+   <div class="auth-orb-1"></div>
+   <div class="auth-orb-2"></div>
+
+   <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
+    <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
+     <div style="position:absolute;inset:-3px;background:linear-gradient(135deg,#a855f7,#6366f1);border-radius:16px;filter:blur(8px);opacity:0.6"></div>
+     <img src="./icons/icon.png" style="position:relative;width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
+    </div>
+    <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
+    <p class="ph" style="margin:0;font-size:0.82rem">${LANG==="ru"?"Синхронизируйте любимые треки, историю прослушивания и достижения":"Sync your favorite tracks, listening history and badges"}</p>
    </div>
 
-   ${authMethod==="standard"?`
-   <div class="auth-header" style="text-align:center;margin-bottom:16px">
-    <img src="./icons/icon.png" class="auth-app-icon" style="width:48px;height:48px;border-radius:12px;margin:0 auto 10px;display:block" alt="Meowave">
-    <h3 style="margin:0 0 4px">${authTab==="in"?(LANG==="ru"?"Вход в аккаунт Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
-    <p class="ph" style="margin:0;font-size:0.84rem">${LANG==="ru"?"Синхронизация медиатеки, плейлистов, часов и бейджей":"Sync library, playlists, listening hours and badges"}</p>
+   <div class="auth-tabs" style="position:relative;z-index:2;margin-bottom:16px">
+    <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="au-tab-in">${LANG==="ru"?"Вход":"Sign In"}</button>
+    <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="au-tab-up">${LANG==="ru"?"Регистрация":"Register"}</button>
    </div>
-   `:`
-   <div class="quasar-brand">
-    <div class="quasar-logo-wrap">
-     <i data-lucide="sparkles" width="24" height="24" style="color:var(--accent,#a78bfa)"></i>
-    </div>
-    <div class="quasar-title-block">
-     <span class="quasar-badge">Quasar ID Network</span>
-     <h3>${authTab==="in"?(LANG==="ru"?"Вход через Quasar ID":"Sign in via Quasar ID"):(LANG==="ru"?"Создать аккаунт Quasar ID":"Register Quasar ID")}</h3>
-    </div>
-   </div>
-   <p class="ph" style="margin:0 0 16px;font-size:0.86rem">${t("soc.auth")}</p>
-   <div class="quasar-perks" style="margin-bottom:18px">
-    <div class="quasar-perk">
-     <i data-lucide="message-square" width="16" height="16"></i>
-     <div><b>${LANG==="ru"?"Интеграция с Messenger":"Messenger Integration"}</b><span>${LANG==="ru"?"Вся история чатов и переписок сохраняется в Quasar Messenger":"Saved conversation and message history in Quasar Messenger"}</span></div>
-    </div>
-    <div class="quasar-perk">
-     <i data-lucide="music" width="16" height="16"></i>
-     <div><b>${LANG==="ru"?"Музыка в профиле":"Profile Music"}</b><span>${LANG==="ru"?"Трансляция трека в статус и закрепление любимой музыки":"Broadcast playing track to status and pin favorite music"}</span></div>
-    </div>
-    <div class="quasar-perk">
-     <i data-lucide="zap" width="16" height="16"></i>
-     <div><b>${LANG==="ru"?"Единый Quasar ID":"Single Quasar ID"}</b><span>${LANG==="ru"?"Один аккаунт для комнат, личных чатов, друзей и облака":"Single identity for rooms, private chats, friends and cloud"}</span></div>
-    </div>
-   </div>
-   `}
 
-   <div class="auth-tabs" style="margin-bottom:16px">
-    <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="au-tab-in">${authMethod==='standard'?(LANG==="ru"?"Войти":"Sign In"):(LANG==="ru"?"Вход Quasar ID":"Quasar Sign In")}</button>
-    <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="au-tab-up">${authMethod==='standard'?(LANG==="ru"?"Создать аккаунт":"Create Account"):(LANG==="ru"?"Регистрация Quasar ID":"Quasar Register")}</button>
-   </div>
-   <div class="authform">
-    <div class="auth-field">
-     <input id="au-email" type="email" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Email или ID":"Quasar Email or ID"):t("pr.email")}" autocomplete="email" value="${esc(savedVals?.email||"")}">
-    </div>
+   <div class="authform" style="position:relative;z-index:2">
     ${authTab==="up"?`
     <div class="auth-field">
-     <input id="au-user" type="text" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Никнейм":"Quasar Username"):t("pr.name.ph")}" autocomplete="username" value="${esc(savedVals?.user||"")}">
+     <input id="au-user" type="text" placeholder="${t("pr.name.ph")||(LANG==="ru"?"Имя пользователя":"Username")}" autocomplete="username" value="${esc(savedVals?.user||"")}">
     </div>`:""}
     <div class="auth-field">
-     <input id="au-pass" type="password" placeholder="${t("pr.pass")}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(savedVals?.pass||"")}">
+     <input id="au-email" type="email" placeholder="${t("pr.email")||"Email"}" autocomplete="email" value="${esc(savedVals?.email||"")}">
+    </div>
+    <div class="auth-field">
+     <input id="au-pass" type="password" placeholder="${t("pr.pass")||"Пароль"}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(savedVals?.pass||"")}">
     </div>
     <div class="auth-actions" style="margin-top:14px">
-     <button class="primary auth-submit-btn" id="au-submit">${authTab==="in"?(authMethod==='quasar'?(LANG==="ru"?"Войти по Quasar ID":"Sign in with Quasar ID"):t("pr.signin")):(authMethod==='quasar'?(LANG==="ru"?"Зарегистрироваться в Quasar ID":"Register with Quasar ID"):t("pr.signup"))}</button>
-     <button class="btn ghost sm" id="au-magic">${t("pr.magic")}</button>
+     <button class="primary auth-submit-btn" id="au-submit">${authTab==="in"?(t("pr.signin")||"Войти"):(t("pr.signup")||"Зарегистрироваться")}</button>
+     <button class="btn ghost sm" id="au-magic">${t("pr.magic")||"Magic link"}</button>
     </div>
-    <div style="margin-top:14px;text-align:center">
-     <button class="btn text sm" id="au-guest" style="color:var(--mute);text-decoration:underline">${t("pr.auth.guest")}</button>
+    <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between">
+     <button class="btn text sm" id="au-guest" style="color:var(--mute);text-decoration:underline;font-size:0.78rem">${t("pr.auth.guest")||"Продолжить без аккаунта (Гость)"}</button>
+     <span style="font-size:0.72rem;color:#34d399;display:flex;align-items:center;gap:4px;font-family:monospace">
+      <span style="width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399"></span>
+      Supabase RLS
+     </span>
     </div>
     <p class="authmsg" id="authmsg" style="margin-top:8px"></p>
+
+    <!-- Quasar ID SSO Button at the Bottom with Perks -->
+    <div class="quasar-sso-container">
+     <button class="quasar-sso-btn" id="au-quasar-btn" type="button">
+      <i data-lucide="sparkles" width="18" height="18" style="color:#7c3aed"></i>
+      <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
+     </button>
+     <div class="quasar-sso-perks">
+      <div class="quasar-sso-perk">
+       <i data-lucide="message-square" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+       <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
+      </div>
+      <div class="quasar-sso-perk">
+       <i data-lucide="music" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+       <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
+      </div>
+      <div class="quasar-sso-perk">
+       <i data-lucide="zap" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+       <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
+      </div>
+     </div>
+    </div>
    </div>
   </div>`;
   icons();
@@ -5078,8 +5486,6 @@ function renderProfile(savedVals={}){
    const pass=document.getElementById("au-pass")?.value||"";
    renderProfile({email,user,pass});
   };
-  document.getElementById("m-btn-std")?.addEventListener("click",()=>{authMethod="standard";rePaintProf()});
-  document.getElementById("m-btn-qsr")?.addEventListener("click",()=>{authMethod="quasar";rePaintProf()});
   document.getElementById("au-tab-in")?.addEventListener("click",()=>{authTab="in";rePaintProf()});
   document.getElementById("au-tab-up")?.addEventListener("click",()=>{authTab="up";rePaintProf()});
   document.getElementById("au-submit")?.addEventListener("click",()=>doAuth(authTab));
@@ -5090,6 +5496,19 @@ function renderProfile(savedVals={}){
   document.getElementById("au-user")?.addEventListener("keydown",onEnter);
   document.getElementById("au-guest")?.addEventListener("click",()=>{
    S.guest=true;save();toast(t("pr.auth.guest.ok")||"Гостевой профиль активен");renderProfile();
+  });
+  document.getElementById("au-quasar-btn")?.addEventListener("click",async()=>{
+   const qId=await askText(LANG==="ru"?"Введите ваш Quasar ID или почту:":"Enter your Quasar ID or email:","");
+   if(!qId||!qId.trim())return;
+   const em=document.getElementById("au-email");
+   if(em){
+    em.value=qId.trim().includes("@")?qId.trim():`${qId.trim().toLowerCase()}@quasar.id`;
+   }
+   const pass=document.getElementById("au-pass");
+   if(pass){
+    pass.focus();
+    authMsg(LANG==="ru"?"Quasar ID указан. Введите пароль для входа.":"Quasar ID specified. Enter password.", "ok");
+   }
   });
   return}
  const p=sbProfile||{},favs=TRACKS.filter(x=>x.fav).length;
@@ -5211,70 +5630,62 @@ const socClearAll=()=>{Object.keys(SOC.timers).forEach(socClear)};
 const needAuth=(box,saved={})=>{
  if(!box)return;
  box.innerHTML=`
- <div class="panel pane quasar-auth-card">
-  <!-- Auth Method Toggle: Standard vs Quasar ID -->
-  <div class="auth-method-switcher" style="display:flex;padding:3px;background:oklch(100% 0 0 / .06);border:1px solid oklch(100% 0 0 / .08);border-radius:12px;margin-bottom:18px">
-   <button class="auth-method-btn ${authMethod==='standard'?'active':''}" id="qm-btn-std" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='standard'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='standard'?'#fff':'var(--mute)'}">
-    🐾 ${LANG==="ru"?"Обычный вход (Meowave)":"Standard (Meowave)"}
-   </button>
-   <button class="auth-method-btn ${authMethod==='quasar'?'active':''}" id="qm-btn-qsr" style="flex:1;padding:8px 12px;font-size:0.82rem;font-weight:600;border-radius:9px;border:none;cursor:pointer;transition:all .2s var(--e);background:${authMethod==='quasar'?'var(--primary,#a78bfa)':'transparent'};color:${authMethod==='quasar'?'#fff':'var(--mute)'}">
-    ✨ Quasar ID
-   </button>
+ <div class="panel pane quasar-auth-card" style="position:relative;overflow:hidden">
+  <div class="auth-orb-1"></div>
+  <div class="auth-orb-2"></div>
+
+  <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
+   <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
+    <div style="position:absolute;inset:-3px;background:linear-gradient(135deg,#a855f7,#6366f1);border-radius:16px;filter:blur(8px);opacity:0.6"></div>
+    <img src="./icons/icon.png" style="position:relative;width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
+   </div>
+   <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
+   <p class="ph" style="margin:0;font-size:0.82rem">${LANG==="ru"?"Синхронизация медиатеки, комнат, чатов и профиля":"Sync library, rooms, chats and profile"}</p>
   </div>
 
-  ${authMethod==="standard"?`
-  <div class="auth-header" style="text-align:center;margin-bottom:16px">
-   <img src="./icons/icon.png" class="auth-app-icon" style="width:48px;height:48px;border-radius:12px;margin:0 auto 10px;display:block" alt="Meowave">
-   <h3 style="margin:0 0 4px">${authTab==="in"?(LANG==="ru"?"Вход в аккаунт Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
-   <p class="ph" style="margin:0;font-size:0.84rem">${LANG==="ru"?"Синхронизация медиатеки, комнат, чатов и профиля":"Sync library, rooms, chats and profile"}</p>
+  <div class="auth-tabs" style="position:relative;z-index:2;margin-bottom:16px">
+   <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="qau-tab-in">${LANG==="ru"?"Вход":"Sign In"}</button>
+   <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="qau-tab-up">${LANG==="ru"?"Регистрация":"Register"}</button>
   </div>
-  `:`
-  <div class="quasar-brand">
-   <div class="quasar-logo-wrap">
-    <i data-lucide="sparkles" width="24" height="24" style="color:var(--accent,#a78bfa)"></i>
-   </div>
-   <div class="quasar-title-block">
-    <span class="quasar-badge">Quasar ID Network</span>
-    <h3>${authTab==="in"?(LANG==="ru"?"Вход через Quasar ID":"Sign in via Quasar ID"):(LANG==="ru"?"Создать аккаунт Quasar ID":"Register Quasar ID")}</h3>
-   </div>
-  </div>
-  <p class="ph" style="margin:0 0 16px;font-size:0.86rem">${t("soc.auth")}</p>
-  <div class="quasar-perks" style="margin-bottom:18px">
-   <div class="quasar-perk">
-    <i data-lucide="message-square" width="16" height="16"></i>
-    <div><b>${LANG==="ru"?"Интеграция с Messenger":"Messenger Integration"}</b><span>${LANG==="ru"?"Вся история чатов и переписок сохраняется в Quasar Messenger":"Saved conversation and message history in Quasar Messenger"}</span></div>
-   </div>
-   <div class="quasar-perk">
-    <i data-lucide="music" width="16" height="16"></i>
-    <div><b>${LANG==="ru"?"Музыка в профиле":"Profile Music"}</b><span>${LANG==="ru"?"Трансляция трека в статус и закрепление любимой музыки":"Broadcast playing track to status and pin favorite music"}</span></div>
-   </div>
-   <div class="quasar-perk">
-    <i data-lucide="zap" width="16" height="16"></i>
-    <div><b>${LANG==="ru"?"Единый Quasar ID":"Single Quasar ID"}</b><span>${LANG==="ru"?"Один аккаунт для комнат, личных чатов, друзей и облака":"Single identity for rooms, private chats, friends and cloud"}</span></div>
-   </div>
-  </div>
-  `}
 
-  <div class="auth-tabs" style="margin-bottom:16px">
-   <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="qau-tab-in">${authMethod==='standard'?(LANG==="ru"?"Войти":"Sign In"):(LANG==="ru"?"Вход Quasar ID":"Quasar Sign In")}</button>
-   <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="qau-tab-up">${authMethod==='standard'?(LANG==="ru"?"Создать аккаунт":"Create Account"):(LANG==="ru"?"Регистрация Quasar ID":"Quasar Register")}</button>
-  </div>
-  <div class="authform">
-   <div class="auth-field">
-    <input id="qau-email" type="email" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Email или ID":"Quasar Email or ID"):t("pr.email")}" autocomplete="email" value="${esc(saved.email||"")}">
-   </div>
+  <div class="authform" style="position:relative;z-index:2">
    ${authTab==="up"?`
    <div class="auth-field">
-    <input id="qau-user" type="text" placeholder="${authMethod==='quasar'?(LANG==="ru"?"Quasar Никнейм":"Quasar Username"):t("pr.name.ph")}" autocomplete="username" value="${esc(saved.user||"")}">
+    <input id="qau-user" type="text" placeholder="${t("pr.name.ph")||(LANG==="ru"?"Имя пользователя":"Username")}" autocomplete="username" value="${esc(saved?.user||"")}">
    </div>`:""}
    <div class="auth-field">
-    <input id="qau-pass" type="password" placeholder="${t("pr.pass")}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(saved.pass||"")}">
+    <input id="qau-email" type="email" placeholder="${t("pr.email")||"Email"}" autocomplete="email" value="${esc(saved?.email||"")}">
+   </div>
+   <div class="auth-field">
+    <input id="qau-pass" type="password" placeholder="${t("pr.pass")||"Пароль"}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(saved?.pass||"")}">
    </div>
    <div class="auth-actions" style="margin-top:14px">
-    <button class="primary auth-submit-btn" id="qau-submit">${authTab==="in"?(authMethod==='quasar'?(LANG==="ru"?"Войти по Quasar ID":"Sign in with Quasar ID"):t("pr.signin")):(authMethod==='quasar'?(LANG==="ru"?"Зарегистрироваться в Quasar ID":"Register with Quasar ID"):t("pr.signup"))}</button>
-    <button class="btn ghost sm" id="qau-magic">${t("pr.magic")}</button>
+    <button class="primary auth-submit-btn" id="qau-submit">${authTab==="in"?(t("pr.signin")||"Войти"):(t("pr.signup")||"Зарегистрироваться")}</button>
+    <button class="btn ghost sm" id="qau-magic">${t("pr.magic")||"Magic link"}</button>
    </div>
    <p class="authmsg" id="qauthmsg" style="margin-top:8px"></p>
+
+   <!-- Quasar ID SSO Button at the Bottom with Perks -->
+   <div class="quasar-sso-container">
+    <button class="quasar-sso-btn" id="qau-quasar-btn" type="button">
+     <i data-lucide="sparkles" width="18" height="18" style="color:#7c3aed"></i>
+     <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
+    </button>
+    <div class="quasar-sso-perks">
+     <div class="quasar-sso-perk">
+      <i data-lucide="message-square" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+      <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
+     </div>
+     <div class="quasar-sso-perk">
+      <i data-lucide="music" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+      <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
+     </div>
+     <div class="quasar-sso-perk">
+      <i data-lucide="zap" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+      <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
+     </div>
+    </div>
+   </div>
   </div>
  </div>`;
  icons();
@@ -5284,8 +5695,6 @@ const needAuth=(box,saved={})=>{
   const pass=box.querySelector("#qau-pass")?.value||"";
   needAuth(box,{email,user,pass});
  };
- box.querySelector("#qm-btn-std")?.addEventListener("click",()=>{authMethod="standard";rePaint()});
- box.querySelector("#qm-btn-qsr")?.addEventListener("click",()=>{authMethod="quasar";rePaint()});
  box.querySelector("#qau-tab-in")?.addEventListener("click",()=>{authTab="in";rePaint()});
  box.querySelector("#qau-tab-up")?.addEventListener("click",()=>{authTab="up";rePaint()});
  const submitAuth=async(kind)=>{
@@ -5327,6 +5736,20 @@ const needAuth=(box,saved={})=>{
  };
  box.querySelector("#qau-submit")?.addEventListener("click",()=>submitAuth(authTab));
  box.querySelector("#qau-magic")?.addEventListener("click",()=>submitAuth("magic"));
+ box.querySelector("#qau-quasar-btn")?.addEventListener("click",async()=>{
+  const qId=await askText(LANG==="ru"?"Введите ваш Quasar ID или почту:":"Enter your Quasar ID or email:","");
+  if(!qId||!qId.trim())return;
+  const em=box.querySelector("#qau-email");
+  if(em){
+   em.value=qId.trim().includes("@")?qId.trim():`${qId.trim().toLowerCase()}@quasar.id`;
+  }
+  const pass=box.querySelector("#qau-pass");
+  if(pass){
+   pass.focus();
+   const msg=box.querySelector("#qauthmsg");
+   if(msg)msg.textContent=LANG==="ru"?"Quasar ID указан. Введите пароль для входа.":"Quasar ID specified. Enter password.";
+  }
+ });
  const onEnter=(e)=>{if(e.key==="Enter"){e.preventDefault();submitAuth(authTab)}};
  box.querySelector("#qau-email")?.addEventListener("keydown",onEnter);
  box.querySelector("#qau-pass")?.addEventListener("keydown",onEnter);
@@ -5356,10 +5779,18 @@ const avat=(p,size=34)=>{
 const JOIN_RE=/MEOW-[2-9A-HJ-NP-Z]{4}/;
 function chatBodyHtml(m){
  const img=m.image?`<img class="chatimg" src="${esc(m.image)}" alt="" loading="lazy">`:"";
- const join=m.body&&JOIN_RE.test(m.body)
-  ?`<button class="btn sm joinchip" data-join="${esc(m.body.match(JOIN_RE)[0])}"><i data-lucide="radio-tower" width="13" height="13"></i>${esc(m.body)}</button>`
-  :esc(m.body||"");
- return img+join}
+ let body=esc(m.body||"");
+ if(m.body){
+  body=body.replace(/MEOW-[2-9A-HJ-NP-Z]{4}/gi,code=>`<button class="btn sm joinchip" data-join="${code}"><i data-lucide="radio-tower" width="13" height="13"></i>${code}</button>`);
+  body=body.replace(/(https?:\/\/[^\s<]+)/g,url=>`<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;word-break:break-all">${url}</a>`);
+ }
+ const trMatch=m.body&&m.body.match(/🎵\s*([^\n—–-]+)\s*[—–-]\s*([^\n]+)/);
+ if(trMatch){
+  const art=trMatch[1].trim(), tit=trMatch[2].trim();
+  const fullQ=`${art} ${tit}`;
+  body+=`<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><i data-lucide="play" width="11" height="11"></i></button><span>${esc(art)} — <b>${esc(tit)}</b></span></div>`;
+ }
+ return img+body}
 
 let PEOPLE_QUERY="";
 let PEOPLE_RESULTS=[];
@@ -5648,6 +6079,7 @@ function hideChatPane(){
   if(c){c.innerHTML=""; c.classList.remove("chat-open");}
 }
 async function renderChats(){
+  SOC.chat=null;socClear("chat");
   const box=document.getElementById("chatbody");if(!box)return;
   const list=document.getElementById("peoplebody");if(list)list.innerHTML="";
   /* The pane is display:none until this class lands, so it goes on before
@@ -5720,6 +6152,10 @@ async function renderChats(){
 /* ── one chat ───────────────────────────────────────────── */
 function chatKeyParts(key){return key.startsWith("d:")?{dm:key.slice(2)}:{chat:key.slice(2)}}
 async function openChat(key){
+  if(!sbUser){
+    toast(LANG==="ru"?"Сначала войдите в аккаунт":"Sign in first to access chat");
+    return;
+  }
   const me=sbUser.id;const{dm,chat}=chatKeyParts(key);
   let name=t("chat.anon");
   if(dm){
@@ -5752,22 +6188,23 @@ function msgClock(ts){
  return d.toLocaleTimeString(LANG==="ru"?"ru-RU":"en-GB",{hour:"2-digit",minute:"2-digit"});
 }
 async function paintChat(){
-  const box=document.getElementById("chatbody");if(!box||!SOC.chat)return;
+  const box=document.getElementById("chatbody");if(!box||!SOC.chat||!sbUser)return;
   /* The poll runs every five seconds for as long as the conversation is open;
      one dropped request must not blank it or spam unhandled rejections. */
   try{await paintChatInner(box)}
   catch(e){console.warn("paintChat:",e?.message||e)}
 }
 async function paintChatInner(box){
+  if(!sbUser||!SOC.chat)return;
   const list0=document.getElementById("peoplebody");if(list0)list0.innerHTML="";
   const{dm,chat}=SOC.chat;
- const {data}=dm
-  ?await sb.from("messages").select("*")
-      .or(`and(recipient.eq.${dm},sender.eq.${sbUser.id}),and(recipient.eq.${sbUser.id},sender.eq.${dm})`)
-      .order("id",{ascending:true}).limit(80)
-  :await sb.from("messages").select("*").eq("chat_id",chat).order("id",{ascending:true}).limit(80);
- const msgs=data||[];
- const me=sbUser.id;
+  const me=sbUser.id;
+  const {data}=dm
+   ?await sb.from("messages").select("*")
+       .or(`and(recipient.eq.${dm},sender.eq.${me}),and(recipient.eq.${me},sender.eq.${dm})`)
+       .order("id",{ascending:false}).limit(100)
+   :await sb.from("messages").select("*").eq("chat_id",chat).order("id",{ascending:false}).limit(100);
+  const msgs=(data||[]).reverse();
  /* Read state for a DM: the other side has seen everything up to the newest
     message they themselves sent after ours. Approximate but honest, and it
     needs no extra table. */
@@ -5790,85 +6227,139 @@ async function paintChatInner(box){
   ?`<div class="memstrip">${(SOC.chat.membersCache||[]).map(m=>
      `${avat(m.profile,24)}<span>${esc(m.profile?.username||"")}</span>${m.role==="owner"?"👑":""}`).join("")}
      <button class="btn sm" id="addmem"><i data-lucide="user-plus" width="13" height="13"></i></button></div>`:"";
-  const old=box.querySelector(".chatlog");
-  const stick=!old||old.scrollHeight-old.scrollTop-old.clientHeight<80;
-  /* A repaint every few seconds must not eat what is being typed. */
-  const draft=document.getElementById("chat-inp")?.value||"";
-  /* Focus and caret have to survive the rebuild too: the poll used to rip the
-     input out from under a mid-sentence typist every five seconds, which read
-     as "the chat input keeps jumping". */
-  const inpOld=document.getElementById("chat-inp");
-  const typing=!!inpOld&&document.activeElement===inpOld;
-  const caret=typing?inpOld.selectionStart:null;
-  /* Message entrance animation belongs to the first render of a conversation
-     only; every poll repaint recreates identical nodes and must stay still. */
-  const firstPaint=!SOC.chat._painted;SOC.chat._painted=true;
- box.innerHTML=`<div class="panel pane chatpane">
-  <div class="chathdr"><button class="ic" data-back>${'<i data-lucide="arrow-left" width="16" height="16"></i>'}</button>
-   ${hdr}
-   <span class="grow"></span>
-   <button class="ic" id="chat-invite" title="${t("chat.invite")}"><i data-lucide="radio-tower" width="15" height="15"></i></button>
-   ${SOC.chat.chat&&SOC.chat.isOwner?`<button class="ic" id="chat-cfg" title="${t("chat.custom")}"><i data-lucide="pencil" width="15" height="15"></i></button>`:""}
-  </div>
-  ${memberList}
-  <div class="chatlog${firstPaint?" first":""}">${list||`<p class="ph">${t("chat.nomsgs")}</p>`}</div>
-  <div class="chatrow-input">
-   <button class="ic" id="chat-img" title="${t("chat.photo")}"><i data-lucide="image" width="16" height="16"></i></button>
-   <button class="ic" id="chat-share-np" title="${t("chat.share_np")||"Поделиться текущим треком"}"><i data-lucide="music" width="16" height="16"></i></button>
-   <input id="chat-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
-   <button class="primary sm" id="chat-send"><i data-lucide="send" width="15" height="15"></i></button>
-   <input type="file" id="chat-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
-  </div></div>`;
- const log=box.querySelector(".chatlog");
- if(stick)log.scrollTop=log.scrollHeight;
-  const inp0=document.getElementById("chat-inp");
-  if(inp0&&draft){inp0.value=draft}
-  if(typing&&inp0){inp0.focus();try{inp0.setSelectionRange(caret,caret)}catch(e){}}
- box.querySelector("[data-back]").onclick=()=>{SOC.chat=null;socClear("chat");renderChats()};
- box.querySelector("[data-togglemembers]")?.addEventListener("click",()=>{
-  SOC.chat.showMembers=!SOC.chat.showMembers;loadChatMembers().then(()=>paintChat())});
- const send=async(image=null)=>{
-  const inp=document.getElementById("chat-inp");
-  const body=inp?.value.trim()||"";
-  if(!body&&!image)return;
-  const row=dm?{recipient:dm,sender:me,body,image}:{chat_id:chat,sender:me,body,image};
-  const {error}=await sb.from("messages").insert(row);
-  if(error)return toast(error.message);
-  if(inp)inp.value="";
-  paintChat()};
- document.getElementById("chat-send").onclick=()=>send();
- document.getElementById("chat-share-np")?.addEventListener("click",()=>{
-  if(!S.current||S.current.mode==="empty")return toast(t("q.none")||"Сейчас ничего не играет");
-  const inp=document.getElementById("chat-inp");
-  if(inp){
-   const text=`🎵 ${S.current.a} — ${S.current.t}`;
-   inp.value=inp.value?`${inp.value} ${text}`:text;
-   inp.focus();
+  const existingPane=box.querySelector(".chatpane");
+  if(existingPane&&SOC.chat._painted){
+   const log=existingPane.querySelector(".chatlog");
+   if(log){
+    const stick=log.scrollHeight-log.scrollTop-log.clientHeight<80;
+    const newHtml=list||`<p class="ph">${t("chat.nomsgs")}</p>`;
+    if(log.innerHTML!==newHtml){
+     log.innerHTML=newHtml;
+     if(stick)log.scrollTop=log.scrollHeight;
+     wireChatTracks(existingPane);
+     existingPane.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
+     icons();
+    }
+   }
+   let memStripEl=existingPane.querySelector(".memstrip");
+   if(memberList){
+    if(!memStripEl){
+     const hdrEl=existingPane.querySelector(".chathdr");
+     if(hdrEl)hdrEl.insertAdjacentHTML("afterend",memberList);
+     existingPane.querySelector("#addmem")?.addEventListener("click",async()=>{
+      const n=await askText(t("chat.addwho"));
+      if(!n)return;
+      const p=(await sb.from("profiles").select("id").eq("username",n).maybeSingle()).data;
+      if(!p)return toast(t("soc.nouser"));
+      const {error}=await sb.from("chat_members").insert({chat_id:chat,user_id:p.id});
+      toast(error?error.message:t("chat.added"));if(!error)loadChatMembers().then(paintChat)});
+    }
+   }else if(memStripEl){
+    memStripEl.remove();
+   }
+   wireChatTracks(existingPane);
+   return;
   }
+
+  const firstPaint=!SOC.chat._painted;SOC.chat._painted=true;
+  box.innerHTML=`<div class="panel pane chatpane">
+   <div class="chathdr"><button class="ic" data-back>${'<i data-lucide="arrow-left" width="16" height="16"></i>'}</button>
+    ${hdr}
+    <span class="grow"></span>
+    <button class="ic" id="chat-invite" title="${t("chat.invite")}"><i data-lucide="radio-tower" width="15" height="15"></i></button>
+    ${SOC.chat.chat&&SOC.chat.isOwner?`<button class="ic" id="chat-cfg" title="${t("chat.custom")}"><i data-lucide="pencil" width="15" height="15"></i></button>`:""}
+   </div>
+   ${memberList}
+   <div class="chatlog${firstPaint?" first":""}">${list||`<p class="ph">${t("chat.nomsgs")}</p>`}</div>
+   <div class="chatrow-input">
+    <button class="ic" id="chat-img" title="${t("chat.photo")}"><i data-lucide="image" width="16" height="16"></i></button>
+    <button class="ic" id="chat-share-np" title="${t("chat.share_np")||"Поделиться текущим треком"}"><i data-lucide="music" width="16" height="16"></i></button>
+    <input id="chat-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
+    <button class="primary sm" id="chat-send"><i data-lucide="send" width="15" height="15"></i></button>
+    <input type="file" id="chat-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+   </div></div>`;
+  const log=box.querySelector(".chatlog");
+  if(log)log.scrollTop=log.scrollHeight;
+  box.querySelector("[data-back]").onclick=()=>{SOC.chat=null;socClear("chat");box.classList.remove("chat-open");renderChats()};
+  box.querySelector("[data-togglemembers]")?.addEventListener("click",()=>{
+   SOC.chat.showMembers=!SOC.chat.showMembers;loadChatMembers().then(()=>paintChat())});
+  let sendingChat=false;
+  const send=async(image=null)=>{
+   if(sendingChat)return;
+   const inp=document.getElementById("chat-inp");
+   const body=inp?.value.trim()||"";
+   if(!body&&!image)return;
+   sendingChat=true;
+   const btn=document.getElementById("chat-send");
+   if(btn)btn.disabled=true;
+   if(inp&&!image)inp.value="";
+   try{
+    const row=dm?{recipient:dm,sender:me,body,image}:{chat_id:chat,sender:me,body,image};
+    const {error}=await sb.from("messages").insert(row);
+    if(error){
+     if(inp&&!image)inp.value=body;
+     toast(error.message);
+     return;
+    }
+    if(inp)inp.focus();
+    await paintChat();
+    const l=box.querySelector(".chatlog");
+    if(l)l.scrollTop=l.scrollHeight;
+   }finally{
+    sendingChat=false;
+    if(btn)btn.disabled=false;
+   }
+  };
+  document.getElementById("chat-send").onclick=()=>send();
+  document.getElementById("chat-share-np")?.addEventListener("click",()=>{
+   if(!S.current||S.current.mode==="empty")return toast(t("q.none")||"Сейчас ничего не играет");
+   const inp=document.getElementById("chat-inp");
+   if(inp){
+    const text=`🎵 ${S.current.a} — ${S.current.t}`;
+    inp.value=inp.value?`${inp.value} ${text}`:text;
+    inp.focus();
+   }
+  });
+  document.getElementById("chat-inp").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});
+  document.getElementById("chat-img").onclick=()=>document.getElementById("chat-file").click();
+  document.getElementById("chat-file").onchange=async e=>{
+   const f=e.target.files?.[0];e.target.value="";if(!f)return;
+   const img=await compressChatImage(f);
+   if(img)send(img)};
+  document.getElementById("chat-invite").onclick=async()=>{
+   if(!SOC.room)return toast(t("chat.noroom"));
+   const{dm,chat}=SOC.chat;
+   const {error}=await sb.from("messages").insert(dm
+    ?{recipient:dm,sender:me,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`}
+    :{chat_id:chat,sender:me,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`});
+   toast(error?error.message:t("chat.invited"));if(!error)paintChat()};
+  document.getElementById("chat-cfg")?.addEventListener("click",customizeGroup);
+  document.getElementById("addmem")?.addEventListener("click",async()=>{
+   const n=await askText(t("chat.addwho"));
+   if(!n)return;
+   const p=(await sb.from("profiles").select("id").eq("username",n).maybeSingle()).data;
+   if(!p)return toast(t("soc.nouser"));
+   const {error}=await sb.from("chat_members").insert({chat_id:chat,user_id:p.id});
+   toast(error?error.message:t("chat.added"));if(!error)loadChatMembers().then(paintChat)});
+  box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
+  wireChatTracks(box);
+  icons()}
+
+function wireChatTracks(root){
+ if(!root)return;
+ root.querySelectorAll("[data-chat-play]").forEach(chip=>{
+  chip.onclick=e=>{
+   e.stopPropagation();
+   const q=chip.dataset.chatPlay;
+   if(q){
+    toast((LANG==="ru"?"Поиск трека: ":"Searching: ")+q);
+    go("search");
+    const inp=document.getElementById("q");
+    if(inp){inp.value=q;search(q)}
+   }
+  };
  });
- document.getElementById("chat-inp").addEventListener("keydown",e=>{if(e.key==="Enter")send()});
- document.getElementById("chat-img").onclick=()=>document.getElementById("chat-file").click();
- document.getElementById("chat-file").onchange=async e=>{
-  const f=e.target.files?.[0];e.target.value="";if(!f)return;
-  const img=await compressChatImage(f);
-  if(img)send(img)};
- document.getElementById("chat-invite").onclick=async()=>{
-  if(!SOC.room)return toast(t("chat.noroom"));
-  const{dm,chat}=SOC.chat;
-  const {error}=await sb.from("messages").insert(dm
-   ?{recipient:dm,sender:me,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`}
-   :{chat_id:chat,sender:me,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`});
-  toast(error?error.message:t("chat.invited"));if(!error)paintChat()};
- document.getElementById("chat-cfg")?.addEventListener("click",customizeGroup);
- document.getElementById("addmem")?.addEventListener("click",async()=>{
-  const n=await askText(t("chat.addwho"));
-  if(!n)return;
-  const p=(await sb.from("profiles").select("id").eq("username",n).maybeSingle()).data;
-  if(!p)return toast(t("soc.nouser"));
-  const {error}=await sb.from("chat_members").insert({chat_id:chat,user_id:p.id});
-  toast(error?error.message:t("chat.added"));if(!error)loadChatMembers().then(paintChat)});
- box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
- icons()}
+}
 
 async function loadChatMembers(){
  const c=SOC.chat;if(!c||!c.chat)return;
@@ -6024,7 +6515,7 @@ async function refreshRoomState(){
   SOC.roomMembers=mem.map(m=>({...m,profile:ps.find(p=>p.id===m.user_id)}));
   SOC.roomQueue=(await sb.from("room_queue").select("*").eq("room_id",data.id).order("position")).data||[];
   SOC.requests=(await sb.from("room_requests").select("*").eq("room_id",data.id).eq("status","pending").order("id",{ascending:false}).limit(20)).data||[];
-  const roomChat=(await sb.from("messages").select("*").eq("room_id",data.id).order("id",{ascending:true}).limit(60)).data||[];
+  const roomChat=((await sb.from("messages").select("*").eq("room_id",data.id).order("id",{ascending:false}).limit(80)).data||[]).reverse();
   SOC.roomChat=roomChat
   }catch(e){console.warn("room state:",e?.message||e)}}
 
@@ -6063,6 +6554,32 @@ function paintRoomShell(){
    <i>${esc((m.profile?.username||"?").slice(0,12))}${m.role==="owner"?" 👑":""}</i>
    ${isOwner&&m.user_id!==me?`<button class="qrm" data-kick="${m.user_id}" title="${t("room.kick")}"><i data-lucide="x" width="11" height="11"></i></button>`:""}
   </span>`).join("");
+
+ const existing=box.querySelector(".roompane");
+ if(existing){
+  const mem=existing.querySelector(".memstrip");if(mem)mem.innerHTML=memberHtml;
+  paintRoomNow();
+  paintRoomLists();
+  const log=existing.querySelector("#roomlog");
+  if(log){
+   const stick=log.scrollHeight-log.scrollTop-log.clientHeight<80;
+   const newChatHtml=chat.map(m=>{
+    const mine=m.sender===me;
+    const who=members.find(x=>x.user_id===m.sender)?.profile;
+    return `<div class="msg ${mine?"mine":""}">
+     ${!mine?`<span class="who">${esc(who?.username||"…")}</span>`:""}
+     ${chatBodyHtml(m)}<time>${esc(ago(m.sent_at))}</time></div>`;
+   }).join("");
+   if(log.innerHTML!==newChatHtml){
+    log.innerHTML=newChatHtml;
+    if(stick)log.scrollTop=log.scrollHeight;
+    existing.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
+    icons();
+   }
+  }
+  return;
+ }
+
  box.innerHTML=`<div class="panel pane roompane">
   <div class="chathdr">
    <button class="ic" id="leaveroom" title="${t("room.leave")}"><i data-lucide="log-out" width="16" height="16"></i></button>
@@ -6115,7 +6632,7 @@ function paintRoomShell(){
   toast(t("room.kicked"));
   refreshRoomState().then(paintRoomShell)});
  document.getElementById("room-send").onclick=sendRoomMsg;
- document.getElementById("room-inp").addEventListener("keydown",e=>{if(e.key==="Enter")sendRoomMsg()});
+ document.getElementById("room-inp").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();sendRoomMsg()}});
  /* One search box, two behaviours: DJs put the track straight into the queue,
     listeners propose it and wait for a ✓. The queue only moves when a DJ is
     playing the room context, so a listener search can never seize playback. */
@@ -6147,13 +6664,24 @@ function paintRoomShell(){
  box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
  icons()}
 
+let sendingRoomMsg=false;
 async function sendRoomMsg(){
+ if(sendingRoomMsg)return;
  const inp=document.getElementById("room-inp");
  const body=inp?.value.trim();if(!body)return;
- const {error}=await sb.from("messages").insert({room_id:SOC.room.id,sender:sbUser.id,body});
- if(error)return toast(error.message);
+ sendingRoomMsg=true;
  inp.value="";
- refreshRoomState().then(paintRoomShell)}
+ try{
+  const {error}=await sb.from("messages").insert({room_id:SOC.room.id,sender:sbUser.id,body});
+  if(error){inp.value=body;if(inp)inp.focus();return toast(error.message)}
+  await refreshRoomState();
+  paintRoomShell();
+  const inp2=document.getElementById("room-inp");
+  if(inp2)inp2.focus();
+ }finally{
+  sendingRoomMsg=false;
+ }
+}
 
 function paintRoomNow(){
  const el=document.getElementById("roomnow");if(!el)return;
@@ -6553,7 +7081,7 @@ document.getElementById("sp-elev-v").textContent=Math.round(S.sp.elev*100);
 ["sp-on","sp3d"].forEach(id=>document.getElementById(id)?.setAttribute("aria-pressed",String(S.sp.on)));
 applyI18n();
 applyLyVars();paintLyPanel();
-applyFPSettings();initFPSettings();initHoverCard();initImportModal();
+applyFPSettings();initFPSettings();initImportModal();initLyricEditor();initMediaSession();
 renderBands();renderNP();paint();sync();go("home");search("");
 showSettingsTab(S.stab);renderWaveHint();renderLocalInfo();renderDislikes();
 /* Restore a custom accent before the first paint, or the field builds its
@@ -6597,17 +7125,21 @@ Promise.race([
    to a playable source. */
 
 let SP={me:null,lists:null};
+let SP_CLIENT_ID="";
 async function renderSpotify(){
  const panel=document.getElementById("sppanel"),body=document.getElementById("spbody");
  if(!panel)return;
  panel.hidden=false;
+ if(TAURI&&!SP_CLIENT_ID){
+  SP_CLIENT_ID=(await inv("spotify_get_client_id").catch(()=>""))||"";
+ }
  const available=TAURI?await inv("spotify_available").catch(()=>false):false;
  if(!SP.me&&available)SP.me=await inv("spotify_me").catch(()=>null);
  if(SP.me){
   body.innerHTML=`<p class="ph" style="margin:0 0 10px">${esc(SP.me.display_name||SP.me.id)} · ${SP.me.product||"free"} <button class="btn sm" id="sp-out" style="margin-left:8px">${t("sp.logout")}</button> <button class="btn sm" id="sp-modal-imp" style="margin-left:6px">${t("import.btn")||"Импорт по ссылке"}</button></p>
    <div id="splists"><p class="ph">${t("sp.loading")}</p></div>`;
   document.getElementById("sp-out").onclick=async()=>{
-   await inv("spotify_logout").catch(()=>{});SP={me:null,lists:null};renderSpotify()};
+   await inv("spotify_logout").catch(()=>{});SP={me:null,lists:null};renderSpotify();renderAccounts()};
   document.getElementById("sp-modal-imp").onclick=openImportModal;
   if(!SP.lists){
    SP.lists=await inv("spotify_playlists").catch(e=>{toast(String(e.message||e));return null})}
@@ -6624,15 +7156,47 @@ async function renderSpotify(){
   return;
  }
  body.innerHTML=`<p class="ph" style="margin:0 0 10px">${t("sp.desc")}</p>
+  <div class="field" style="margin:10px 0;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;gap:8px">
+   <div>
+    <label style="font-size:.85rem;font-weight:600">Spotify Client ID</label>
+    <small style="display:block;color:var(--mute);font-size:.72rem">${LANG==="ru"?"Получите в developer.spotify.com/dashboard (Redirect URI: http://localhost:8080/callback)":"Get from developer.spotify.com/dashboard (Redirect URI: http://localhost:8080/callback)"}</small>
+   </div>
+   <div style="display:flex;gap:8px;width:100%;max-width:440px">
+    <input id="sp-cid-inp" type="text" placeholder="SPOTIFY_CLIENT_ID" value="${esc(SP_CLIENT_ID||"")}" style="flex:1;padding:7px 12px;border-radius:8px;background:var(--surf);border:1px solid var(--line);font-size:.82rem" autocomplete="off">
+    <button class="btn sm" id="sp-cid-save">${t("tok.save")||"Сохранить"}</button>
+   </div>
+  </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
    <button class="btn" id="sp-modal-open"><i data-lucide="download" width="14" height="14"></i> ${t("import.btn")||"Импорт плейлиста Spotify"}</button>
-   ${available?`<button class="btn" id="sp-login">${t("sp.login")}</button>`:""}
-  </div>
-  ${!available?`<small style="display:block;margin-top:8px;color:var(--mute);font-size:.74rem">${LANG==="ru"?"Для авторизации через браузер можно указать SPOTIFY_CLIENT_ID в .env, либо вставьте любую ссылку на плейлист через кнопку «Импорт» выше.":"For web OAuth, set SPOTIFY_CLIENT_ID in .env, or use the Import button above to import any public playlist."}</small>`:""}`;
+   <button class="btn primary" id="sp-login"><i data-lucide="log-in" width="14" height="14"></i> ${t("sp.login")}</button>
+  </div>`;
+ document.getElementById("sp-cid-save")?.addEventListener("click",async()=>{
+  const val=(document.getElementById("sp-cid-inp")?.value||"").trim();
+  await inv("spotify_set_client_id",{clientId:val}).catch(()=>{});
+  SP_CLIENT_ID=val;
+  toast(LANG==="ru"?"Client ID сохранён":"Client ID saved");
+  renderSpotify();renderAccounts();
+ });
  document.getElementById("sp-modal-open")?.addEventListener("click",openImportModal);
  document.getElementById("sp-login")?.addEventListener("click",async()=>{
+  let cur=(document.getElementById("sp-cid-inp")?.value||"").trim() || SP_CLIENT_ID;
+  if(!cur){
+   const entered=prompt(LANG==="ru"
+    ?"Введите Client ID Spotify (из developer.spotify.com/dashboard, Redirect URI: http://localhost:8080/callback):"
+    :"Enter Spotify Client ID (from developer.spotify.com/dashboard, Redirect URI: http://localhost:8080/callback):");
+   if(entered&&entered.trim()){
+    await inv("spotify_set_client_id",{clientId:entered.trim()}).catch(()=>{});
+    SP_CLIENT_ID=entered.trim();
+    cur=SP_CLIENT_ID;
+   }else{
+    return;
+   }
+  }else if(cur!==SP_CLIENT_ID){
+   await inv("spotify_set_client_id",{clientId:cur}).catch(()=>{});
+   SP_CLIENT_ID=cur;
+  }
   toast(t("sp.browser"));
-  try{SP.me=await inv("spotify_login");renderSpotify()}
+  try{SP.me=await inv("spotify_login");renderSpotify();renderAccounts();await initServices()}
   catch(e){toast(String(e.message||e),5200)}});
  icons();
 }

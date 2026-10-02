@@ -24,10 +24,32 @@ use sha2::{Digest, Sha256};
 /// commands below report "not configured" instead of failing deep inside the
 /// token exchange.
 fn client_id() -> Option<String> {
+    if let Ok(Some(tok)) = crate::tokens::read_token("sp_client_id") {
+        let trimmed = tok.trim().to_string();
+        if !trimmed.is_empty() {
+            return Some(trimmed);
+        }
+    }
     std::env::var("SPOTIFY_CLIENT_ID")
         .ok()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
+}
+
+#[tauri::command]
+pub fn spotify_get_client_id() -> Result<Option<String>, String> {
+    Ok(client_id())
+}
+
+#[tauri::command]
+pub fn spotify_set_client_id(client_id: String) -> Result<(), String> {
+    let cid = client_id.trim();
+    if cid.is_empty() {
+        let _ = crate::tokens::delete_service_token("sp_client_id".into());
+    } else {
+        crate::tokens::set_service_token("sp_client_id".into(), cid.to_string())?;
+    }
+    Ok(())
 }
 
 pub fn configured() -> bool {
@@ -578,4 +600,59 @@ pub async fn spotify_playlist_tracks(pid: String) -> Result<Vec<serde_json::Valu
             }))
         })
         .collect())
+}
+
+/// Search Spotify for tracks using the authenticated access token.
+pub async fn spotify_search(query: &str) -> Result<Vec<crate::api::Track>, String> {
+    let tok = access_token().await?;
+    let path = format!("/v1/search?q={}&type=track&limit=20", urlencoding::encode(query));
+    let resp = sp_get(&path, &tok)
+        .send()
+        .await
+        .map_err(|e| format!("Spotify search network: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("Spotify search error: {}", resp.status()));
+    }
+    let v: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| format!("Spotify search json: {e}"))?;
+
+    let items = v.pointer("/tracks/items")
+        .and_then(|t| t.as_array())
+        .ok_or_else(|| "Spotify returned no track items".to_string())?;
+
+    let mut tracks = Vec::new();
+    for tr in items {
+        let name = match tr.get("name").and_then(|n| n.as_str()) {
+            Some(n) if !n.is_empty() => n,
+            _ => continue,
+        };
+        let id = tr.get("id").and_then(|i| i.as_str()).unwrap_or("");
+        let artist = tr.get("artists")
+            .and_then(|as_| as_.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|a| a.get("name").and_then(|n| n.as_str()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_else(|| "—".to_string());
+        let album = tr.pointer("/album/name").and_then(|a| a.as_str()).unwrap_or("");
+        let dur_ms = tr.get("duration_ms").and_then(|d| d.as_u64()).unwrap_or(0);
+        let art = tr.pointer("/album/images/0/url").and_then(|u| u.as_str()).map(|s| s.to_string());
+
+        tracks.push(crate::api::Track {
+            id: id.to_string(),
+            s: "sp".into(),
+            t: name.to_string(),
+            a: artist,
+            al: album.to_string(),
+            d: (dur_ms / 1000) as u32,
+            art,
+            mode: "web".into(),
+        });
+    }
+
+    Ok(tracks)
 }

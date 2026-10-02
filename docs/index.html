@@ -40,10 +40,12 @@
     <a class="brand" href="#top"><img src="assets/icon.png" alt=""> Meowave</a>
     <div class="navlinks">
       <a href="#features">Возможности</a>
+      <a href="#design">Дизайн</a>
       <a href="#sound">Звук</a>
       <a href="#badges">Значки</a>
       <a href="#install">Установка</a>
       <a href="#faq">Вопросы</a>
+      <a href="https://github.com/kotar1223/meowave" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg> GitHub</a>
     </div>
     <button class="iconbtn" id="theme" title="Тема" aria-label="Сменить тему">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
@@ -53,19 +55,18 @@
 
 <div class="wrap" id="top">
   <header class="hero">
-    <p class="eyebrow reveal">Windows · бесплатно · без рекламы</p>
-    <h1 class="reveal">Четыре сервиса.<br><em>Один плеер.</em></h1>
-    <p class="lead reveal">YouTube Music, SoundCloud, Yandex Music и файлы с диска — в одной библиотеке,
-      с одним поиском и одной очередью. Звук идёт через собственный тракт, поэтому эквалайзер,
-      объёмное звучание и визуализатор работают на всех сервисах, а не только там, где их дали.</p>
+    <p class="eyebrow reveal">Windows 10/11 · Бесплатно · Open Source</p>
+    <h1 class="reveal">Музыка со всех сервисов.<br><em>В одном идеальном плеере.</em></h1>
+    <p class="lead reveal">SoundCloud, Yandex Music, Spotify, YouTube Music и ваши локальные файлы — в единой библиотеке, с адаптивным дизайном Material You, живым эквалайзером, синхронизированными текстами и нативным управлением Windows 11.</p>
     <div class="cta reveal">
       <a class="primary" href="#install" id="dl-top">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>
         Скачать для Windows
       </a>
+      <a class="ghost" href="https://github.com/kotar1223/meowave" target="_blank" rel="noopener">GitHub</a>
       <a class="ghost" href="https://t.me/meowaveplayer" target="_blank" rel="noopener">Telegram-канал</a>
     </div>
-    <p class="meta reveal">Установщик <b id="ver">0.1.0</b> · <b id="size-top">около 3,3 МБ</b> · обновляется само</p>
+    <p class="meta reveal">Установщик <b id="ver">0.1.0</b> · <b id="size-top">~3,3 МБ</b> · автообновления</p>
   </header>
 </div>
 
@@ -92,51 +93,70 @@
   <div class="shead reveal">
     <p class="eyebrow">Возможности</p>
     <h2>Всё, что нужно плееру, и ничего лишнего</h2>
-    <p>Никаких подписок внутри, никакой рекламы и никакой аналитики. Токены сервисов
-      лежат в системном хранилище ключей, а не в файле рядом с программой. Время
-      прослушивания уходит на сервер только если вы вошли в аккаунт — это нужно
-      для значков и статистики в профиле.</p>
+    <p>Никаких платных подписок внутри, никакой рекламы и сторонней телеметрии. Токены сервисов хранятся в защищённом системном хранилище ключей (Windows Credential Manager). Потребляет в 10 раз меньше памяти, чем Electron.</p>
   </div>
   <div class="grid">
     <div class="card pane reveal">
       <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>
       <h3>Один поиск на все сервисы</h3>
-      <p>Запрос уходит во все подключённые сервисы сразу, результаты сходятся в один список.
-        Откуда трек — видно в строке, но выбирать источник заранее не нужно.</p>
+      <p>Запрос уходит во все подключённые сервисы сразу, результаты сходятся в один аккуратный список. Источник виден в строке трека.</p>
     </div>
     <div class="card pane reveal">
       <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 15V9M8.5 19V5M13 16v-8M17.5 13v-2M21 17V7"/></svg></span>
-      <h3>Эквалайзер на 8 полос</h3>
-      <p>Работает поверх любого сервиса, потому что звук проходит через нас.
-        Пресет можно закрепить за конкретным треком или за всем плейлистом —
-        он применится сам, когда трек начнёт играть.</p>
+      <h3>Эквалайзер на 10 полос</h3>
+      <p>Работает поверх любого сервиса благодаря собственному аудио-тракту. Пресеты можно закреплять за отдельными треками или целыми плейлистами.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M6 16h12M8 12l4-4 4 4"/></svg></span>
+      <h3>Кнопки в таскбаре Windows 11</h3>
+      <p>Наведите курсор на значок Meowave на панели задач: ставьте на паузу и переключайте треки прямо из превью-миниатюры, как в Spotify.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h14"/><path d="M18 10l3 3-3 3"/></svg></span>
+      <h3>Синхронные тексты и калибровка</h3>
+      <p>Тексты песен в реальном времени с LRCLIB и Genius. Встроенный редактор таймингов позволяет добавить или скорректировать свой текст под музыку.</p>
+    </div>
+    <div class="card pane reveal">
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14.5c2.5-1 5.5-1 8 0M7 11.5c3-1.2 7-1.2 10 0M6 8.5c4-1.5 8-1.5 12 0"/></svg></span>
+      <h3>Импорт медиатеки Spotify</h3>
+      <p>Подключение аккаунта Spotify через PKCE OAuth и импорт публичных или приватных плейлистов прямо в вашу единую библиотеку Meowave.</p>
     </div>
     <div class="card pane reveal">
       <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg></span>
-      <h3>Скачивание в mp3</h3>
-      <p>Трек или плейлист целиком, в выбранную папку. Плейлисты раскладываются
-        по подпапкам с их названиями. Можно включить автоскачивание всего,
-        что попадает в избранное.</p>
+      <h3>Скачивание в mp3 с обработкой</h3>
+      <p>Трек или плейлист целиком в выбранную папку. При желании можно запечь в скачиваемый файл настройки эквалайзера и скорости.</p>
     </div>
     <div class="card pane reveal">
       <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></span>
       <h3>Локальные файлы наравне</h3>
-      <p>mp3, flac, wav, ogg, m4a. Файлы никуда не копируются и не отправляются —
-        читаются с диска напрямую. В библиотеке они живут рядом с треками из сервисов.</p>
+      <p>flac, mp3, wav, ogg, m4a, aac. Читаются напрямую с вашего диска без лишнего копирования и индексации в облако.</p>
     </div>
     <div class="card pane reveal">
-      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM3.6 9h16.8M3.6 15h16.8"/><path d="M12 3c2.5 2.5 3.8 5.6 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3z"/></svg></span>
-      <h3>Плейлисты в аккаунте</h3>
-      <p>Плейлисты, избранное и отслеживаемые артисты хранятся на сервере,
-        поэтому переезжают на другой компьютер сами. Без аккаунта плеер тоже
-        работает — всё останется локально.</p>
+      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
+      <h3>Легковесность Tauri и Rust</h3>
+      <p>В отличие от тяжеловесных плееров на Electron, Meowave написан на Rust и потребляет менее 15 МБ оперативной памяти в фоновом режиме.</p>
     </div>
-    <div class="card pane reveal">
-      <span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span>
-      <h3>Прокси для заблокированного</h3>
-      <p>SOCKS5 или HTTP, и только для тех сервисов, которым он реально нужен —
-        остальное идёт напрямую и не теряет скорость. Есть кнопка проверки туннеля.</p>
+  </div>
+</section>
+
+<section class="wrap" id="design">
+  <div class="shead reveal">
+    <p class="eyebrow">Дизайн</p>
+    <h2>Material You & Expressive 2025</h2>
+    <p>Цветовая схема плеера может динамически адаптироваться под обложку играющего трека или следовать выбранной палитре. Нажмите на любой цвет, чтобы примерить тему:</p>
+  </div>
+  <div class="palette-demo pane reveal">
+    <div class="palette-strip-web" id="web-palette-pills">
+      <button class="palette-pill active" data-color="#a855f7" data-rgb="168 85 247"><span class="palette-dot" style="background:#a855f7"></span> Material Purple</button>
+      <button class="palette-pill" data-color="#6366f1" data-rgb="99 102 241"><span class="palette-dot" style="background:#6366f1"></span> Electric Indigo</button>
+      <button class="palette-pill" data-color="#38bdf8" data-rgb="56 189 248"><span class="palette-dot" style="background:#38bdf8"></span> Ocean Sky</button>
+      <button class="palette-pill" data-color="#10b981" data-rgb="16 185 129"><span class="palette-dot" style="background:#10b981"></span> Neon Emerald</button>
+      <button class="palette-pill" data-color="#f59e0b" data-rgb="245 158 11"><span class="palette-dot" style="background:#f59e0b"></span> Solar Amber</button>
+      <button class="palette-pill" data-color="#f97316" data-rgb="249 115 22"><span class="palette-dot" style="background:#f97316"></span> Sunset Coral</button>
+      <button class="palette-pill" data-color="#f43f5e" data-rgb="244 63 94"><span class="palette-dot" style="background:#f43f5e"></span> Vibrant Rose</button>
+      <button class="palette-pill" data-color="#2dd4bf" data-rgb="45 212 191"><span class="palette-dot" style="background:#2dd4bf"></span> Cyber Cyan</button>
     </div>
+    <p style="color:var(--mute);font-size:.82rem;margin:0">Адаптивная генерация гармоничных тональных палитр Material 3: Primary, Secondary, Container и Surface Tint.</p>
   </div>
 </section>
 
@@ -301,6 +321,22 @@ document.getElementById("theme").onclick=()=>{
  /* Sprites bake the colour in, so they must be rebuilt or the field keeps the
     old palette until something else forces a redraw. */
  sprites={}};
+
+/* ---- interactive palette switcher ----------------------------------- */
+document.querySelectorAll(".palette-pill").forEach(btn=>{
+ btn.addEventListener("click",()=>{
+  document.querySelectorAll(".palette-pill").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  const color=btn.dataset.color;
+  const rgb=btn.dataset.rgb;
+  if(color){
+   html.style.setProperty("--accent",color);
+   html.style.setProperty("--accent-rgb",rgb);
+   html.style.setProperty("--accent-soft",color+"28");
+   sprites={};
+  }
+ });
+});
 
 /* ---- nav shadow on scroll ------------------------------------------- */
 const nav=document.getElementById("nav");

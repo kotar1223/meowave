@@ -745,7 +745,9 @@ mod tests {
                 for (i, tr) in tracks.iter().take(3).enumerate() {
                     let st = super::stream(&tr.id, false, "best").await;
                     match st {
-                        Ok(pick) => println!("Track {} ({}: {}) STREAM OK: mime={}", i, tr.id, tr.t, pick.mime),
+                        Ok(pick) => {
+                            println!("Track {} ({}: {}) STREAM OK: mime={}, url_prefix={}", i, tr.id, tr.t, pick.mime, &pick.url[..pick.url.len().min(80)]);
+                        },
                         Err(e) => println!("Track {} ({}: {}) STREAM ERR: {e}", i, tr.id, tr.t),
                     }
                 }

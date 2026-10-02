@@ -7,7 +7,7 @@ const KEYCHAIN_SERVICE: &str = "meowave";
 /// `sp` holds the whole Spotify token set as JSON rather than a bare string:
 /// PKCE hands back an access token, a refresh token and an expiry, and losing
 /// any of the three means a fresh browser round-trip on every restart.
-const KNOWN_SERVICES: &[&str] = &["ytm", "sc", "ym", "sp"];
+const KNOWN_SERVICES: &[&str] = &["ytm", "sc", "ym", "sp", "sp_client_id"];
 
 /// Services that work without any user credentials: SoundCloud runs on a
 /// public client_id we scrape ourselves, YouTube Music answers guest
@@ -59,10 +59,11 @@ pub fn list_connected_services() -> Vec<String> {
     KNOWN_SERVICES
         .iter()
         .filter(|id| {
-            TOKENLESS_SERVICES.contains(id)
-                || Entry::new(KEYCHAIN_SERVICE, id)
-                    .and_then(|e| e.get_password())
-                    .is_ok()
+            **id != "sp_client_id"
+                && (TOKENLESS_SERVICES.contains(id)
+                    || Entry::new(KEYCHAIN_SERVICE, id)
+                        .and_then(|e| e.get_password())
+                        .is_ok())
         })
         .map(|s| s.to_string())
         .collect()

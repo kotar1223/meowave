@@ -514,6 +514,7 @@ pub async fn api_search(query: String, services: Vec<String>) -> Result<SearchRe
                 "ym" => ym_search(&token, &q).await,
                 "sc" => sc_search(&token, &q).await,
                 "ytm" => ytm_search(&q).await,
+                "sp" => crate::spotify::spotify_search(&q).await,
                 other => Err(format!("unknown service: {other}")),
             };
             (s, res)
@@ -546,6 +547,7 @@ pub async fn api_check_token(service: String, token: String) -> Result<bool, Str
         "ym" => ym_search(t, "test").await.map(|_| true),
         "sc" => sc_search(t, "test").await.map(|_| true),
         "ytm" => ytm_search("test").await.map(|_| true),
+        "sp" => crate::spotify::access_token().await.map(|_| true),
         other => Err(format!("unknown service: {other}")),
     }
 }
@@ -558,6 +560,7 @@ pub async fn api_probe_service(service: String) -> Result<bool, String> {
         "sc" => sc_search("", "test").await.map(|_| true),
         "ytm" => ytm_search("test").await.map(|_| true),
         "ym" => Err("Yandex Music needs your token".into()),
+        "sp" => Ok(crate::spotify::configured()),
         other => Err(format!("unknown service: {other}")),
     }
 }
@@ -653,15 +656,32 @@ pub async fn sc_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String>
 #[tauri::command]
 pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String> {
     let raw = url_or_id.trim();
-    let id = if raw.contains("playlist/") {
-        raw.split("playlist/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
-    } else if raw.contains("playlist:") {
-        raw.split("playlist:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+    let (embed_type, id) = if raw.contains("album/") || raw.contains("album:") {
+        let id = if raw.contains("album/") {
+            raw.split("album/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
+        } else {
+            raw.split("album:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+        };
+        ("album", id)
+    } else if raw.contains("track/") || raw.contains("track:") {
+        let id = if raw.contains("track/") {
+            raw.split("track/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
+        } else {
+            raw.split("track:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+        };
+        ("track", id)
     } else {
-        raw
+        let id = if raw.contains("playlist/") {
+            raw.split("playlist/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
+        } else if raw.contains("playlist:") {
+            raw.split("playlist:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+        } else {
+            raw
+        };
+        ("playlist", id)
     };
 
-    let embed_url = format!("https://open.spotify.com/embed/playlist/{id}");
+    let embed_url = format!("https://open.spotify.com/embed/{embed_type}/{id}");
     let c = client()?;
     let html = c
         .get(&embed_url)

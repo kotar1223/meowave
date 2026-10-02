@@ -11,6 +11,7 @@ mod proxy;
 mod paths;
 mod spotify;
 mod stream;
+mod taskbar;
 mod tokens;
 mod update;
 mod ymlib;
@@ -221,8 +222,8 @@ fn webview_args() -> String {
         // initialise and hold buffers regardless.
         "--disable-background-timer-throttling".into(),
         // Release memory back to the OS when it falls idle rather than holding
-        // the high-water mark for the life of the process.
-        "--enable-features=MemoryPressureBasedSourceBufferGC".into(),
+        // the high-water mark for the life of the process; enable SMTC media keys & controls.
+        "--enable-features=MemoryPressureBasedSourceBufferGC,HardwareMediaKeyHandling,MediaSessionService".into(),
     ];
     // CDP endpoint for debugging the embedded webview: MEOWAVE_DEBUG_PORT=9222.
     if let Some(port) = std::env::var_os("MEOWAVE_DEBUG_PORT") {
@@ -367,6 +368,8 @@ fn main() {
             spotify::spotify_logout,
             spotify::spotify_me,
             spotify::spotify_available,
+            spotify::spotify_get_client_id,
+            spotify::spotify_set_client_id,
             spotify::spotify_playlists,
             spotify::spotify_playlist_tracks,
             ymlib::ym_available,
@@ -380,6 +383,7 @@ fn main() {
             discord::discord_update,
             discord::discord_clear,
             stream_info,
+            taskbar::taskbar_set_playing,
         ])
         // Only a minimised window stops rendering. Tying this to focus was a
         // mistake: the window is still fully on screen when the user clicks
@@ -401,6 +405,7 @@ fn main() {
         .setup(|app| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.emit("meowave://render", true);
+                taskbar::init_window(&w);
             }
             Ok(())
         })

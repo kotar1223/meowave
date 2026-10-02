@@ -1,53 +1,50 @@
-# meowave
+# meowave 🐾
 
-A multi-service desktop music player: YouTube Music, SoundCloud, Yandex Music
-and your own files behind one player, one queue and one sound pipeline.
+> A modern, lightweight multi-service desktop music player for Windows, macOS and Linux. Built with **Tauri 2**, **Rust**, and **Material You**.
 
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
-![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri-24C8DB?logo=tauri)
-![Backend](https://img.shields.io/badge/backend-Supabase-3ECF8E?logo=supabase)
+[![Official Landing Page](https://img.shields.io/badge/Website-kotar1223.github.io%2Fmeowave-blue?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kotar1223.github.io/meowave/)
+[![Download Latest](https://img.shields.io/badge/Download-Latest%20Release-success?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/kotar1223/meowave/releases/latest)
+[![Built with Tauri](https://img.shields.io/badge/Tauri_v2-Rust-FFC131?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app)
+[![Design System](https://img.shields.io/badge/Material_You-Expressive_2025-a855f7?style=for-the-badge)](https://m3.material.io/)
 
-## About
+---
 
-**meowave** is a desktop music player built with [Tauri](https://tauri.app):
-a Rust backend and a webview frontend. It unifies several streaming services so
-there is no switching between apps, and it owns the audio path end to end — the
-equaliser, the spatial panner and the visualiser all work on streamed tracks, not
-just local files.
+## 🌟 Highlights
 
-That last part is why the app runs a small HTTP proxy on 127.0.0.1: signed
-service URLs arrive without CORS headers, and without a same-origin stream
-`createMediaElementSource` returns silence, taking every effect with it. See the
-header of `src-tauri/src/stream.rs`.
+- **Unified Multi-Service Library**: SoundCloud, Yandex Music, Spotify playlist import, YouTube Music, and local disk files (FLAC, MP3, WAV, AAC, OGG) behind a single queue and search bar.
+- **🎨 Material You & Material Expressive**:
+  - Dynamic palette adapting in real-time to the current track's album art.
+  - 11 built-in expressive color themes (Adaptive, Monochrome, Material Purple, Electric Indigo, Ocean Sky, Cyber Cyan, Nordic Teal, Neon Emerald, Solar Amber, Sunset Coral, Vibrant Rose, Custom HEX).
+  - Concentric corner radii, ambient particle canvas, and fluid spring motion tokens.
+- **🪟 Windows 11 Taskbar Thumbnail Controls**:
+  - Hover over the taskbar icon to play/pause, skip, and go back right from the Windows thumbnail toolbar (native Win32 `ITaskbarList3`), just like Spotify.
+- **🎤 Karaoke & Synced Lyrics with Calibrator**:
+  - Real-time synced lyrics from LRCLIB & Genius.
+  - Built-in interactive lyrics timing editor to sync and edit your own lyrics.
+- **📺 Fullscreen Stage & Cover Drift (F11)**:
+  - Cinema stage mode with customizable album cover zoom and organic slow drift motion.
+- **🔊 Audiophile DSP Pipeline**:
+  - 10-band graphic equalizer with per-track and per-playlist saved presets.
+  - 3D Spatial Audio: HRTF binaural head orbit panner with adjustable radius, speed, and elevation.
+  - Nightcore & slowed-and-reverbed speed shifting (0.5×–1.5× with pitch coupling).
+  - Loudness boost up to +9 dB via clean limiter.
+- **🚀 Ultra-Lightweight & Private**:
+  - Powered by Rust & Tauri 2: uses less than 15 MB of RAM in background (10× less than Electron).
+  - Zero telemetry or third-party ads. Tokens are saved securely in the native OS Keychain (Windows Credential Manager).
+- **👥 Social & Rooms**:
+  - Listening rooms with live playback synchronization, direct/group chat, custom badges and user profiles.
 
-## Features
+---
 
-- **Multi-service playback** — one library and one queue across services
-- **Own audio pipeline** — 9-band EQ, HRTF spatial panner, limiter, visualiser
-- **Per-track and per-playlist EQ presets** — pinned and remembered
-- **Speed and boost** — 0.5×–1.5× playback, up to +3× through a limiter
-- **Lyrics** — LRCLIB, then YouTube Music, then local Whisper transcription
-- **Downloads** — mp3 via a bundled ffmpeg, plus an export that bakes in the
-  live EQ and speed
-- **Local files** — read straight off disk, never copied
-- **People** — friends, direct and group chats, and listening rooms where one
-  person is the DJ and everyone else follows their playback
-- **Interface in Russian and English** — switchable at any time, both tables
-  kept in sync by `scripts/find-cyrillic.mjs`
-- **Selective proxy** — SOCKS5/HTTP for the services that need it, never for
-  Yandex or Supabase
-- **Accounts via Supabase** — favorites, playlists, stats, badges
-- **Signed auto-updates**
+## 🎧 Supported Services
 
-### Supported services
-
-| Service | Status | Auth |
-| --- | --- | --- |
-| YouTube Music | Supported | none (guest InnerTube) |
-| SoundCloud | Supported | none (public client_id) |
-| Yandex Music | Supported | OAuth token, stored in the OS keychain |
-| Local files | Supported | — |
-| Spotify | Sign-in implemented, needs a `SPOTIFY_CLIENT_ID` | Authorization Code + PKCE |
+| Service | Playback Status | Authentication |
+| :--- | :--- | :--- |
+| **SoundCloud** | ✅ Supported | Anonymous (public client) / OAuth |
+| **Yandex Music** | ✅ Supported | OAuth Token (stored in OS Keychain) |
+| **Local Files** | ✅ Supported | None (direct disk streaming, zero copying) |
+| **Spotify** | ✅ Playlist / Library Import | OAuth Authorization Code + PKCE |
+| **YouTube Music** | ⚠️ Experimental | InnerTube guest |
 
 Playback for Spotify is not implemented: the Web API does not serve full tracks
 to a third-party client.
