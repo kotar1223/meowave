@@ -258,10 +258,11 @@ fn ym_row(v: &serde_json::Value) -> Option<serde_json::Value> {
 }
 
 fn ym_api(path: &str, token: &str) -> reqwest::RequestBuilder {
+    let clean_token = token.trim().strip_prefix("OAuth ").unwrap_or(token.trim());
     crate::api::client()
         .expect("http client")
         .get(format!("{}{}", crate::api::YM_API, path))
-        .header("Authorization", format!("OAuth {}", token.trim()))
+        .header("Authorization", format!("OAuth {clean_token}"))
         .header("X-Yandex-Music-Client", "YandexMusicAndroid/24023621")
 }
 
@@ -280,12 +281,14 @@ async fn ym_uid(token: &str) -> Result<String, String> {
         .json()
         .await
         .map_err(|e| format!("bad response: {e}"))?;
-    extract_uid(&v).ok_or_else(|| "не удалось получить uid пользователя Яндекс Музыки".to_string())
+    Ok(extract_uid(&v).unwrap_or_else(|| "me".to_string()))
 }
 
 pub(crate) fn extract_uid(v: &serde_json::Value) -> Option<String> {
     v.pointer("/result/account/uid")
         .or_else(|| v.pointer("/result/account/id"))
+        .or_else(|| v.pointer("/result/user/uid"))
+        .or_else(|| v.pointer("/result/subAccount/uid"))
         .or_else(|| v.pointer("/result/default_email"))
         .and_then(|u| match u {
             serde_json::Value::Number(n) => Some(n.to_string()),
@@ -350,15 +353,22 @@ pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
             }
             for chunk in ids.chunks(50) {
                 let batch = chunk.join(",");
-                let v2: serde_json::Value = ym_api(&format!("/tracks/{batch}"), &token)
-                    .send()
-                    .await
-                    .map_err(|e| format!("network: {e}"))?
-                    .error_for_status()
-                    .map_err(|e| format!("Yandex: {e}"))?
-                    .json()
-                    .await
-                    .map_err(|e| format!("bad response: {e}"))?;
+                let clean_token = token.trim().strip_prefix("OAuth ").unwrap_or(token.trim());
+                let v2: serde_json::Value = match crate::api::client() {
+                    Ok(c) => c.post(format!("{}/tracks", crate::api::YM_API))
+                        .header("Authorization", format!("OAuth {clean_token}"))
+                        .header("X-Yandex-Music-Client", "YandexMusicAndroid/24023621")
+                        .form(&[("track-ids", &batch)])
+                        .send()
+                        .await
+                        .map_err(|e| format!("network: {e}"))?
+                        .error_for_status()
+                        .map_err(|e| format!("Yandex: {e}"))?
+                        .json()
+                        .await
+                        .map_err(|e| format!("bad response: {e}"))?,
+                    Err(_) => continue,
+                };
                 if let Some(rows) = v2.pointer("/result").and_then(|x| x.as_array()) {
                     for tr in rows {
                         if let Some(row) = ym_row(tr) {

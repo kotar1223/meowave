@@ -71,20 +71,41 @@
 </div>
 
 <section class="wrap">
-  <!-- A drawn replica of the player's chrome rather than a screenshot: it stays
-       sharp on any display, weighs nothing, and cannot go out of date. -->
-  <div class="mock pane reveal" aria-hidden="true">
-    <div class="mrail"><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="mmain">
-      <div class="mrow" data-on="true"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
-      <div class="mrow"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
-      <div class="mrow"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
-      <div class="mrow"><span class="mart"></span><span class="mtx"><b></b><s></s></span><span class="mdur"></span></div>
+  <div class="demo-player-wrap pane reveal" id="interactive-player">
+    <div class="demo-player-left">
+      <div class="demo-track-header">
+        <div class="demo-track-info">
+          <b id="demo-track-title">Get Lucky</b>
+          <span id="demo-track-artist">Daft Punk ft. Pharrell Williams · Random Access Memories</span>
+        </div>
+        <span class="res-svc" id="demo-track-srv" data-srv="sp">Spotify</span>
+      </div>
+
+      <canvas class="demo-visualizer-canvas" id="demo-visualizer-canvas" height="84"></canvas>
+
+      <div class="demo-controls-bar">
+        <div class="demo-seek-wrap">
+          <input type="range" id="demo-seek-bar" min="0" max="100" value="14" step="0.1" aria-label="Seek track">
+          <span id="demo-track-time" style="font-size:0.8rem;color:var(--mute);font-family:monospace;white-space:nowrap">0:14 / 4:08</span>
+        </div>
+        <div class="demo-buttons-row">
+          <div class="demo-playback-buttons">
+            <button class="demo-ctrl-btn" id="demo-prev-btn" title="Предыдущий трек" aria-label="Previous"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+            <button class="demo-ctrl-btn play" id="demo-play-btn" title="Воспроизведение" aria-label="Play"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></button>
+            <button class="demo-ctrl-btn" id="demo-next-btn" title="Следующий трек" aria-label="Next"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:0.75rem;color:var(--mute)">Живое демо Web Audio & M3</span>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="mbar">
-      <span class="mplay"></span>
-      <span class="mseek"></span>
-      <span class="meq"><b></b><b></b><b></b><b></b><b></b><b></b></span>
+
+    <div class="demo-lyrics-wrap">
+      <h4>Текст песни (Karaoke)</h4>
+      <div class="demo-lyrics-list" id="demo-lyrics-list">
+        <!-- Rendered by DemoPlayer -->
+      </div>
     </div>
   </div>
 </section>
@@ -136,6 +157,24 @@
       <h3>Легковесность Tauri и Rust</h3>
       <p>В отличие от тяжеловесных плееров на Electron, Meowave написан на Rust и потребляет менее 15 МБ оперативной памяти в фоновом режиме.</p>
     </div>
+    <div class="card pane reveal wide">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <h3 style="margin:0 0 2px">Интерактивный Material 3 Поиск</h3>
+          <p style="margin:0;color:var(--mute);font-size:0.85rem">Плавное органическое появление символов и мгновенный поиск по сервисам</p>
+        </div>
+        <span class="badge-tag">M3 Search Bar</span>
+      </div>
+      <div class="demo-search-bar">
+        <span class="demo-search-leading"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
+        <div class="demo-search-flow" id="demo-search-flow"></div>
+        <input type="text" class="demo-search-input" id="demo-search-q" placeholder="Поиск по всем сервисам сразу…" autocomplete="off">
+        <button class="demo-search-clear" id="demo-search-clear" aria-label="Clear"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="search-results-list" id="demo-search-results">
+        <!-- Rendered by initSearchDemo -->
+      </div>
+    </div>
   </div>
 </section>
 
@@ -143,7 +182,7 @@
   <div class="shead reveal">
     <p class="eyebrow">Дизайн</p>
     <h2>Material You & Expressive 2025</h2>
-    <p>Цветовая схема плеера может динамически адаптироваться под обложку играющего трека или следовать выбранной палитре. Нажмите на любой цвет, чтобы примерить тему:</p>
+    <p>Цветовая схема плеера динамически адаптируется под обложку играющего трека или следует выбранной палитре. Выберите готовый цвет или укажите свой собственный с помощью пипетки:</p>
   </div>
   <div class="palette-demo pane reveal">
     <div class="palette-strip-web" id="web-palette-pills">
@@ -156,7 +195,14 @@
       <button class="palette-pill" data-color="#f43f5e" data-rgb="244 63 94"><span class="palette-dot" style="background:#f43f5e"></span> Vibrant Rose</button>
       <button class="palette-pill" data-color="#2dd4bf" data-rgb="45 212 191"><span class="palette-dot" style="background:#2dd4bf"></span> Cyber Cyan</button>
     </div>
-    <p style="color:var(--mute);font-size:.82rem;margin:0">Адаптивная генерация гармоничных тональных палитр Material 3: Primary, Secondary, Container и Surface Tint.</p>
+    <div class="custom-picker-wrap">
+      <input type="color" id="custom-seed-picker" value="#a855f7" title="Выбрать свой цвет">
+      <span style="font-size:0.85rem;color:var(--text);font-weight:500">Пользовательский Seed Color: живая генерация 29 ролей M3</span>
+    </div>
+    <div class="tonal-swatches-grid" id="tonal-swatches">
+      <!-- Generated live by theme.ts -->
+    </div>
+    <p style="color:var(--mute);font-size:.82rem;margin-top:8px">Адаптивная генерация гармоничных тональных палитр Material 3: Primary, Secondary, Tertiary, Container и Surface Tint.</p>
   </div>
 </section>
 
@@ -306,183 +352,7 @@
   </div>
 </footer>
 
-<script>
-/* ---- theme -------------------------------------------------------------
-   Follows the OS unless the visitor has chosen, which is stored. The player
-   does the same, so switching between site and app is not jarring. */
-const html=document.documentElement;
-const savedTheme=localStorage.getItem("mw-theme");
-if(savedTheme)html.dataset.theme=savedTheme;
-else if(matchMedia("(prefers-color-scheme: light)").matches)html.dataset.theme="light";
-document.getElementById("theme").onclick=()=>{
- const next=html.dataset.theme==="light"?"dark":"light";
- html.dataset.theme=next;
- localStorage.setItem("mw-theme",next);
- /* Sprites bake the colour in, so they must be rebuilt or the field keeps the
-    old palette until something else forces a redraw. */
- sprites={}};
-
-/* ---- interactive palette switcher ----------------------------------- */
-document.querySelectorAll(".palette-pill").forEach(btn=>{
- btn.addEventListener("click",()=>{
-  document.querySelectorAll(".palette-pill").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
-  const color=btn.dataset.color;
-  const rgb=btn.dataset.rgb;
-  if(color){
-   html.style.setProperty("--accent",color);
-   html.style.setProperty("--accent-rgb",rgb);
-   html.style.setProperty("--accent-soft",color+"28");
-   sprites={};
-  }
- });
-});
-
-/* ---- nav shadow on scroll ------------------------------------------- */
-const nav=document.getElementById("nav");
-const onScroll=()=>nav.dataset.scrolled=scrollY>8;
-addEventListener("scroll",onScroll,{passive:true});onScroll();
-
-/* ---- reveal on scroll -----------------------------------------------
-   The .js class gates the hidden state, so with JavaScript off or if the
-   observer never fires the page is still fully readable. */
-html.classList.add("js");
-const io=new IntersectionObserver(es=>{
- es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}})
-},{rootMargin:"0px 0px -8% 0px",threshold:.05});
-document.querySelectorAll(".reveal").forEach(el=>io.observe(el));
-
-/* ---- badges ---------------------------------------------------------
-   Read from the app's own catalog: hard-coding a list here is how a site ends
-   up advertising badges that no longer exist. */
-const RARITY={common:"#8b8b96",uncommon:"#3fb950",rare:"#4a9eff",epic:"#a855f7",legendary:"#f5a524",secret:"#e0679a"};
-/* Declared before the fetch callbacks that use it. It was a `const` further
-   down, which only worked because the callbacks run after the script is parsed —
-   one reorder away from a ReferenceError. */
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-fetch("assets/badges/badges.json").then(r=>r.json()).then(j=>{
- const box=document.getElementById("bstrip");
- /* A representative sample, not all 36: the strip is a taste of what exists,
-    and the full list belongs in the app. Rarest first — those are the ones
-    worth showing off. */
- const order=["legendary","epic","rare","uncommon","common","secret"];
- const pick=[...(j.badges||[])]
-  .sort((a,b)=>order.indexOf(a.rarity)-order.indexOf(b.rarity))
-  .slice(0,14);
- box.innerHTML=pick.map(b=>{
-  const c=RARITY[b.rarity]||RARITY.common;
-  return `<span class="bitem" title="${esc(b.description||"")}">
-   <span class="art" style="--ring:${c};background:color-mix(in oklab,${c} 14%,transparent)">
-    <img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
-   <b>${esc(b.name)}</b></span>`}).join("");
-}).catch(()=>{
- /* Leave the section without a grid rather than showing broken tiles — and drop
-    its nav entry too, otherwise the menu links to a hidden section. */
- document.getElementById("badges").style.display="none";
- document.querySelector('a[href="#badges"]')?.remove()});
-
-/* ---- live download link ---------------------------------------------
-   The button always works: it points at the releases page by default, and is
-   upgraded to the exact installer when the GitHub API answers. Hard-coding a
-   filename would 404 on every version bump. */
-const REPO="kotar1223/meowave";
-fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
- .then(r=>r.ok?r.json():Promise.reject(r.status))
- .then(rel=>{
-  const exe=(rel.assets||[]).find(a=>/\.exe$/i.test(a.name));
-  const ver=String(rel.tag_name||"").replace(/^v/,"");
-  if(ver){document.getElementById("ver").textContent=ver;
-          document.getElementById("ver2").textContent=ver}
-  if(exe){
-   const mb=(exe.size/1048576).toFixed(1).replace(".",",");
-   for(const id of ["dl-main","dl-top"]){
-    const el=document.getElementById(id);
-    if(el){el.href=exe.browser_download_url;el.removeAttribute("target")}}
-   document.getElementById("dl-note").textContent=`${exe.name} · ${mb} МБ`;
-   /* The size was written out by hand in three places and only one of them was
-      ever updated, so the page advertised a stale figure. */
-   for(const id of ["size-top","size-main"]){
-    const el=document.getElementById(id);
-    if(el)el.textContent=`${mb} МБ`}}
- })
- .catch(()=>{
-  /* No releases yet, or the API is rate-limited. The link to the releases page
-     is already correct, so only the note needs to be honest. */
-  document.getElementById("dl-note").textContent="Открыть страницу релизов на GitHub"});
-
-/* The top button scrolls to the download block; only the block's own button
-   downloads. Two buttons that do different things must not look identical in
-   behaviour. */
-
-/* ---- particle field -------------------------------------------------
-   Trimmed version of the player's field: same sprite-and-additive-blending
-   approach, no audio reactivity to react to. */
-const cv=document.getElementById("field"),gx=cv.getContext("2d",{alpha:true});
-const F={p:[],n:0,w:0,h:0};
-let sprites={};
-const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-function sprite(a){
- const dark=html.dataset.theme!=="light";
- const k=a.toFixed(2)+html.dataset.theme;
- if(sprites[k])return sprites[k];
- const c=document.createElement("canvas");c.width=c.height=32;
- const x=c.getContext("2d");
- const g=x.createRadialGradient(16,16,0,16,16,16);
- const base=dark?"255,255,255":"26,24,32";
- g.addColorStop(0,`rgba(${base},${a})`);
- g.addColorStop(.45,`rgba(${base},${a*.35})`);
- g.addColorStop(1,`rgba(${base},0)`);
- x.fillStyle=g;x.beginPath();x.arc(16,16,16,0,6.284);x.fill();
- return sprites[k]=c}
-
-function size(){
- const dpr=Math.min(2,devicePixelRatio||1);
- F.w=innerWidth;F.h=innerHeight;
- cv.width=F.w*dpr;cv.height=F.h*dpr;
- gx.setTransform(dpr,0,0,dpr,0,0)}
-
-function build(){
- /* Density scales with the viewport: a phone does not need a desktop's count,
-    and it is the count that costs frames. */
- const n=reduce?0:Math.round(Math.min(1400,(F.w*F.h)/1400));
- F.n=n;F.p=[];
- for(let i=0;i<n;i++)F.p.push({
-  x:Math.random()*F.w,y:Math.random()*F.h,vx:0,vy:0,
-  a:.16+Math.random()*.4,s:.5+Math.random()*.85,
-  ph:Math.random()*Math.PI*2,lane:i%9})}
-
-let t0=0,raf=0,visible=true;
-function frame(now){
- const t=now/1000;
- gx.clearRect(0,0,F.w,F.h);
- gx.globalCompositeOperation=html.dataset.theme==="light"?"source-over":"lighter";
- for(let i=0;i<F.n;i++){
-  const p=F.p[i];
-  const ang=p.ph+t*.32+p.lane*.7;
-  p.vx+=Math.cos(ang)*.016;p.vy+=Math.sin(ang)*.016;
-  p.vx*=.965;p.vy*=.965;
-  p.x+=p.vx;p.y+=p.vy;
-  /* Wrap instead of respawn: a particle appearing out of nowhere reads as a
-     glitch, whereas drifting in from the far edge does not. */
-  if(p.x<-8)p.x+=F.w+16; else if(p.x>F.w+8)p.x-=F.w+16;
-  if(p.y<-8)p.y+=F.h+16; else if(p.y>F.h+8)p.y-=F.h+16;
-  const sz=2+p.s*2.6;
-  gx.drawImage(sprite(p.a),p.x-sz,p.y-sz,sz*2,sz*2)}
- gx.globalCompositeOperation="source-over";
- raf=requestAnimationFrame(frame)}
-
-function start(){if(!raf&&!reduce&&visible)raf=requestAnimationFrame(frame)}
-function stop(){cancelAnimationFrame(raf);raf=0}
-
-size();build();start();
-addEventListener("resize",()=>{size();build()});
-/* A background tab must not keep painting: that is a laptop battery for
-   nothing, and browsers throttle it inconsistently. */
-document.addEventListener("visibilitychange",()=>{
- visible=!document.hidden;
- visible?start():stop()});
-</script>
+<script type="module" src="assets/main.js"></script>
 
 </body>
 </html>

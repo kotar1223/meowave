@@ -35,6 +35,7 @@ pub const VR_UA: &str =
 /// audio formats and every one of them a plain `url` (verified against a batch
 /// of ids — both mp4 and webm containers, ranged GET returns 206).
 const ANDROID_UA: &str = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip";
+pub const IOS_UA: &str = "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)";
 pub const WEB_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36";
 
 /// UA for the media fetch itself: googlevideo only serves a stream to a client
@@ -45,8 +46,9 @@ pub const MEDIA_UA: &str = ANDROID_UA;
 /// Clients tried against the player endpoint, first that answers OK wins.
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
     ("ANDROID", ANDROID_UA),
-    ("ANDROID_VR", VR_UA),
     ("ANDROID_MUSIC", MUSIC_UA),
+    ("IOS", IOS_UA),
+    ("ANDROID_VR", VR_UA),
 ];
 
 fn web_remix_ctx() -> Value {
@@ -99,6 +101,22 @@ fn player_ctx(name: &str, visitor: Option<&str>) -> Value {
             "androidSdkVersion": 33,
             "osName": "Android",
             "osVersion": "13",
+            "hl": "en",
+            "gl": "US"
+        }),
+        "IOS" => json!({
+            "clientName": "IOS",
+            "clientVersion": "19.29.1",
+            "deviceMake": "Apple",
+            "deviceModel": "iPhone16,2",
+            "osName": "iOS",
+            "osVersion": "17.5.1.21F90",
+            "hl": "en",
+            "gl": "US"
+        }),
+        "TVHTML5_SIMPLY_EMBEDDED_PLAYER" => json!({
+            "clientName": "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+            "clientVersion": "2.0",
             "hl": "en",
             "gl": "US"
         }),

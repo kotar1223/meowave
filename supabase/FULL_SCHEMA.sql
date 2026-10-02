@@ -2312,7 +2312,7 @@ language sql stable security definer set search_path = public as $$
    limit greatest(coalesce(limit_, 50), 1)
 $$;
 
-grant execute on function public.leaderboard(int) to authenticated;
+grant execute on function public.leaderboard(int) to anon, authenticated;
 
 -- ── realtime ────────────────────────────────────────────────
 do $$

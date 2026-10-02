@@ -511,6 +511,24 @@ pub struct SpotifyPlaylist {
 #[tauri::command]
 pub async fn spotify_playlists() -> Result<Vec<SpotifyPlaylist>, String> {
     let tok = access_token().await?;
+    let mut lists = Vec::new();
+
+    // Check if user has liked tracks in library
+    if let Ok(resp) = sp_get("/v1/me/tracks?limit=1", &tok).send().await {
+        if resp.status().is_success() {
+            if let Ok(v) = resp.json::<serde_json::Value>().await {
+                let total = v["total"].as_u64().unwrap_or(0) as u32;
+                if total > 0 {
+                    lists.push(SpotifyPlaylist {
+                        id: "__liked__".to_string(),
+                        name: "Любимые треки (Liked Songs)".to_string(),
+                        total,
+                    });
+                }
+            }
+        }
+    }
+
     let v: serde_json::Value = sp_get("/v1/me/playlists?limit=50", &tok)
         .send()
         .await
@@ -520,21 +538,22 @@ pub async fn spotify_playlists() -> Result<Vec<SpotifyPlaylist>, String> {
         .json()
         .await
         .map_err(|e| format!("bad response: {e}"))?;
-    Ok(v["items"]
-        .as_array()
-        .map(|rows| {
-            rows.iter()
-                .filter_map(|p| Some(SpotifyPlaylist {
-                    id: p["id"].as_str()?.to_string(),
+
+    if let Some(rows) = v["items"].as_array() {
+        for p in rows {
+            if let Some(id) = p["id"].as_str() {
+                lists.push(SpotifyPlaylist {
+                    id: id.to_string(),
                     name: p["name"].as_str().unwrap_or("—").to_string(),
                     total: p["tracks"]["total"].as_u64().unwrap_or(0) as u32,
-                }))
-                .collect()
-        })
-        .unwrap_or_default())
+                });
+            }
+        }
+    }
+    Ok(lists)
 }
 
-/// Track rows of one playlist: {t: title, a: artist, d: seconds}.
+/// Track rows of one playlist: {id, s, t: title, a: artist, al: album, d: seconds, art}.
 ///
 /// Paginated. Spotify answers 100 rows at a time and hands back the next page
 /// as `next`; reading only the first response silently imported the first 100
@@ -547,7 +566,11 @@ pub async fn spotify_playlist_tracks(pid: String) -> Result<Vec<serde_json::Valu
     let tok = access_token().await?;
 
     let mut items: Vec<serde_json::Value> = Vec::new();
-    let mut path = format!("/v1/playlists/{pid}/tracks?limit=100");
+    let mut path = if pid == "__liked__" {
+        "/v1/me/tracks?limit=50".to_string()
+    } else {
+        format!("/v1/playlists/{pid}/tracks?limit=100")
+    };
 
     for _ in 0..MAX_PAGES {
         let v: serde_json::Value = sp_get(&path, &tok)
@@ -577,11 +600,12 @@ pub async fn spotify_playlist_tracks(pid: String) -> Result<Vec<serde_json::Valu
     Ok(items
         .iter()
         .filter_map(|it| {
-            let tr = &it["track"];
+            let tr = if it.get("track").is_some() { &it["track"] } else { it };
             let name = tr["name"].as_str()?;
             if name.is_empty() {
                 return None;
             }
+            let track_id = tr["id"].as_str().unwrap_or("");
             let artist = tr["artists"]
                 .as_array()
                 .map(|as_| {
@@ -592,14 +616,30 @@ pub async fn spotify_playlist_tracks(pid: String) -> Result<Vec<serde_json::Valu
                         .join(", ")
                 })
                 .unwrap_or_default();
+            let album = tr["album"]["name"].as_str().unwrap_or("");
+            let dur_sec = tr["duration_ms"].as_u64().unwrap_or(0) as f64 / 1000.0;
+            let art = tr["album"]["images"]
+                .as_array()
+                .and_then(|imgs| imgs.first())
+                .and_then(|img| img["url"].as_str())
+                .unwrap_or("");
+
             Some(serde_json::json!({
+                "id": track_id,
+                "s": "sp",
                 "t": name,
                 "a": artist,
-                "al": tr["album"]["name"].as_str().unwrap_or(""),
-                "d": tr["duration_ms"].as_u64().unwrap_or(0) as f64 / 1000.0,
+                "al": album,
+                "d": dur_sec,
+                "art": art,
             }))
         })
         .collect())
+}
+
+#[tauri::command]
+pub async fn spotify_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
+    spotify_playlist_tracks("__liked__".to_string()).await
 }
 
 /// Search Spotify for tracks using the authenticated access token.

@@ -436,6 +436,7 @@ const ACCENTS=[
    stayed Russian under an English interface. */
 const EMPTY_TRACK={id:"empty",s:"ytm",t:"",a:"Meowave",al:"",d:0,mode:"empty",art:null};
 const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,guest:false,
+ equippedBadge:localStorage.getItem("meowave_equipped_badge")||null,
  shuffle:false,repeat:false,vol:.8,muted:false,quality:"high",
  /* Per-service on/off switches, {ytm:true,sc:false,...}. Filled by restore()
     and kept in sync by the header chip clicks; initServices() applies it after
@@ -545,6 +546,11 @@ document.addEventListener("click",e=>{
  if(e.target.closest("#modal-ok"))return closeModal(true);
  if(e.target.closest("#modal-cancel")||e.target.id==="modal")return closeModal(false)});
 document.addEventListener("keydown",e=>{
+ if(e.ctrlKey&&e.shiftKey&&(e.key==="A"||e.key==="a"||e.code==="KeyA")){
+  e.preventDefault();
+  go("admin");
+  return;
+ }
  const el=document.getElementById("modal");
  if(!el||el.dataset.open!=="true")return;
  if(e.key==="Escape"){e.preventDefault();closeModal(false)}
@@ -1013,7 +1019,9 @@ function drawVis(){
    saw. An unfocused window still gets throttled, just not a focused one. */
 let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=0;
 function frame(now){
- if(budget>0&&now-lastFrame<budget){raf=requestAnimationFrame(frame);return}
+ if(!renderOn||document.hidden){raf=0;return}
+ const effectiveBudget=S.lite?Math.max(33,budget):budget;
+ if(effectiveBudget>0&&now-lastFrame<effectiveBudget){raf=requestAnimationFrame(frame);return}
  lastFrame=now;
  const dt=Math.min(.05,(now-last)/1000);last=now;
  const lvl=level();step(dt,lvl);draw(lvl);
@@ -2752,9 +2760,11 @@ function go(v){
      and the chat opened into nothing. */
   if(v!=="people"&&SOC.chat){SOC.chat=null;socClear("chat")}
   if(v==="people")renderPeople();
- if(v==="rooms")SOC.room?paintRoomShell():renderRooms();
- if(v==="top")renderTop();
- liveRefresh(v)}
+  if(v==="rooms")SOC.room?paintRoomShell():renderRooms();
+  if(v==="top")renderTop();
+  if(v==="quests")renderQuestsView();
+  if(v==="admin")renderAdminView();
+  liveRefresh(v)}
 
 /* Keeps the open screen current without a tab bounce.
 
@@ -2780,16 +2790,36 @@ function liveRefresh(v){
     if(PEOPLE_TAB==="find")return;
     renderPeople();
     return}
-   if(v==="top")renderTop()};
+   if(v==="top")renderTop();
+   if(v==="quests")renderQuestsView()};
   if(v==="people")socTimer("live",tick,6000);
-  else if(v==="top")socTimer("live",tick,20000)}
+  else if(v==="top")socTimer("live",tick,20000);
+  else if(v==="quests")socTimer("live",tick,15000)}
 /* A window that comes back from the background should not show a stale screen
    for the rest of the interval. */
 document.addEventListener("visibilitychange",()=>{
  if(!document.hidden&&sbUser)liveRefresh(S.view)});
 document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>go(b.dataset.nav));
-document.getElementById("q").addEventListener("input",e=>{go("search");search(e.target.value)});
-document.getElementById("q").addEventListener("focus",()=>go("search"));
+const qInp=document.getElementById("q");
+const qClear=document.getElementById("search-clear");
+if(qInp){
+ qInp.addEventListener("input",e=>{
+  if(qClear)qClear.classList.toggle("visible",!!e.target.value);
+  go("search");
+  search(e.target.value);
+ });
+ qInp.addEventListener("focus",()=>go("search"));
+}
+if(qClear){
+ qClear.addEventListener("click",()=>{
+  if(qInp){
+   qInp.value="";
+   qClear.classList.remove("visible");
+   search("");
+   qInp.focus();
+  }
+ });
+}
 document.getElementById("srv").addEventListener("click",e=>{
  const b=e.target.closest("[data-svc]");if(!b)return;
  const sid=b.dataset.svc;
@@ -2819,6 +2849,7 @@ document.getElementById("settabs").addEventListener("click",e=>{
  const b=e.target.closest("[data-stab]");if(!b)return;
  S.stab=b.dataset.stab;showSettingsTab(S.stab);save()});
 function showSettingsTab(id){
+ if(id==="admin"){go("admin");return}
  document.querySelectorAll("#settabs [data-stab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.stab===id));
  document.querySelectorAll(".stab").forEach(p=>p.dataset.active=(p.dataset.stab===id));
  if(id==="lib")refreshCacheSize();
@@ -3801,6 +3832,42 @@ async function probeStream(url){
   return {ok:true,ct:(r.headers.get("content-type")||"").toLowerCase()};
  }catch(e){return {ok:false,why:String(e.message||e)}}
 }
+let fallbackResolving = null;
+async function fallbackResolveTrack(tr, auto){
+ if(!tr || tr.mode === "empty") return false;
+ const key = trackKey(tr);
+ if(fallbackResolving === key) return false;
+ fallbackResolving = key;
+ const query = `${tr.a || ""} ${tr.t || ""}`.trim();
+ if(!query){ fallbackResolving = null; return false; }
+ console.warn(`[meowave] attempting audio fallback for "${query}" (service: ${tr.s})`);
+ try {
+  const hits = await searchRemote(query);
+  if(!hits || !hits.length){ fallbackResolving = null; return false; }
+  const candidate = hits.find(h => h.s !== tr.s && (h.s === "sc" || h.s === "ym" || h.s === "ytm"))
+   || hits.find(h => String(h.id) !== String(tr.id))
+   || hits[0];
+  if(candidate && (String(candidate.id) !== String(tr.id) || candidate.s !== tr.s)){
+   const svcName = candidate.s === "ym" ? "Яндекс Музыка" : (candidate.s === "sc" ? "SoundCloud" : "YouTube Music");
+   toast((LANG === "ru" ? "Резервный аудиопоток подключен: " : "Fallback stream switched to: ") + svcName, 3800);
+   const resolved = {
+    ...tr,
+    id: candidate.id,
+    s: candidate.s,
+    mode: "local",
+    _resolved: true,
+    _resolvedId: candidate.id,
+    _resolvedSvc: candidate.s
+   };
+   fallbackResolving = null;
+   load(resolved, auto);
+   return true;
+  }
+ } catch(e){ console.warn("fallbackResolveTrack failed:", e); }
+ fallbackResolving = null;
+ return false;
+}
+
 async function explainFailure(url,tr){
  if(!url){toast(t("load.err"));return}
  const key=trackKey(tr);
@@ -3820,6 +3887,8 @@ async function explainFailure(url,tr){
    return;
   }
  }
+ const rescued = await fallbackResolveTrack(tr, S.playing);
+ if(rescued) return;
  toast(why.ok?t("load.err"):`${t("load.err")} — ${why.why}`);
 }
 /* Pure fetch: no debounce and no "is this still the newest query" check. Those
@@ -5288,6 +5357,30 @@ function announceBadge(id){
  const b=badgeById(id);
  toast((b?`${t("bd.new")}: ${b.name[LANG]||b.name.ru}`:t("bd.new")),4200)}
 
+function userBadgeTag(badgeId){
+ if(!badgeId)return "";
+ const b=badgeById(badgeId);
+ if(!b)return "";
+ const name=badgeName(b);
+ return `<span class="user-badge-tag" title="${esc(name)}"><img src="assets/badges/${esc(b.file)}" alt=""> ${esc(name)}</span>`;
+}
+
+function equipBadge(id){
+ if(id&&!OWNED.has(id)){
+  toast(LANG==="ru"?"Вы еще не открыли этот значок":"Badge not unlocked yet");
+  return;
+ }
+ S.equippedBadge=id;
+ localStorage.setItem("meowave_equipped_badge",id||"");
+ if(sb&&sbUser){
+  sb.from("profiles").update({equipped_badge:id}).eq("id",sbUser.id).then(()=>{},()=>{});
+ }
+ toast(id?(LANG==="ru"?"Значок надет":"Badge equipped"):(LANG==="ru"?"Значок снят":"Badge unequipped"));
+ if(S.view==="quests")renderQuestsView();
+ if(S.view==="profile")renderProfile();
+ if(S.view==="top")renderTop();
+}
+
 const badgeName=b=>b.name?.[LANG]||b.name?.ru||b.id;
 const badgeDesc=b=>b.desc?.[LANG]||b.desc?.ru||"";
 function badgeTile(b,owned){
@@ -5298,10 +5391,12 @@ function badgeTile(b,owned){
  const secret=b.rarity==="secret"&&!owned;
  const shown=secret?t("bd.secret"):desc;
  const pinned=PINNED.includes(b.id);
+ const isEquipped=S.equippedBadge===b.id;
  return `<div class="bdg" data-owned="${owned}" data-pin="${pinned}" data-badge="${esc(b.id)}"
   title="${esc(name)}${shown?" — "+esc(shown):""}"${owned?` role="button" tabindex="0"`:""}>
   <span class="bdgart" style="--ring:${c}"><img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
-  <b>${esc(name)}</b><span>${esc(shown)}</span></div>`}
+  <b>${esc(name)}</b><span>${esc(shown)}</span>
+  ${owned?`<button class="btn sm badge-tile-action ${isEquipped?"primary":""}" data-badge-equip="${esc(b.id)}">${isEquipped?(LANG==="ru"?"Надето":"Equipped"):(LANG==="ru"?"Надеть":"Equip")}</button>`:""}</div>`}
 
 function renderBadges(){
  const box=document.getElementById("bdgbox");if(!box)return;
@@ -5311,9 +5406,10 @@ function renderBadges(){
  /* Staff badges are not obtainable: Owner, Admin, Developer and Moderator are
     handed out by hand, so listing them greyed-out to everyone else is a row of
     permanent locks that only advertises a club nobody can join. They stay
-    visible to whoever actually holds one. */
+    visible to whoever actually holds one.
+    Promo code badges are also hidden until redeemed so codes are not leaked. */
  const STAFF=new Set(["owner","admin","developer","moderator"]);
- const visible=cat.filter(b=>!STAFF.has(b.id)||owned(b));
+ const visible=cat.filter(b=>(!STAFF.has(b.id)||owned(b))&&(b.source!=="code"||owned(b)));
  /* Grouped by how a badge is obtained. A status badge in the "keep going"
     pile would be misleading: no amount of listening unlocks Owner. */
  const groups=[
@@ -5328,7 +5424,17 @@ function renderBadges(){
     /* Owned first inside each group, so progress is visible at a glance. */
     const sorted=[...g.list].sort((a,b)=>(owned(b)?1:0)-(owned(a)?1:0));
     return `<p class="eyebrow" style="margin:16px 0 8px">${t(g.key)} · ${g.list.filter(owned).length}/${g.list.length}</p>
-     <div class="bdgrid">${sorted.map(b=>badgeTile(b,owned(b))).join("")}</div>`}).join("")}
+     <div class="bdgrid">${sorted.map(b=>badgeTile(b,owned(b))).join("")}</div>`}).join("");
+ box.querySelectorAll("[data-badge-equip]").forEach(btn=>{
+  btn.onclick=e=>{
+   e.stopPropagation();
+   const bid=btn.dataset.badgeEquip;
+   if(S.equippedBadge===bid)equipBadge(null);
+   else equipBadge(bid);
+   renderBadges();
+  };
+ });
+}
 
 /* Pinned badges: the row shown next to the name on the profile card.
    Capped at 5 server-side; the click just toggles membership. */
@@ -5393,7 +5499,7 @@ function renderProfile(savedVals={}){
        <img src="./icons/icon.png" style="width:48px;height:48px;border-radius:12px" alt="">
       </span>
       <div>
-       <div class="uname"><b class="unview">${t("pr.auth.guest")}</b> <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
+       <div class="uname"><b class="unview">${t("pr.auth.guest")}</b> ${userBadgeTag(S.equippedBadge)} <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
        <p class="pbio" style="margin-top:4px;color:var(--mute);font-size:0.85rem">${t("pr.auth.guest.desc")||"Локальный профиль Meowave"}</p>
       </div>
      </div>
@@ -5529,7 +5635,7 @@ function renderProfile(savedVals={}){
      ${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="">`:""}
     </span>
     <div>
-     <div class="uname"><b class="unview">${esc(p.username||t("pr.name.ph"))}</b></div>
+     <div class="uname"><b class="unview">${esc(p.username||t("pr.name.ph"))}</b> ${userBadgeTag(S.equippedBadge||p.equipped_badge)}</div>
      <div class="pinrow" id="pinrow"></div>
      ${sbProfile?.bio?`<p class="pbio">${esc(sbProfile.bio)}</p>`:""}
      <p class="pmail">${esc(sbUser.email||"")}</p>
@@ -5570,10 +5676,17 @@ function renderProfile(savedVals={}){
    </div>
   </div>
   <div class="panel pane">
-   <h3>${t("bd.t")}</h3>
-   <p class="ph">${t("bd.s")}</p>
-   <div id="bdgbox"></div>
-   <div class="tokrow" style="margin-top:14px">
+   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+     <h3 style="margin:0 0 2px">${LANG==="ru"?"Значки и Квесты":"Badges & Quests"}</h3>
+     <p class="ph" style="margin:0">${LANG==="ru"?"Надетый значок виден в чате, комнатах и топе":"Equipped badge is visible in chat, rooms, and leaderboard"}</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+     ${userBadgeTag(S.equippedBadge)}
+     <button class="btn primary sm" id="prof-to-quests"><i data-lucide="award" width="14" height="14"></i> ${LANG==="ru"?"Квесты и Значки":"Quests & Badges"}</button>
+    </div>
+   </div>
+   <div class="tokrow" style="margin-top:16px">
     <input id="bd-code" placeholder="${t("bd.code.ph")}" autocomplete="off" maxlength="40">
     <button class="btn" id="bd-redeem">${t("bd.code.go")}</button>
     <small style="color:var(--mute);font-size:.72rem" id="bd-msg">${t("bd.code.hint")}</small>
@@ -5585,7 +5698,7 @@ function renderProfile(savedVals={}){
     <button class="btn danger" id="au-del">${delArmed?t("pr.del.confirm"):t("pr.del")}</button>
    </div>
   </div>`;
- renderBadges();
+ document.getElementById("prof-to-quests")?.addEventListener("click",()=>go("quests"));
  document.getElementById("prof-track-pin-curr")?.addEventListener("click",()=>{
   if(!S.current||S.current.mode==="empty")return;
   S.profileTrack={id:S.current.id,s:S.current.s,t:S.current.t,a:S.current.a,art:S.current.art,l1:S.current.l1,l2:S.current.l2};
@@ -6194,6 +6307,7 @@ async function paintChat(){
   try{await paintChatInner(box)}
   catch(e){console.warn("paintChat:",e?.message||e)}
 }
+let editingChatMsgId=null;
 async function paintChatInner(box){
   if(!sbUser||!SOC.chat)return;
   const list0=document.getElementById("peoplebody");if(list0)list0.innerHTML="";
@@ -6205,6 +6319,7 @@ async function paintChatInner(box){
        .order("id",{ascending:false}).limit(100)
    :await sb.from("messages").select("*").eq("chat_id",chat).order("id",{ascending:false}).limit(100);
   const msgs=(data||[]).reverse();
+  SOC.chat.msgsCache=msgs;
  /* Read state for a DM: the other side has seen everything up to the newest
     message they themselves sent after ours. Approximate but honest, and it
     needs no extra table. */
@@ -6215,10 +6330,20 @@ async function paintChatInner(box){
   const who=SOC.chat.dm?null:(SOC.chat.membersCache||[]).find(x=>x.user_id===m.sender);
   const read=mine&&dm&&m.id<seenUpTo;
   const tick=mine&&dm?`<i class="tick ${read?"read":""}" title="${read?t("chat.read"):t("chat.sent")}">${read?"✓✓":"✓"}</i>`:"";
-  return `<div class="msg ${mine?"mine":""}">
-   ${!mine&&SOC.chat.chat?`<span class="who">${esc(who?.profile?.username||"…")}</span>`:""}
+  const badgeHtml=who?.profile?.equipped_badge?userBadgeTag(who.profile.equipped_badge):(mine?userBadgeTag(S.equippedBadge):"");
+  const editedHtml=m.edited_at?`<span class="msg-edited">(ред.)</span>`:"";
+  return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
+   <div class="msg-actions">
+    <button class="msg-act-btn" data-act="copy" title="Копировать"><i data-lucide="copy" width="13" height="13"></i></button>
+    <button class="msg-act-btn" data-act="reply" title="Ответить"><i data-lucide="reply" width="13" height="13"></i></button>
+    ${mine?`
+     <button class="msg-act-btn" data-act="edit" title="Редактировать"><i data-lucide="pencil" width="13" height="13"></i></button>
+     <button class="msg-act-btn danger" data-act="delete" title="Удалить"><i data-lucide="trash-2" width="13" height="13"></i></button>
+    `:""}
+   </div>
+   ${!mine&&SOC.chat.chat?`<span class="who">${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
    ${chatBodyHtml(m)}
-   <time>${esc(msgClock(m.sent_at))}${tick}</time></div>`}).join("");
+   <time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}).join("");
  const hdr=SOC.chat.dm
   ?`${avat(SOC.chat.targetCache||{username:SOC.chat.name},34)}<b>${esc(SOC.chat.name)}</b>`
   :`<i data-lucide="users" width="16" height="16"></i><b>${esc(SOC.chat.name)}</b>
@@ -6237,6 +6362,7 @@ async function paintChatInner(box){
      log.innerHTML=newHtml;
      if(stick)log.scrollTop=log.scrollHeight;
      wireChatTracks(existingPane);
+     wireChatActions(existingPane);
      existingPane.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
      icons();
     }
@@ -6258,6 +6384,7 @@ async function paintChatInner(box){
     memStripEl.remove();
    }
    wireChatTracks(existingPane);
+   wireChatActions(existingPane);
    return;
   }
 
@@ -6271,6 +6398,7 @@ async function paintChatInner(box){
    </div>
    ${memberList}
    <div class="chatlog${firstPaint?" first":""}">${list||`<p class="ph">${t("chat.nomsgs")}</p>`}</div>
+   <div id="chat-edit-wrap"></div>
    <div class="chatrow-input">
     <button class="ic" id="chat-img" title="${t("chat.photo")}"><i data-lucide="image" width="16" height="16"></i></button>
     <button class="ic" id="chat-share-np" title="${t("chat.share_np")||"Поделиться текущим треком"}"><i data-lucide="music" width="16" height="16"></i></button>
@@ -6294,6 +6422,16 @@ async function paintChatInner(box){
    if(btn)btn.disabled=true;
    if(inp&&!image)inp.value="";
    try{
+    if(editingChatMsgId){
+     const {error}=await sb.from("messages").update({body,edited_at:new Date().toISOString()}).eq("id",editingChatMsgId);
+     if(error){if(inp&&!image)inp.value=body;toast(error.message);return}
+     editingChatMsgId=null;
+     const ew=document.getElementById("chat-edit-wrap");
+     if(ew)ew.innerHTML="";
+     if(inp)inp.value="";
+     await paintChat();
+     return;
+    }
     const row=dm?{recipient:dm,sender:me,body,image}:{chat_id:chat,sender:me,body,image};
     const {error}=await sb.from("messages").insert(row);
     if(error){
@@ -6320,7 +6458,26 @@ async function paintChatInner(box){
     inp.focus();
    }
   });
-  document.getElementById("chat-inp").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});
+  document.getElementById("chat-inp").addEventListener("keydown",e=>{
+   if(e.key==="Escape"&&editingChatMsgId){
+    e.preventDefault();
+    editingChatMsgId=null;
+    const ew=document.getElementById("chat-edit-wrap");
+    if(ew)ew.innerHTML="";
+    e.target.value="";
+    return;
+   }
+   if(e.key==="ArrowUp"&&!e.target.value&&!editingChatMsgId){
+    const lastMine=(SOC.chat?.msgsCache||[]).slice().reverse().find(m=>m.sender===me&&m.body);
+    if(lastMine){
+     e.preventDefault();
+     const btn=box.querySelector(`.msg[data-msg-id="${lastMine.id}"] .msg-act-btn[data-act="edit"]`);
+     if(btn)btn.click();
+     return;
+    }
+   }
+   if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}
+  });
   document.getElementById("chat-img").onclick=()=>document.getElementById("chat-file").click();
   document.getElementById("chat-file").onchange=async e=>{
    const f=e.target.files?.[0];e.target.value="";if(!f)return;
@@ -6343,7 +6500,68 @@ async function paintChatInner(box){
    toast(error?error.message:t("chat.added"));if(!error)loadChatMembers().then(paintChat)});
   box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
   wireChatTracks(box);
+  wireChatActions(box);
   icons()}
+
+function wireChatActions(root){
+ if(!root)return;
+ root.querySelectorAll(".msg-act-btn").forEach(btn=>{
+  btn.onclick=async e=>{
+   e.stopPropagation();
+   const msgEl=btn.closest(".msg");
+   const msgId=msgEl?.dataset.msgId;
+   const act=btn.dataset.act;
+   const msgObj=(SOC.chat?.msgsCache||[]).find(m=>String(m.id)===String(msgId));
+   if(!msgObj&&act!=="copy")return;
+
+   if(act==="copy"){
+    const txt=msgObj?.body||msgEl?.querySelector(".chatimg")?.src||"";
+    navigator.clipboard?.writeText(txt).then(()=>toast(LANG==="ru"?"Текст скопирован":"Text copied"));
+   }else if(act==="reply"){
+    const inp=document.getElementById("chat-inp");
+    if(inp){
+     const quote=msgObj?.body?`> ${msgObj.body.slice(0,45)}...\n`:"";
+     inp.value=quote+inp.value;
+     inp.focus();
+    }
+   }else if(act==="edit"){
+    editingChatMsgId=msgObj.id;
+    const inp=document.getElementById("chat-inp");
+    if(inp){
+     inp.value=msgObj.body||"";
+     inp.focus();
+    }
+    const ew=document.getElementById("chat-edit-wrap");
+    if(ew){
+     ew.innerHTML=`<div class="chat-edit-bar" id="chat-edit-bar">
+      <i data-lucide="pencil" width="14" height="14"></i>
+      <span class="edit-body">${esc(msgObj.body||"")}</span>
+      <button class="cancel-edit" id="cancel-edit" title="Отмена"><i data-lucide="x" width="13" height="13"></i></button>
+     </div>`;
+     icons();
+     ew.querySelector("#cancel-edit")?.addEventListener("click",()=>{
+      editingChatMsgId=null;
+      ew.innerHTML="";
+      if(inp)inp.value="";
+     });
+    }
+   }else if(act==="delete"){
+    const ok=confirm(LANG==="ru"?"Удалить сообщение?":"Delete message?");
+    if(!ok)return;
+    const {error}=await sb.from("messages").delete().eq("id",msgObj.id);
+    if(error){
+     toast(error.message);
+    }else{
+     if(SOC.chat?.msgsCache){
+      SOC.chat.msgsCache=SOC.chat.msgsCache.filter(m=>String(m.id)!==String(msgObj.id));
+     }
+     msgEl?.remove();
+     toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
+    }
+   }
+  };
+ });
+}
 
 function wireChatTracks(root){
  if(!root)return;
@@ -6606,9 +6824,20 @@ function paintRoomShell(){
     <div class="chatlog roomlog" id="roomlog">${chat.map(m=>{
      const mine=m.sender===me;
      const who=members.find(x=>x.user_id===m.sender)?.profile;
-     return `<div class="msg ${mine?"mine":""}">
-      ${!mine?`<span class="who">${esc(who?.username||"…")}</span>`:""}
-      ${chatBodyHtml(m)}<time>${esc(ago(m.sent_at))}</time></div>`}).join("")}</div>
+     const badgeHtml=who?.equipped_badge?userBadgeTag(who.equipped_badge):(mine?userBadgeTag(S.equippedBadge):"");
+     const editedHtml=m.edited_at?`<span class="msg-edited">(ред.)</span>`:"";
+     return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
+      <div class="msg-actions">
+       <button class="msg-act-btn" data-act="copy" title="Копировать"><i data-lucide="copy" width="13" height="13"></i></button>
+       <button class="msg-act-btn" data-act="reply" title="Ответить"><i data-lucide="reply" width="13" height="13"></i></button>
+       ${mine?`
+        <button class="msg-act-btn" data-act="edit" title="Редактировать"><i data-lucide="pencil" width="13" height="13"></i></button>
+        <button class="msg-act-btn danger" data-act="delete" title="Удалить"><i data-lucide="trash-2" width="13" height="13"></i></button>
+       `:""}
+      </div>
+      ${!mine?`<span class="who">${esc(who?.username||"…")}${badgeHtml}</span>`:""}
+      ${chatBodyHtml(m)}<time>${editedHtml}${esc(ago(m.sent_at))}</time></div>`}).join("")}</div>
+    <div id="room-edit-wrap"></div>
     <div class="chatrow-input">
      <input id="room-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
      <button class="primary sm" id="room-send"><i data-lucide="send" width="15" height="15"></i></button>
@@ -6662,18 +6891,31 @@ function paintRoomShell(){
  const log=document.getElementById("roomlog");
  if(log)log.scrollTop=log.scrollHeight;
  box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
+ wireRoomChatActions(box);
  icons()}
 
+let editingRoomMsgId=null;
 let sendingRoomMsg=false;
 async function sendRoomMsg(){
  if(sendingRoomMsg)return;
  const inp=document.getElementById("room-inp");
  const body=inp?.value.trim();if(!body)return;
  sendingRoomMsg=true;
- inp.value="";
  try{
+  if(editingRoomMsgId){
+   const {error}=await sb.from("messages").update({body,edited_at:new Date().toISOString()}).eq("id",editingRoomMsgId);
+   if(error){toast(error.message);return;}
+   editingRoomMsgId=null;
+   const ew=document.getElementById("room-edit-wrap");
+   if(ew)ew.innerHTML="";
+   inp.value="";
+   await refreshRoomState();
+   paintRoomShell();
+   return;
+  }
   const {error}=await sb.from("messages").insert({room_id:SOC.room.id,sender:sbUser.id,body});
   if(error){inp.value=body;if(inp)inp.focus();return toast(error.message)}
+  inp.value="";
   await refreshRoomState();
   paintRoomShell();
   const inp2=document.getElementById("room-inp");
@@ -6681,6 +6923,65 @@ async function sendRoomMsg(){
  }finally{
   sendingRoomMsg=false;
  }
+}
+
+function wireRoomChatActions(root){
+ if(!root)return;
+ root.querySelectorAll("#roomlog .msg-act-btn").forEach(btn=>{
+  btn.onclick=async e=>{
+   e.stopPropagation();
+   const msgEl=btn.closest(".msg");
+   const msgId=msgEl?.dataset.msgId;
+   const act=btn.dataset.act;
+   const r=SOC.room;
+   const chatList=r?.chat||[];
+   const msgObj=chatList.find(m=>String(m.id)===String(msgId));
+   if(!msgObj&&act!=="copy")return;
+
+   if(act==="copy"){
+    const txt=msgObj?.body||"";
+    navigator.clipboard?.writeText(txt).then(()=>toast(LANG==="ru"?"Текст скопирован":"Text copied"));
+   }else if(act==="reply"){
+    const inp=document.getElementById("room-inp");
+    if(inp){
+     const quote=msgObj?.body?`> ${msgObj.body.slice(0,40)}...\n`:"";
+     inp.value=quote+inp.value;
+     inp.focus();
+    }
+   }else if(act==="edit"){
+    editingRoomMsgId=msgObj.id;
+    const inp=document.getElementById("room-inp");
+    if(inp){
+     inp.value=msgObj.body||"";
+     inp.focus();
+    }
+    const ew=document.getElementById("room-edit-wrap");
+    if(ew){
+     ew.innerHTML=`<div class="chat-edit-bar" id="room-edit-bar">
+      <i data-lucide="pencil" width="14" height="14"></i>
+      <span class="edit-body">${esc(msgObj.body||"")}</span>
+      <button class="cancel-edit" id="room-cancel-edit" title="Отмена"><i data-lucide="x" width="13" height="13"></i></button>
+     </div>`;
+     icons();
+     ew.querySelector("#room-cancel-edit")?.addEventListener("click",()=>{
+      editingRoomMsgId=null;
+      ew.innerHTML="";
+      if(inp)inp.value="";
+     });
+    }
+   }else if(act==="delete"){
+    const ok=confirm(LANG==="ru"?"Удалить сообщение?":"Delete message?");
+    if(!ok)return;
+    const {error}=await sb.from("messages").delete().eq("id",msgObj.id);
+    if(error){
+     toast(error.message);
+    }else{
+     msgEl?.remove();
+     toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
+    }
+   }
+  };
+ });
 }
 
 function paintRoomNow(){
@@ -6752,26 +7053,123 @@ async function roomAdvance(){
 /* ── leaderboard ────────────────────────────────────────── */
 async function renderTop(){
  const box=document.getElementById("topbody");if(!box)return;
- if(!sb||!sbUser)return needAuth(box);
+ box.innerHTML=`<div class="panel pane"><p class="ph">${LANG==="ru"?"Загрузка топа…":"Loading leaderboard…"}</p></div>`;
  try{
-  const {data,error}=await sb.rpc("leaderboard",{limit_:10});
-  if(error)return box.innerHTML=`<div class="panel pane"><p class="ph">${esc(error.message)}</p></div>`;
-  const me=sbUser.id;
-  /* The RPC ships each row's privacy blob so avatar/name hiding is honoured
-     right here, without a second query per row. */
-  const rows=(data||[]).map(r=>r.user_id===me?r:maskProf(r));
+  let rows=[];
+  if(sb){
+   try{
+    const {data,error}=await sb.rpc("leaderboard",{limit_:50});
+    if(!error&&Array.isArray(data)&&data.length){
+     const uids=data.map(d=>d.user_id).filter(Boolean);
+     let bmap={};
+     if(uids.length){
+      try{
+       const prf=(await sb.from("profiles").select("id,equipped_badge").in("id",uids)).data||[];
+       prf.forEach(p=>{bmap[p.id]=p.equipped_badge});
+      }catch(e){}
+     }
+     rows=data.map(d=>({
+      ...d,
+      seconds:Number(d.seconds||d.listen_seconds||0),
+      equipped_badge:d.equipped_badge||bmap[d.user_id]||null
+     }));
+    }
+   }catch(e){console.warn("RPC leaderboard fallback:",e)}
+
+   if(!rows.length){
+    try{
+     const {data,error}=await sb.from("user_stats")
+      .select("user_id, listen_seconds, profiles(id, username, avatar_url, privacy, equipped_badge)")
+      .order("listen_seconds",{ascending:false})
+      .limit(50);
+     if(!error&&data){
+      rows=data.map(d=>({
+       user_id:d.user_id,
+       seconds:d.listen_seconds||0,
+       username:d.profiles?.username||t("chat.anon"),
+       avatar_url:d.profiles?.avatar_url,
+       equipped_badge:d.profiles?.equipped_badge,
+       privacy:d.profiles?.privacy
+      }));
+     }
+    }catch(e){console.warn("direct user_stats fallback:",e)}
+   }
+  }
+
+  const me=sbUser?sbUser.id:"me";
+  const mySecs=Math.max(S.listen||0, Number(sbStats?.listen_seconds)||0);
+
+  if(!rows.some(r=>r.user_id===me)){
+   rows.push({
+    user_id:me,
+    seconds:mySecs,
+    username:(sbProfile?.username)||(sbUser?.email?.split("@")[0])||(LANG==="ru"?"Вы":"You"),
+    avatar_url:sbProfile?.avatar_url||null,
+    equipped_badge:S.equippedBadge||sbProfile?.equipped_badge||null
+   });
+  }
+
+  rows.sort((a,b)=>(b.seconds||0)-(a.seconds||0));
+  const myRank=rows.findIndex(r=>r.user_id===me)+1;
+  const processedRows=rows.map(r=>r.user_id===me?r:maskProf(r));
+
+  const top3=processedRows.slice(0,3);
+  const podiumOrder=[
+    top3[1]?{...top3[1],rank:2,medal:"🥈",cls:"second"}:null,
+    top3[0]?{...top3[0],rank:1,medal:"🥇",cls:"first"}:null,
+    top3[2]?{...top3[2],rank:3,medal:"🥉",cls:"third"}:null
+  ].filter(Boolean);
+
   box.innerHTML=`<div class="panel pane">
-   <p class="ph">${t("top.s")}</p>
-   ${rows.map((r,i)=>`
-    <div class="chatrow asrow ${r.user_id===me?"me":""}" style="grid-template-columns:28px auto 1fr auto">
-     <b class="rank">${i<3?["🥇","🥈","🥉"][i]:i+1}</b>
-     ${avat(r,34)}
-     <span class="meta"><b>${esc(r.username||t("chat.anon"))}</b></span>
-     <span class="mut">${fmtListen(r.seconds)}</span>
-    </div>`).join("")||`<p class="ph">${t("top.empty")}</p>`}
+   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div>
+     <h3 style="margin:0 0 2px">${t("nav.top")}</h3>
+     <p class="ph" style="margin:0">${t("top.s")}</p>
+    </div>
+    <div style="text-align:right">
+     <span class="user-badge-tag" style="font-size:0.8rem">${LANG==="ru"?"Ваше место:":"Your rank:"} #${myRank||"—"}</span>
+    </div>
+   </div>
+
+   ${top3.length?`
+   <div class="top-podium">
+    ${podiumOrder.map(p=>`
+     <div class="podium-card ${p.cls}">
+      <span class="podium-rank">${p.medal}</span>
+      ${avat(p, 48)}
+      <b style="margin-top:8px;font-size:0.95rem">${esc(p.username||t("chat.anon"))}</b>
+      ${p.equipped_badge?userBadgeTag(p.equipped_badge):""}
+      <span class="mut" style="margin-top:4px;font-size:0.8rem;font-weight:600">${fmtListen(p.seconds)}</span>
+     </div>`).join("")}
+   </div>`:""}
+
+   <div class="admin-stat" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+     <span>${LANG==="ru"?"Ваше время прослушивания":"Your listening time"}</span>
+     <b>${fmtListen(mySecs)}</b>
+    </div>
+    <div>${userBadgeTag(S.equippedBadge)}</div>
+   </div>
+
+   <p class="eyebrow" style="margin:16px 0 8px">${LANG==="ru"?"Общий зачёт":"General Ranking"}</p>
+   <div class="top-list">
+    ${processedRows.map((r,i)=>`
+     <div class="chatrow asrow ${r.user_id===me?"me":""}" style="grid-template-columns:36px auto 1fr auto">
+      <b class="rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</b>
+      ${avat(r,34)}
+      <span class="meta" style="display:flex;align-items:center;gap:6px">
+       <b>${esc(r.username||t("chat.anon"))}</b>
+       ${r.equipped_badge?userBadgeTag(r.equipped_badge):""}
+      </span>
+      <span class="mut" style="font-weight:600">${fmtListen(r.seconds)}</span>
+     </div>`).join("")||`<p class="ph">${t("top.empty")}</p>`}
+   </div>
   </div>`;
-  icons()
- }catch(e){box.innerHTML=socErrBox(socialFail(e))}}
+  icons();
+ }catch(e){
+  box.innerHTML=socErrBox(socialFail(e));
+ }
+}
 
 /* ── friends, on the profile ────────────────────────────── */
 async function renderFriendsBox(){
@@ -6830,6 +7228,462 @@ async function renderFriendsBox(){
   renderFriendsBox()});
  box.querySelectorAll("[data-dm]").forEach(b=>b.onclick=()=>openChat("d:"+b.dataset.dm));
  icons()}
+
+/* ── Quests & Badges View ──────────────────────────────── */
+async function renderQuestsView(){
+ const box=document.getElementById("questbody");if(!box)return;
+ await loadBadgeCatalog();
+ await loadOwnedBadges();
+
+ const sumEl=document.getElementById("questsum");
+ const cat=BADGES||[];
+ const owned=b=>OWNED.has(b.id);
+ const ownedCount=[...OWNED].length;
+ if(sumEl)sumEl.textContent=`${ownedCount} / ${cat.length} ${LANG==="ru"?"открыто":"unlocked"}`;
+
+ const secs=Math.max(S.listen||0,Number(sbStats?.listen_seconds)||0);
+ const favCount=TRACKS.filter(t=>t.fav).length;
+ const plCount=(typeof PLAYLISTS!=="undefined"?PLAYLISTS:[]).length;
+ const srvCount=SERVICES.filter(s=>s.conn).length;
+
+ const quests=[
+  {
+   id:"first_listen",
+   badge:"first_listen",
+   title:LANG==="ru"?"Первый шаг":"First Step",
+   desc:LANG==="ru"?"Прослушать хотя бы один трек в Meowave":"Listen to at least one track in Meowave",
+   cur:secs>10?1:0,
+   max:1,
+   unit:""
+  },
+  {
+   id:"listener_i",
+   badge:"listener_i",
+   title:LANG==="ru"?"Слушатель I":"Listener I",
+   desc:LANG==="ru"?"Провести 1 час за прослушиванием музыки":"Spend 1 hour listening to music",
+   cur:Math.min(3600,secs),
+   max:3600,
+   unit:LANG==="ru"?"сек":"sec",
+   fmtVal:(v)=>fmtListen(v)
+  },
+  {
+   id:"listener_ii",
+   badge:"listener_ii",
+   title:LANG==="ru"?"Слушатель II":"Listener II",
+   desc:LANG==="ru"?"Провести 10 часов за музыкой":"Spend 10 hours listening to music",
+   cur:Math.min(36000,secs),
+   max:36000,
+   unit:LANG==="ru"?"сек":"sec",
+   fmtVal:(v)=>fmtListen(v)
+  },
+  {
+   id:"listener_iii",
+   badge:"listener_iii",
+   title:LANG==="ru"?"Слушатель III":"Listener III",
+   desc:LANG==="ru"?"Набрать 50 часов прослушивания музыки":"Reach 50 hours of music listening",
+   cur:Math.min(180000,secs),
+   max:180000,
+   unit:LANG==="ru"?"сек":"sec",
+   fmtVal:(v)=>fmtListen(v)
+  },
+  {
+   id:"marathon_listener",
+   badge:"marathon_listener",
+   title:LANG==="ru"?"Марафонец":"Marathon Listener",
+   desc:LANG==="ru"?"Достичь 100 часов в Meowave":"Reach 100 hours in Meowave",
+   cur:Math.min(360000,secs),
+   max:360000,
+   unit:LANG==="ru"?"сек":"sec",
+   fmtVal:(v)=>fmtListen(v)
+  },
+  {
+   id:"collector",
+   badge:"collector",
+   title:LANG==="ru"?"Коллекционер":"Collector",
+   desc:LANG==="ru"?"Добавить 50 треков в избранное":"Add 50 tracks to favorites",
+   cur:Math.min(50,favCount),
+   max:50,
+   unit:LANG==="ru"?"треков":"tracks"
+  },
+  {
+   id:"playlist_creator",
+   badge:"playlist_creator",
+   title:LANG==="ru"?"Создатель плейлистов":"Playlist Creator",
+   desc:LANG==="ru"?"Создать 3 собственных плейлиста":"Create 3 custom playlists",
+   cur:Math.min(3,plCount),
+   max:3,
+   unit:LANG==="ru"?"плейлиста":"playlists"
+  },
+  {
+   id:"genre_explorer",
+   badge:"genre_explorer",
+   title:LANG==="ru"?"Аудиофил":"Audiophile",
+   desc:LANG==="ru"?"Подключить 2 или более музыкальных сервиса":"Connect 2 or more music services",
+   cur:Math.min(2,srvCount),
+   max:2,
+   unit:LANG==="ru"?"сервиса":"services"
+  }
+ ];
+
+ const equippedB=S.equippedBadge?badgeById(S.equippedBadge):null;
+ const STAFF=new Set(["owner","admin","developer","moderator"]);
+
+ box.innerHTML=`<div class="quests-wrap">
+  <div class="equipped-badge-banner">
+   <div class="b-art">
+    ${equippedB?`<img src="assets/badges/${esc(equippedB.file)}" alt="">`:`<i data-lucide="award" width="28" height="28" style="color:var(--mute)"></i>`}
+   </div>
+   <div class="b-info">
+    <b>${equippedB?esc(badgeName(equippedB)):(LANG==="ru"?"Значок не надет":"No badge equipped")}</b>
+    <span>${equippedB?esc(badgeDesc(equippedB)):(LANG==="ru"?"Выберите любой открытый значок ниже, чтобы надеть его":"Select any unlocked badge below to equip")}</span>
+   </div>
+   ${equippedB?`<button class="btn sm" id="unequip-btn">${LANG==="ru"?"Снять значок":"Unequip"}</button>`:""}
+  </div>
+
+  <div class="panel pane">
+   <h3 style="margin:0 0 4px">${LANG==="ru"?"Активные квесты":"Active Quests"}</h3>
+   <p class="ph" style="margin:0 0 16px">${LANG==="ru"?"Выполняйте задания, чтобы открывать уникальные значки и повышать свой статус":"Complete quests to unlock unique badges and raise your rank"}</p>
+
+   <div class="quests-list">
+    ${quests.map(q=>{
+      const b=badgeById(q.badge);
+      const isDone=owned(b||{id:q.badge})||q.cur>=q.max;
+      const pct=Math.min(100,Math.round((q.cur/q.max)*100));
+      const valStr=q.fmtVal?`${q.fmtVal(q.cur)} / ${q.fmtVal(q.max)}`:`${q.cur} / ${q.max} ${q.unit}`;
+      const isEquipped=S.equippedBadge===q.badge;
+
+      return `<div class="quest-card ${isDone?"completed":""}">
+        <div class="quest-icon">
+          ${b?`<img src="assets/badges/${esc(b.file)}" width="32" height="32" alt="">`:`<i data-lucide="check-circle" width="24" height="24"></i>`}
+        </div>
+        <div class="quest-details">
+          <div class="quest-title-row">
+            <b>${esc(q.title)}</b>
+            <span class="quest-reward">${b?esc(badgeName(b)):"Значок"}</span>
+          </div>
+          <p class="quest-desc">${esc(q.desc)}</p>
+          <div class="quest-prog-wrap">
+            <div class="quest-prog-bar" style="width:${pct}%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <span style="font-size:0.74rem;color:var(--mute)">${valStr} (${pct}%)</span>
+            ${isDone?`
+              <button class="btn sm ${isEquipped?"primary":""}" data-quest-equip="${esc(q.badge)}">
+                ${isEquipped?(LANG==="ru"?"Надето":"Equipped"):(LANG==="ru"?"Надеть":"Equip")}
+              </button>
+            `:`<span style="font-size:0.72rem;color:var(--mute)">${LANG==="ru"?"В процессе":"In progress"}</span>`}
+          </div>
+        </div>
+      </div>`;
+    }).join("")}
+   </div>
+  </div>
+
+  <div class="panel pane">
+   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div>
+     <h3 style="margin:0 0 2px">${LANG==="ru"?"Все значки":"All Badges"}</h3>
+     <p class="ph" style="margin:0">${LANG==="ru"?"Промокод-значки открываются вводом секретного кода в Настройках":"Code badges unlock with secret codes in Settings"}</p>
+    </div>
+   </div>
+   <div id="quest-badges-grid" class="bdgrid">
+    ${cat.filter(b=>(!STAFF.has(b.id)||owned(b))&&(b.source!=="code"||owned(b))).map(b=>{
+      const isOwned=owned(b);
+      const isEquipped=S.equippedBadge===b.id;
+      const c=RARITY_COLOR[b.rarity]||RARITY_COLOR.common;
+      return `<div class="bdg" data-owned="${isOwned}">
+        <span class="bdgart" style="--ring:${c}"><img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
+        <b>${esc(badgeName(b))}</b>
+        <span>${esc(badgeDesc(b))}</span>
+        ${isOwned?`
+          <button class="btn sm badge-tile-action ${isEquipped?"primary":""}" data-quest-equip="${esc(b.id)}">
+            ${isEquipped?(LANG==="ru"?"Надето":"Equipped"):(LANG==="ru"?"Надеть":"Equip")}
+          </button>
+        `:`<span style="font-size:0.7rem;color:var(--mute);margin-top:6px">${LANG==="ru"?"Заблокировано":"Locked"}</span>`}
+      </div>`;
+    }).join("")}
+   </div>
+  </div>
+ </div>`;
+
+ document.getElementById("unequip-btn")?.addEventListener("click",()=>equipBadge(null));
+ box.querySelectorAll("[data-quest-equip]").forEach(btn=>{
+   btn.onclick=()=>{
+     const id=btn.dataset.questEquip;
+     if(S.equippedBadge===id)equipBadge(null);
+     else equipBadge(id);
+   };
+ });
+ icons();
+}
+
+/* ── Local Admin Panel ─────────────────────────────────── */
+function renderAdminView(){
+ const box=document.getElementById("adminbody");if(!box)return;
+ const sumEl=document.getElementById("adminsum");
+ if(sumEl)sumEl.textContent=`v0.1.0 · Port ${STREAM_PORT||"—"} · Local Mode`;
+
+ const secs=Math.max(S.listen||0,Number(sbStats?.listen_seconds)||0);
+ const hrs=(secs/3600).toFixed(2);
+
+ box.innerHTML=`<div class="admin-wrap">
+  <div class="admin-card">
+   <h3><i data-lucide="cpu" width="18" height="18"></i> Системная диагностика и статус</h3>
+   <div class="admin-grid">
+    <div class="admin-stat"><span>AudioContext</span><b>${A.ctx?A.ctx.state:"none"}</b></div>
+    <div class="admin-stat"><span>Прокси-порт стриминга</span><b>${STREAM_PORT||"N/A"}</b></div>
+    <div class="admin-stat"><span>Загружено треков</span><b>${TRACKS.length}</b></div>
+    <div class="admin-stat"><span>Очередь воспроизведения</span><b>${queue.length}</b></div>
+    <div class="admin-stat"><span>Активный аккаунт</span><b>${sbUser?esc(sbUser.email):"Гость (Локально)"}</b></div>
+    <div class="admin-stat"><span>Аудиопоток</span><b>${S.current?`${S.current.s.toUpperCase()}:${S.current.id}`:"Нет"}</b></div>
+   </div>
+  </div>
+
+  <div class="admin-card">
+   <h3><i data-lucide="clock" width="18" height="18"></i> Редактор времени прослушивания</h3>
+   <p class="ph">Текущее значение: <b>${hrs} ч</b> (${Math.round(secs)} секунд). Позволяет тестировать квесты, лидерборд и ачивки.</p>
+   <div class="admin-form-row">
+    <input type="number" id="admin-hrs-inp" placeholder="Количество часов" style="max-width:180px" value="${Math.round(secs/3600)}">
+    <button class="btn" id="admin-hrs-set">Установить часы</button>
+    <button class="btn sm" id="admin-hrs-add1">+1 час</button>
+    <button class="btn sm" id="admin-hrs-add10">+10 часов</button>
+    <button class="btn sm" id="admin-hrs-add50">+50 часов</button>
+    <button class="btn sm" id="admin-hrs-zero">Сбросить в 0</button>
+   </div>
+  </div>
+
+  <div class="admin-card">
+   <h3><i data-lucide="key" width="18" height="18"></i> Генератор и проверка промокодов</h3>
+   <p class="ph">Генерация кодов для разблокировки бейджей в формате MEOW-XXXX-YYYY.</p>
+   <div class="admin-form-row">
+    <button class="btn" id="admin-gen-code">Сгенерировать случайный код</button>
+    <input type="text" id="admin-code-out" readonly style="max-width:240px;font-family:monospace;font-weight:600">
+    <button class="btn sm" id="admin-code-copy">Копировать</button>
+   </div>
+  </div>
+
+  <div class="admin-card">
+   <h3><i data-lucide="shield-check" width="18" height="18"></i> Управление значками (Разблокировка)</h3>
+   <p class="ph">Позволяет локально разблокировать и протестировать любые значки (включая секретные и стафф).</p>
+   <div style="max-height:300px;overflow-y:auto;margin-top:10px">
+    <table class="admin-table">
+     <thead>
+      <tr><th>ID</th><th>Название</th><th>Тип</th><th>Статус</th><th>Действие</th></tr>
+     </thead>
+     <tbody>
+      ${(BADGES||[]).map(b=>{
+        const isOwned=OWNED.has(b.id);
+        return `<tr>
+          <td><code>${esc(b.id)}</code></td>
+          <td><b>${esc(badgeName(b))}</b></td>
+          <td>${esc(b.source||"ach")}</td>
+          <td>${isOwned?'<span style="color:#4ade80">Открыт</span>':'<span style="color:var(--mute)">Закрыт</span>'}</td>
+          <td>
+            <button class="btn sm ${isOwned?"danger":""}" data-admin-badge="${esc(b.id)}">
+              ${isOwned?"Отозвать":"Разблокировать"}
+            </button>
+          </td>
+        </tr>`;
+      }).join("")}
+     </tbody>
+    </table>
+   </div>
+  </div>
+
+  <div class="admin-card">
+   <h3><i data-lucide="radio" width="18" height="18"></i> Тестер аудиопотока</h3>
+   <p class="ph">Прямая проверка стрима трека по ID или URL через прокси Meowave.</p>
+   <div class="admin-form-row">
+    <select id="admin-stream-svc" style="max-width:140px">
+     <option value="ytm">YouTube Music</option>
+     <option value="sc">SoundCloud</option>
+     <option value="ym">Yandex Music</option>
+    </select>
+    <input type="text" id="admin-stream-id" placeholder="ID трека (напр. dQw4w9WgXcQ)" style="flex:1;min-width:200px">
+    <button class="btn" id="admin-stream-play">Включить поток</button>
+   </div>
+  </div>
+ </div>`;
+
+ const updateHours=async(newSecs)=>{
+   newSecs=Math.max(0,Math.floor(newSecs));
+   S.listen=newSecs;
+   if(sbStats)sbStats.listen_seconds=newSecs;
+   save();
+   if(sb&&sbUser){
+     try{
+       await sb.from("user_stats").upsert({user_id:sbUser.id,listen_seconds:newSecs});
+       await syncAchievements();
+     }catch(e){console.warn("admin hours sync:",e)}
+   }
+   toast(`Время прослушивания обновлено: ${fmtListen(newSecs)}`);
+   renderAdminView();
+ };
+
+ document.getElementById("admin-hrs-set")?.addEventListener("click",()=>{
+   const val=Number(document.getElementById("admin-hrs-inp").value);
+   if(Number.isFinite(val))updateHours(val*3600);
+ });
+ document.getElementById("admin-hrs-add1")?.addEventListener("click",()=>updateHours(S.listen+3600));
+ document.getElementById("admin-hrs-add10")?.addEventListener("click",()=>updateHours(S.listen+36000));
+ document.getElementById("admin-hrs-add50")?.addEventListener("click",()=>updateHours(S.listen+180000));
+ document.getElementById("admin-hrs-zero")?.addEventListener("click",()=>updateHours(0));
+
+ document.getElementById("admin-gen-code")?.addEventListener("click",()=>{
+   const alphabet="23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+   const part=()=>Array.from({length:4},()=>alphabet[Math.floor(Math.random()*alphabet.length)]).join("");
+   const code=`MEOW-${part()}-${part()}`;
+   const out=document.getElementById("admin-code-out");
+   if(out)out.value=code;
+ });
+ document.getElementById("admin-code-copy")?.addEventListener("click",()=>{
+   const out=document.getElementById("admin-code-out");
+   if(out?.value){
+     navigator.clipboard.writeText(out.value).then(()=>toast("Код скопирован"));
+   }
+ });
+
+ box.querySelectorAll("[data-admin-badge]").forEach(btn=>{
+   btn.onclick=()=>{
+     const bid=btn.dataset.adminBadge;
+     if(OWNED.has(bid)){
+       OWNED.delete(bid);
+       if(S.equippedBadge===bid)equipBadge(null);
+       toast(`Значок ${bid} отозван`);
+     }else{
+       OWNED.add(bid);
+       toast(`Значок ${bid} разблокирован`);
+     }
+     renderAdminView();
+   };
+ });
+
+ document.getElementById("admin-stream-play")?.addEventListener("click",()=>{
+   const svc=document.getElementById("admin-stream-svc").value;
+   const tid=document.getElementById("admin-stream-id").value.trim();
+   if(!tid)return toast("Укажите ID трека");
+   const testTrack={
+     id:tid,
+     s:svc,
+     t:`Test Track (${tid})`,
+     a:"Admin Tester",
+     al:"Meowave Diagnostics",
+     d:180,
+     mode:"local"
+   };
+   load(testTrack,true);
+   toast(`Запущен поток: ${svc.toUpperCase()}:${tid}`);
+ });
+
+ icons();
+}
+
+/* ── Search UI Fluid Progressive Text Fill ("Заливка текста") ── */
+function initSearchReveal(){
+ const flow=document.getElementById("search-flow");
+ const q=document.getElementById("q");
+ const clearBtn=document.getElementById("search-clear");
+ if(!flow||!q)return;
+
+ const phrases=[
+  "Поиск по всем сервисам, трекам, артистам…",
+  "Кино — Звезда по имени Солнце",
+  "Daft Punk — Get Lucky",
+  "Oxxxymiron — Город под подошвой",
+  "The Weeknd — Blinding Lights",
+  "PHARAOH — Дико, например",
+  "Linkin Park — Numb",
+  "Король и Шут — Лесник",
+  "Arctic Monkeys — Do I Wanna Know?",
+  "Нервы — Батареи",
+  "Miyagi & Эндшпиль — I Got Love"
+ ];
+
+ let phraseIdx=0;
+ let progress=0; // 0.0 to 1.0
+ let state="filling"; // "filling" -> "holding" -> "fading"
+ let stateStart=performance.now();
+ let lastTime=performance.now();
+ let rafId=0;
+
+ function setFlowContent(phrase, pct){
+  flow.innerHTML=`<span class="search-fill-base">${esc(phrase)}</span>`+
+   `<span class="search-fill-wipe" style="clip-path:inset(0 ${(100-pct).toFixed(2)}% 0 0);width:100%">${esc(phrase)}</span>`;
+ }
+
+ setFlowContent(phrases[0], 0);
+
+ function frame(now){
+  const dt=Math.min(100, Math.max(1, now-lastTime));
+  lastTime=now;
+
+  if(document.activeElement===q || q.value.length>0){
+   flow.style.opacity="0";
+   flow.style.visibility="hidden";
+   rafId=requestAnimationFrame(frame);
+   return;
+  }
+  flow.style.opacity="1";
+  flow.style.visibility="visible";
+
+  const phrase=phrases[phraseIdx%phrases.length];
+
+  if(state==="filling"){
+   // Continuous fluid velocity without stepped timeouts:
+   // accelerates and decelerates organically like surface fluid wave
+   const organicWave=0.00034 + 0.00024 * Math.sin(progress * Math.PI * 2.2);
+   progress += organicWave * dt;
+   if(progress>=1){
+    progress=1;
+    state="holding";
+    stateStart=now;
+   }
+   setFlowContent(phrase, progress*100);
+  }else if(state==="holding"){
+   setFlowContent(phrase, 100);
+   if(now-stateStart>1900){
+    state="fading";
+    stateStart=now;
+    flow.style.transition="opacity .28s var(--md-sys-motion-easing-standard)";
+    flow.style.opacity="0";
+   }
+  }else if(state==="fading"){
+   if(now-stateStart>300){
+    phraseIdx=(phraseIdx+1)%phrases.length;
+    progress=0;
+    state="filling";
+    setFlowContent(phrases[phraseIdx%phrases.length], 0);
+    flow.style.opacity="1";
+   }
+  }
+
+  rafId=requestAnimationFrame(frame);
+ }
+
+ q.addEventListener("focus",()=>{
+  flow.style.opacity="0";
+  flow.style.visibility="hidden";
+ });
+ q.addEventListener("blur",()=>{
+  if(!q.value){
+   flow.style.opacity="1";
+   flow.style.visibility="visible";
+  }
+ });
+ q.addEventListener("input",()=>{
+  if(clearBtn)clearBtn.classList.toggle("visible",q.value.length>0);
+ });
+ if(clearBtn){
+  clearBtn.addEventListener("click",()=>{
+   q.value="";
+   clearBtn.classList.remove("visible");
+   search("");
+   q.focus();
+  });
+ }
+
+ rafId=requestAnimationFrame(frame);
+}
 
 /* ── privacy settings ───────────────────────────────────── */
 /* ── Large-lyrics customization ────────────────────────────
@@ -7221,23 +8075,34 @@ async function importRows(rows,svcId,name,asFavorites){
  let ok=0;
  for(const r of take){
   let hit=null;
-  if(r.id&&(r.s==="ytm"||r.s==="sc")){
-   hit={id:String(r.id),s:r.s,t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"local"};
+  if(r.id&&(r.s==="ytm"||r.s==="sc"||r.s==="ym")){
+   hit={id:String(r.id),s:r.s,t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:(r.s==="ym"||r.s==="local")?"local":"local"};
    const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
    if(known)hit=known;else TRACKS.push(hit);
   }else if(r.i&&svcId){
    /* Native id: the track is directly playable on its home service. */
    hit={id:String(r.i),s:svcId,t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:svcId==="ym"?"local":"web"};
    const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
-   if(known)hit=known;else TRACKS.push(hit)}
-  else{
+   if(known)hit=known;else TRACKS.push(hit);
+  }else if(r.s==="sp"||svcId==="sp"){
+   /* Spotify tracks retain full metadata and resolve on play */
+   hit={id:String(r.id||uid()),s:"sp",t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"web"};
+   const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
+   if(known)hit=known;else TRACKS.push(hit);
+  }else{
    const q=`${r.a||""} ${r.t||""}`.trim();
-   if(!q)continue;
-   const hits=await searchRemote(q).catch(()=>[]);
-   hit=(hits||[]).find(x=>x.s==="ytm"&&svc("ytm").on)
-    ||(hits||[]).find(x=>x.s==="sc"&&svc("sc").on)
-    ||(hits||[]).find(x=>svc(x.s).on)
-    ||(hits||[])[0];
+   if(q){
+    const hits=await searchRemote(q).catch(()=>[]);
+    hit=(hits||[]).find(x=>x.s==="ytm"&&svc("ytm").on)
+     ||(hits||[]).find(x=>x.s==="sc"&&svc("sc").on)
+     ||(hits||[]).find(x=>x.s==="ym"&&svc("ym").on)
+     ||(hits||[]).find(x=>svc(x.s).on)
+     ||(hits||[])[0];
+   }
+   if(!hit){
+    hit={id:String(r.id||uid()),s:svcId||"ytm",t:r.t||"—",a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"local"};
+    TRACKS.push(hit);
+   }
   }
   if(!hit)continue;
   if(asFavorites){
@@ -7245,7 +8110,7 @@ async function importRows(rows,svcId,name,asFavorites){
     if(!TRACKS.some(x=>x.id===hit.id&&x.s===hit.s))TRACKS.push(hit);ok++}}
   else if(pl&&!pl.tracks.some(x=>String(x.id)===String(hit.id)&&x.s===hit.s)){
    await addToPlaylist(plId,hit);ok++}
-  await new Promise(res=>setTimeout(res,120))}
+  await new Promise(res=>setTimeout(res,60))}
  save();renderLib();renderWaveHint();
  toast(t("sp.imported").replace("{ok}",ok).replace("{n}",take.length),5200)}
 
@@ -7302,6 +8167,10 @@ async function fetchImportTracks(){
    svcName="Spotify";
    svcId="sp";
    tracks=await inv("spotify_public_playlist_tracks",{urlOrId:url});
+  }else if(/music\.yandex\.ru|yandex\.ru\/music/i.test(url)){
+   svcName="Yandex Music";
+   svcId="ym";
+   tracks=await inv("ym_public_playlist_tracks",{urlOrId:url});
   }else if(/music\.youtube\.com|youtube\.com|youtu\.be/i.test(url)||/^[A-Za-z0-9_-]{18,}$/.test(url)){
    svcName="YouTube Music";
    svcId="ytm";
@@ -7311,7 +8180,7 @@ async function fetchImportTracks(){
    svcId="sc";
    tracks=await inv("sc_playlist_tracks",{urlOrId:url});
   }else{
-   throw new Error("Неподдерживаемый сервис. Поддерживаются: Spotify, YouTube Music, SoundCloud");
+   throw new Error("Неподдерживаемый сервис. Поддерживаются: Spotify, YouTube Music, Yandex Music, SoundCloud");
   }
 
   if(!tracks||!tracks.length){
@@ -7351,9 +8220,36 @@ function initImportModal(){
   const dest=document.querySelector('input[name="import-dest"]:checked')?.value||"pl";
   const asFav=dest==="fav";
   closeImportModal();
-  const plTitle=detectedImportSvc==="sp"?"Spotify Import":(detectedImportSvc==="ytm"?"YouTube Music Import":"SoundCloud Import");
+  const names = {sp: "Spotify Import", ytm: "YouTube Music Import", ym: "Yandex Music Import", sc: "SoundCloud Import"};
+  const plTitle = names[detectedImportSvc] || "Playlist Import";
   importRows(importedStagingTracks,detectedImportSvc,plTitle,asFav);
  });
 }
 
+function initUIFont(){
+ const sel=document.getElementById("ui-font-select");
+ const stored=localStorage.getItem("meowave_ui_font")||"";
+ if(stored){
+  document.documentElement.style.setProperty("--app-font", stored);
+  if(sel)sel.value=stored.replace(/^'([^']+)',.*$/, "$1");
+ }
+ if(sel){
+  sel.addEventListener("change",()=>{
+   const val=sel.value;
+   if(val){
+    const fontStr=`'${val}', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
+    document.documentElement.style.setProperty("--app-font", fontStr);
+    localStorage.setItem("meowave_ui_font", fontStr);
+   }else{
+    document.documentElement.style.removeProperty("--app-font");
+    localStorage.removeItem("meowave_ui_font");
+   }
+   toast(LANG==="ru"?"Шрифт интерфейса обновлен":"UI font updated");
+  });
+ }
+}
+
 if(TAURI){setTimeout(renderSpotify,800);setTimeout(renderYmAcc,900)}
+initSearchReveal();
+initImportModal();
+initUIFont();

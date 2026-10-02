@@ -656,30 +656,73 @@ pub async fn sc_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String>
 #[tauri::command]
 pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String> {
     let raw = url_or_id.trim();
-    let (embed_type, id) = if raw.contains("album/") || raw.contains("album:") {
-        let id = if raw.contains("album/") {
-            raw.split("album/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
+    // Normalize intl URLs like https://open.spotify.com/intl-ru/playlist/...
+    let normalized = if let Some(pos) = raw.find("/intl-") {
+        if let Some(slash) = raw[pos + 1..].find('/') {
+            format!("https://open.spotify.com/{}", &raw[pos + 1 + slash + 1..])
         } else {
-            raw.split("album:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+            raw.to_string()
+        }
+    } else {
+        raw.to_string()
+    };
+    let norm = normalized.as_str();
+
+    let (embed_type, id) = if norm.contains("album/") || norm.contains("album:") {
+        let id = if norm.contains("album/") {
+            norm.split("album/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(norm).trim()
+        } else {
+            norm.split("album:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(norm).trim()
         };
         ("album", id)
-    } else if raw.contains("track/") || raw.contains("track:") {
-        let id = if raw.contains("track/") {
-            raw.split("track/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
+    } else if norm.contains("track/") || norm.contains("track:") {
+        let id = if norm.contains("track/") {
+            norm.split("track/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(norm).trim()
         } else {
-            raw.split("track:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+            norm.split("track:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(norm).trim()
         };
         ("track", id)
     } else {
-        let id = if raw.contains("playlist/") {
-            raw.split("playlist/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(raw).trim()
-        } else if raw.contains("playlist:") {
-            raw.split("playlist:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(raw).trim()
+        let id = if norm.contains("playlist/") {
+            norm.split("playlist/").nth(1).and_then(|s| s.split('?').next()).and_then(|s| s.split('/').next()).unwrap_or(norm).trim()
+        } else if norm.contains("playlist:") {
+            norm.split("playlist:").nth(1).and_then(|s| s.split('?').next()).unwrap_or(norm).trim()
         } else {
-            raw
+            norm
         };
         ("playlist", id)
     };
+
+    // If user is connected to Spotify via OAuth, use official API for 100% reliable tracks
+    if embed_type == "playlist" {
+        if let Ok(rows) = crate::spotify::spotify_playlist_tracks(id.to_string()).await {
+            if !rows.is_empty() {
+                let mut tracks = Vec::new();
+                for r in rows {
+                    let title = r.get("t").and_then(|t| t.as_str()).unwrap_or("").trim();
+                    if title.is_empty() { continue; }
+                    let artist = r.get("a").and_then(|a| a.as_str()).unwrap_or("—").trim();
+                    let album = r.get("al").and_then(|al| al.as_str()).unwrap_or("").trim();
+                    let dur = r.get("d").and_then(|d| d.as_u64()).unwrap_or(0) as u32;
+                    let track_id = r.get("id").and_then(|i| i.as_str()).unwrap_or("");
+                    let art = r.get("art").and_then(|a| a.as_str()).map(|s| s.to_string());
+                    tracks.push(Track {
+                        id: track_id.to_string(),
+                        s: "sp".into(),
+                        t: title.to_string(),
+                        a: artist.to_string(),
+                        al: album.to_string(),
+                        d: dur,
+                        art,
+                        mode: "web".into(),
+                    });
+                }
+                if !tracks.is_empty() {
+                    return Ok(tracks);
+                }
+            }
+        }
+    }
 
     let embed_url = format!("https://open.spotify.com/embed/{embed_type}/{id}");
     let c = client()?;
@@ -717,30 +760,85 @@ pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Tra
     let entity = data.pointer("/props/pageProps/state/data/entity")
         .or_else(|| data.pointer("/props/pageProps/entity"))
         .ok_or_else(|| "no playlist entity found in Spotify page".to_string())?;
+    let default_art = entity
+        .pointer("/coverArt/sources/0/url")
+        .or_else(|| entity.pointer("/visualIdentity/image/0/url"))
+        .or_else(|| entity.pointer("/images/0/url"))
+        .and_then(|u| u.as_str())
+        .map(|s| s.to_string());
+
+    let album_title = entity
+        .get("name")
+        .or_else(|| entity.get("title"))
+        .and_then(|n| n.as_str())
+        .unwrap_or("")
+        .to_string();
 
     let track_list = entity.get("trackList")
-        .and_then(|t| t.as_array())
-        .ok_or_else(|| "no trackList found in Spotify playlist".to_string())?;
+        .or_else(|| entity.pointer("/trackList"))
+        .or_else(|| entity.pointer("/tracks/items"))
+        .and_then(|t| t.as_array());
 
     let mut tracks = Vec::new();
-    for tr in track_list {
-        let title = tr.get("title").and_then(|t| t.as_str()).unwrap_or("").trim();
-        if title.is_empty() { continue; }
-        let artist = tr.get("subtitle").and_then(|s| s.as_str()).unwrap_or("—").trim();
-        let duration_ms = tr.get("duration").and_then(|d| d.as_u64()).unwrap_or(0);
-        let uri = tr.get("uri").and_then(|u| u.as_str()).unwrap_or("");
-        let track_id = uri.strip_prefix("spotify:track:").unwrap_or(uri);
 
-        tracks.push(Track {
-            id: track_id.to_string(),
-            s: "sp".into(),
-            t: title.to_string(),
-            a: artist.to_string(),
-            al: String::new(),
-            d: (duration_ms / 1000) as u32,
-            art: None,
-            mode: "web".into(),
-        });
+    if let Some(list) = track_list {
+        for tr in list {
+            let title = tr.get("title")
+                .or_else(|| tr.get("name"))
+                .or_else(|| tr.pointer("/track/name"))
+                .and_then(|t| t.as_str()).unwrap_or("").trim();
+            if title.is_empty() { continue; }
+            let artist = tr.get("subtitle")
+                .or_else(|| tr.get("artist"))
+                .or_else(|| tr.pointer("/track/artists/0/name"))
+                .and_then(|s| s.as_str()).unwrap_or("—").trim();
+            let duration_ms = tr.get("duration")
+                .or_else(|| tr.get("duration_ms"))
+                .or_else(|| tr.pointer("/track/duration_ms"))
+                .and_then(|d| d.as_u64()).unwrap_or(0);
+            let uri = tr.get("uri")
+                .or_else(|| tr.pointer("/track/uri"))
+                .and_then(|u| u.as_str()).unwrap_or("");
+            let track_id = uri.strip_prefix("spotify:track:").unwrap_or(uri);
+            let art = tr.pointer("/coverArt/sources/0/url")
+                .or_else(|| tr.pointer("/album/images/0/url"))
+                .and_then(|u| u.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| default_art.clone());
+
+            tracks.push(Track {
+                id: track_id.to_string(),
+                s: "sp".into(),
+                t: title.to_string(),
+                a: artist.to_string(),
+                al: album_title.clone(),
+                d: (duration_ms / 1000) as u32,
+                art,
+                mode: "web".into(),
+            });
+        }
+    } else if embed_type == "track" {
+        let title = entity.get("title").or_else(|| entity.get("name")).and_then(|t| t.as_str()).unwrap_or("").trim();
+        if !title.is_empty() {
+            let artist = entity.get("subtitle").or_else(|| entity.get("artist")).and_then(|s| s.as_str()).unwrap_or("—").trim();
+            let duration_ms = entity.get("duration").or_else(|| entity.get("duration_ms")).and_then(|d| d.as_u64()).unwrap_or(0);
+            let uri = entity.get("uri").and_then(|u| u.as_str()).unwrap_or("");
+            let track_id = uri.strip_prefix("spotify:track:").unwrap_or(id);
+            tracks.push(Track {
+                id: track_id.to_string(),
+                s: "sp".into(),
+                t: title.to_string(),
+                a: artist.to_string(),
+                al: album_title,
+                d: (duration_ms / 1000) as u32,
+                art: default_art,
+                mode: "web".into(),
+            });
+        }
+    }
+
+    if tracks.is_empty() {
+        return Err("no tracks found in Spotify entity".to_string());
     }
 
     Ok(tracks)
@@ -751,4 +849,144 @@ pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Tra
 pub async fn ytm_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String> {
     crate::ytm::playlist(&url_or_id).await
 }
+
+/// Fetch tracks from a Yandex Music playlist or album by URL or ID without auth.
+#[tauri::command]
+pub async fn ym_public_playlist_tracks(url_or_id: String) -> Result<Vec<Track>, String> {
+    let raw = url_or_id.trim();
+    let c = client()?;
+
+    // 1. Check if user playlist: .../users/{user}/playlists/{kind}
+    if raw.contains("/users/") && raw.contains("/playlists/") {
+        let parts: Vec<&str> = raw.split("/users/").collect();
+        if parts.len() > 1 {
+            let after_user = parts[1];
+            let user = after_user.split("/playlists/").next().unwrap_or("").trim();
+            let kind_raw = after_user.split("/playlists/").nth(1).unwrap_or("").trim();
+            let kind = kind_raw.split('?').next().unwrap_or(kind_raw).trim();
+            if !user.is_empty() && !kind.is_empty() {
+                let api_url = format!("{YM_API}/users/{user}/playlists/{kind}");
+                let resp = c.get(&api_url).send().await.map_err(|e| format!("network: {e}"))?;
+                if resp.status().is_success() {
+                    let v: serde_json::Value = resp.json().await.map_err(|e| format!("json: {e}"))?;
+                    if let Some(tracks_arr) = v.pointer("/result/tracks").and_then(|t| t.as_array()) {
+                        let tracks: Vec<Track> = tracks_arr.iter().filter_map(|item| {
+                            let tr = item.get("track").unwrap_or(item);
+                            ym_track(tr)
+                        }).collect();
+                        if !tracks.is_empty() {
+                            return Ok(tracks);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Check if album: .../album/{id}
+    if raw.contains("album/") || raw.contains("/album/") {
+        let after = if raw.contains("/album/") {
+            raw.split("/album/").nth(1).unwrap_or("")
+        } else {
+            raw.split("album/").nth(1).unwrap_or("")
+        };
+        let album_id = after.split('?').next().unwrap_or(after).split('/').next().unwrap_or("").trim();
+        if !album_id.is_empty() {
+            let api_url = format!("{YM_API}/albums/{album_id}/with-tracks");
+            let resp = c.get(&api_url).send().await.map_err(|e| format!("network: {e}"))?;
+            if resp.status().is_success() {
+                let v: serde_json::Value = resp.json().await.map_err(|e| format!("json: {e}"))?;
+                if let Some(vols) = v.pointer("/result/volumes").and_then(|t| t.as_array()) {
+                    let mut tracks = Vec::new();
+                    for vol in vols {
+                        if let Some(arr) = vol.as_array() {
+                            for tr in arr {
+                                if let Some(t) = ym_track(tr) {
+                                    tracks.push(t);
+                                }
+                            }
+                        }
+                    }
+                    if !tracks.is_empty() {
+                        return Ok(tracks);
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Check if artist: .../artist/{id}
+    if raw.contains("artist/") || raw.contains("/artist/") {
+        let after = if raw.contains("/artist/") {
+            raw.split("/artist/").nth(1).unwrap_or("")
+        } else {
+            raw.split("artist/").nth(1).unwrap_or("")
+        };
+        let artist_id = after.split('?').next().unwrap_or(after).split('/').next().unwrap_or("").trim();
+        if !artist_id.is_empty() {
+            let api_url = format!("{YM_API}/artists/{artist_id}/tracks?page=0&page-size=50");
+            let resp = c.get(&api_url).send().await.map_err(|e| format!("network: {e}"))?;
+            if resp.status().is_success() {
+                let v: serde_json::Value = resp.json().await.map_err(|e| format!("json: {e}"))?;
+                if let Some(items) = v.pointer("/result/tracks").and_then(|t| t.as_array()) {
+                    let tracks: Vec<Track> = items.iter().filter_map(ym_track).collect();
+                    if !tracks.is_empty() {
+                        return Ok(tracks);
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Check if single track: .../track/{id}
+    if raw.contains("track/") || raw.contains("/track/") {
+        let after = if raw.contains("/track/") {
+            raw.split("/track/").nth(1).unwrap_or("")
+        } else {
+            raw.split("track/").nth(1).unwrap_or("")
+        };
+        let track_id = after.split('?').next().unwrap_or(after).split('/').next().unwrap_or("").trim();
+        if !track_id.is_empty() {
+            let api_url = format!("{YM_API}/tracks/{track_id}");
+            let resp = c.get(&api_url).send().await.map_err(|e| format!("network: {e}"))?;
+            if resp.status().is_success() {
+                let v: serde_json::Value = resp.json().await.map_err(|e| format!("json: {e}"))?;
+                if let Some(items) = v.pointer("/result").and_then(|t| t.as_array()) {
+                    let tracks: Vec<Track> = items.iter().filter_map(ym_track).collect();
+                    if !tracks.is_empty() {
+                        return Ok(tracks);
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. Check if short playlist URL: .../playlists/{kind}
+    if raw.contains("playlists/") {
+        let kind = raw.split("playlists/").nth(1).unwrap_or("").split('?').next().unwrap_or("").split('/').next().unwrap_or("").trim();
+        if !kind.is_empty() {
+            for user in ["yamusic-daily", "yamusic-origin", "yandex-music"] {
+                let api_url = format!("{YM_API}/users/{user}/playlists/{kind}");
+                if let Ok(resp) = c.get(&api_url).send().await {
+                    if resp.status().is_success() {
+                        if let Ok(v) = resp.json::<serde_json::Value>().await {
+                            if let Some(tracks_arr) = v.pointer("/result/tracks").and_then(|t| t.as_array()) {
+                                let tracks: Vec<Track> = tracks_arr.iter().filter_map(|item| {
+                                    let tr = item.get("track").unwrap_or(item);
+                                    ym_track(tr)
+                                }).collect();
+                                if !tracks.is_empty() {
+                                    return Ok(tracks);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Err("Could not parse Yandex Music playlist or album".to_string())
+}
+
 
