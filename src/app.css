@@ -2658,28 +2658,40 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: oklch(100% 0 0 / .12);
-  border: 1px solid oklch(100% 0 0 / .15);
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.28);
   border-radius: 12px;
-  padding: 6px 10px;
-  margin-top: 4px;
+  padding: 6px 12px;
+  margin: 6px 0;
   cursor: pointer;
-  transition: all 0.16s var(--e);
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  user-select: none;
 }
 .chat-track-chip:hover {
-  background: oklch(100% 0 0 / .18);
+  background: rgba(168, 85, 247, 0.22);
+  border-color: rgba(168, 85, 247, 0.45);
   transform: translateY(-1px);
 }
 .chat-track-chip button {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--accent);
-  color: oklch(14% 0.015 280);
+  background: var(--accent, #a855f7);
+  color: #fff;
   border: none;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.chat-track-chip span {
+  font-size: 0.82rem;
+  color: var(--text, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Material 3 Quests & Badges View ──────────────────────── */
@@ -3061,9 +3073,11 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
   min-width: 44px;
   text-align: center;
 }
-.ly-off-val.has-offset {
+.ly-off-val.has-offset,
+.ly-off-val.shifted {
   color: var(--accent, #a855f7);
   font-weight: 700;
+  text-shadow: 0 0 10px rgb(var(--accent-rgb, 168 85 247) / 0.4);
 }
 
 /* ── Avatar Status Indicator Dot ───────────────────────────────── */
@@ -3361,37 +3375,4 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
   color: var(--mute);
 }
 
-/* ── Chat Interactive Track Chip ──────────────────────────────── */
-.chat-track-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(168, 85, 247, 0.12);
-  border: 1px solid rgba(168, 85, 247, 0.28);
-  border-radius: 10px;
-  padding: 6px 10px;
-  margin-top: 6px;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
-  user-select: none;
-}
-.chat-track-chip:hover {
-  background: rgba(168, 85, 247, 0.22);
-  transform: translateY(-1px);
-}
-.chat-track-chip button {
-  background: var(--accent, #a855f7);
-  border: none;
-  color: #fff;
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.chat-track-chip span {
-  font-size: 0.8rem;
-  color: var(--text, #fff);
-}
+

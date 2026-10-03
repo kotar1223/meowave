@@ -285,6 +285,18 @@ fn parse_item(item: &Value) -> Option<Track> {
         let subtitle = data.get("subtitle").and_then(|v| v.as_str()).unwrap_or("");
         let parts: Vec<&str> = subtitle.split('•').map(|p| p.trim()).collect();
         let artist = parts.get(1).copied().unwrap_or(parts.first().copied().unwrap_or("—")).to_string();
+        let duration = parts
+            .iter()
+            .rev()
+            .find(|p| p.contains(':'))
+            .map(|p| hms(p))
+            .or_else(|| {
+                data.pointer("/duration/runs/0/text")
+                    .or_else(|| data.pointer("/durationText/runs/0/text"))
+                    .and_then(|v| v.as_str())
+                    .map(hms)
+            })
+            .unwrap_or(0);
         let art = data.pointer("/thumbnail/image/sources")
             .and_then(|s| s.as_array())
             .and_then(|s| s.last())
@@ -297,7 +309,7 @@ fn parse_item(item: &Value) -> Option<Track> {
             t: title,
             a: artist,
             al: String::new(),
-            d: 0,
+            d: duration,
             art,
             mode: "local".into(),
         });

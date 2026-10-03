@@ -572,7 +572,7 @@ const fp=document.getElementById("fp");
    source -> 9×Biquad -> [HRTF Panner -> dry + Convolver wet] | bypass -> gain -> analyser -> out */
 const A={ctx:null,src:null,audio:null,media:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0,
  /* gen bumps on every track change; events from the previous src are dropped */
- gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0};
+ gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0,pendingSeek:null,seekingUntil:0};
 /* Exactly one <audio> element for the whole app. */
 function ensureAudioEl(){
  if(A.audio)return A.audio;
@@ -584,6 +584,8 @@ function ensureAudioEl(){
  au.addEventListener("durationchange",()=>A.onMeta?.());
  au.addEventListener("canplay",()=>A.onMeta?.());
  au.addEventListener("timeupdate",()=>A.onTime?.());
+ au.addEventListener("seeking",()=>{/* seek initiated */});
+ au.addEventListener("seeked",()=>{A.pendingSeek=null;A.seekingUntil=0});
  au.addEventListener("ended",()=>A.onEnd?.());
  au.addEventListener("error",()=>A.onErr?.());
  /* The media load algorithm resets playbackRate to defaultPlaybackRate, and it
@@ -757,21 +759,27 @@ function load(tr,auto,resumePos=0){
   A.onMeta=()=>{
    if(gen!==A.gen)return;
    const metaDur=au.duration;
+   const trDur=S.current?.d?(+S.current.d||0):0;
    if(Number.isFinite(metaDur)&&metaDur>0){
-    const trDur=S.current?.d?(+S.current.d||0):0;
     if(!trDur||metaDur>=trDur*0.8||Math.abs(metaDur-trDur)<10){
      S.dur=metaDur;
     }else if(!S.dur||!Number.isFinite(S.dur)||S.dur<=0){
      S.dur=trDur||metaDur;
     }
-   }else{
-    const trDur=S.current?.d?(+S.current.d||0):0;
-    if(trDur>0)S.dur=trDur;
+   }else if(trDur>0){
+    S.dur=trDur;
+   }else if(au.seekable&&au.seekable.length>0){
+    const sEnd=au.seekable.end(au.seekable.length-1);
+    if(Number.isFinite(sEnd)&&sEnd>0)S.dur=sEnd;
    }
    renderNP();paint();
    if(fp.dataset.open==="true")renderFP();
    if(resumePos&&resumePos>0&&resumePos<(S.dur||au.duration||9999)){
-    try{au.currentTime=resumePos}catch(_){}
+    try{
+     A.pendingSeek=resumePos;
+     A.seekingUntil=Date.now()+800;
+     au.currentTime=resumePos;
+    }catch(_){}
    }
   };
   A.onTime=()=>{
@@ -783,18 +791,33 @@ function load(tr,auto,resumePos=0){
    }
    A.lastPos=now;
    if(seeking)return;
+   if(A.pendingSeek!==null){
+    if(Date.now()<A.seekingUntil&&Math.abs(now-A.pendingSeek)>2){
+     return;
+    }
+    A.pendingSeek=null;
+   }
    const metaDur=au.duration;
+   const trDur=S.current?.d?(+S.current.d||0):0;
    if(Number.isFinite(metaDur)&&metaDur>0){
-    const trDur=S.current?.d?(+S.current.d||0):0;
     if(!S.dur||!Number.isFinite(S.dur)||S.dur<=0){
      S.dur=(trDur>0&&metaDur<trDur*0.5)?trDur:metaDur;
     }else if(!trDur&&metaDur>S.dur){
      S.dur=metaDur;
+    }else if(trDur&&Math.abs(metaDur-trDur)<5&&Math.abs(S.dur-metaDur)>1){
+     S.dur=metaDur;
     }
-   }else if((!S.dur||!Number.isFinite(S.dur)||S.dur<=0)&&S.current?.d){
-    S.dur=+S.current.d;
+   }else if(!S.dur||!Number.isFinite(S.dur)||S.dur<=0){
+    if(trDur>0){
+     S.dur=trDur;
+    }else if(au.seekable&&au.seekable.length>0){
+     const sEnd=au.seekable.end(au.seekable.length-1);
+     if(Number.isFinite(sEnd)&&sEnd>0)S.dur=sEnd;
+    }
    }
    if(S.dur>0&&now>S.dur){
+    S.dur=Math.ceil(now);
+   }else if((!S.dur||!Number.isFinite(S.dur)||S.dur<=0)&&now>0){
     S.dur=Math.ceil(now);
    }
    S.pos=now;paint()};
@@ -1107,27 +1130,23 @@ function frame(now){
  /* Non-local playback has no media element to read a clock from, so its
     position and listening time advance here instead. */
  if(S.playing&&S.current?.mode!=="local"){S.pos+=dt;S.listen+=dt;noteListening(dt);if(S.pos>=S.dur){S.repeat?S.pos=0:next()}paint()}
- const curPos=(A.audio&&S.current?.mode==="local"&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
+ const curPos=(A.audio&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
  if(S.playing)syncKaraokeFrame(curPos);
-
-
 
  raf=requestAnimationFrame(frame)
 }
 function syncKaraokeFrame(curPos){
- if(S.lyKaraoke==="line")return;
+ if(S.lyKaraoke==="line"||S.lyKaraoke==="off")return;
  const L=lyricsFor(S.current);
  if(!L?.lines?.length||!L.synced)return;
- const isFpLyric=fp.dataset.open==="true"&&S.fpMode==="lyric";
- const box=isFpLyric?document.getElementById("fplyr"):(document.getElementById("lyr")||document.getElementById("fplyr"));
- if(!box)return;
  const offset=typeof getLyricOffset==="function"?getLyricOffset(S.current):0;
  const effPos=Math.max(0,curPos+offset);
  let idx=-1;
  for(let i=0;i<L.lines.length;i++){
   const at=L.lines[i].at;
   if(at==null)continue;
-  if(effPos>=at)idx=i;else break}
+  if(effPos>=at)idx=i;else break;
+ }
  if(idx<0||idx>=L.lines.length)return;
  const curLine=L.lines[idx];
  const nextLine=L.lines[idx+1];
@@ -1135,8 +1154,17 @@ function syncKaraokeFrame(curPos){
  const dur=nextLine&&nextLine.at!=null?(nextLine.at-start):Math.min(6,Math.max(2,(S.dur||start+4)-start));
  const elapsed=Math.max(0,effPos-start);
  const pct=Math.min(100,Math.max(0,(elapsed/Math.max(0.2,dur))*100));
- const curEl=box.querySelector(`p[data-i="${idx}"]`);
- if(curEl)curEl.style.setProperty("--karaoke-pct",`${pct.toFixed(1)}%`);
+ const pctStr=`${pct.toFixed(1)}%`;
+ const boxes=[document.getElementById("fplyr"),document.getElementById("lyr")].filter(Boolean);
+ for(const box of boxes){
+  const curEl=box.querySelector(`p[data-i="${idx}"]`);
+  if(curEl)curEl.style.setProperty("--karaoke-pct",pctStr);
+  if(box._lastKaraokeIdx!==undefined&&box._lastKaraokeIdx!==idx){
+   const prevEl=box.querySelector(`p[data-i="${box._lastKaraokeIdx}"]`);
+   if(prevEl)prevEl.style.setProperty("--karaoke-pct",box._lastKaraokeIdx<idx?"100%":"0%");
+  }
+  box._lastKaraokeIdx=idx;
+ }
 }
 /* The orbit runs off the render loop: setInterval is not throttled in a hidden
    window the way rAF is, so the sound keeps circling the head. */
@@ -1760,7 +1788,7 @@ function isExplicit(tr){
  return false}
 
 function paint(){
- const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(S.current?.d?+S.current.d:0);
+ const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(S.current?.d?+S.current.d:(A.audio&&Number.isFinite(A.audio.duration)&&A.audio.duration>0?A.audio.duration:0));
  const p=(effectiveDur>0)?Math.min(100,Math.max(0,(S.pos/effectiveDur)*100)):0;
  const pStr=p.toFixed(2)+"%";
  const f=document.querySelector("#btrack .f");if(f){f.style.width=pStr;const h=document.querySelector("#btrack .h");if(h)h.style.left=pStr}
@@ -1989,12 +2017,22 @@ function renderFPBody(anim){
 const LYRICS=new Map();          /* trackKey -> {state,source,synced,lines} */
 let lyReq=0;                     /* rejects results from a previous track */
 
+function songOffsetKey(tr){
+ if(!tr)return "";
+ const a=(tr.a||"").trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"_");
+ const t=(tr.t||"").trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"_");
+ return (a&&t)?`song:${a}::${t}`:"";
+}
+
 function getLyricOffset(tr){
  tr=tr||S.current;
  if(!tr||tr.mode==="empty")return 0;
  const key=trackKey(tr);
- const saved=localStorage.getItem("mw.lyoff."+key);
+ const saved=key?localStorage.getItem("mw.lyoff."+key):null;
  if(saved!==null&&!isNaN(+saved))return +saved;
+ const sKey=songOffsetKey(tr);
+ const songSaved=sKey?localStorage.getItem("mw.lyoff."+sKey):null;
+ if(songSaved!==null&&!isNaN(+songSaved))return +songSaved;
  const globalSaved=localStorage.getItem("mw.lyoff.global");
  if(globalSaved!==null&&!isNaN(+globalSaved))return +globalSaved;
  return 0;
@@ -2008,7 +2046,9 @@ function setLyricOffset(tr,val,isGlobal=false){
   localStorage.setItem("mw.lyoff.global",String(rounded));
  }else{
   const key=trackKey(tr);
-  localStorage.setItem("mw.lyoff."+key,String(rounded));
+  if(key)localStorage.setItem("mw.lyoff."+key,String(rounded));
+  const sKey=songOffsetKey(tr);
+  if(sKey)localStorage.setItem("mw.lyoff."+sKey,String(rounded));
  }
  updateLyricOffsetUi();
  syncLyrics(true);
@@ -2028,7 +2068,9 @@ function resetLyricOffset(tr){
  tr=tr||S.current;
  if(!tr)return;
  const key=trackKey(tr);
- localStorage.removeItem("mw.lyoff."+key);
+ if(key)localStorage.removeItem("mw.lyoff."+key);
+ const sKey=songOffsetKey(tr);
+ if(sKey)localStorage.removeItem("mw.lyoff."+sKey);
  updateLyricOffsetUi();
  syncLyrics(true);
  toast(LANG==="ru"?"Смещение текста сброшено (0.0s)":"Lyrics offset reset (0.0s)");
@@ -2348,7 +2390,7 @@ function syncLyrics(force){
  if(!L?.lines?.length||!box)return;
  if(!L.synced){if(force)lyLast=-1;return}
 
- const audioPos=(A.audio&&S.current?.mode==="local"&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))
+ const audioPos=(A.audio&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))
   ?A.audio.currentTime
   :S.pos;
  const offset=typeof getLyricOffset==="function"?getLyricOffset(S.current):0;
@@ -2618,7 +2660,7 @@ async function setTrack(tr,play=true,openFull=false,ctx,keepQueue){
     server rows drift apart and roomAdvance() hands out tracks that already
     went by. Listeners never consume — roomConsume() checks the role. */
  if(String(PLAYCTX.key||"").startsWith("room:"))roomConsume(S.current);
- load(tr,play);S.playing=play;sync();renderNP();paint();
+ load(tr,play);S.playing=play;sync();renderNP();paint();updateLyricOffsetUi();
  /* The cover drives the accent colour when adaptive mode is on. */
  adaptAccent(tr);
  pushHistory(tr);noteTrackStart(tr);
@@ -3223,28 +3265,32 @@ let seeking=false;
 /* Seeks to an absolute position in seconds. Shared by the lyrics and by
    anything else that knows a timestamp rather than a pixel. */
 function seekSeconds(pos){
- const effectiveDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : 0);
+ const effectiveDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : (A.audio?.duration > 0 && Number.isFinite(A.audio.duration) ? A.audio.duration : 0));
  const p = Math.max(0, Math.min(pos, effectiveDur || pos));
  S.pos = p;
  paint();
- if(A.audio && S.current?.mode === "local"){
+ if(A.audio){
   try{
+   A.pendingSeek = p;
+   A.seekingUntil = Date.now() + 800;
    A.audio.currentTime = p;
   }catch(e){
    console.warn("seek:", e);
   }
  }
 }
-function seekTo(el, x, commit){
- const r = el.getBoundingClientRect();
+function seekTo(trackEl, x, commit){
+ const r = trackEl.getBoundingClientRect();
  if(!r.width) return;
- const effectiveDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : 0);
+ const effectiveDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : (A.audio?.duration > 0 && Number.isFinite(A.audio.duration) ? A.audio.duration : 0));
  const ratio = Math.max(0, Math.min(1, (x - r.left) / r.width));
  const pos = ratio * (effectiveDur || 0);
  S.pos = pos;
  paint();
- if(commit && A.audio && S.current?.mode === "local"){
+ if(commit && A.audio){
   try{
+   A.pendingSeek = pos;
+   A.seekingUntil = Date.now() + 800;
    A.audio.currentTime = pos;
   }catch(e){
    console.warn("seek:", e);
@@ -3254,19 +3300,22 @@ function seekTo(el, x, commit){
 function wireSeek(id){
  const el = document.getElementById(id);
  if(!el) return;
+ const trackEl = el.classList.contains("track") ? el : (el.querySelector(".track") || el);
  el.addEventListener("pointerdown", e => {
-  const activeDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : 0);
-  if(!activeDur) return;
+  if(e.target.closest(".t")) return;
+  e.stopPropagation();
+  const activeDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : (A.audio?.duration > 0 && Number.isFinite(A.audio.duration) ? A.audio.duration : 0));
+  if(!activeDur && (!A.audio || !A.audio.currentTime)) return;
   seeking = true;
   el.setPointerCapture?.(e.pointerId);
-  seekTo(el, e.clientX, false);
+  seekTo(trackEl, e.clientX, false);
   const mv = ev => {
-   if(seeking) seekTo(el, ev.clientX, false);
+   if(seeking) seekTo(trackEl, ev.clientX, false);
   };
   const up = ev => {
    if(seeking){
     seeking = false;
-    seekTo(el, ev.clientX, true);
+    seekTo(trackEl, ev.clientX, true);
    }
    el.removeEventListener("pointermove", mv);
    el.removeEventListener("pointerup", up);
@@ -3822,7 +3871,7 @@ document.getElementById("sp-rad").oninput=e=>{S.sp.rad=e.target.value/100;docume
 document.getElementById("sp-elev").oninput=e=>{S.sp.elev=e.target.value/100;document.getElementById("sp-elev-v").textContent=e.target.value;save()};
 
 addEventListener("keydown",e=>{
-  if(e.target.matches("input, textarea"))return;
+  if(e.target.matches("input, textarea")||e.target.isContentEditable)return;
   /* An open dialog owns Escape: the modal's own handler closes it, and the
      fullscreen player behind it must not close in the same keystroke. */
   if(document.getElementById("modal")?.dataset.open==="true")return;
@@ -3840,9 +3889,9 @@ addEventListener("keydown",e=>{
   }
   if(e.key.toLowerCase()==="l"&&fp.dataset.open==="true"){S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()}
   if(e.key.toLowerCase()==="e")eqbtn.click();
-  if(e.key==="["||(e.altKey&&e.key==="ArrowLeft")){e.preventDefault();adjustLyricOffset(-0.5)}
-  if(e.key==="]"||(e.altKey&&e.key==="ArrowRight")){e.preventDefault();adjustLyricOffset(0.5)}
-  if(e.key==="{"||(e.altKey&&e.key==="0")){e.preventDefault();resetLyricOffset()}
+  if(e.code==="BracketLeft"||e.key==="["||e.key==="х"||(e.altKey&&e.key==="ArrowLeft")){e.preventDefault();adjustLyricOffset(-0.5)}
+  if(e.code==="BracketRight"||e.key==="]"||e.key==="ъ"||(e.altKey&&e.key==="ArrowRight")){e.preventDefault();adjustLyricOffset(0.5)}
+  if(e.code==="BraceLeft"||e.key==="{"||(e.altKey&&e.key==="0")){e.preventDefault();resetLyricOffset()}
   if(e.shiftKey&&e.key==="ArrowRight")next();
   if(e.shiftKey&&e.key==="ArrowLeft")prev()});
 
@@ -4843,7 +4892,7 @@ async function addToPlaylist(pid,tr){
    Stored as a map of "service:id" -> preset id, not as a copy of the curve:
    editing a preset then updates every track using it, which is what people
    expect from a preset. */
-const trackKey=tr=>tr?`${tr.s}:${tr.id}`:"";
+function trackKey(tr){return tr?`${tr.s}:${tr.id}`:""}
 
 /* Disliked tracks.
 
@@ -6079,7 +6128,7 @@ const socErrBox=(msg)=>`<div class="panel pane"><p class="ph" style="margin:0;co
 
 /* Profile bubble: the picture when there is one, the first letter when not, with optional status badge. */
 const avat=(p,size=34,status=null)=>{
- const u=p?.avatar_url?esc(cssUrl(p.avatar_url)):"";
+ const u=p?.avatar_url?cssUrl(p.avatar_url):"";
  const base=u
   ?`<span class="avat" style="width:${size}px;height:${size}px;background-image:url('${u}')"></span>`
   :`<span class="avat ghost" style="width:${size}px;height:${size}px">${esc((p?.username||"?")[0].toUpperCase())}</span>`;
@@ -6248,12 +6297,11 @@ function chatBodyHtml(m){
  if(m.body){
   body=body.replace(/MEOW-[2-9A-HJ-NP-Z]{4}/gi,code=>`<button class="btn sm joinchip" data-join="${code}"><i data-lucide="radio-tower" width="13" height="13"></i>${code}</button>`);
   body=body.replace(/(https?:\/\/[^\s<]+)/g,url=>`<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;word-break:break-all">${url}</a>`);
- }
- const trMatch=m.body&&m.body.match(/🎵\s*([^\n—–-]+)\s*[—–-]\s*([^\n]+)/);
- if(trMatch){
-  const art=trMatch[1].trim(), tit=trMatch[2].trim();
-  const fullQ=`${art} ${tit}`;
-  body+=`<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><i data-lucide="play" width="11" height="11"></i></button><span>${esc(art)} — <b>${esc(tit)}</b></span></div>`;
+  body=body.replace(/🎵\s*([^\n—–-]+)\s*[—–-]\s*([^\n]+)/g,(match,art,tit)=>{
+   const cleanArt=art.trim(), cleanTit=tit.trim();
+   const fullQ=`${cleanArt} ${cleanTit}`;
+   return `<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><i data-lucide="play" width="12" height="12"></i></button><span>${esc(cleanArt)} — <b>${esc(cleanTit)}</b></span></div>`;
+  });
  }
  return img+body;
 }
@@ -6419,10 +6467,17 @@ async function renderPeopleProfile(id){
     </div>
   </div>`;
 
-  document.getElementById("people-prof-play")?.addEventListener("click",()=>{
+  document.getElementById("people-prof-play")?.addEventListener("click",async ()=>{
     if(!profTr)return;
-    const q=`${profTr.a} ${profTr.t}`;
-    toast((LANG==="ru"?"Включаем: ":"Playing: ")+q);
+    const q=`${profTr.a} ${profTr.t}`.trim();
+    toast((LANG==="ru"?"Поиск и запуск: ":"Playing: ")+q);
+    try{
+      const hits=await searchRemote(q);
+      if(hits&&hits.length>0){
+        await setTrack(hits[0],true,false,"people");
+        return;
+      }
+    }catch(_){}
     go("search");
     const inp=document.getElementById("q");
     if(inp){inp.value=q;search(q)}
@@ -6599,7 +6654,7 @@ async function renderPeopleFind(box){
             </div>`:"" ;
           return `
           <div class="people-find-card">
-            <div class="people-find-banner" style="${banner?`background-image:url('${esc(cssUrl(banner))}')`:""}"></div>
+            <div class="people-find-banner" style="${banner?`background-image:url('${cssUrl(banner)}')`:""}"></div>
             <div class="people-find-body">
               <div class="people-find-top">
                 ${avat(p, 46, p.status||"online")}
@@ -6644,11 +6699,18 @@ async function renderPeopleFind(box){
     });
 
     results.querySelectorAll("[data-play-track]").forEach(btn=>{
-      btn.onclick=e=>{
+      btn.onclick=async e=>{
         e.stopPropagation();
         const trQ=btn.dataset.playTrack;
         if(trQ){
-          toast((LANG==="ru"?"Поиск и воспроизведение: ":"Playing: ")+trQ);
+          toast((LANG==="ru"?"Поиск и запуск: ":"Playing: ")+trQ);
+          try{
+            const hits=await searchRemote(trQ);
+            if(hits&&hits.length>0){
+              await setTrack(hits[0],true,false,"find");
+              return;
+            }
+          }catch(_){}
           go("search");
           const qInp=document.getElementById("q");
           if(qInp){qInp.value=trQ;search(trQ)}
@@ -6714,8 +6776,8 @@ async function renderPeopleFriends(box){
     }catch(e){console.warn("friends query:",e)}
   }
 
-  // If in guest mode or user has 0 friends yet, load rich mock friends
-  if(isGuest||!accepted.length){
+  // If in guest mode, load rich mock friends
+  if(isGuest){
     const mockList=getMockFriends();
     const mockFriends=mockList.filter(m=>m.isFriend);
     accepted=mockFriends.map(m=>({
@@ -6824,10 +6886,18 @@ async function renderPeopleFriends(box){
     }
 
     if(!list.length){
-      html+=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
-        <i data-lucide="user-x" width="32" height="32" style="opacity:0.4;margin-bottom:8px"></i>
-        <p class="ph" style="margin:0">${LANG==="ru"?"Друзья не найдены. Попробуйте изменить фильтр или найти новых людей.":"No friends found. Try adjusting filter or discover new people."}</p>
-      </div>`;
+      if(!isGuest){
+        html+=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
+          <i data-lucide="users" width="36" height="36" style="opacity:0.4;margin-bottom:10px"></i>
+          <p class="ph" style="margin:0 0 12px">${LANG==="ru"?"У вас пока нет друзей в аккаунте. Найдите единомышленников во вкладке «Найти людей»!":"You don't have friends yet. Discover music lovers in the 'Find People' tab!"}</p>
+          <button class="btn primary sm" id="fr-go-find" style="display:inline-flex;align-items:center;gap:6px"><i data-lucide="compass" width="14" height="14"></i> ${LANG==="ru"?"Найти людей":"Discover People"}</button>
+        </div>`;
+      }else{
+        html+=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
+          <i data-lucide="user-x" width="32" height="32" style="opacity:0.4;margin-bottom:8px"></i>
+          <p class="ph" style="margin:0">${LANG==="ru"?"Друзья не найдены. Попробуйте изменить фильтр или найти новых людей.":"No friends found. Try adjusting filter or discover new people."}</p>
+        </div>`;
+      }
     }else{
       html+=`<div class="friends-grid">
         ${list.map(p=>{
@@ -6860,15 +6930,23 @@ async function renderPeopleFriends(box){
 
     contentBox.innerHTML=html;
 
+    contentBox.querySelector("#fr-go-find")?.addEventListener("click",()=>setPeopleTab("find"));
     contentBox.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>renderPeopleProfile(b.dataset.person));
     contentBox.querySelectorAll("[data-dm]").forEach(b=>b.onclick=e=>{e.stopPropagation();openChat("d:"+b.dataset.dm)});
 
     contentBox.querySelectorAll("[data-play-track]").forEach(btn=>{
-      btn.onclick=e=>{
+      btn.onclick=async e=>{
         e.stopPropagation();
         const trQ=btn.dataset.playTrack;
         if(trQ){
-          toast((LANG==="ru"?"Поиск и воспроизведение: ":"Playing: ")+trQ);
+          toast((LANG==="ru"?"Поиск и запуск: ":"Playing: ")+trQ);
+          try{
+            const hits=await searchRemote(trQ);
+            if(hits&&hits.length>0){
+              await setTrack(hits[0],true,false,"friends");
+              return;
+            }
+          }catch(_){}
           go("search");
           const qInp=document.getElementById("q");
           if(qInp){qInp.value=trQ;search(trQ)}
@@ -7166,7 +7244,7 @@ async function paintChatInner(box){
      <time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}).join("");
 
   const hdr=SOC.chat.dm
-    ?`${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,SOC.chat.targetCache?.status||"online")}<b>${esc(SOC.chat.name)}</b>`
+    ?`<div class="chat-dm-user" style="display:inline-flex;align-items:center;gap:10px;cursor:pointer" title="${t("people.profile")||"Профиль"}">${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,SOC.chat.targetCache?.status||"online")}<b>${esc(SOC.chat.name)}</b></div>`
     :`<i data-lucide="users" width="16" height="16"></i><b>${esc(SOC.chat.name)}</b>
       <span class="mut" data-togglemembers>${(SOC.chat.membersCache||[]).length}</span>`;
 
@@ -7217,6 +7295,12 @@ async function paintChatInner(box){
   const log=box.querySelector(".chatlog");
   if(log)log.scrollTop=log.scrollHeight;
   box.querySelector("[data-back]").onclick=()=>{SOC.chat=null;socClear("chat");box.classList.remove("chat-open");renderChats()};
+  box.querySelector(".chat-dm-user")?.addEventListener("click",()=>{
+    if(SOC.chat?.dm){
+      const dmId=SOC.chat.dm;
+      renderPeopleProfile(dmId);
+    }
+  });
 
   let sendingChat=false;
   const send=async(image=null)=>{
@@ -7435,11 +7519,18 @@ function wireChatActions(root){
 function wireChatTracks(root){
  if(!root)return;
  root.querySelectorAll("[data-chat-play]").forEach(chip=>{
-  chip.onclick=e=>{
+  chip.onclick=async e=>{
    e.stopPropagation();
    const q=chip.dataset.chatPlay;
    if(q){
-    toast((LANG==="ru"?"Поиск трека: ":"Searching: ")+q);
+    toast((LANG==="ru"?"Поиск и запуск: ":"Playing: ")+q);
+    try{
+     const hits=await searchRemote(q);
+     if(hits&&hits.length>0){
+      await setTrack(hits[0],true,false,"chat");
+      return;
+     }
+    }catch(_){}
     go("search");
     const inp=document.getElementById("q");
     if(inp){inp.value=q;search(q)}
