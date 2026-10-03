@@ -119,7 +119,7 @@
     const opts = options || {};
     const root = opts.root || document;
     const nameAttr = opts.nameAttr || "data-lucide";
-    const selector = `[${nameAttr}], [data-icon], [data-ms-icon], i.material-symbols-rounded, span.material-symbols-rounded`;
+    const selector = `[${nameAttr}], [data-icon]:not(.material-symbols-rounded), [data-ms-icon]`;
     
     let targets;
     try {
@@ -130,7 +130,7 @@
 
     for (let i = 0; i < targets.length; i++) {
       const el = targets[i];
-      const rawName = el.getAttribute(nameAttr) || el.getAttribute("data-icon") || el.getAttribute("data-ms-icon") || el.dataset?.icon || el.textContent?.trim();
+      const rawName = el.getAttribute(nameAttr) || el.getAttribute("data-ms-icon") || el.getAttribute("data-icon") || el.dataset?.icon;
       if (!rawName) continue;
 
       const sym = toSymbolName(rawName);
@@ -154,17 +154,32 @@
       if (el.textContent !== sym) {
         el.textContent = sym;
       }
+
+      if (nameAttr === "data-lucide") {
+        el.removeAttribute("data-lucide");
+      }
     }
+  }
+
+  function iconHtml(name, size = 18, cls = "", filled = false) {
+    const sym = toSymbolName(name);
+    const sizeStyle = size ? `font-size:${size}px;` : "";
+    const fillClass = filled ? " filled" : "";
+    const extraClass = cls ? ` ${cls}` : "";
+    return `<span class="material-symbols-rounded${fillClass}${extraClass}" style="${sizeStyle}" aria-hidden="true" data-icon="${sym}">${sym}</span>`;
   }
 
   const m3Icons = {
     createIcons: createIcons,
     toSymbolName: toSymbolName,
+    iconHtml: iconHtml,
     mapping: LUCIDE_TO_MATERIAL
   };
 
   window.m3Icons = m3Icons;
   window.toMaterialSymbol = toSymbolName;
+  window.msIcon = iconHtml;
+
   // Provide full drop-in compatibility for existing window.lucide callers
   window.lucide = {
     createIcons: createIcons,

@@ -1226,7 +1226,7 @@ function renderAccounts(){
   <span class="btn on" aria-disabled="true">${t("ready")}</span></div>`:`
   <div class="acc"><span class="an"><b>${esc(svc(s.id).name)}</b><span>${s.conn?t("connected")+" · keychain: meowave/"+s.id:t("noauth")}</span></span>
   <div style="display:flex;gap:6px;align-items:center">
-   ${s.id==="sp"&&!s.conn?`<button class="btn sm" data-sp-cid-toggle="true" title="${LANG==="ru"?"Настроить Client ID":"Configure Client ID"}"><i data-lucide="key" width="13" height="13"></i> Client ID</button>`:""}
+   ${s.id==="sp"&&!s.conn?`<button class="btn sm" data-sp-cid-toggle="true" title="${LANG==="ru"?"Настроить Client ID":"Configure Client ID"}"><span class="material-symbols-rounded" style="font-size:16px">key</span> Client ID</button>`:""}
    <button class="btn ${s.conn?"on":""}" data-acc="${s.id}">${s.conn?t("disconnect"):t("connect")}</button>
   </div></div>
   ${tokOpen===s.id?(s.id==="sp"?spGuide():`<div class="tokrow"><input id="tok-${s.id}" type="password" placeholder="${t("tok.ph")}" autocomplete="off">
@@ -1283,7 +1283,7 @@ function renderSwatches(){
   <div class="palette-card" data-sw="${id}" aria-pressed="${active}" style="--card-accent:${color}">
    <div class="palette-card-head">
     <span class="palette-title">${esc(title)}</span>
-    <span class="palette-check"><i data-lucide="check" width="12" height="12"></i></span>
+    <span class="palette-check"><span class="material-symbols-rounded" style="font-size:14px">check</span></span>
    </div>
    <div class="mini-player-window">
     <div class="mpw-header">
@@ -1291,14 +1291,14 @@ function renderSwatches(){
     </div>
     <div class="mpw-body">
      <div class="mpw-art" style="background:${bg}">
-      <i data-lucide="music" width="14" height="14"></i>
+      <span class="material-symbols-rounded" style="font-size:16px">music_note</span>
      </div>
      <div class="mpw-info">
       <div class="mpw-line-1"></div>
       <div class="mpw-line-2"></div>
      </div>
      <div class="mpw-btn" style="background:${color}">
-      <i data-lucide="play" width="10" height="10" style="margin-left:1px"></i>
+      <span class="material-symbols-rounded" style="font-size:14px;margin-left:1px">play_arrow</span>
      </div>
     </div>
     <div class="mpw-bar">
@@ -1832,9 +1832,9 @@ function renderFP(){
  const expBadge=isExplicit(tr)?`<span class="fp-badge-exp" title="Explicit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="11.5" r="1" fill="currentColor"/><path d="M8 4.2v4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>`:"";
  document.getElementById("fpc").innerHTML=lyricMode?`
   <div class="fp-actions-top">
-   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><i data-lucide="maximize" width="17" height="17"></i></button>
-   <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><i data-lucide="sliders" width="18" height="18"></i></button>
-   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
+   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><span class="material-symbols-rounded" style="font-size:20px">fullscreen</span></button>
+   <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><span class="material-symbols-rounded" style="font-size:20px">tune</span></button>
+   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><span class="material-symbols-rounded" style="font-size:24px">expand_more</span></button>
   </div>
   <div class="fp-lyric-grid">
    <div class="fp-lyric-left">
@@ -1849,13 +1849,13 @@ function renderFP(){
       <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t" id="fpdur">${fmt((Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0))}</span></div>
      </div>
      <div class="fpctrls fpctrls-lyric">
-      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><i data-lucide="shuffle" width="17" height="17"></i></button>
-      <button class="ic" data-act="prev" title="${t("np.prev")}"><i data-lucide="skip-back" width="19" height="19"></i></button>
-      <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><i data-lucide="${S.playing?"pause":"play"}" width="20" height="20"></i></button>
-      <button class="ic" data-act="next" title="${t("np.next")}"><i data-lucide="skip-forward" width="19" height="19"></i></button>
-      <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><i data-lucide="repeat" width="17" height="17"></i></button>
-      <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><i data-lucide="heart" width="17" height="17"></i></button>
-      <button class="ic" id="fp-mode" title="${t("fp.mode")}"><i data-lucide="disc" width="17" height="17"></i></button>
+      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><span class="material-symbols-rounded" style="font-size:20px">shuffle</span></button>
+      <button class="ic" data-act="prev" title="${t("np.prev")}"><span class="material-symbols-rounded" style="font-size:20px">skip_previous</span></button>
+      <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px" pause":"play"}">${S.playing?"pause":"play_arrow"}</span></button>
+      <button class="ic" data-act="next" title="${t("np.next")}"><span class="material-symbols-rounded" style="font-size:20px">skip_next</span></button>
+      <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><span class="material-symbols-rounded" style="font-size:20px">repeat</span></button>
+      <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><span class="material-symbols-rounded" style="font-size:20px">favorite</span></button>
+      <button class="ic" id="fp-mode" title="${t("fp.mode")}"><span class="material-symbols-rounded" style="font-size:20px">album</span></button>
      </div>
     </div>
    </div>
@@ -1864,9 +1864,9 @@ function renderFP(){
    </div>
   </div>`:`
   <div class="fp-actions-top">
-   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><i data-lucide="maximize" width="17" height="17"></i></button>
-   <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><i data-lucide="sliders" width="18" height="18"></i></button>
-   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><i data-lucide="chevron-down" width="22" height="22"></i></button>
+   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><span class="material-symbols-rounded" style="font-size:20px">fullscreen</span></button>
+   <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><span class="material-symbols-rounded" style="font-size:20px">tune</span></button>
+   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><span class="material-symbols-rounded" style="font-size:24px">expand_more</span></button>
   </div>
   <div class="fp-stage-content">
    <div class="cover fpcover-stage" ${art}><canvas class="vis" id="vis"></canvas></div>
@@ -1880,13 +1880,13 @@ function renderFP(){
      <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t" id="fpdur">${fmt((Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0))}</span></div>
      </div>
     <div class="fpctrls fpctrls-stage">
-     <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><i data-lucide="shuffle" width="18" height="18"></i></button>
-     <button class="ic" data-act="prev" title="${t("np.prev")}"><i data-lucide="skip-back" width="20" height="20"></i></button>
-     <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><i data-lucide="${S.playing?"pause":"play"}" width="22" height="22"></i></button>
-     <button class="ic" data-act="next" title="${t("np.next")}"><i data-lucide="skip-forward" width="20" height="20"></i></button>
-     <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><i data-lucide="repeat" width="18" height="18"></i></button>
-     <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><i data-lucide="heart" width="18" height="18"></i></button>
-     <button class="ic" id="fp-mode" title="${hasLyrics?t("lyrics"):t("ly.search_genius")}"><i data-lucide="${hasLyrics?"mic-2":"search"}" width="18" height="18"></i></button>
+     <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><span class="material-symbols-rounded" style="font-size:20px">shuffle</span></button>
+     <button class="ic" data-act="prev" title="${t("np.prev")}"><span class="material-symbols-rounded" style="font-size:24px">skip_previous</span></button>
+     <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px" pause":"play"}">${S.playing?"pause":"play_arrow"}</span></button>
+     <button class="ic" data-act="next" title="${t("np.next")}"><span class="material-symbols-rounded" style="font-size:24px">skip_next</span></button>
+     <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><span class="material-symbols-rounded" style="font-size:20px">repeat</span></button>
+     <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><span class="material-symbols-rounded" style="font-size:20px">favorite</span></button>
+     <button class="ic" id="fp-mode" title="${hasLyrics?t("lyrics"):t("ly.search_genius")}"><span class="material-symbols-rounded" style="font-size:20px" mic-2":"search"}">${hasLyrics?"lyrics":"search"}</span></button>
     </div>
    </div>
   </div>`;
@@ -1961,11 +1961,11 @@ function renderLyricSheet(){
  el.dataset.synced=String(!!L.synced);
  el.dataset.karaoke=S.lyKaraoke||"karaoke";
  const badge=L.source==="custom"?(LANG==="ru"?"Свой текст":"Custom"):L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):"";
- const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-alt" title="${LANG==="ru"?"Автоматически распределить тайминги":"Auto-distribute timestamps across track"}"><i data-lucide="wand-2" width="13" height="13"></i> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
+ const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-alt" title="${LANG==="ru"?"Автоматически распределить тайминги":"Auto-distribute timestamps across track"}"><span class="material-symbols-rounded" style="font-size:16px">auto_fix_high</span> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
  const curOff=getLyricOffset(tr);
  const curOffStr=(curOff>0?"+":"")+curOff.toFixed(1)+"s";
- const offCtrl=L.synced?`<div class="lyr-offset-ctrl" title="${LANG==="ru"?"Подстройка тайминга текста [ / ]":"Lyrics timing offset [ / ]"}"><button class="btn sm text ly-off-btn" data-lyoff="-0.5" title="-0.5s">−0.5s</button><span class="ly-off-val${curOff!==0?" shifted":""}" title="${LANG==="ru"?"Текущее смещение":"Current offset"}">${curOffStr}</span><button class="btn sm text ly-off-btn" data-lyoff="0.5" title="+0.5s">+0.5s</button><button class="btn sm text ly-off-btn ly-off-reset-btn" data-lyreset="true" style="${curOff!==0?"":"display:none"}" title="${LANG==="ru"?"Сбросить смещение":"Reset offset"}"><i data-lucide="rotate-ccw" width="12" height="12"></i></button></div>`:"";
- el.innerHTML=`<div class="lyr-header">${badge?`<span class="lyr-badge">${esc(badge)}</span>`:""}${offCtrl}<div style="display:flex;gap:6px;margin-left:auto">${syncBtn}<button class="btn sm text" id="lygenius-alt" title="${t("ly.search_genius")}"><i data-lucide="search" width="13" height="13"></i> Genius</button><button class="btn sm text" id="lyr-edit-alt" title="${LANG==="ru"?"Редактировать текст и тайминги":"Edit lyrics & timings"}"><i data-lucide="timer" width="13" height="13"></i> ${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
+ const offCtrl=L.synced?`<div class="lyr-offset-ctrl" title="${LANG==="ru"?"Подстройка тайминга текста [ / ]":"Lyrics timing offset [ / ]"}"><button class="btn sm text ly-off-btn" data-lyoff="-0.5" title="-0.5s">−0.5s</button><span class="ly-off-val${curOff!==0?" shifted":""}" title="${LANG==="ru"?"Текущее смещение":"Current offset"}">${curOffStr}</span><button class="btn sm text ly-off-btn" data-lyoff="0.5" title="+0.5s">+0.5s</button><button class="btn sm text ly-off-btn ly-off-reset-btn" data-lyreset="true" style="${curOff!==0?"":"display:none"}" title="${LANG==="ru"?"Сбросить смещение":"Reset offset"}"><span class="material-symbols-rounded" style="font-size:14px">restart_alt</span></button></div>`:"";
+ el.innerHTML=`<div class="lyr-header">${badge?`<span class="lyr-badge">${esc(badge)}</span>`:""}${offCtrl}<div style="display:flex;gap:6px;margin-left:auto">${syncBtn}<button class="btn sm text" id="lygenius-alt" title="${t("ly.search_genius")}"><span class="material-symbols-rounded" style="font-size:16px">search</span> Genius</button><button class="btn sm text" id="lyr-edit-alt" title="${LANG==="ru"?"Редактировать текст и тайминги":"Edit lyrics & timings"}"><span class="material-symbols-rounded" style="font-size:16px">timer</span> ${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
   +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("");
  document.getElementById("lyr-sync-alt")?.addEventListener("click",()=>autoSyncLyrics(tr,L));
  document.getElementById("lygenius-alt")?.addEventListener("click",()=>searchGeniusPrompt(tr));
@@ -2000,7 +2000,7 @@ function renderFPBody(anim){
    +queue.map((x,i)=>`<div class="q" data-track="${esc(x.id)}" data-svc="${esc(x.s)}" style="--i:${Math.min(i,12)}">
      <i class="n">${String(i+1).padStart(2,"0")}</i>
      <b>${esc(x.t)}</b><em>${esc(x.a)}</em>
-     <button class="qrm" data-qrm="${esc(x.id)}" data-qsvc="${esc(x.s)}" aria-label="${esc(t("q.rm"))}" title="${esc(t("q.rm"))}"><i data-lucide="x" width="13" height="13"></i></button>
+     <button class="qrm" data-qrm="${esc(x.id)}" data-qsvc="${esc(x.s)}" aria-label="${esc(t("q.rm"))}" title="${esc(t("q.rm"))}"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>
     </div>`).join("")
    +`</div>`;
   document.getElementById("qclr").onclick=()=>{queue=[];renderFPBody()};
@@ -2303,10 +2303,10 @@ function renderLyrics(){
   return}
 
  const badge=L.source==="custom"?(LANG==="ru"?"Свой текст":"Custom"):L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):"";
- const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-btn" style="padding:2px 8px;font-size:.72rem"><i data-lucide="wand-2" width="12" height="12"></i> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
+ const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-btn" style="padding:2px 8px;font-size:.72rem"><span class="material-symbols-rounded" style="font-size:14px">auto_fix_high</span> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
  const curOff=getLyricOffset(tr);
  const curOffStr=(curOff>0?"+":"")+curOff.toFixed(1)+"s";
- const offCtrl=L.synced?`<div class="lyr-offset-ctrl" title="${LANG==="ru"?"Подстройка тайминга текста [ / ]":"Lyrics timing offset [ / ]"}"><button class="btn sm text ly-off-btn" data-lyoff="-0.5" title="-0.5s">−0.5s</button><span class="ly-off-val${curOff!==0?" shifted":""}" title="${LANG==="ru"?"Текущее смещение":"Current offset"}">${curOffStr}</span><button class="btn sm text ly-off-btn" data-lyoff="0.5" title="+0.5s">+0.5s</button><button class="btn sm text ly-off-btn ly-off-reset-btn" data-lyreset="true" style="${curOff!==0?"":"display:none"}" title="${LANG==="ru"?"Сбросить смещение":"Reset offset"}"><i data-lucide="rotate-ccw" width="12" height="12"></i></button></div>`:"";
+ const offCtrl=L.synced?`<div class="lyr-offset-ctrl" title="${LANG==="ru"?"Подстройка тайминга текста [ / ]":"Lyrics timing offset [ / ]"}"><button class="btn sm text ly-off-btn" data-lyoff="-0.5" title="-0.5s">−0.5s</button><span class="ly-off-val${curOff!==0?" shifted":""}" title="${LANG==="ru"?"Текущее смещение":"Current offset"}">${curOffStr}</span><button class="btn sm text ly-off-btn" data-lyoff="0.5" title="+0.5s">+0.5s</button><button class="btn sm text ly-off-btn ly-off-reset-btn" data-lyreset="true" style="${curOff!==0?"":"display:none"}" title="${LANG==="ru"?"Сбросить смещение":"Reset offset"}"><span class="material-symbols-rounded" style="font-size:14px">restart_alt</span></button></div>`:"";
  el.innerHTML=`<div class="lyr" id="lyr" data-synced="${!!L.synced}" data-karaoke="${esc(S.lyKaraoke||"karaoke")}">`
   +`<div class="lysrc" style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span>${badge?esc(badge):""}</span>${offCtrl}</div><div style="display:flex;gap:6px">${syncBtn}<button class="btn sm text" id="lyr-genius-btn" style="padding:2px 8px;font-size:.72rem">Genius</button><button class="btn sm text" id="lyr-edit-btn" style="padding:2px 8px;font-size:.72rem">${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
   +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("")
@@ -2885,7 +2885,7 @@ function setPlayIcon(btn,name,size){
  if(!btn)return;
  const sym=(window.m3Icons?.toSymbolName?window.m3Icons.toSymbolName(name):(name==="pause"?"pause":"play_arrow"));
  const cur=btn.firstElementChild;
- if(cur&&cur.dataset.icon===sym)return;
+ if(cur&&(cur.dataset?.icon===sym||cur.textContent?.trim()===sym))return;
  btn.innerHTML=`<span class="material-symbols-rounded" data-icon="${sym}" style="font-size:${size}px">${sym}</span>`;
 }
 function initMediaSession(){
@@ -3248,10 +3248,12 @@ document.getElementById("prev").onclick=prev;
 document.getElementById("shuffle").onclick=()=>setShuffle(!S.shuffle);
 document.getElementById("repeat").onclick=()=>setRepeat(!S.repeat);
 document.getElementById("vol").oninput=e=>{S.vol=e.target.value/100;S.muted=false;
+ const mb=document.getElementById("mute");
+ if(mb){mb.setAttribute("aria-pressed","false");mb.innerHTML=`<span class="material-symbols-rounded">${S.vol===0?"volume_off":(S.vol<0.5?"volume_down":"volume_up")}</span>`}
  if(A.gain)A.gain.gain.setTargetAtTime(S.vol,A.ctx.currentTime,.02);save()};
 document.getElementById("mute").onclick=e=>{S.muted=!S.muted;const b=e.currentTarget;
  b.setAttribute("aria-pressed",S.muted);
- b.innerHTML=`<span class="material-symbols-rounded">${S.muted?"volume_off":"volume_up"}</span>`;
+ b.innerHTML=`<span class="material-symbols-rounded">${S.muted?"volume_off":(S.vol<0.5?"volume_down":"volume_up")}</span>`;
  if(A.gain)A.gain.gain.setTargetAtTime(S.muted?0:S.vol,A.ctx.currentTime,.02)};
 /* Speed and loudness. initAudio() is called first because the graph may not
    exist yet if the user reaches for these before pressing play. */
@@ -3902,14 +3904,14 @@ addEventListener("keydown",e=>{
 /* onboarding */
 const OB={step:0};
 document.getElementById("oblang").innerHTML=`
- <button class="opt" role="radio" aria-checked="true" data-v="ru" style="--i:0"><b>Русский</b><small>Полный интерфейс</small><span class="tick"><i data-lucide="check" width="16" height="16"></i></span></button>
- <button class="opt" role="radio" aria-checked="false" data-v="en" style="--i:1"><b>English</b><small>Full interface</small><span class="tick"><i data-lucide="check" width="16" height="16"></i></span></button>`;
+ <button class="opt" role="radio" aria-checked="true" data-v="ru" style="--i:0"><b>Русский</b><small>Полный интерфейс</small><span class="tick"><span class="material-symbols-rounded" style="font-size:18px">check</span></span></button>
+ <button class="opt" role="radio" aria-checked="false" data-v="en" style="--i:1"><b>English</b><small>Full interface</small><span class="tick"><span class="material-symbols-rounded" style="font-size:18px">check</span></span></button>`;
 function obThemes(){
  const box=document.getElementById("obtheme");if(!box)return;
  box.innerHTML=[["dark",t("th.dark"),LANG==="ru"?"Почти чёрный фон, белые частицы":"Near-black canvas, white particles"],
   ["light",t("th.light"),LANG==="ru"?"Белая основа, тёмные частицы":"White base, dark particles"],
   ["system",t("th.sys"),LANG==="ru"?"Следовать за системой":"Follow the OS"]]
-  .map(([v,n,d],i)=>`<button class="opt" role="radio" aria-checked="${S.theme===v}" data-v="${v}" style="--i:${i}"><b>${n}</b><small>${d}</small><span class="tick"><i data-lucide="check" width="16" height="16"></i></span></button>`).join("");
+  .map(([v,n,d],i)=>`<button class="opt" role="radio" aria-checked="${S.theme===v}" data-v="${v}" style="--i:${i}"><b>${n}</b><small>${d}</small><span class="tick"><span class="material-symbols-rounded" style="font-size:18px">check</span></span></button>`).join("");
  icons()}
 obThemes();renderSwatches();
 document.getElementById("oblang").addEventListener("click",e=>{
@@ -5309,20 +5311,20 @@ function openCtx(x,y,tr){
   `<button data-ctx="pl" data-pid="${esc(p.id)}">${esc(p.name)} <em>${p.tracks.length}</em></button>`).join("");
  const remote=tr.s!=="local";
  m.innerHTML=`
-  <button data-ctx="play"><i data-lucide="play" width="14" height="14"></i>${t("ctx.play")}</button>
-  <button data-ctx="qnext"><i data-lucide="corner-down-right" width="14" height="14"></i>${t("ctx.qnext")}</button>
-  <button data-ctx="qlast"><i data-lucide="list-end" width="14" height="14"></i>${t("ctx.qlast")}</button>
-  <button data-ctx="fav"><i data-lucide="heart" width="14" height="14"></i>${tr.fav?t("ctx.unfav"):t("ctx.fav")}</button>
-  <button data-ctx="artist"><i data-lucide="user" width="14" height="14"></i>${t("ctx.artist")}</button>
-  ${tr.s==="local"?`<button data-ctx="rmlocal"><i data-lucide="trash-2" width="14" height="14"></i>${t("ctx.rmlocal")}</button>`:""}
+  <button data-ctx="play"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span>${t("ctx.play")}</button>
+  <button data-ctx="qnext"><span class="material-symbols-rounded" style="font-size:16px">subdirectory_arrow_right</span>${t("ctx.qnext")}</button>
+  <button data-ctx="qlast"><span class="material-symbols-rounded" style="font-size:16px">queue_music</span>${t("ctx.qlast")}</button>
+  <button data-ctx="fav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span>${tr.fav?t("ctx.unfav"):t("ctx.fav")}</button>
+  <button data-ctx="artist"><span class="material-symbols-rounded" style="font-size:16px">person</span>${t("ctx.artist")}</button>
+  ${tr.s==="local"?`<button data-ctx="rmlocal"><span class="material-symbols-rounded" style="font-size:16px">delete</span>${t("ctx.rmlocal")}</button>`:""}
   ${remote?`<div class="sep"></div>
   <span class="lbl">${t("dl.preset.t")}</span>
-  <button data-ctx="dl"><i data-lucide="download" width="14" height="14"></i>${t("dl.raw")}</button>
-  <button data-ctx="dlfx"${HAS_FFMPEG?"":" disabled title=\""+esc(t("dl.fx.need"))+"\""}><i data-lucide="sliders-horizontal" width="14" height="14"></i>${t("dl.withfx")}</button>`:""}
+  <button data-ctx="dl"><span class="material-symbols-rounded" style="font-size:16px">download</span>${t("dl.raw")}</button>
+  <button data-ctx="dlfx"${HAS_FFMPEG?"":" disabled title=\""+esc(t("dl.fx.need"))+"\""}><span class="material-symbols-rounded" style="font-size:16px">tune</span>${t("dl.withfx")}</button>`:""}
   <div class="sep"></div>
   <span class="lbl">${t("ctx.addto")}</span>
   ${pls||`<span class="lbl dim">${t("ctx.nopl")}</span>`}
-  <button data-ctx="newpl"><i data-lucide="plus" width="14" height="14"></i>${t("ctx.newpl")}</button>
+  <button data-ctx="newpl"><span class="material-symbols-rounded" style="font-size:16px">add</span>${t("ctx.newpl")}</button>
   <div class="sep"></div>
   <span class="lbl">${t("ctx.eq")}</span>
   <div class="ctxchips">
@@ -5366,14 +5368,14 @@ function openAddMenu(x,y,tr){
  m.innerHTML=`
   <span class="lbl">${t("ctx.addto")}</span>
   ${pls||`<span class="lbl dim">${t("ctx.nopl")}</span>`}
-  <button data-ctx="newpl"><i data-lucide="plus" width="14" height="14"></i>${t("ctx.newpl")}</button>
+  <button data-ctx="newpl"><span class="material-symbols-rounded" style="font-size:16px">add</span>${t("ctx.newpl")}</button>
   <div class="sep"></div>
-  <button data-ctx="fav"><i data-lucide="heart" width="14" height="14"></i>${tr.fav?t("ctx.unfav"):t("ctx.fav")}</button>
-  <button data-ctx="qnext"><i data-lucide="corner-down-right" width="14" height="14"></i>${t("ctx.qnext")}</button>
+  <button data-ctx="fav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span>${tr.fav?t("ctx.unfav"):t("ctx.fav")}</button>
+  <button data-ctx="qnext"><span class="material-symbols-rounded" style="font-size:16px">subdirectory_arrow_right</span>${t("ctx.qnext")}</button>
   ${remote?`<div class="sep"></div>
   <span class="lbl">${t("dl.preset.t")}</span>
-  <button data-ctx="dl"><i data-lucide="download" width="14" height="14"></i>${t("dl.raw")}</button>
-  <button data-ctx="dlfx"${HAS_FFMPEG?"":" disabled title=\""+esc(t("dl.fx.need"))+"\""}><i data-lucide="sliders-horizontal" width="14" height="14"></i>${t("dl.withfx")}</button>`
+  <button data-ctx="dl"><span class="material-symbols-rounded" style="font-size:16px">download</span>${t("dl.raw")}</button>
+  <button data-ctx="dlfx"${HAS_FFMPEG?"":" disabled title=\""+esc(t("dl.fx.need"))+"\""}><span class="material-symbols-rounded" style="font-size:16px">tune</span>${t("dl.withfx")}</button>`
   :`<div class="sep"></div><span class="lbl dim">${t("dl.already")}</span>`}`;
  document.body.appendChild(m);
  CTX.el=m;
@@ -5400,11 +5402,11 @@ function openPlCtx(x,y,pid){
  m.className="ctx pane";
  const cur=S.eqByPl?.[pid];
  m.innerHTML=`
-  <button data-plctx="play"><i data-lucide="play" width="14" height="14"></i>${t("pl.playall")}</button>
-  <button data-plctx="cover"><i data-lucide="image" width="14" height="14"></i>${t("plctx.cover")}</button>
-  ${pl.cover?`<button data-plctx="coveroff"><i data-lucide="image-off" width="14" height="14"></i>${t("plctx.coveroff")}</button>`:""}
-  <button data-plctx="dl"><i data-lucide="download" width="14" height="14"></i>${t("pl.dl")}</button>
-  <button data-plctx="rename"><i data-lucide="pencil" width="14" height="14"></i>${t("plctx.rename")}</button>
+  <button data-plctx="play"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span>${t("pl.playall")}</button>
+  <button data-plctx="cover"><span class="material-symbols-rounded" style="font-size:16px">image</span>${t("plctx.cover")}</button>
+  ${pl.cover?`<button data-plctx="coveroff"><span class="material-symbols-rounded" style="font-size:16px">hide_image</span>${t("plctx.coveroff")}</button>`:""}
+  <button data-plctx="dl"><span class="material-symbols-rounded" style="font-size:16px">download</span>${t("pl.dl")}</button>
+  <button data-plctx="rename"><span class="material-symbols-rounded" style="font-size:16px">edit</span>${t("plctx.rename")}</button>
   <div class="sep"></div>
   <span class="lbl">${t("plctx.eq")}</span>
   <div class="ctxchips">
@@ -5413,7 +5415,7 @@ function openPlCtx(x,y,pid){
    ${cur?`<button data-plctx="eqoff" class="off">${t("ctx.eq.off")}</button>`:""}
   </div>
   <div class="sep"></div>
-  <button data-plctx="del" class="danger"><i data-lucide="trash-2" width="14" height="14"></i>${t("pl.del")}</button>`;
+  <button data-plctx="del" class="danger"><span class="material-symbols-rounded" style="font-size:16px">delete</span>${t("pl.del")}</button>`;
  document.body.appendChild(m);
  PLCTX.el=m;
  placeMenu(m,x,y);
@@ -5820,20 +5822,20 @@ function renderProfile(savedVals={}){
     <!-- Quasar ID SSO Button at the Bottom with Perks -->
     <div class="quasar-sso-container">
      <button class="quasar-sso-btn" id="au-quasar-btn" type="button">
-      <i data-lucide="sparkles" width="18" height="18" style="color:#7c3aed"></i>
+      <span class="material-symbols-rounded" style="font-size:20px;color:#7c3aed">auto_awesome</span>
       <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
      </button>
      <div class="quasar-sso-perks">
       <div class="quasar-sso-perk">
-       <i data-lucide="message-square" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+       <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">chat_bubble</span>
        <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
       </div>
       <div class="quasar-sso-perk">
-       <i data-lucide="music" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+       <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">music_note</span>
        <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
       </div>
       <div class="quasar-sso-perk">
-       <i data-lucide="zap" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+       <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">bolt</span>
        <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
       </div>
      </div>
@@ -5906,7 +5908,7 @@ function renderProfile(savedVals={}){
   </div>
   <div class="panel pane">
    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-    <h3 style="margin:0;display:flex;align-items:center;gap:8px"><i data-lucide="music" width="18" height="18" style="color:var(--accent,#a78bfa)"></i><span>${LANG==="ru"?"Музыка в профиле":"Profile Music"}</span></h3>
+    <h3 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-rounded" style="font-size:20px;color:var(--accent,#a78bfa)">music_note</span><span>${LANG==="ru"?"Музыка в профиле":"Profile Music"}</span></h3>
     ${S.profileTrack?`<button class="btn sm ghost" id="prof-track-clear">${LANG==="ru"?"Открепить":"Unpin"}</button>`:""}
    </div>
    <p class="ph" style="margin:0 0 12px">${LANG==="ru"?"Закрепите трек, который будет отображаться в вашем профиле Quasar ID":"Pin a featured song displayed on your Quasar ID profile"}</p>
@@ -5918,12 +5920,12 @@ function renderProfile(savedVals={}){
           <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(S.profileTrack.t)}</div>
           <div style="color:var(--mute);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(S.profileTrack.a||"—")}</div>
         </div>
-        <button class="btn sm primary" id="prof-track-play" title="${t("np.play")}"><i data-lucide="play" width="14" height="14"></i></button>
+        <button class="btn sm primary" id="prof-track-play" title="${t("np.play")}"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span></button>
       </div>
     `:`
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <button class="btn" id="prof-track-pin-curr"${!S.current||S.current.mode==="empty"?" disabled":""}>
-          <i data-lucide="pin" width="14" height="14"></i> ${LANG==="ru"?"Закрепить текущий трек":"Pin Current Track"}
+          <span class="material-symbols-rounded" style="font-size:16px">push_pin</span> ${LANG==="ru"?"Закрепить текущий трек":"Pin Current Track"}
         </button>
         ${!S.current||S.current.mode==="empty"?`<small style="color:var(--mute)">(${LANG==="ru"?"сейчас ничего не играет":"nothing playing right now"})</small>`:`<small style="color:var(--mute)">${esc(S.current.a)} — ${esc(S.current.t)}</small>`}
       </div>
@@ -5933,7 +5935,7 @@ function renderProfile(savedVals={}){
   <div class="panel pane">
    <div class="quests-profile-card">
     <div class="quests-profile-info">
-     <div class="quests-profile-icon"><i data-lucide="award" width="22" height="22"></i></div>
+     <div class="quests-profile-icon"><span class="material-symbols-rounded" style="font-size:24px">military_tech</span></div>
      <div class="quests-profile-details">
       <h3>${LANG==="ru"?"Квесты и Значки":"Quests & Badges"}</h3>
       <p>${LANG==="ru"?"Выполняйте задания, открывайте уникальные значки и надевайте их":"Complete quests, unlock unique badges and equip them"}</p>
@@ -5941,7 +5943,7 @@ function renderProfile(savedVals={}){
     </div>
     <div style="display:flex;align-items:center;gap:10px">
      ${userBadgeTag(S.equippedBadge)}
-     <button class="quests-profile-btn" id="prof-to-quests"><i data-lucide="sparkles" width="15" height="15"></i> ${LANG==="ru"?"Перейти к квестам":"Open Quests"}</button>
+     <button class="quests-profile-btn" id="prof-to-quests"><span class="material-symbols-rounded" style="font-size:18px">auto_awesome</span> ${LANG==="ru"?"Перейти к квестам":"Open Quests"}</button>
     </div>
    </div>
   <div class="panel pane">
@@ -6031,20 +6033,20 @@ const needAuth=(box,saved={})=>{
    <!-- Quasar ID SSO Button at the Bottom with Perks -->
    <div class="quasar-sso-container">
     <button class="quasar-sso-btn" id="qau-quasar-btn" type="button">
-     <i data-lucide="sparkles" width="18" height="18" style="color:#7c3aed"></i>
+     <span class="material-symbols-rounded" style="font-size:20px;color:#7c3aed">auto_awesome</span>
      <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
     </button>
     <div class="quasar-sso-perks">
      <div class="quasar-sso-perk">
-      <i data-lucide="message-square" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+      <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">chat_bubble</span>
       <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
      </div>
      <div class="quasar-sso-perk">
-      <i data-lucide="music" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+      <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">music_note</span>
       <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
      </div>
      <div class="quasar-sso-perk">
-      <i data-lucide="zap" width="14" height="14" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+      <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">bolt</span>
       <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
      </div>
     </div>
@@ -6299,12 +6301,12 @@ function chatBodyHtml(m){
  const img=m.image?`<img class="chatimg" src="${esc(m.image)}" alt="" loading="lazy">`:"";
  let body=esc(m.body||"");
  if(m.body){
-  body=body.replace(/MEOW-[2-9A-HJ-NP-Z]{4}/gi,code=>`<button class="btn sm joinchip" data-join="${code}"><i data-lucide="radio-tower" width="13" height="13"></i>${code}</button>`);
+  body=body.replace(/MEOW-[2-9A-HJ-NP-Z]{4}/gi,code=>`<button class="btn sm joinchip" data-join="${code}"><span class="material-symbols-rounded" style="font-size:16px">podcasts</span>${code}</button>`);
   body=body.replace(/(https?:\/\/[^\s<]+)/g,url=>`<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;word-break:break-all">${url}</a>`);
   body=body.replace(/🎵\s*([^\n—–-]+)\s*[—–-]\s*([^\n]+)/g,(match,art,tit)=>{
    const cleanArt=art.trim(), cleanTit=tit.trim();
    const fullQ=`${cleanArt} ${cleanTit}`;
-   return `<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><i data-lucide="play" width="12" height="12"></i></button><span>${esc(cleanArt)} — <b>${esc(cleanTit)}</b></span></div>`;
+   return `<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><span class="material-symbols-rounded" style="font-size:14px">play_arrow</span></button><span>${esc(cleanArt)} — <b>${esc(cleanTit)}</b></span></div>`;
   });
  }
  return img+body;
@@ -6322,9 +6324,9 @@ function notify(title,body,opts={}){
   if(!box)return;
   const el=document.createElement("div");
   el.className="note";
-  el.innerHTML=`<span class="noteic"><i data-lucide="${esc(opts.icon||"bell")}" width="16" height="16"></i></span>
+  el.innerHTML=`<span class="noteic"><span class="material-symbols-rounded" style="font-size:18px" bell")}">${esc(window.toMaterialSymbol?window.toMaterialSymbol(opts.icon||"bell"):"notifications")}</span></span>
    <span class="notetxt"><b>${esc(title)}</b>${body?`<span>${esc(body)}</span>`:""}</span>
-   <button class="notex" aria-label="close"><i data-lucide="x" width="13" height="13"></i></button>`;
+   <button class="notex" aria-label="close"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`;
   box.appendChild(el);
   icons();
   const kill=()=>{if(el.dataset.gone)return;el.dataset.gone="1";el.classList.add("out");setTimeout(()=>el.remove(),320)};
@@ -6457,7 +6459,7 @@ async function renderPeopleProfile(id){
               <div style="font-weight:600;font-size:0.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(profTr.t)}</div>
               <div style="color:var(--mute);font-size:0.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(profTr.a||"—")}</div>
             </div>
-            <button class="btn sm primary" id="people-prof-play" title="${t("np.play")}"><i data-lucide="play" width="13" height="13"></i></button>
+            <button class="btn sm primary" id="people-prof-play" title="${t("np.play")}"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span></button>
           </div>`:""}
         </div>
       </div>
@@ -6496,7 +6498,7 @@ async function renderPeopleProfile(id){
   }
 
   if(friend){
-    a.innerHTML=`<button class="primary" id="people-dm"><i data-lucide="message-circle" width="15" height="15"></i> ${t("people.message")}</button>
+    a.innerHTML=`<button class="primary" id="people-dm"><span class="material-symbols-rounded" style="font-size:18px">chat_bubble</span> ${t("people.message")}</button>
       <button class="btn danger" id="people-unfr">${t("fr.rm")}</button>`;
     document.getElementById("people-dm").onclick=()=>openChat("d:"+p.id);
     document.getElementById("people-unfr").onclick=async()=>{
@@ -6521,7 +6523,7 @@ async function renderPeopleProfile(id){
       if(error)return toast(error.message);
       refreshFriendNotice();renderPeopleProfile(p.id)};
   }else{
-    a.innerHTML=`<button class="primary" id="people-add"><i data-lucide="user-plus" width="15" height="15"></i> ${t("people.add")}</button>`;
+    a.innerHTML=`<button class="primary" id="people-add"><span class="material-symbols-rounded" style="font-size:18px">person_add</span> ${t("people.add")}</button>`;
     document.getElementById("people-add").onclick=async()=>{
       if(isMock||!sbUser){
         const list=getMockFriends();
@@ -6565,7 +6567,7 @@ async function renderPeople(){
 function peopleRow(p,sub){
   return `<button class="people-row" data-person="${esc(p.id)}">${avat(p,42,p.status||"online")}
     <span class="meta"><b>${esc(p.username||t("chat.anon"))}</b><span>${esc(sub||p.bio||t("people.open"))}</span></span>
-    <i data-lucide="chevron-right" width="16" height="16"></i></button>`;
+    <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`;
 }
 
 /* ── Find / Discover People ─────────────────────────────────────────── */
@@ -6574,7 +6576,7 @@ async function renderPeopleFind(box){
   const guestBanner=isGuest?`
     <div class="people-guest-banner">
       <div class="people-guest-info">
-        <i data-lucide="sparkles" width="20" height="20" style="color:var(--accent)"></i>
+        <span class="material-symbols-rounded" style="font-size:24px;color:var(--accent)">auto_awesome</span>
         <div>
           <b>${LANG==="ru"?"Исследуйте сообщество Meowave":"Explore Meowave Community"}</b>
           <span>${LANG==="ru"?"Знакомьтесь с меломанами, слушайте их треки и делитесь вкусом.":"Discover music lovers, listen to their favorite tracks, and share music taste."}</span>
@@ -6590,7 +6592,7 @@ async function renderPeopleFind(box){
     ${guestBanner}
     <div class="people-toolbar">
       <div class="people-search-box">
-        <i data-lucide="search" width="16" height="16"></i>
+        <span class="material-symbols-rounded" style="font-size:18px">search</span>
         <input id="people-q" placeholder="${t("people.search.ph")}" value="${esc(PEOPLE_QUERY)}" maxlength="32" autocomplete="off">
       </div>
       <div class="people-filters-row">
@@ -6634,7 +6636,7 @@ async function renderPeopleFind(box){
 
     if(!combined.length){
       results.innerHTML=`<div style="text-align:center;padding:36px 16px;color:var(--mute)">
-        <i data-lucide="users" width="32" height="32" style="opacity:0.4;margin-bottom:8px"></i>
+        <span class="material-symbols-rounded" style="font-size:32px;opacity:0.4;margin-bottom:8px">group</span>
         <p class="ph" style="margin:0">${t("people.none")}</p>
       </div>`;
       icons();
@@ -6654,7 +6656,7 @@ async function renderPeopleFind(box){
             <div class="friend-listening-chip" style="margin-top:6px">
               <div class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></div>
               <span>${esc(p.listening.a)} — <b>${esc(p.listening.t)}</b></span>
-              <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><i data-lucide="play" width="11" height="11"></i></button>
+              <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><span class="material-symbols-rounded" style="font-size:14px">play_arrow</span></button>
             </div>`:"" ;
           return `
           <div class="people-find-card">
@@ -6663,7 +6665,7 @@ async function renderPeopleFind(box){
               <div class="people-find-top">
                 ${avat(p, 46, p.status||"online")}
                 <button class="btn sm ${isFr?"":"primary"}" data-find-action="${esc(p.id)}" style="font-size:0.75rem">
-                  <i data-lucide="${isFr?"check":"user-plus"}" width="13" height="13"></i> ${isFr?(LANG==="ru"?"В друзьях":"Friends"):(LANG==="ru"?"Добавить":"Add")}
+                  <span class="material-symbols-rounded" style="font-size:16px" check":"user-plus"}">${isFr?"check":"person_add"}</span> ${isFr?(LANG==="ru"?"В друзьях":"Friends"):(LANG==="ru"?"Добавить":"Add")}
                 </button>
               </div>
               <div style="font-weight:600;font-size:0.92rem;cursor:pointer" data-person="${esc(p.id)}">${esc(p.username)}</div>
@@ -6695,7 +6697,7 @@ async function renderPeopleFind(box){
           const {error}=await sb.rpc("add_friend_by_username",{name:target.username});
           if(error)return toast(error.message);
           notify(t("people.pending"),target.username||"",{icon:"user-plus"});
-          btn.innerHTML=`<i data-lucide="clock" width="13" height="13"></i> ${t("people.pending")}`;
+          btn.innerHTML=`<span class="material-symbols-rounded" style="font-size:16px">schedule</span> ${t("people.pending")}`;
           btn.disabled=true;
           icons();
         }
@@ -6804,7 +6806,7 @@ async function renderPeopleFriends(box){
   const guestBanner=isGuest?`
     <div class="people-guest-banner">
       <div class="people-guest-info">
-        <i data-lucide="users" width="20" height="20" style="color:var(--accent)"></i>
+        <span class="material-symbols-rounded" style="font-size:24px;color:var(--accent)">group</span>
         <div>
           <b>${LANG==="ru"?"Локальный список друзей":"Local Friends & Community"}</b>
           <span>${LANG==="ru"?"Войдите в аккаунт для добавления друзей по всему миру и синхронизации.":"Sign in to add friends across devices and sync in the cloud."}</span>
@@ -6818,12 +6820,12 @@ async function renderPeopleFriends(box){
     <div class="people-toolbar">
       <div class="tokrow" style="margin:0 0 10px">
         <input id="fr-add" placeholder="${t("fr.addph")}" autocomplete="off" maxlength="24">
-        <button class="btn primary" id="fr-addbtn"><i data-lucide="user-plus" width="14" height="14"></i> ${t("fr.add")}</button>
+        <button class="btn primary" id="fr-addbtn"><span class="material-symbols-rounded" style="font-size:16px">person_add</span> ${t("fr.add")}</button>
       </div>
 
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div class="people-search-box" style="flex:1;min-width:200px">
-          <i data-lucide="search" width="15" height="15"></i>
+          <span class="material-symbols-rounded" style="font-size:18px">search</span>
           <input id="fr-filter" placeholder="${LANG==="ru"?"Фильтр по имени или треку...":"Filter by name or track..."}" autocomplete="off">
         </div>
         <div class="people-filters-row">
@@ -6892,13 +6894,13 @@ async function renderPeopleFriends(box){
     if(!list.length){
       if(!isGuest){
         html+=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
-          <i data-lucide="users" width="36" height="36" style="opacity:0.4;margin-bottom:10px"></i>
+          <span class="material-symbols-rounded" style="font-size:36px;opacity:0.4;margin-bottom:10px">group</span>
           <p class="ph" style="margin:0 0 12px">${LANG==="ru"?"У вас пока нет друзей в аккаунте. Найдите единомышленников во вкладке «Найти людей»!":"You don't have friends yet. Discover music lovers in the 'Find People' tab!"}</p>
-          <button class="btn primary sm" id="fr-go-find" style="display:inline-flex;align-items:center;gap:6px"><i data-lucide="compass" width="14" height="14"></i> ${LANG==="ru"?"Найти людей":"Discover People"}</button>
+          <button class="btn primary sm" id="fr-go-find" style="display:inline-flex;align-items:center;gap:6px"><span class="material-symbols-rounded" style="font-size:16px">explore</span> ${LANG==="ru"?"Найти людей":"Discover People"}</button>
         </div>`;
       }else{
         html+=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
-          <i data-lucide="user-x" width="32" height="32" style="opacity:0.4;margin-bottom:8px"></i>
+          <span class="material-symbols-rounded" style="font-size:32px;opacity:0.4;margin-bottom:8px">person_off</span>
           <p class="ph" style="margin:0">${LANG==="ru"?"Друзья не найдены. Попробуйте изменить фильтр или найти новых людей.":"No friends found. Try adjusting filter or discover new people."}</p>
         </div>`;
       }
@@ -6909,7 +6911,7 @@ async function renderPeopleFriends(box){
             <div class="friend-listening-chip">
               <div class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></div>
               <span>${esc(p.listening.a)} — <b>${esc(p.listening.t)}</b></span>
-              <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><i data-lucide="play" width="11" height="11"></i></button>
+              <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><span class="material-symbols-rounded" style="font-size:14px">play_arrow</span></button>
             </div>`:"" ;
 
           return `
@@ -6923,9 +6925,9 @@ async function renderPeopleFriends(box){
               ${listeningChip}
             </div>
             <div class="friend-actions">
-              <button class="btn sm" data-dm="${esc(p.id)}" title="${t("people.message")}"><i data-lucide="message-circle" width="15" height="15"></i></button>
-              <button class="btn sm" data-person="${esc(p.id)}" title="Профиль"><i data-lucide="user" width="15" height="15"></i></button>
-              <button class="ic" data-unfr="${esc(p.id)}" title="${t("fr.rm")}"><i data-lucide="user-minus" width="15" height="15"></i></button>
+              <button class="btn sm" data-dm="${esc(p.id)}" title="${t("people.message")}"><span class="material-symbols-rounded" style="font-size:18px">chat_bubble</span></button>
+              <button class="btn sm" data-person="${esc(p.id)}" title="Профиль"><span class="material-symbols-rounded" style="font-size:18px">person</span></button>
+              <button class="ic" data-unfr="${esc(p.id)}" title="${t("fr.rm")}"><span class="material-symbols-rounded" style="font-size:18px">person_remove</span></button>
             </div>
           </div>`;
         }).join("")}
@@ -7082,7 +7084,7 @@ async function renderChats(){
      <button class="chatrow" data-openchat="${esc(key)}">
       ${img}
       <span class="meta"><b>${esc(name)}</b><span>${last?esc(String(last).slice(0,64)):extra}</span></span>
-      <i data-lucide="chevron-right" width="16" height="16"></i></button>`;
+      <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`;
 
     const dmRows=[...partners.entries()].map(([pid,m])=>{
       const p=profs.find(x=>x.id===pid)||{username:t("chat.anon")};
@@ -7100,12 +7102,12 @@ async function renderChats(){
         <span class="chats-count-badge">${totalChats}</span>
        </div>
        <div class="chats-actions-row">
-        ${!isGuest?`<button class="btn" id="newgrp"><i data-lucide="users" width="14" height="14"></i> ${t("chat.newgrp")}</button>`:""}
-        <button class="btn primary sm" id="newdm"><i data-lucide="message-square-plus" width="14" height="14"></i> ${t("chat.newdm")}</button>
+        ${!isGuest?`<button class="btn" id="newgrp"><span class="material-symbols-rounded" style="font-size:16px">group</span> ${t("chat.newgrp")}</button>`:""}
+        <button class="btn primary sm" id="newdm"><span class="material-symbols-rounded" style="font-size:16px">add_comment</span> ${t("chat.newdm")}</button>
        </div>
       </div>
       <div class="chats-list">
-       ${grpRows}${dmRows||(!grpRows?`<div class="chats-empty"><i data-lucide="message-square-dashed" width="32" height="32"></i><p class="ph" style="margin:0">${t("chat.empty")}</p></div>`:"")}
+       ${grpRows}${dmRows||(!grpRows?`<div class="chats-empty"><span class="material-symbols-rounded" style="font-size:32px">chat_bubble_outline</span><p class="ph" style="margin:0">${t("chat.empty")}</p></div>`:"")}
       </div>
      </div>`;
 
@@ -7236,11 +7238,11 @@ async function paintChatInner(box){
     const editedHtml=m.edited_at?`<span class="msg-edited">(ред.)</span>`:"";
     return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
      <div class="msg-actions">
-      <button class="msg-act-btn" data-act="copy" title="Копировать"><i data-lucide="copy" width="13" height="13"></i></button>
-      <button class="msg-act-btn" data-act="reply" title="Ответить"><i data-lucide="reply" width="13" height="13"></i></button>
+      <button class="msg-act-btn" data-act="copy" title="Копировать"><span class="material-symbols-rounded" style="font-size:16px">content_copy</span></button>
+      <button class="msg-act-btn" data-act="reply" title="Ответить"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button>
       ${mine?`
-       <button class="msg-act-btn" data-act="edit" title="Редактировать"><i data-lucide="pencil" width="13" height="13"></i></button>
-       <button class="msg-act-btn danger" data-act="delete" title="Удалить"><i data-lucide="trash-2" width="13" height="13"></i></button>
+       <button class="msg-act-btn" data-act="edit" title="Редактировать"><span class="material-symbols-rounded" style="font-size:16px">edit</span></button>
+       <button class="msg-act-btn danger" data-act="delete" title="Удалить"><span class="material-symbols-rounded" style="font-size:16px">delete</span></button>
       `:""}
      </div>
      ${!mine&&SOC.chat.chat?`<span class="who">${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
@@ -7249,13 +7251,13 @@ async function paintChatInner(box){
 
   const hdr=SOC.chat.dm
     ?`<div class="chat-dm-user" style="display:inline-flex;align-items:center;gap:10px;cursor:pointer" title="${t("people.profile")||"Профиль"}">${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,SOC.chat.targetCache?.status||"online")}<b>${esc(SOC.chat.name)}</b></div>`
-    :`<i data-lucide="users" width="16" height="16"></i><b>${esc(SOC.chat.name)}</b>
+    :`<span class="material-symbols-rounded" style="font-size:18px">group</span><b>${esc(SOC.chat.name)}</b>
       <span class="mut" data-togglemembers>${(SOC.chat.membersCache||[]).length}</span>`;
 
   const memberList=SOC.chat.chat&&SOC.chat.showMembers
     ?`<div class="memstrip">${(SOC.chat.membersCache||[]).map(m=>
         `${avat(m.profile,24)}<span>${esc(m.profile?.username||"")}</span>${m.role==="owner"?"👑":""}`).join("")}
-        <button class="btn sm" id="addmem"><i data-lucide="user-plus" width="13" height="13"></i></button></div>`:"";
+        <button class="btn sm" id="addmem"><span class="material-symbols-rounded" style="font-size:16px">person_add</span></button></div>`:"";
 
   const existingPane=box.querySelector(".chatpane");
   if(existingPane&&SOC.chat._painted){
@@ -7279,20 +7281,20 @@ async function paintChatInner(box){
 
   const firstPaint=!SOC.chat._painted;SOC.chat._painted=true;
   box.innerHTML=`<div class="panel pane chatpane">
-   <div class="chathdr"><button class="ic" data-back>${'<i data-lucide="arrow-left" width="16" height="16"></i>'}</button>
+   <div class="chathdr"><button class="ic" data-back>${'<span class="material-symbols-rounded" style="font-size:18px">arrow_back</span>'}</button>
     ${hdr}
     <span class="grow"></span>
-    <button class="ic" id="chat-invite" title="${t("chat.invite")}"><i data-lucide="radio-tower" width="15" height="15"></i></button>
-    ${SOC.chat.chat&&SOC.chat.isOwner?`<button class="ic" id="chat-cfg" title="${t("chat.custom")}"><i data-lucide="pencil" width="15" height="15"></i></button>`:""}
+    <button class="ic" id="chat-invite" title="${t("chat.invite")}"><span class="material-symbols-rounded" style="font-size:18px">podcasts</span></button>
+    ${SOC.chat.chat&&SOC.chat.isOwner?`<button class="ic" id="chat-cfg" title="${t("chat.custom")}"><span class="material-symbols-rounded" style="font-size:18px">edit</span></button>`:""}
    </div>
    ${memberList}
    <div class="chatlog${firstPaint?" first":""}">${list||`<p class="ph">${t("chat.nomsgs")}</p>`}</div>
    <div id="chat-edit-wrap"></div>
    <div class="chatrow-input">
-    <button class="ic" id="chat-img" title="${t("chat.photo")}"><i data-lucide="image" width="16" height="16"></i></button>
-    <button class="ic" id="chat-share-np" title="${t("chat.share_np")||"Поделиться текущим треком"}"><i data-lucide="music" width="16" height="16"></i></button>
+    <button class="ic" id="chat-img" title="${t("chat.photo")}"><span class="material-symbols-rounded" style="font-size:18px">image</span></button>
+    <button class="ic" id="chat-share-np" title="${t("chat.share_np")||"Поделиться текущим треком"}"><span class="material-symbols-rounded" style="font-size:18px">music_note</span></button>
     <input id="chat-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
-    <button class="primary sm" id="chat-send"><i data-lucide="send" width="15" height="15"></i></button>
+    <button class="primary sm" id="chat-send"><span class="material-symbols-rounded" style="font-size:18px">send</span></button>
     <input type="file" id="chat-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
    </div></div>`;
 
@@ -7480,9 +7482,9 @@ function wireChatActions(root){
     const ew=document.getElementById("chat-edit-wrap");
     if(ew){
      ew.innerHTML=`<div class="chat-edit-bar" id="chat-edit-bar">
-      <i data-lucide="pencil" width="14" height="14"></i>
+      <span class="material-symbols-rounded" style="font-size:16px">edit</span>
       <span class="edit-body">${esc(msgObj.body||"")}</span>
-      <button class="cancel-edit" id="cancel-edit" title="Отмена"><i data-lucide="x" width="13" height="13"></i></button>
+      <button class="cancel-edit" id="cancel-edit" title="Отмена"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>
      </div>`;
      icons();
      ew.querySelector("#cancel-edit")?.addEventListener("click",()=>{
@@ -7606,14 +7608,14 @@ async function renderRooms(){
  const list=data||[];
  box.innerHTML=`<div class="panel pane">
   <div class="tokrow" style="margin:0 0 12px">
-   <button class="primary sm" id="mkroom"><i data-lucide="plus" width="14" height="14"></i>${t("room.new")}</button>
+   <button class="primary sm" id="mkroom"><span class="material-symbols-rounded" style="font-size:16px">add</span>${t("room.new")}</button>
    <input id="joincode" placeholder="MEOW-XXXX" maxlength="9" style="text-transform:uppercase">
    <button class="btn" id="joinbtn">${t("room.join")}</button>
   </div>
   ${list.map(r=>`<button class="chatrow" data-roomid="${r.id}">
     <span class="avat ghost">🎧</span>
     <span class="meta"><b>${esc(r.name)}</b><span>${r.playing?esc(r.track?.t||""):t("room.silent")} · ${(r.room_members||[]).length}</span></span>
-    <i data-lucide="chevron-right" width="15" height="15"></i></button>`).join("")
+    <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`).join("")
    ||`<p class="ph">${t("room.none")}</p>`}
  </div>`;
  document.getElementById("mkroom").onclick=async()=>{
@@ -7735,7 +7737,7 @@ function paintRoomShell(){
   <span class="memchip" data-uid="${m.user_id}" title="${esc(m.profile?.username||"")}">
    ${avat(m.profile,22)}
    <i>${esc((m.profile?.username||"?").slice(0,12))}${m.role==="owner"?" 👑":""}</i>
-   ${isOwner&&m.user_id!==me?`<button class="qrm" data-kick="${m.user_id}" title="${t("room.kick")}"><i data-lucide="x" width="11" height="11"></i></button>`:""}
+   ${isOwner&&m.user_id!==me?`<button class="qrm" data-kick="${m.user_id}" title="${t("room.kick")}"><span class="material-symbols-rounded" style="font-size:14px">close</span></button>`:""}
   </span>`).join("");
 
  const existing=box.querySelector(".roompane");
@@ -7765,7 +7767,7 @@ function paintRoomShell(){
 
  box.innerHTML=`<div class="panel pane roompane">
   <div class="chathdr">
-   <button class="ic" id="leaveroom" title="${t("room.leave")}"><i data-lucide="log-out" width="16" height="16"></i></button>
+   <button class="ic" id="leaveroom" title="${t("room.leave")}"><span class="material-symbols-rounded" style="font-size:18px">logout</span></button>
    <b>${esc(r.name)}</b>
    <button class="codechip" id="copycode" title="${t("room.copycode")}">${esc(r.join_code)}${r.is_private?" · 🔒":""}</button>
    <span class="grow"></span>
@@ -7793,11 +7795,11 @@ function paintRoomShell(){
      const editedHtml=m.edited_at?`<span class="msg-edited">(ред.)</span>`:"";
      return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
       <div class="msg-actions">
-       <button class="msg-act-btn" data-act="copy" title="Копировать"><i data-lucide="copy" width="13" height="13"></i></button>
-       <button class="msg-act-btn" data-act="reply" title="Ответить"><i data-lucide="reply" width="13" height="13"></i></button>
+       <button class="msg-act-btn" data-act="copy" title="Копировать"><span class="material-symbols-rounded" style="font-size:16px">content_copy</span></button>
+       <button class="msg-act-btn" data-act="reply" title="Ответить"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button>
        ${mine?`
-        <button class="msg-act-btn" data-act="edit" title="Редактировать"><i data-lucide="pencil" width="13" height="13"></i></button>
-        <button class="msg-act-btn danger" data-act="delete" title="Удалить"><i data-lucide="trash-2" width="13" height="13"></i></button>
+        <button class="msg-act-btn" data-act="edit" title="Редактировать"><span class="material-symbols-rounded" style="font-size:16px">edit</span></button>
+        <button class="msg-act-btn danger" data-act="delete" title="Удалить"><span class="material-symbols-rounded" style="font-size:16px">delete</span></button>
        `:""}
       </div>
       ${!mine?`<span class="who">${esc(who?.username||"…")}${badgeHtml}</span>`:""}
@@ -7805,7 +7807,7 @@ function paintRoomShell(){
     <div id="room-edit-wrap"></div>
     <div class="chatrow-input">
      <input id="room-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
-     <button class="primary sm" id="room-send"><i data-lucide="send" width="15" height="15"></i></button>
+     <button class="primary sm" id="room-send"><span class="material-symbols-rounded" style="font-size:18px">send</span></button>
     </div>
    </div>
   </div></div>`;
@@ -7923,9 +7925,9 @@ function wireRoomChatActions(root){
     const ew=document.getElementById("room-edit-wrap");
     if(ew){
      ew.innerHTML=`<div class="chat-edit-bar" id="room-edit-bar">
-      <i data-lucide="pencil" width="14" height="14"></i>
+      <span class="material-symbols-rounded" style="font-size:16px">edit</span>
       <span class="edit-body">${esc(msgObj.body||"")}</span>
-      <button class="cancel-edit" id="room-cancel-edit" title="Отмена"><i data-lucide="x" width="13" height="13"></i></button>
+      <button class="cancel-edit" id="room-cancel-edit" title="Отмена"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>
      </div>`;
      icons();
      ew.querySelector("#room-cancel-edit")?.addEventListener("click",()=>{
@@ -7956,7 +7958,7 @@ function paintRoomNow(){
  el.innerHTML=tr?`
   <span class="art" ${coverStyle(tr.art)}></span>
   <span class="meta"><b>${esc(tr.t)}</b><span>${esc(tr.a)}</span></span>
-  ${isDj?`<button class="ic" id="roomplay"><i data-lucide="${S.playing?"pause":"play"}" width="16" height="16"></i></button>`:
+  ${isDj?`<button class="ic" id="roomplay"><span class="material-symbols-rounded" style="font-size:18px" pause":"play"}">${S.playing?"pause":"play_arrow"}</span></button>`:
     `<span class="mut">${r.playing?t("room.live"):t("room.paused")}</span>`}`
   :`<p class="ph" style="margin:0">${t("room.silent")}</p>`;
  document.getElementById("roomplay")?.addEventListener("click",()=>{
@@ -7971,7 +7973,7 @@ function paintRoomLists(){
   <div class="q" style="--i:${Math.min(i,12)}">
    <i class="n">${String(i+1).padStart(2,"0")}</i>
    <b>${esc(q.track?.t||"")}</b><em>${esc(q.track?.a||"")}</em>
-   ${isDj?`<button class="qrm" data-delm="${q.id}"><i data-lucide="x" width="13" height="13"></i></button>`:""}
+   ${isDj?`<button class="qrm" data-delm="${q.id}"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}
   </div>`).join("")||`<p class="ph">${t("room.qempty")}</p>`;
  ql.querySelectorAll("[data-delm]").forEach(b=>b.onclick=async()=>{
   await sb.from("room_queue").delete().eq("id",+b.dataset.delm);
@@ -8169,8 +8171,8 @@ async function renderFriendsBox(){
   ${accepted.map(r=>{const p=prof(otherId(r));
    return `<div class="chatrow asrow" style="grid-template-columns:auto 1fr auto auto">
     ${avat(p,34)}<span class="meta"><b>${esc(p.username)}</b></span>
-    <button class="btn sm" data-dm="${p.id}"><i data-lucide="message-circle" width="13" height="13"></i></button>
-     <button class="ic" data-unfr="${r.requester}|${r.addressee}" title="${t("fr.rm")}"><i data-lucide="user-minus" width="14" height="14"></i></button></div>`}).join("")
+    <button class="btn sm" data-dm="${p.id}"><span class="material-symbols-rounded" style="font-size:16px">chat_bubble</span></button>
+     <button class="ic" data-unfr="${r.requester}|${r.addressee}" title="${t("fr.rm")}"><span class="material-symbols-rounded" style="font-size:16px">person_remove</span></button></div>`}).join("")
    ||`<p class="ph">${t("fr.none")}</p>`}
  </div>`;
  document.getElementById("fr-addbtn").onclick=async()=>{
@@ -8296,7 +8298,7 @@ async function renderQuestsView(){
  box.innerHTML=`<div class="quests-wrap">
   <div class="equipped-badge-banner">
    <div class="b-art">
-    ${equippedB?`<img src="assets/badges/${esc(equippedB.file)}" alt="">`:`<i data-lucide="award" width="28" height="28" style="color:var(--mute)"></i>`}
+    ${equippedB?`<img src="assets/badges/${esc(equippedB.file)}" alt="">`:`<span class="material-symbols-rounded" style="font-size:28px;color:var(--mute)">military_tech</span>`}
    </div>
    <div class="b-info">
     <b>${equippedB?esc(badgeName(equippedB)):(LANG==="ru"?"Значок не надет":"No badge equipped")}</b>
@@ -8319,7 +8321,7 @@ async function renderQuestsView(){
 
       return `<div class="quest-card ${isDone?"completed":""}">
         <div class="quest-icon">
-          ${b?`<img src="assets/badges/${esc(b.file)}" width="32" height="32" alt="">`:`<i data-lucide="check-circle" width="24" height="24"></i>`}
+          ${b?`<img src="assets/badges/${esc(b.file)}" width="32" height="32" alt="">`:`<span class="material-symbols-rounded" style="font-size:24px">check_circle</span>`}
         </div>
         <div class="quest-details">
           <div class="quest-title-row">
@@ -8838,8 +8840,8 @@ async function renderSpotify(){
    </div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-   <button class="btn" id="sp-modal-open"><i data-lucide="download" width="14" height="14"></i> ${t("import.btn")||"Импорт плейлиста Spotify"}</button>
-   <button class="btn primary" id="sp-login"><i data-lucide="log-in" width="14" height="14"></i> ${t("sp.login")}</button>
+   <button class="btn" id="sp-modal-open"><span class="material-symbols-rounded" style="font-size:16px">download</span> ${t("import.btn")||"Импорт плейлиста Spotify"}</button>
+   <button class="btn primary" id="sp-login"><span class="material-symbols-rounded" style="font-size:16px">login</span> ${t("sp.login")}</button>
   </div>`;
  document.getElementById("sp-cid-save")?.addEventListener("click",async()=>{
   const val=(document.getElementById("sp-cid-inp")?.value||"").trim();

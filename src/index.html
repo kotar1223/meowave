@@ -128,11 +128,11 @@
       <div class="view" id="v-library">
         <div class="vh"><h2 data-i18n="nav.library">Медиа</h2></div>
         <div class="tabs" role="tablist" id="libtabs">
-          <button role="tab" aria-selected="true" data-tab="pl" data-i18n="lib.pl">Плейлисты</button>
-          <button role="tab" aria-selected="false" data-tab="fav" data-i18n="lib.fav">Избранное</button>
-          <button role="tab" aria-selected="false" data-tab="rec" data-i18n="lib.rec">Недавнее</button>
-          <button role="tab" aria-selected="false" data-tab="loc" data-i18n="lib.loc">Мои файлы</button>
-          <button role="tab" aria-selected="false" data-tab="art" data-i18n="lib.art">Артисты</button>
+          <button role="tab" aria-selected="true" data-tab="pl"><span class="material-symbols-rounded">queue_music</span><span data-i18n="lib.pl">Плейлисты</span></button>
+          <button role="tab" aria-selected="false" data-tab="fav"><span class="material-symbols-rounded">favorite</span><span data-i18n="lib.fav">Избранное</span></button>
+          <button role="tab" aria-selected="false" data-tab="rec"><span class="material-symbols-rounded">history</span><span data-i18n="lib.rec">Недавнее</span></button>
+          <button role="tab" aria-selected="false" data-tab="loc"><span class="material-symbols-rounded">folder</span><span data-i18n="lib.loc">Мои файлы</span></button>
+          <button role="tab" aria-selected="false" data-tab="art"><span class="material-symbols-rounded">person</span><span data-i18n="lib.art">Артисты</span></button>
         </div>
         <div id="libbody"></div>
       </div>
@@ -140,9 +140,9 @@
       <div class="view" id="v-people">
         <div class="vh"><h2 data-i18n="nav.people">Люди</h2><span id="peoplesum"></span></div>
         <div class="tabs" role="tablist" id="peopletabs">
-          <button role="tab" aria-selected="true" data-ptab="friends" data-i18n="fr.t">Друзья</button>
-          <button role="tab" aria-selected="false" data-ptab="find" data-i18n="people.search">Найти людей</button>
-          <button role="tab" aria-selected="false" data-ptab="chats" data-i18n="nav.chats">Чаты</button>
+          <button role="tab" aria-selected="true" data-ptab="friends"><span class="material-symbols-rounded">group</span><span data-i18n="fr.t">Друзья</span></button>
+          <button role="tab" aria-selected="false" data-ptab="find"><span class="material-symbols-rounded">person_search</span><span data-i18n="people.search">Найти людей</span></button>
+          <button role="tab" aria-selected="false" data-ptab="chats"><span class="material-symbols-rounded">chat</span><span data-i18n="nav.chats">Чаты</span></button>
         </div>
         <div id="peoplebody"></div>
         <div id="chatbody"></div>
@@ -178,14 +178,14 @@
         <div class="vh"><h2 data-i18n="set.t">Настройки</h2></div>
         <!-- Settings outgrew a single scroll, so they are split into tabs. -->
         <div class="tabs" role="tablist" id="settabs">
-          <button role="tab" aria-selected="true" data-stab="acc" data-i18n="set.acc">Аккаунты</button>
-          <button role="tab" aria-selected="false" data-stab="prof" data-i18n="set.tab.prof">Профиль</button>
-          <button role="tab" aria-selected="false" data-stab="sound" data-i18n="set.tab.sound">Звук</button>
-          <button role="tab" aria-selected="false" data-stab="look" data-i18n="set.tab.look">Вид</button>
-          <button role="tab" aria-selected="false" data-stab="lib" data-i18n="set.tab.lib">Фонотека</button>
-          <button role="tab" aria-selected="false" data-stab="priv" data-i18n="set.tab.priv">Приватность</button>
-          <button role="tab" aria-selected="false" data-stab="net" data-i18n="set.tab.net">Сеть</button>
-          <button role="tab" aria-selected="false" data-stab="about" data-i18n="set.tab.about">О приложении</button>
+          <button role="tab" aria-selected="true" data-stab="acc"><span class="material-symbols-rounded">manage_accounts</span><span data-i18n="set.acc">Аккаунты</span></button>
+          <button role="tab" aria-selected="false" data-stab="prof"><span class="material-symbols-rounded">account_circle</span><span data-i18n="set.tab.prof">Профиль</span></button>
+          <button role="tab" aria-selected="false" data-stab="sound"><span class="material-symbols-rounded">equalizer</span><span data-i18n="set.tab.sound">Звук</span></button>
+          <button role="tab" aria-selected="false" data-stab="look"><span class="material-symbols-rounded">palette</span><span data-i18n="set.tab.look">Вид</span></button>
+          <button role="tab" aria-selected="false" data-stab="lib"><span class="material-symbols-rounded">library_music</span><span data-i18n="set.tab.lib">Фонотека</span></button>
+          <button role="tab" aria-selected="false" data-stab="priv"><span class="material-symbols-rounded">lock</span><span data-i18n="set.tab.priv">Приватность</span></button>
+          <button role="tab" aria-selected="false" data-stab="net"><span class="material-symbols-rounded">public</span><span data-i18n="set.tab.net">Сеть</span></button>
+          <button role="tab" aria-selected="false" data-stab="about"><span class="material-symbols-rounded">info</span><span data-i18n="set.tab.about">О приложении</span></button>
         </div>
 
         <div class="stab" data-stab="acc" data-active="true">
