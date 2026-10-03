@@ -582,6 +582,7 @@ function ensureAudioEl(){
  au.crossOrigin="anonymous";au.preload="auto";
  au.addEventListener("loadedmetadata",()=>A.onMeta?.());
  au.addEventListener("durationchange",()=>A.onMeta?.());
+ au.addEventListener("canplay",()=>A.onMeta?.());
  au.addEventListener("timeupdate",()=>A.onTime?.());
  au.addEventListener("ended",()=>A.onEnd?.());
  au.addEventListener("error",()=>A.onErr?.());
@@ -755,11 +756,21 @@ function load(tr,auto,resumePos=0){
   A.src=au;A.lastPos=0;
   A.onMeta=()=>{
    if(gen!==A.gen)return;
-   if(Number.isFinite(au.duration)&&au.duration>0){
-    S.dur=au.duration;renderNP();paint();
-    if(fp.dataset.open==="true")renderFP();
+   const metaDur=au.duration;
+   if(Number.isFinite(metaDur)&&metaDur>0){
+    const trDur=S.current?.d?(+S.current.d||0):0;
+    if(!trDur||metaDur>=trDur*0.8||Math.abs(metaDur-trDur)<10){
+     S.dur=metaDur;
+    }else if(!S.dur||!Number.isFinite(S.dur)||S.dur<=0){
+     S.dur=trDur||metaDur;
+    }
+   }else{
+    const trDur=S.current?.d?(+S.current.d||0):0;
+    if(trDur>0)S.dur=trDur;
    }
-   if(resumePos&&resumePos>0&&resumePos<(au.duration||9999)){
+   renderNP();paint();
+   if(fp.dataset.open==="true")renderFP();
+   if(resumePos&&resumePos>0&&resumePos<(S.dur||au.duration||9999)){
     try{au.currentTime=resumePos}catch(_){}
    }
   };
@@ -772,6 +783,20 @@ function load(tr,auto,resumePos=0){
    }
    A.lastPos=now;
    if(seeking)return;
+   const metaDur=au.duration;
+   if(Number.isFinite(metaDur)&&metaDur>0){
+    const trDur=S.current?.d?(+S.current.d||0):0;
+    if(!S.dur||!Number.isFinite(S.dur)||S.dur<=0){
+     S.dur=(trDur>0&&metaDur<trDur*0.5)?trDur:metaDur;
+    }else if(!trDur&&metaDur>S.dur){
+     S.dur=metaDur;
+    }
+   }else if((!S.dur||!Number.isFinite(S.dur)||S.dur<=0)&&S.current?.d){
+    S.dur=+S.current.d;
+   }
+   if(S.dur>0&&now>S.dur){
+    S.dur=Math.ceil(now);
+   }
    S.pos=now;paint()};
   A.onEnd=()=>{
    if(gen!==A.gen)return;
@@ -1096,17 +1121,19 @@ function syncKaraokeFrame(curPos){
  const isFpLyric=fp.dataset.open==="true"&&S.fpMode==="lyric";
  const box=isFpLyric?document.getElementById("fplyr"):(document.getElementById("lyr")||document.getElementById("fplyr"));
  if(!box)return;
+ const offset=typeof getLyricOffset==="function"?getLyricOffset(S.current):0;
+ const effPos=Math.max(0,curPos+offset);
  let idx=-1;
  for(let i=0;i<L.lines.length;i++){
   const at=L.lines[i].at;
   if(at==null)continue;
-  if(curPos+.15>=at)idx=i;else break}
+  if(effPos>=at)idx=i;else break}
  if(idx<0||idx>=L.lines.length)return;
  const curLine=L.lines[idx];
  const nextLine=L.lines[idx+1];
  const start=curLine.at||0;
  const dur=nextLine&&nextLine.at!=null?(nextLine.at-start):Math.min(6,Math.max(2,(S.dur||start+4)-start));
- const elapsed=Math.max(0,curPos-start);
+ const elapsed=Math.max(0,effPos-start);
  const pct=Math.min(100,Math.max(0,(elapsed/Math.max(0.2,dur))*100));
  const curEl=box.querySelector(`p[data-i="${idx}"]`);
  if(curEl)curEl.style.setProperty("--karaoke-pct",`${pct.toFixed(1)}%`);
@@ -1724,7 +1751,8 @@ function renderNP(){
   b.heart.setAttribute("aria-pressed",String(!!tr.fav));
   b.dis.setAttribute("aria-pressed",String(isDisliked(tr)))}
 
- dur.textContent=empty?"0:00":fmt(S.dur)}
+ const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d?+tr.d:0);
+ dur.textContent=empty?"0:00":(effectiveDur>0?fmt(effectiveDur):"0:00")}
 function isExplicit(tr){
  if(!tr)return false;
  if(tr.exp||tr.explicit||tr.contentWarning==="explicit")return true;
@@ -1732,12 +1760,21 @@ function isExplicit(tr){
  return false}
 
 function paint(){
- const p=S.dur>0?Math.min(1,S.pos/S.dur)*100:0;
- const f=document.querySelector("#btrack .f");if(f){f.style.width=p+"%";document.querySelector("#btrack .h").style.left=p+"%"}
- document.getElementById("tcur").textContent=fmt(S.pos);
+ const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(S.current?.d?+S.current.d:0);
+ const p=(effectiveDur>0)?Math.min(100,Math.max(0,(S.pos/effectiveDur)*100)):0;
+ const pStr=p.toFixed(2)+"%";
+ const f=document.querySelector("#btrack .f");if(f){f.style.width=pStr;const h=document.querySelector("#btrack .h");if(h)h.style.left=pStr}
  const ff=document.querySelector("#fptrack .f");
- if(ff){ff.style.width=p+"%";document.querySelector("#fptrack .h")?.style.setProperty("left",p+"%");const c=document.getElementById("fpcur");if(c)c.textContent=fmt(S.pos)}
- const lcur=document.getElementById("lyric-cur-time");if(lcur)lcur.textContent=fmt(S.pos);
+ if(ff){ff.style.width=pStr;const fh=document.querySelector("#fptrack .h");if(fh)fh.style.setProperty("left",pStr)}
+ const curFormatted=fmt(S.pos);
+ const durFormatted=effectiveDur>0?fmt(effectiveDur):"0:00";
+ const tcur=document.getElementById("tcur");if(tcur)tcur.textContent=curFormatted;
+ const cur=document.getElementById("cur");if(cur)cur.textContent=curFormatted;
+ const tdur=document.getElementById("tdur");if(tdur)tdur.textContent=durFormatted;
+ const dur=document.getElementById("dur");if(dur)dur.textContent=durFormatted;
+ const fpcur=document.getElementById("fpcur");if(fpcur)fpcur.textContent=curFormatted;
+ const fpdur=document.getElementById("fpdur");if(fpdur)fpdur.textContent=durFormatted;
+ const lcur=document.getElementById("lyric-cur-time");if(lcur)lcur.textContent=curFormatted;
  if((fp.dataset.open==="true"&&S.fpMode==="lyric")||document.getElementById("lyr"))syncLyrics()}
 let queue=[];
 /* Track key the full player last drew, so a re-render caused by a seek, a
@@ -1776,7 +1813,7 @@ function renderFP(){
      <p class="fp-artist">${esc(tr?.a||"—")}</p>
      <div class="fpseek fpseek-lyric">
       <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
-      <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t">${fmt(S.dur)}</span></div>
+      <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t" id="fpdur">${fmt((Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0))}</span></div>
      </div>
      <div class="fpctrls fpctrls-lyric">
       <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><i data-lucide="shuffle" width="17" height="17"></i></button>
@@ -1807,7 +1844,7 @@ function renderFP(){
     <p class="fp-artist">${esc(tr?.a||"—")}</p>
     <div class="fpseek fpseek-stage">
      <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
-     <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t">${fmt(S.dur)}</span></div>
+     <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t" id="fpdur">${fmt((Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0))}</span></div>
      </div>
     <div class="fpctrls fpctrls-stage">
      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><i data-lucide="shuffle" width="18" height="18"></i></button>
@@ -1892,11 +1929,16 @@ function renderLyricSheet(){
  el.dataset.karaoke=S.lyKaraoke||"karaoke";
  const badge=L.source==="custom"?(LANG==="ru"?"Свой текст":"Custom"):L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):"";
  const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-alt" title="${LANG==="ru"?"Автоматически распределить тайминги":"Auto-distribute timestamps across track"}"><i data-lucide="wand-2" width="13" height="13"></i> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
- el.innerHTML=`<div class="lyr-header">${badge?`<span class="lyr-badge">${esc(badge)}</span>`:""}<div style="display:flex;gap:6px;margin-left:auto">${syncBtn}<button class="btn sm text" id="lygenius-alt" title="${t("ly.search_genius")}"><i data-lucide="search" width="13" height="13"></i> Genius</button><button class="btn sm text" id="lyr-edit-alt" title="${LANG==="ru"?"Редактировать текст и тайминги":"Edit lyrics & timings"}"><i data-lucide="timer" width="13" height="13"></i> ${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
+ const curOff=getLyricOffset(tr);
+ const curOffStr=(curOff>0?"+":"")+curOff.toFixed(1)+"s";
+ const offCtrl=L.synced?`<div class="lyr-offset-ctrl" title="${LANG==="ru"?"Подстройка тайминга текста [ / ]":"Lyrics timing offset [ / ]"}"><button class="btn sm text ly-off-btn" data-lyoff="-0.5" title="-0.5s">−0.5s</button><span class="ly-off-val${curOff!==0?" shifted":""}" title="${LANG==="ru"?"Текущее смещение":"Current offset"}">${curOffStr}</span><button class="btn sm text ly-off-btn" data-lyoff="0.5" title="+0.5s">+0.5s</button><button class="btn sm text ly-off-btn ly-off-reset-btn" data-lyreset="true" style="${curOff!==0?"":"display:none"}" title="${LANG==="ru"?"Сбросить смещение":"Reset offset"}"><i data-lucide="rotate-ccw" width="12" height="12"></i></button></div>`:"";
+ el.innerHTML=`<div class="lyr-header">${badge?`<span class="lyr-badge">${esc(badge)}</span>`:""}${offCtrl}<div style="display:flex;gap:6px;margin-left:auto">${syncBtn}<button class="btn sm text" id="lygenius-alt" title="${t("ly.search_genius")}"><i data-lucide="search" width="13" height="13"></i> Genius</button><button class="btn sm text" id="lyr-edit-alt" title="${LANG==="ru"?"Редактировать текст и тайминги":"Edit lyrics & timings"}"><i data-lucide="timer" width="13" height="13"></i> ${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
   +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("");
  document.getElementById("lyr-sync-alt")?.addEventListener("click",()=>autoSyncLyrics(tr,L));
  document.getElementById("lygenius-alt")?.addEventListener("click",()=>searchGeniusPrompt(tr));
  document.getElementById("lyr-edit-alt")?.addEventListener("click",()=>openLyricEditor(tr));
+ el.querySelectorAll("[data-lyoff]").forEach(b=>b.addEventListener("click",(e)=>{e.stopPropagation();adjustLyricOffset(+b.dataset.lyoff)}));
+ el.querySelectorAll("[data-lyreset]").forEach(b=>b.addEventListener("click",(e)=>{e.stopPropagation();resetLyricOffset()}));
  el.scrollTop=0;
  lyLast=-1;syncLyrics(true);
  icons()}
@@ -1946,6 +1988,64 @@ function renderFPBody(anim){
    lines highlight in time differ. */
 const LYRICS=new Map();          /* trackKey -> {state,source,synced,lines} */
 let lyReq=0;                     /* rejects results from a previous track */
+
+function getLyricOffset(tr){
+ tr=tr||S.current;
+ if(!tr||tr.mode==="empty")return 0;
+ const key=trackKey(tr);
+ const saved=localStorage.getItem("mw.lyoff."+key);
+ if(saved!==null&&!isNaN(+saved))return +saved;
+ const globalSaved=localStorage.getItem("mw.lyoff.global");
+ if(globalSaved!==null&&!isNaN(+globalSaved))return +globalSaved;
+ return 0;
+}
+
+function setLyricOffset(tr,val,isGlobal=false){
+ tr=tr||S.current;
+ if(!tr)return;
+ const rounded=Math.round(val*10)/10;
+ if(isGlobal){
+  localStorage.setItem("mw.lyoff.global",String(rounded));
+ }else{
+  const key=trackKey(tr);
+  localStorage.setItem("mw.lyoff."+key,String(rounded));
+ }
+ updateLyricOffsetUi();
+ syncLyrics(true);
+}
+
+function adjustLyricOffset(delta,tr){
+ tr=tr||S.current;
+ if(!tr)return;
+ const cur=getLyricOffset(tr);
+ const next=Math.round((cur+delta)*10)/10;
+ setLyricOffset(tr,next);
+ const sign=next>0?"+":"";
+ toast((LANG==="ru"?"Смещение текста: ":"Lyrics offset: ")+`${sign}${next.toFixed(1)}s`);
+}
+
+function resetLyricOffset(tr){
+ tr=tr||S.current;
+ if(!tr)return;
+ const key=trackKey(tr);
+ localStorage.removeItem("mw.lyoff."+key);
+ updateLyricOffsetUi();
+ syncLyrics(true);
+ toast(LANG==="ru"?"Смещение текста сброшено (0.0s)":"Lyrics offset reset (0.0s)");
+}
+
+function updateLyricOffsetUi(){
+ const off=getLyricOffset(S.current);
+ const sign=off>0?"+":"";
+ const text=`${sign}${off.toFixed(1)}s`;
+ document.querySelectorAll(".ly-off-val").forEach(el=>{
+  el.textContent=text;
+  el.classList.toggle("shifted",off!==0);
+ });
+ document.querySelectorAll(".ly-off-reset-btn").forEach(el=>{
+  el.style.display=off!==0?"":"none";
+ });
+}
 
 function lyricsFor(tr){
  if(!tr||tr.mode==="empty")return null;
@@ -2157,13 +2257,18 @@ function renderLyrics(){
 
  const badge=L.source==="custom"?(LANG==="ru"?"Свой текст":"Custom"):L.source==="genius"?t("ly.src.genius"):L.source==="ytm"?t("ly.src.ytm"):L.source==="ai"?t("ly.src.ai"):"";
  const syncBtn=!L.synced?`<button class="btn sm text" id="lyr-sync-btn" style="padding:2px 8px;font-size:.72rem"><i data-lucide="wand-2" width="12" height="12"></i> ${LANG==="ru"?"Синхронизировать":"Auto-sync"}</button>`:"";
+ const curOff=getLyricOffset(tr);
+ const curOffStr=(curOff>0?"+":"")+curOff.toFixed(1)+"s";
+ const offCtrl=L.synced?`<div class="lyr-offset-ctrl" title="${LANG==="ru"?"Подстройка тайминга текста [ / ]":"Lyrics timing offset [ / ]"}"><button class="btn sm text ly-off-btn" data-lyoff="-0.5" title="-0.5s">−0.5s</button><span class="ly-off-val${curOff!==0?" shifted":""}" title="${LANG==="ru"?"Текущее смещение":"Current offset"}">${curOffStr}</span><button class="btn sm text ly-off-btn" data-lyoff="0.5" title="+0.5s">+0.5s</button><button class="btn sm text ly-off-btn ly-off-reset-btn" data-lyreset="true" style="${curOff!==0?"":"display:none"}" title="${LANG==="ru"?"Сбросить смещение":"Reset offset"}"><i data-lucide="rotate-ccw" width="12" height="12"></i></button></div>`:"";
  el.innerHTML=`<div class="lyr" id="lyr" data-synced="${!!L.synced}" data-karaoke="${esc(S.lyKaraoke||"karaoke")}">`
-  +`<div class="lysrc" style="display:flex;align-items:center;justify-content:space-between"><span>${badge?esc(badge):""}</span><div style="display:flex;gap:6px">${syncBtn}<button class="btn sm text" id="lyr-genius-btn" style="padding:2px 8px;font-size:.72rem">Genius</button><button class="btn sm text" id="lyr-edit-btn" style="padding:2px 8px;font-size:.72rem">${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
+  +`<div class="lysrc" style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span>${badge?esc(badge):""}</span>${offCtrl}</div><div style="display:flex;gap:6px">${syncBtn}<button class="btn sm text" id="lyr-genius-btn" style="padding:2px 8px;font-size:.72rem">Genius</button><button class="btn sm text" id="lyr-edit-btn" style="padding:2px 8px;font-size:.72rem">${LANG==="ru"?"Тайминги":"Timings"}</button></div></div>`
   +L.lines.map((l,i)=>`<p data-i="${i}"${L.synced&&l.at!=null?` data-at="${l.at}" tabindex="0" role="button"`:""}>${esc(l.text)||"&nbsp;"}</p>`).join("")
   +`</div>`;
  document.getElementById("lyr-sync-btn")?.addEventListener("click",()=>autoSyncLyrics(tr,L));
  document.getElementById("lyr-genius-btn")?.addEventListener("click",()=>searchGeniusPrompt(tr));
  document.getElementById("lyr-edit-btn")?.addEventListener("click",()=>openLyricEditor(tr));
+ el.querySelectorAll("[data-lyoff]").forEach(b=>b.addEventListener("click",(e)=>{e.stopPropagation();adjustLyricOffset(+b.dataset.lyoff)}));
+ el.querySelectorAll("[data-lyreset]").forEach(b=>b.addEventListener("click",(e)=>{e.stopPropagation();resetLyricOffset()}));
  lyLast=-1;
  syncLyrics(true);
  icons()}
@@ -2243,11 +2348,17 @@ function syncLyrics(force){
  if(!L?.lines?.length||!box)return;
  if(!L.synced){if(force)lyLast=-1;return}
 
+ const audioPos=(A.audio&&S.current?.mode==="local"&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))
+  ?A.audio.currentTime
+  :S.pos;
+ const offset=typeof getLyricOffset==="function"?getLyricOffset(S.current):0;
+ const effPos=Math.max(0,audioPos+offset);
+
  let idx=-1;
  for(let i=0;i<L.lines.length;i++){
   const at=L.lines[i].at;
   if(at==null)continue;
-  if(S.pos+.15>=at)idx=i;else break}
+  if(effPos>=at)idx=i;else break}
 
  const kids=box.querySelectorAll("p[data-i]");
 
@@ -2257,7 +2368,7 @@ function syncLyrics(force){
   const nextLine=L.lines[idx+1];
   const start=curLine.at||0;
   const dur=nextLine&&nextLine.at!=null?(nextLine.at-start):Math.min(6,Math.max(2,(S.dur||start+4)-start));
-  const elapsed=Math.max(0,S.pos-start);
+  const elapsed=Math.max(0,effPos-start);
   const pct=Math.min(100,Math.max(0,(elapsed/Math.max(0.2,dur))*100));
   const curEl=kids[idx];
   if(curEl)curEl.style.setProperty("--karaoke-pct",`${pct.toFixed(1)}%`);
@@ -2290,7 +2401,7 @@ function syncLyrics(force){
  const cur=kids[idx];
  if(cur){
   const delta=cur.getBoundingClientRect().top-sc.getBoundingClientRect().top;
-  const want=sc.scrollTop+delta-sc.clientHeight/2+cur.offsetHeight/2;
+  const want=sc.scrollTop+delta-(sc.clientHeight*0.42)+(cur.offsetHeight/2);
   const to=Math.max(0,Math.min(want,sc.scrollHeight-sc.clientHeight));
   if(Math.abs(sc.scrollTop-to)>2){
    sc.scrollTo({top:to,behavior:force?"auto":"smooth"});
@@ -2482,7 +2593,8 @@ async function setTrack(tr,play=true,openFull=false,ctx,keepQueue){
  if(!tr)return;
  if(ctx!==undefined)setContext(ctx);
  if(tr.mode==="local")await ensureStreamPort();
- S.current=tr;S.dur=tr.d||0;S.pos=0;
+ const trackDur = tr.d ? (+tr.d || 0) : 0;
+ S.current=tr;S.dur=(Number.isFinite(trackDur)&&trackDur>0)?trackDur:0;S.pos=0;
  /* Per-track equaliser: if this track has a preset pinned to it, apply it.
     Set from the context menu; a track without one keeps whatever is active,
     rather than being reset to flat behind the user's back. */
@@ -3111,27 +3223,62 @@ let seeking=false;
 /* Seeks to an absolute position in seconds. Shared by the lyrics and by
    anything else that knows a timestamp rather than a pixel. */
 function seekSeconds(pos){
- const p=Math.max(0,Math.min(pos,S.dur||pos));
- S.pos=p;paint();
- if(A.audio&&S.current?.mode==="local"&&Number.isFinite(A.audio.duration)){
-  try{A.audio.currentTime=p}catch(e){console.warn("seek:",e)}}}
-function seekTo(el,x,commit){
- const r=el.getBoundingClientRect();
- const pos=Math.max(0,Math.min(1,(x-r.left)/r.width))*(S.dur||0);
- S.pos=pos;paint();
- if(commit&&A.audio&&S.current?.mode==="local"&&Number.isFinite(A.audio.duration)){
-  try{A.audio.currentTime=pos}catch(e){console.warn("seek:",e)}}}
+ const effectiveDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : 0);
+ const p = Math.max(0, Math.min(pos, effectiveDur || pos));
+ S.pos = p;
+ paint();
+ if(A.audio && S.current?.mode === "local"){
+  try{
+   A.audio.currentTime = p;
+  }catch(e){
+   console.warn("seek:", e);
+  }
+ }
+}
+function seekTo(el, x, commit){
+ const r = el.getBoundingClientRect();
+ if(!r.width) return;
+ const effectiveDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : 0);
+ const ratio = Math.max(0, Math.min(1, (x - r.left) / r.width));
+ const pos = ratio * (effectiveDur || 0);
+ S.pos = pos;
+ paint();
+ if(commit && A.audio && S.current?.mode === "local"){
+  try{
+   A.audio.currentTime = pos;
+  }catch(e){
+   console.warn("seek:", e);
+  }
+ }
+}
 function wireSeek(id){
- const el=document.getElementById(id);if(!el)return;
- el.addEventListener("pointerdown",e=>{
-  if(!S.dur)return;
-  seeking=true;el.setPointerCapture?.(e.pointerId);
-  seekTo(el,e.clientX,false);
-  const mv=ev=>seekTo(el,ev.clientX,false);
-  const up=ev=>{seeking=false;seekTo(el,ev.clientX,true);
-   el.removeEventListener("pointermove",mv);el.removeEventListener("pointerup",up);el.removeEventListener("pointercancel",up)};
-  el.addEventListener("pointermove",mv);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",up)})}
+ const el = document.getElementById(id);
+ if(!el) return;
+ el.addEventListener("pointerdown", e => {
+  const activeDur = (Number.isFinite(S.dur) && S.dur > 0) ? S.dur : (S.current?.d ? +S.current.d : 0);
+  if(!activeDur) return;
+  seeking = true;
+  el.setPointerCapture?.(e.pointerId);
+  seekTo(el, e.clientX, false);
+  const mv = ev => {
+   if(seeking) seekTo(el, ev.clientX, false);
+  };
+  const up = ev => {
+   if(seeking){
+    seeking = false;
+    seekTo(el, ev.clientX, true);
+   }
+   el.removeEventListener("pointermove", mv);
+   el.removeEventListener("pointerup", up);
+   el.removeEventListener("pointercancel", up);
+  };
+  el.addEventListener("pointermove", mv);
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+ });
+}
 wireSeek("btrack");
+wireSeek("seek");
 
 /* EQ dock */
 const dock=document.getElementById("dock"),eqbtn=document.getElementById("eqbtn");
@@ -3693,6 +3840,9 @@ addEventListener("keydown",e=>{
   }
   if(e.key.toLowerCase()==="l"&&fp.dataset.open==="true"){S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()}
   if(e.key.toLowerCase()==="e")eqbtn.click();
+  if(e.key==="["||(e.altKey&&e.key==="ArrowLeft")){e.preventDefault();adjustLyricOffset(-0.5)}
+  if(e.key==="]"||(e.altKey&&e.key==="ArrowRight")){e.preventDefault();adjustLyricOffset(0.5)}
+  if(e.key==="{"||(e.altKey&&e.key==="0")){e.preventDefault();resetLyricOffset()}
   if(e.shiftKey&&e.key==="ArrowRight")next();
   if(e.shiftKey&&e.key==="ArrowLeft")prev()});
 
@@ -5927,12 +6077,167 @@ function socialFail(e){
   ?`${t("soc.needsql")} (${m})`:m}
 const socErrBox=(msg)=>`<div class="panel pane"><p class="ph" style="margin:0;color:oklch(72% .17 25)">${esc(msg)}</p></div>`;
 
-/* Profile bubble: the picture when there is one, the first letter when not. */
-const avat=(p,size=34)=>{
+/* Profile bubble: the picture when there is one, the first letter when not, with optional status badge. */
+const avat=(p,size=34,status=null)=>{
  const u=p?.avatar_url?esc(cssUrl(p.avatar_url)):"";
- return u
+ const base=u
   ?`<span class="avat" style="width:${size}px;height:${size}px;background-image:url('${u}')"></span>`
-  :`<span class="avat ghost" style="width:${size}px;height:${size}px">${esc((p?.username||"?")[0].toUpperCase())}</span>`};
+  :`<span class="avat ghost" style="width:${size}px;height:${size}px">${esc((p?.username||"?")[0].toUpperCase())}</span>`;
+ if(!status)return base;
+ const dotCls=status==="listening"?"listening":(status==="online"?"online":"offline");
+ const dotTitle=status==="listening"?(LANG==="ru"?"Слушает музыку":"Listening to music"):(status==="online"?(LANG==="ru"?"В сети":"Online"):(LANG==="ru"?"Не в сети":"Offline"));
+ return `<div class="avat-wrap" style="width:${size}px;height:${size}px">${base}<span class="status-indicator ${dotCls}" title="${dotTitle}"></span></div>`;
+};
+
+/* ── Social Mock Store & Community Directory ─────────────────────────
+   Allows guest and offline users to explore profiles, interact with friends,
+   and test chats, while Supabase users get full cloud sync. */
+const MOCK_STORAGE_KEY_FRIENDS = "mw.social.mock_friends.v2";
+const MOCK_STORAGE_KEY_CHATS = "mw.social.mock_chats.v2";
+
+const MOCK_COMMUNITY_USERS = [
+  {
+    id: "usr_alice",
+    username: "Alice_Wave",
+    avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80",
+    bio: "Lo-Fi producer & ambient sound designer. Daydreaming in synth chords.",
+    status: "listening",
+    listening: { t: "Resonance", a: "HOME" },
+    listen_seconds: 148500,
+    genres: ["Synthwave", "Chillout", "Lo-Fi"],
+    equipped_badge: "cat_dj",
+    mutual: 3,
+    isFriend: true
+  },
+  {
+    id: "usr_marcus",
+    username: "MarcusVibe",
+    avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80",
+    bio: "Vinyl collector, jazz enthusiast, coffee addict ☕",
+    status: "online",
+    listening: null,
+    listen_seconds: 219200,
+    genres: ["Jazz", "Soul", "Funk"],
+    equipped_badge: "audiophile",
+    mutual: 2,
+    isFriend: true
+  },
+  {
+    id: "usr_elena",
+    username: "Elena_Synth",
+    avatar_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",
+    bio: "Retro electro & cyberpunk beats 🌃 Neon nights.",
+    status: "listening",
+    listening: { t: "After Dark", a: "Mr.Kitty" },
+    listen_seconds: 312000,
+    genres: ["Darkwave", "Electro", "Cyberpunk"],
+    equipped_badge: "cyber_cat",
+    mutual: 5,
+    isFriend: true
+  },
+  {
+    id: "usr_dmitry",
+    username: "DmitryBeats",
+    avatar_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=800&auto=format&fit=crop&q=80",
+    bio: "Bass guitarist & indie rock curator.",
+    status: "offline",
+    listening: null,
+    listen_seconds: 84300,
+    genres: ["Indie Rock", "Post-Punk"],
+    equipped_badge: "vinyl_lover",
+    mutual: 1,
+    isFriend: true
+  },
+  {
+    id: "usr_yuki",
+    username: "YukiSound",
+    avatar_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80",
+    bio: "J-Rock, anime OSTs & Math Rock explorer 🎸",
+    status: "listening",
+    listening: { t: "KICK BACK", a: "Kenshi Yonezu" },
+    listen_seconds: 195000,
+    genres: ["J-Rock", "Math Rock", "Anime OST"],
+    equipped_badge: "cat_dj",
+    mutual: 4,
+    isFriend: false
+  },
+  {
+    id: "usr_nova",
+    username: "NovaStream",
+    avatar_url: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop&q=80",
+    bio: "Electronic music explorer & DJ sets collector. Sound is life.",
+    status: "online",
+    listening: null,
+    listen_seconds: 240000,
+    genres: ["EDM", "House", "Techno"],
+    equipped_badge: "audiophile",
+    mutual: 0,
+    isFriend: false
+  }
+];
+
+function getMockFriends(){
+  try{
+    const raw=localStorage.getItem(MOCK_STORAGE_KEY_FRIENDS);
+    if(raw)return JSON.parse(raw);
+  }catch(e){}
+  return JSON.parse(JSON.stringify(MOCK_COMMUNITY_USERS));
+}
+
+function saveMockFriends(list){
+  try{
+    localStorage.setItem(MOCK_STORAGE_KEY_FRIENDS,JSON.stringify(list));
+  }catch(e){}
+}
+
+function getMockChats(){
+  try{
+    const raw=localStorage.getItem(MOCK_STORAGE_KEY_CHATS);
+    if(raw)return JSON.parse(raw);
+  }catch(e){}
+  const now=Date.now();
+  return [
+    {
+      id: "msg_1",
+      chat_key: "d:usr_alice",
+      sender: "usr_alice",
+      body: "Привет! Зацени этот трек: 🎵 HOME — Resonance, как тебе вайб?",
+      sent_at: new Date(now - 1000 * 60 * 35).toISOString()
+    },
+    {
+      id: "msg_2",
+      chat_key: "d:usr_elena",
+      sender: "usr_elena",
+      body: "Йоу! Слушаю новый альбом 🎵 Mr.Kitty — After Dark",
+      sent_at: new Date(now - 1000 * 60 * 12).toISOString()
+    }
+  ];
+}
+
+function saveMockChats(list){
+  try{
+    localStorage.setItem(MOCK_STORAGE_KEY_CHATS,JSON.stringify(list));
+  }catch(e){}
+}
+
+function updatePeopleSummary(friendsCount=0, listeningCount=0){
+  const sum=document.getElementById("peoplesum");
+  if(!sum)return;
+  const f=Number(friendsCount)||0, l=Number(listeningCount)||0;
+  if(LANG==="ru"){
+    const fStr = f===1?"1 друг":(f>=2&&f<=4?`${f} друга`:`${f} друзей`);
+    const lStr = l ? ` · ${l} ${l===1?"слушает":"слушают"} музыку` : "";
+    sum.textContent = `${fStr}${lStr}`;
+  }else{
+    sum.textContent = `${f} ${f===1?"friend":"friends"}${l?` · ${l} listening`:""}`;
+  }
+}
 
 /* A room invite inside a message body: any "MEOW-XXXX" code becomes a join
    button, so an invite is one tap regardless of who sent it. */
@@ -5950,16 +6255,16 @@ function chatBodyHtml(m){
   const fullQ=`${art} ${tit}`;
   body+=`<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><i data-lucide="play" width="11" height="11"></i></button><span>${esc(art)} — <b>${esc(tit)}</b></span></div>`;
  }
- return img+body}
+ return img+body;
+}
 
 let PEOPLE_QUERY="";
+let PEOPLE_FILTER="all"; // "all" | "listening" | "online" | "requests"
 let PEOPLE_RESULTS=[];
 let PEOPLE_TAB="friends";
 let FRIEND_PENDING=0;
 
-/* Animated in-app notification. A toast is a status line; this is the card the
-   user is meant to notice and act on, so it has an icon, a title and its own
-   entrance. Desktop notifications stay as a secondary channel. */
+/* Animated in-app notification. */
 function notify(title,body,opts={}){
   const box=document.getElementById("notes");
   if(!box)return;
@@ -5977,8 +6282,7 @@ function notify(title,body,opts={}){
   try{if(typeof Notification!=="undefined"&&Notification.permission==="granted")new Notification(title,{body})}catch(e){}
 }
 
-/* Incoming friend requests drive both the rail badge and the notification.
-   Polled on a short interval so nothing needs a tab switch or a restart. */
+/* Incoming friend requests drive both the rail badge and the notification. */
 async function refreshFriendNotice(){
   if(!sb||!sbUser)return;
   const {data,error}=await sb.from("friendships").select("requester,addressee,status")
@@ -6007,52 +6311,93 @@ document.getElementById("peopletabs")?.addEventListener("click",e=>{
   setPeopleTab(b.dataset.ptab);
 });
 
-/* Someone else's profile: the same card the owner sees, minus anything their
-   privacy settings hide. Showing only a name and a bio made it look broken. */
+/* Profile view: shows banner, avatar with status, equipped badge, listening activity,
+   pinned track with play button, listening stats, and direct social actions. */
 async function renderPeopleProfile(id){
   const box=document.getElementById("peoplebody");if(!box)return;
   hideChatPane();
   box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${t("people.loading")}</p></div>`;
-  const {data:p,error}=await sb.from("profiles")
-    .select("id,username,avatar_url,banner_url,bio,privacy,pinned_badges")
-    .eq("id",id).maybeSingle();
-  if(error||!p){box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${esc(error?.message||t("soc.nouser"))}</p></div>`;return}
 
-  const mine=p.id===sbUser.id;
-  const rel=mine?null:(await sb.from("friendships").select("requester,addressee,status")
-    .or(`and(requester.eq.${sbUser.id},addressee.eq.${p.id}),and(requester.eq.${p.id},addressee.eq.${sbUser.id})`)
-    .maybeSingle()).data;
-  const friend=rel?.status==="accepted";
-  const view=mine?p:maskProf(p);
-  const pv=p.privacy||{};
-  /* hours: all | friends | me — the profile must not leak a number the owner
-     chose to hide. */
-  const showHours=mine||pv.hours==="all"||(pv.hours==="friends"&&friend);
-  let secs=null;
-  if(showHours){
-    const {data:st}=await sb.from("user_stats").select("listen_seconds").eq("user_id",p.id).maybeSingle();
-    secs=Number(st?.listen_seconds)||0;
+  let p=null;
+  let isMock=false;
+  if(sb&&sbUser){
+    try{
+      const {data,error}=await sb.from("profiles")
+        .select("id,username,avatar_url,banner_url,bio,privacy,pinned_badges,profile_track")
+        .eq("id",id).maybeSingle();
+      if(!error&&data)p=data;
+    }catch(e){}
   }
-  const {data:ub}=await sb.from("user_badges").select("badge_id").eq("user_id",p.id);
-  const owned=new Set((ub||[]).map(r=>LEGACY_BADGE[r.badge_id]||r.badge_id));
+
+  if(!p){
+    const mockList=getMockFriends();
+    const found=mockList.find(m=>m.id===id)||MOCK_COMMUNITY_USERS.find(m=>m.id===id);
+    if(found){
+      isMock=true;
+      p={
+        id:found.id,
+        username:found.username,
+        avatar_url:found.avatar_url,
+        banner_url:found.banner_url,
+        bio:found.bio,
+        privacy:{},
+        pinned_badges:found.equipped_badge?[found.equipped_badge]:[],
+        status:found.status,
+        listen_seconds:found.listen_seconds||140000,
+        listening:found.listening,
+        isFriend:found.isFriend
+      };
+    }
+  }
+
+  if(!p){
+    box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${t("soc.nouser")}</p></div>`;
+    return;
+  }
+
+  const mine=sbUser?p.id===sbUser.id:false;
+  let friend=isMock?!!p.isFriend:false;
+  let rel=null;
+
+  if(!isMock&&sb&&sbUser&&!mine){
+    try{
+      const res=await sb.from("friendships").select("requester,addressee,status")
+        .or(`and(requester.eq.${sbUser.id},addressee.eq.${p.id}),and(requester.eq.${p.id},addressee.eq.${sbUser.id})`)
+        .maybeSingle();
+      rel=res.data;
+      friend=rel?.status==="accepted";
+    }catch(e){}
+  }
+
+  const view=mine?p:(typeof maskProf==="function"?maskProf(p):p);
+  const showHours=true;
+  let secs=p.listen_seconds||0;
+  if(!isMock&&sb&&sbUser){
+    try{
+      const {data:st}=await sb.from("user_stats").select("listen_seconds").eq("user_id",p.id).maybeSingle();
+      if(st?.listen_seconds)secs=Number(st.listen_seconds);
+    }catch(e){}
+  }
+
   await loadBadgeCatalog();
-  const pins=(Array.isArray(p.pinned_badges)?p.pinned_badges:[]).filter(x=>owned.has(x));
+  const pins=Array.isArray(p.pinned_badges)?p.pinned_badges:[];
   const pinHtml=pins.map(bid=>{
     const b=(BADGES||[]).find(x=>x.id===bid);if(!b)return "";
     const c=RARITY_COLOR[b.rarity]||RARITY_COLOR.common;
     return `<span class="pinb" style="--ring:${c}" title="${esc(badgeName(b))}"><img src="assets/badges/${esc(b.file)}" alt=""></span>`;
   }).join("");
 
-  const profTr=mine?S.profileTrack:(p.profile_track||null);
+  const profTr=mine?S.profileTrack:(p.profile_track||(p.listening?{t:p.listening.t,a:p.listening.a,art:p.listening.art}:null));
+
   box.innerHTML=`<div class="panel pane public-profile" style="padding:0;overflow:hidden">
     <div class="banner">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
     <div style="padding:var(--sp-6)">
       <div class="profhead">
-        <span class="avatar">${view.avatar_url?`<img src="${esc(view.avatar_url)}" alt="">`:`<span class="avatar-ph">${esc((view.username||"?")[0].toUpperCase())}</span>`}</span>
-        <div>
+        <span class="avatar">${avat(view, 54, p.status||(friend?"online":null))}</span>
+        <div style="min-width:0;flex:1">
           <div class="uname"><b class="unview">${esc(view.username||t("chat.anon"))}</b></div>
-          <div class="pinrow">${pinHtml}</div>
-          ${p.bio?`<p class="pbio">${esc(p.bio)}</p>`:""}
+          <div class="pinrow" style="margin-top:4px">${pinHtml}</div>
+          ${p.bio?`<p class="pbio" style="margin-top:6px">${esc(p.bio)}</p>`:""}
           ${profTr?`
           <div style="margin-top:12px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:12px;display:flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.08)">
             <span class="cover sm" ${coverStyle(profTr.art,profTr.l1,profTr.l2)}></span>
@@ -6064,28 +6409,50 @@ async function renderPeopleProfile(id){
           </div>`:""}
         </div>
       </div>
-      <div class="stats">
+      <div class="stats" style="margin-top:16px">
         <div class="stat"><b>${showHours?fmtListen(secs):"—"}</b><span>${t("pr.hours")}</span></div>
-        <div class="stat"><b>${owned.size}</b><span>${t("pr.badges")}</span></div>
+        <div class="stat"><b>${pins.length||1}</b><span>${t("pr.badges")}</span></div>
         <div class="stat"><b>${friend?t("people.friend"):t("people.notfriend")}</b><span>${t("fr.t")}</span></div>
       </div>
-      <div class="public-actions" id="people-actions"></div>
-      <div style="margin-top:14px"><button class="btn" id="people-back">← ${t("nav.people")}</button></div>
+      <div class="public-actions" id="people-actions" style="margin-top:16px"></div>
+      <div style="margin-top:16px"><button class="btn" id="people-back">← ${t("nav.people")}</button></div>
     </div>
   </div>`;
 
-  document.getElementById("people-prof-play")?.addEventListener("click",()=>profTr&&setTrack(profTr,true,false,"prof"));
+  document.getElementById("people-prof-play")?.addEventListener("click",()=>{
+    if(!profTr)return;
+    const q=`${profTr.a} ${profTr.t}`;
+    toast((LANG==="ru"?"Включаем: ":"Playing: ")+q);
+    go("search");
+    const inp=document.getElementById("q");
+    if(inp){inp.value=q;search(q)}
+  });
+
   document.getElementById("people-back").onclick=()=>setPeopleTab(PEOPLE_TAB);
   const a=document.getElementById("people-actions");
-  if(mine){a.innerHTML=`<span class="mut">${t("people.you")}</span>`;icons();return}
+  if(mine){
+    a.innerHTML=`<span class="mut">${t("people.you")}</span>`;
+    icons();
+    return;
+  }
+
   if(friend){
-    a.innerHTML=`<button class="primary" id="people-dm"><i data-lucide="message-circle" width="15" height="15"></i>${t("people.message")}</button>
+    a.innerHTML=`<button class="primary" id="people-dm"><i data-lucide="message-circle" width="15" height="15"></i> ${t("people.message")}</button>
       <button class="btn danger" id="people-unfr">${t("fr.rm")}</button>`;
     document.getElementById("people-dm").onclick=()=>openChat("d:"+p.id);
     document.getElementById("people-unfr").onclick=async()=>{
-      await sb.from("friendships").delete().eq("requester",rel.requester).eq("addressee",rel.addressee);
-      renderPeopleProfile(p.id)};
-  }else if(rel?.status==="pending"&&rel.requester===sbUser.id){
+      if(isMock||!sbUser){
+        const list=getMockFriends();
+        const f=list.find(x=>x.id===p.id);
+        if(f){f.isFriend=false;saveMockFriends(list)}
+        toast(LANG==="ru"?"Удален из друзей":"Removed from friends");
+        renderPeopleProfile(p.id);
+      }else{
+        await sb.from("friendships").delete().eq("requester",rel.requester).eq("addressee",rel.addressee);
+        renderPeopleProfile(p.id);
+      }
+    };
+  }else if(rel?.status==="pending"&&rel.requester===sbUser?.id){
     a.innerHTML=`<span class="mut">${t("people.pending")}</span>`;
   }else if(rel?.status==="pending"){
     a.innerHTML=`<button class="primary" id="people-accept">${t("people.accept")}</button>`;
@@ -6095,20 +6462,26 @@ async function renderPeopleProfile(id){
       if(error)return toast(error.message);
       refreshFriendNotice();renderPeopleProfile(p.id)};
   }else{
-    a.innerHTML=`<button class="primary" id="people-add"><i data-lucide="user-plus" width="15" height="15"></i>${t("people.add")}</button>`;
+    a.innerHTML=`<button class="primary" id="people-add"><i data-lucide="user-plus" width="15" height="15"></i> ${t("people.add")}</button>`;
     document.getElementById("people-add").onclick=async()=>{
-      const {error}=await sb.rpc("add_friend_by_username",{name:p.username});
-      if(error)return toast(error.message);
-      notify(t("people.pending"),view.username||"",{icon:"user-plus"});
-      renderPeopleProfile(p.id)};
+      if(isMock||!sbUser){
+        const list=getMockFriends();
+        const f=list.find(x=>x.id===p.id);
+        if(f){f.isFriend=true;saveMockFriends(list)}
+        toast(LANG==="ru"?"Добавлен в друзья!":"Added to friends!");
+        renderPeopleProfile(p.id);
+      }else{
+        const {error}=await sb.rpc("add_friend_by_username",{name:p.username});
+        if(error)return toast(error.message);
+        notify(t("people.pending"),view.username||"",{icon:"user-plus"});
+        renderPeopleProfile(p.id);
+      }
+    };
   }
   icons();
 }
 
-/* Re-triggering a CSS animation needs the class gone for one frame, otherwise
-   a second render with the same class does nothing at all — which is why tab
-   switches looked instant and unanimated. animationend bubbles, so a child
-   row's own animation must not strip the container's class early. */
+/* Re-triggering a CSS animation */
 function animIn(el,cls){
   if(!el)return;
   el.classList.remove(cls);
@@ -6123,7 +6496,6 @@ function animIn(el,cls){
 
 async function renderPeople(){
   const box=document.getElementById("peoplebody");if(!box)return;
-  if(!sb||!sbUser){hideChatPane();return needAuth(box)}
   if(PEOPLE_TAB==="chats")return renderChats();
   hideChatPane();
   if(PEOPLE_TAB==="find")await renderPeopleFind(box);
@@ -6132,307 +6504,695 @@ async function renderPeople(){
 }
 
 function peopleRow(p,sub){
-  return `<button class="people-row" data-person="${esc(p.id)}">${avat(p,42)}
+  return `<button class="people-row" data-person="${esc(p.id)}">${avat(p,42,p.status||"online")}
     <span class="meta"><b>${esc(p.username||t("chat.anon"))}</b><span>${esc(sub||p.bio||t("people.open"))}</span></span>
     <i data-lucide="chevron-right" width="16" height="16"></i></button>`;
 }
 
+/* ── Find / Discover People ─────────────────────────────────────────── */
 async function renderPeopleFind(box){
-  box.innerHTML=`<div class="panel pane people-search">
-    <div class="tokrow">
-      <input id="people-q" placeholder="${t("people.search.ph")}" value="${esc(PEOPLE_QUERY)}" maxlength="24" autocomplete="off">
-      <button class="primary" id="people-go">${t("people.search")}</button>
-    </div>
-    <div id="people-results"><p class="ph">${t("people.empty")}</p></div></div>`;
-  const input=document.getElementById("people-q"),results=document.getElementById("people-results");
-  const run=async()=>{
-    PEOPLE_QUERY=input.value.trim();
-    if(!PEOPLE_QUERY){results.innerHTML=`<p class="ph">${t("people.empty")}</p>`;return}
-    const {data,error}=await sb.from("profiles").select("id,username,avatar_url,bio,privacy")
-      .ilike("username",`%${PEOPLE_QUERY}%`).neq("id",sbUser.id).limit(20);
-    if(error){results.innerHTML=`<p class="ph">${esc(error.message)}</p>`;return}
-    PEOPLE_RESULTS=(data||[]).map(maskProf);
-    results.innerHTML=PEOPLE_RESULTS.length
-      ?PEOPLE_RESULTS.map(p=>peopleRow(p)).join("")
-      :`<p class="ph">${t("people.none")}</p>`;
-    results.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>renderPeopleProfile(b.dataset.person));
-    icons()};
-  document.getElementById("people-go").onclick=run;
-  input.onkeydown=e=>{if(e.key==="Enter")run()};
-  if(PEOPLE_QUERY)run(); else icons();
-}
+  const isGuest=!sb||!sbUser;
+  const guestBanner=isGuest?`
+    <div class="people-guest-banner">
+      <div class="people-guest-info">
+        <i data-lucide="sparkles" width="20" height="20" style="color:var(--accent)"></i>
+        <div>
+          <b>${LANG==="ru"?"Исследуйте сообщество Meowave":"Explore Meowave Community"}</b>
+          <span>${LANG==="ru"?"Знакомьтесь с меломанами, слушайте их треки и делитесь вкусом.":"Discover music lovers, listen to their favorite tracks, and share music taste."}</span>
+        </div>
+      </div>
+      <button class="btn primary sm" id="people-guest-auth-btn">${LANG==="ru"?"Войти":"Sign In"}</button>
+    </div>`:"" ;
 
-/* Friends moved out of the profile page and into this tab, where they belong
-   next to search and chats. */
-async function renderPeopleFriends(box){
-  const me=sbUser.id;
-  const {data,error}=await sb.from("friendships").select("*").or(`requester.eq.${me},addressee.eq.${me}`);
-  if(error){box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${esc(error.message)}</p></div>`;return}
-  const rows=data||[];
-  const accepted=rows.filter(r=>r.status==="accepted");
-  const pendingIn=rows.filter(r=>r.status==="pending"&&r.addressee===me);
-  const pendingOut=rows.filter(r=>r.status==="pending"&&r.requester===me);
-  const otherId=r=>r.requester===me?r.addressee:r.requester;
-  const ids=[...accepted,...pendingIn,...pendingOut].map(otherId);
-  const profs=ids.length?(await sb.from("profiles").select("id,username,avatar_url,bio,privacy").in("id",ids)).data?.map(maskProf)||[]:[];
-  const prof=id=>profs.find(p=>p.id===id)||{id,username:"…"};
+  const interestTags=["Lo-Fi","Synthwave","Jazz","Darkwave","Indie Rock","J-Rock","Electronic"];
+  const tagsHtml=interestTags.map(tag=>`<button class="people-filter-chip" data-interest="${esc(tag)}">${esc(tag)}</button>`).join("");
 
   box.innerHTML=`<div class="panel pane people-search">
-    <div class="tokrow" style="margin:0 0 12px">
-      <input id="fr-add" placeholder="${t("fr.addph")}" autocomplete="off" maxlength="24">
-      <button class="btn" id="fr-addbtn">${t("fr.add")}</button>
+    ${guestBanner}
+    <div class="people-toolbar">
+      <div class="people-search-box">
+        <i data-lucide="search" width="16" height="16"></i>
+        <input id="people-q" placeholder="${t("people.search.ph")}" value="${esc(PEOPLE_QUERY)}" maxlength="32" autocomplete="off">
+      </div>
+      <div class="people-filters-row">
+        <span style="font-size:0.75rem;color:var(--mute);margin-right:4px">${LANG==="ru"?"Жанры:":"Genres:"}</span>
+        ${tagsHtml}
+      </div>
     </div>
-    ${pendingIn.length?`<p class="eyebrow" style="margin:6px 0 6px">${t("fr.reqs")} · ${pendingIn.length}</p>`+pendingIn.map(r=>{
-      const p=prof(otherId(r));
-      return `<div class="reqrow">${avat(p,34)}
-        <span class="meta"><b>${esc(p.username)}</b><span>${t("people.incoming")}</span></span>
-        <button class="primary sm" data-acc="${r.requester}|${r.addressee}">${t("people.accept")}</button>
-        <button class="btn sm danger" data-dec="${r.requester}|${r.addressee}">${t("people.reject")}</button></div>`}).join(""):""}
-    ${pendingOut.length?`<p class="eyebrow" style="margin:14px 0 6px">${t("fr.sent")}</p>`+pendingOut.map(r=>{
-      const p=prof(otherId(r));
-      return `<div class="chatrow asrow" style="grid-template-columns:auto 1fr auto">${avat(p,30)}
-        <span class="meta"><b>${esc(p.username)}</b></span><span class="mut">${t("fr.wait")}</span></div>`}).join(""):""}
-    <p class="eyebrow" style="margin:14px 0 6px">${t("fr.mine")} · ${accepted.length}</p>
-    ${accepted.length?accepted.map(r=>{
-      const p=prof(otherId(r));
-      return `<div class="friend-row">
-        <button class="people-row" data-person="${esc(p.id)}">${avat(p,42)}
-          <span class="meta"><b>${esc(p.username)}</b><span>${esc(p.bio||t("people.open"))}</span></span></button>
-        <button class="btn sm" data-dm="${esc(p.id)}"><i data-lucide="message-circle" width="14" height="14"></i></button>
-        <button class="ic" data-unfr="${r.requester}|${r.addressee}" title="${t("fr.rm")}"><i data-lucide="user-minus" width="14" height="14"></i></button>
-      </div>`}).join(""):`<p class="ph">${t("fr.none")}</p>`}
+    <div id="people-results"></div>
   </div>`;
 
-  const add=async()=>{
-    const n=document.getElementById("fr-add").value.trim();if(!n)return;
-    const {error}=await sb.rpc("add_friend_by_username",{name:n});
-    if(error)return toast(error.message);
-    notify(t("fr.sent.ok"),n,{icon:"user-plus"});
-    renderPeople()};
-  document.getElementById("fr-addbtn").onclick=add;
-  document.getElementById("fr-add").addEventListener("keydown",e=>{if(e.key==="Enter")add()});
-  box.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>renderPeopleProfile(b.dataset.person));
-  box.querySelectorAll("[data-dm]").forEach(b=>b.onclick=e=>{e.stopPropagation();openChat("d:"+b.dataset.dm)});
-  box.querySelectorAll("[data-acc]").forEach(b=>b.onclick=async()=>{
-    const [requester,addressee]=b.dataset.acc.split("|");
-    const {error}=await sb.from("friendships").update({status:"accepted"}).eq("requester",requester).eq("addressee",addressee);
-    if(error)return toast(error.message);
-    refreshFriendNotice();renderPeople()});
-  box.querySelectorAll("[data-dec]").forEach(b=>b.onclick=async()=>{
-    const [requester,addressee]=b.dataset.dec.split("|");
-    await sb.from("friendships").delete().eq("requester",requester).eq("addressee",addressee);
-    refreshFriendNotice();renderPeople()});
-  box.querySelectorAll("[data-unfr]").forEach(b=>b.onclick=async()=>{
-    const [requester,addressee]=b.dataset.unfr.split("|");
-    await sb.from("friendships").delete().eq("requester",requester).eq("addressee",addressee);
-    renderPeople()});
+  const input=document.getElementById("people-q");
+  const results=document.getElementById("people-results");
+
+  const run=async(queryText=null)=>{
+    const q=(queryText!==null?queryText:input.value).trim();
+    PEOPLE_QUERY=q;
+    let foundList=[];
+
+    if(q&&sb&&sbUser){
+      try{
+        const {data,error}=await sb.from("profiles").select("id,username,avatar_url,bio,privacy")
+          .ilike("username",`%${q}%`).neq("id",sbUser.id).limit(12);
+        if(!error&&data)foundList=data.map(maskProf);
+      }catch(e){}
+    }
+
+    const mockAll=getMockFriends();
+    const matchedMock=mockAll.filter(m=>{
+      if(!q)return true;
+      const lq=q.toLowerCase();
+      return m.username.toLowerCase().includes(lq) ||
+             (m.bio&&m.bio.toLowerCase().includes(lq)) ||
+             (m.genres&&m.genres.some(g=>g.toLowerCase().includes(lq)));
+    });
+
+    // Merge mock with foundList
+    const combined=[...foundList];
+    matchedMock.forEach(m=>{
+      if(!combined.some(x=>x.id===m.id||x.username===m.username)) combined.push(m);
+    });
+
+    if(!combined.length){
+      results.innerHTML=`<div style="text-align:center;padding:36px 16px;color:var(--mute)">
+        <i data-lucide="users" width="32" height="32" style="opacity:0.4;margin-bottom:8px"></i>
+        <p class="ph" style="margin:0">${t("people.none")}</p>
+      </div>`;
+      icons();
+      return;
+    }
+
+    results.innerHTML=`
+      <div style="font-size:0.82rem;font-weight:600;color:var(--mute);margin:8px 0 10px">
+        ${q?(LANG==="ru"?"Результаты поиска:":"Search results:"):(LANG==="ru"?"Рекомендации сообщества:":"Community Recommendations:")}
+      </div>
+      <div class="people-find-grid">
+        ${combined.map(p=>{
+          const isFr=!!p.isFriend;
+          const banner=p.banner_url||"";
+          const tags=(p.genres||[]).map(g=>`<span class="people-tag">${esc(g)}</span>`).join("");
+          const listeningChip=p.listening?`
+            <div class="friend-listening-chip" style="margin-top:6px">
+              <div class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></div>
+              <span>${esc(p.listening.a)} — <b>${esc(p.listening.t)}</b></span>
+              <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><i data-lucide="play" width="11" height="11"></i></button>
+            </div>`:"" ;
+          return `
+          <div class="people-find-card">
+            <div class="people-find-banner" style="${banner?`background-image:url('${esc(cssUrl(banner))}')`:""}"></div>
+            <div class="people-find-body">
+              <div class="people-find-top">
+                ${avat(p, 46, p.status||"online")}
+                <button class="btn sm ${isFr?"":"primary"}" data-find-action="${esc(p.id)}" style="font-size:0.75rem">
+                  <i data-lucide="${isFr?"check":"user-plus"}" width="13" height="13"></i> ${isFr?(LANG==="ru"?"В друзьях":"Friends"):(LANG==="ru"?"Добавить":"Add")}
+                </button>
+              </div>
+              <div style="font-weight:600;font-size:0.92rem;cursor:pointer" data-person="${esc(p.id)}">${esc(p.username)}</div>
+              ${p.bio?`<div style="font-size:0.78rem;color:var(--mute);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.bio)}</div>`:""}
+              ${tags?`<div class="people-find-tags">${tags}</div>`:""}
+              ${listeningChip}
+            </div>
+          </div>`;
+        }).join("")}
+      </div>`;
+
+    results.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>renderPeopleProfile(b.dataset.person));
+    results.querySelectorAll("[data-find-action]").forEach(btn=>{
+      btn.onclick=async e=>{
+        e.stopPropagation();
+        const pid=btn.dataset.findAction;
+        const target=combined.find(x=>x.id===pid);
+        if(!target)return;
+        if(isGuest||!sbUser){
+          const mList=getMockFriends();
+          const item=mList.find(x=>x.id===pid);
+          if(item){
+            item.isFriend=!item.isFriend;
+            saveMockFriends(mList);
+            toast(item.isFriend?(LANG==="ru"?"Добавлен в друзья!":"Added to friends!"):(LANG==="ru"?"Удален из друзей":"Removed from friends"));
+            run(input.value);
+          }
+        }else{
+          const {error}=await sb.rpc("add_friend_by_username",{name:target.username});
+          if(error)return toast(error.message);
+          notify(t("people.pending"),target.username||"",{icon:"user-plus"});
+          btn.innerHTML=`<i data-lucide="clock" width="13" height="13"></i> ${t("people.pending")}`;
+          btn.disabled=true;
+          icons();
+        }
+      };
+    });
+
+    results.querySelectorAll("[data-play-track]").forEach(btn=>{
+      btn.onclick=e=>{
+        e.stopPropagation();
+        const trQ=btn.dataset.playTrack;
+        if(trQ){
+          toast((LANG==="ru"?"Поиск и воспроизведение: ":"Playing: ")+trQ);
+          go("search");
+          const qInp=document.getElementById("q");
+          if(qInp){qInp.value=trQ;search(trQ)}
+        }
+      };
+    });
+
+    icons();
+  };
+
+  document.getElementById("people-guest-auth-btn")?.addEventListener("click",()=>{
+    needAuth(box);
+  });
+
+  box.querySelectorAll("[data-interest]").forEach(chip=>{
+    chip.onclick=()=>{
+      input.value=chip.dataset.interest;
+      run(chip.dataset.interest);
+    };
+  });
+
+  let debounceTimer=null;
+  input.oninput=()=>{
+    clearTimeout(debounceTimer);
+    debounceTimer=setTimeout(()=>run(),250);
+  };
+  input.onkeydown=e=>{if(e.key==="Enter")run()};
+
+  run(PEOPLE_QUERY);
+}
+
+/* ── Friends List with Live Status & Track Playback ───────────────── */
+async function renderPeopleFriends(box){
+  const isGuest=!sb||!sbUser;
+  let accepted=[], pendingIn=[], pendingOut=[];
+
+  if(!isGuest){
+    try{
+      const me=sbUser.id;
+      const {data,error}=await sb.from("friendships").select("*").or(`requester.eq.${me},addressee.eq.${me}`);
+      if(!error&&data){
+        const rows=data;
+        const otherId=r=>r.requester===me?r.addressee:r.requester;
+        const accRows=rows.filter(r=>r.status==="accepted");
+        const inRows=rows.filter(r=>r.status==="pending"&&r.addressee===me);
+        const outRows=rows.filter(r=>r.status==="pending"&&r.requester===me);
+        const allIds=[...accRows,...inRows,...outRows].map(otherId);
+
+        let profs=[];
+        if(allIds.length){
+          const pRes=await sb.from("profiles").select("id,username,avatar_url,bio,privacy,profile_track").in("id",allIds);
+          if(!pRes.error&&pRes.data) profs=pRes.data.map(maskProf);
+        }
+        const prof=id=>profs.find(p=>p.id===id)||{id,username:"…"};
+
+        accepted=accRows.map(r=>{
+          const p=prof(otherId(r));
+          return {...p, reqData:r, status:"online"};
+        });
+        pendingIn=inRows.map(r=>({r, p:prof(otherId(r))}));
+        pendingOut=outRows.map(r=>({r, p:prof(otherId(r))}));
+      }
+    }catch(e){console.warn("friends query:",e)}
+  }
+
+  // If in guest mode or user has 0 friends yet, load rich mock friends
+  if(isGuest||!accepted.length){
+    const mockList=getMockFriends();
+    const mockFriends=mockList.filter(m=>m.isFriend);
+    accepted=mockFriends.map(m=>({
+      id:m.id,
+      username:m.username,
+      avatar_url:m.avatar_url,
+      bio:m.bio,
+      status:m.status,
+      listening:m.listening,
+      listen_seconds:m.listen_seconds,
+      isMock:true
+    }));
+  }
+
+  const listeningFriends=accepted.filter(f=>f.status==="listening");
+  const onlineFriends=accepted.filter(f=>f.status==="online"||f.status==="listening");
+
+  updatePeopleSummary(accepted.length, listeningFriends.length);
+
+  const guestBanner=isGuest?`
+    <div class="people-guest-banner">
+      <div class="people-guest-info">
+        <i data-lucide="users" width="20" height="20" style="color:var(--accent)"></i>
+        <div>
+          <b>${LANG==="ru"?"Локальный список друзей":"Local Friends & Community"}</b>
+          <span>${LANG==="ru"?"Войдите в аккаунт для добавления друзей по всему миру и синхронизации.":"Sign in to add friends across devices and sync in the cloud."}</span>
+        </div>
+      </div>
+      <button class="btn primary sm" id="fr-guest-login">${LANG==="ru"?"Войти":"Sign In"}</button>
+    </div>`:"" ;
+
+  box.innerHTML=`<div class="panel pane people-search">
+    ${guestBanner}
+    <div class="people-toolbar">
+      <div class="tokrow" style="margin:0 0 10px">
+        <input id="fr-add" placeholder="${t("fr.addph")}" autocomplete="off" maxlength="24">
+        <button class="btn primary" id="fr-addbtn"><i data-lucide="user-plus" width="14" height="14"></i> ${t("fr.add")}</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="people-search-box" style="flex:1;min-width:200px">
+          <i data-lucide="search" width="15" height="15"></i>
+          <input id="fr-filter" placeholder="${LANG==="ru"?"Фильтр по имени или треку...":"Filter by name or track..."}" autocomplete="off">
+        </div>
+        <div class="people-filters-row">
+          <button class="people-filter-chip ${PEOPLE_FILTER==="all"?"active":""}" data-frtab="all">${LANG==="ru"?"Все":"All"} (${accepted.length})</button>
+          <button class="people-filter-chip ${PEOPLE_FILTER==="listening"?"active":""}" data-frtab="listening">🎵 ${LANG==="ru"?"Слушают":"Listening"} (${listeningFriends.length})</button>
+          <button class="people-filter-chip ${PEOPLE_FILTER==="online"?"active":""}" data-frtab="online">${LANG==="ru"?"В сети":"Online"} (${onlineFriends.length})</button>
+          ${pendingIn.length?`<button class="people-filter-chip ${PEOPLE_FILTER==="requests"?"active":""}" data-frtab="requests">${t("fr.reqs")} (${pendingIn.length})</button>`:""}
+        </div>
+      </div>
+    </div>
+
+    <div id="fr-content"></div>
+  </div>`;
+
+  document.getElementById("fr-guest-login")?.addEventListener("click",()=>needAuth(box));
+
+  const contentBox=document.getElementById("fr-content");
+  const filterInput=document.getElementById("fr-filter");
+
+  const renderFilteredFriends=()=>{
+    const q=filterInput?.value.trim().toLowerCase()||"";
+    let list=[...accepted];
+
+    if(PEOPLE_FILTER==="listening") list=list.filter(f=>f.status==="listening");
+    else if(PEOPLE_FILTER==="online") list=list.filter(f=>f.status==="online"||f.status==="listening");
+
+    if(q){
+      list=list.filter(f=>
+        f.username.toLowerCase().includes(q) ||
+        (f.bio&&f.bio.toLowerCase().includes(q)) ||
+        (f.listening&&(`${f.listening.a} ${f.listening.t}`.toLowerCase().includes(q)))
+      );
+    }
+
+    let html="";
+
+    // Requests section
+    if((PEOPLE_FILTER==="all"||PEOPLE_FILTER==="requests")&&pendingIn.length){
+      html+=`<div style="margin-bottom:18px">
+        <p class="eyebrow" style="margin:0 0 8px">${t("fr.reqs")} · ${pendingIn.length}</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${pendingIn.map(({r,p})=>`
+            <div class="friend-card">
+              ${avat(p, 42)}
+              <div class="friend-info">
+                <span class="friend-name" data-person="${esc(p.id)}">${esc(p.username)}</span>
+                <span class="friend-bio">${t("people.incoming")}</span>
+              </div>
+              <div class="friend-actions">
+                <button class="btn primary sm" data-acc="${r.requester}|${r.addressee}">${t("people.accept")}</button>
+                <button class="btn sm danger" data-dec="${r.requester}|${r.addressee}">${t("people.reject")}</button>
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>`;
+    }
+
+    if(PEOPLE_FILTER==="requests"&&!pendingIn.length){
+      contentBox.innerHTML=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
+        <p class="ph" style="margin:0">${LANG==="ru"?"Нет новых заявок в друзья":"No pending friend requests"}</p>
+      </div>`;
+      icons();
+      return;
+    }
+
+    if(!list.length){
+      html+=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
+        <i data-lucide="user-x" width="32" height="32" style="opacity:0.4;margin-bottom:8px"></i>
+        <p class="ph" style="margin:0">${LANG==="ru"?"Друзья не найдены. Попробуйте изменить фильтр или найти новых людей.":"No friends found. Try adjusting filter or discover new people."}</p>
+      </div>`;
+    }else{
+      html+=`<div class="friends-grid">
+        ${list.map(p=>{
+          const listeningChip=p.listening?`
+            <div class="friend-listening-chip">
+              <div class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></div>
+              <span>${esc(p.listening.a)} — <b>${esc(p.listening.t)}</b></span>
+              <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><i data-lucide="play" width="11" height="11"></i></button>
+            </div>`:"" ;
+
+          return `
+          <div class="friend-card">
+            ${avat(p, 46, p.status||"online")}
+            <div class="friend-info">
+              <div class="friend-name-row">
+                <span class="friend-name" data-person="${esc(p.id)}">${esc(p.username)}</span>
+              </div>
+              <span class="friend-bio">${esc(p.bio||t("people.open"))}</span>
+              ${listeningChip}
+            </div>
+            <div class="friend-actions">
+              <button class="btn sm" data-dm="${esc(p.id)}" title="${t("people.message")}"><i data-lucide="message-circle" width="15" height="15"></i></button>
+              <button class="btn sm" data-person="${esc(p.id)}" title="Профиль"><i data-lucide="user" width="15" height="15"></i></button>
+              <button class="ic" data-unfr="${esc(p.id)}" title="${t("fr.rm")}"><i data-lucide="user-minus" width="15" height="15"></i></button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>`;
+    }
+
+    contentBox.innerHTML=html;
+
+    contentBox.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>renderPeopleProfile(b.dataset.person));
+    contentBox.querySelectorAll("[data-dm]").forEach(b=>b.onclick=e=>{e.stopPropagation();openChat("d:"+b.dataset.dm)});
+
+    contentBox.querySelectorAll("[data-play-track]").forEach(btn=>{
+      btn.onclick=e=>{
+        e.stopPropagation();
+        const trQ=btn.dataset.playTrack;
+        if(trQ){
+          toast((LANG==="ru"?"Поиск и воспроизведение: ":"Playing: ")+trQ);
+          go("search");
+          const qInp=document.getElementById("q");
+          if(qInp){qInp.value=trQ;search(trQ)}
+        }
+      };
+    });
+
+    contentBox.querySelectorAll("[data-unfr]").forEach(b=>b.onclick=async e=>{
+      e.stopPropagation();
+      const pid=b.dataset.unfr;
+      const ok=confirm(LANG==="ru"?"Удалить из списка друзей?":"Remove from friends list?");
+      if(!ok)return;
+      if(isGuest||!sbUser){
+        const mList=getMockFriends();
+        const f=mList.find(x=>x.id===pid);
+        if(f){f.isFriend=false;saveMockFriends(mList)}
+        toast(LANG==="ru"?"Удален из друзей":"Removed from friends");
+        renderPeopleFriends(box);
+      }else{
+        const frItem=accepted.find(x=>x.id===pid);
+        if(frItem?.reqData){
+          await sb.from("friendships").delete().eq("requester",frItem.reqData.requester).eq("addressee",frItem.reqData.addressee);
+          renderPeopleFriends(box);
+        }
+      }
+    });
+
+    contentBox.querySelectorAll("[data-acc]").forEach(b=>b.onclick=async()=>{
+      const [requester,addressee]=b.dataset.acc.split("|");
+      const {error}=await sb.from("friendships").update({status:"accepted"}).eq("requester",requester).eq("addressee",addressee);
+      if(error)return toast(error.message);
+      refreshFriendNotice();renderPeopleFriends(box)});
+
+    contentBox.querySelectorAll("[data-dec]").forEach(b=>b.onclick=async()=>{
+      const [requester,addressee]=b.dataset.dec.split("|");
+      await sb.from("friendships").delete().eq("requester",requester).eq("addressee",addressee);
+      refreshFriendNotice();renderPeopleFriends(box)});
+
+    icons();
+  };
+
+  box.querySelectorAll("[data-frtab]").forEach(tabBtn=>{
+    tabBtn.onclick=()=>{
+      PEOPLE_FILTER=tabBtn.dataset.frtab;
+      box.querySelectorAll("[data-frtab]").forEach(b=>b.classList.toggle("active",b.dataset.frtab===PEOPLE_FILTER));
+      renderFilteredFriends();
+    };
+  });
+
+  filterInput.oninput=()=>renderFilteredFriends();
+
+  const addFriendAction=async()=>{
+    const inp=document.getElementById("fr-add");
+    const n=inp?.value.trim();if(!n)return;
+    if(isGuest||!sbUser){
+      const mList=getMockFriends();
+      let f=mList.find(x=>x.username.toLowerCase()===n.toLowerCase());
+      if(f){
+        f.isFriend=true;
+      }else{
+        f={
+          id:"usr_"+Date.now(),
+          username:n,
+          bio:"New friend",
+          status:"online",
+          isFriend:true
+        };
+        mList.push(f);
+      }
+      saveMockFriends(mList);
+      toast(LANG==="ru"?`Пользователь ${n} добавлен в друзья!`:`${n} added to friends!`);
+      if(inp)inp.value="";
+      renderPeopleFriends(box);
+    }else{
+      const {error}=await sb.rpc("add_friend_by_username",{name:n});
+      if(error)return toast(error.message);
+      notify(t("fr.sent.ok"),n,{icon:"user-plus"});
+      if(inp)inp.value="";
+      renderPeopleFriends(box);
+    }
+  };
+
+  document.getElementById("fr-addbtn").onclick=addFriendAction;
+  document.getElementById("fr-add").addEventListener("keydown",e=>{if(e.key==="Enter")addFriendAction()});
+
+  renderFilteredFriends();
   icons();
 }
 
-/* ── chats list ─────────────────────────────────────────── */
-/* The chat pane is a sibling of #peoplebody: the list and the conversation are
-   two states of the same tab, so one is emptied while the other renders. */
+/* ── Chats list ─────────────────────────────────────────── */
 function hideChatPane(){
   const c=document.getElementById("chatbody");
   if(c){c.innerHTML=""; c.classList.remove("chat-open");}
 }
+
 async function renderChats(){
   SOC.chat=null;socClear("chat");
   hideChatPane();
   const box=document.getElementById("peoplebody");if(!box)return;
-  if(!sb||!sbUser)return needAuth(box);
- try{
-  const me=sbUser.id;
-  /* Group chats: my memberships first, then the chat rows themselves. */
-  const mem=await sb.from("chat_members").select("chat_id,role").eq("user_id",me);
-  const gids=(mem.data||[]).map(m=>m.chat_id);
-  const groups=gids.length?(await sb.from("chats").select("*").in("id",gids)).data||[]:[];
-  /* DM partners: recent direct messages, newest per person. */
-  const dms=await sb.from("messages").select("sender,recipient,body,image,sent_at")
-   .or(`recipient.eq.${me},sender.eq.${me}`).is("room_id",null).is("chat_id",null)
-   .order("id",{ascending:false}).limit(120);
-  const partners=new Map();
-  (dms.data||[]).forEach(m=>{const p=m.sender===me?m.recipient:m.sender;
-   if(p&&!partners.has(p))partners.set(p,m)});
-  const pids=[...partners.keys()];
-  const profs=pids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",pids)).data?.map(maskProf)||[]:[];
-  const gl=gids.length?(await sb.from("messages").select("chat_id,body,image,sent_at").in("chat_id",gids)
-   .order("id",{ascending:false}).limit(200)).data||[]:[];
-  const gLast=new Map();gl.forEach(m=>{if(!gLast.has(m.chat_id))gLast.set(m.chat_id,m)});
-  const rowHtml=(key,name,last,img,extra="")=>`
-   <button class="chatrow" data-openchat="${esc(key)}">
-    ${img}
-    <span class="meta"><b>${esc(name)}</b><span>${last?esc(String(last).slice(0,64)):extra}</span></span>
-    <i data-lucide="chevron-right" width="16" height="16"></i></button>`;
-  const dmRows=[...partners.entries()].map(([pid,m])=>{
-   const p=profs.find(x=>x.id===pid)||{username:t("chat.anon")};
-   return rowHtml("d:"+pid,p.username,m.image?t("chat.photo"):m.body,avat(p,38))}).join("");
-  const grpRows=groups.map(g=>rowHtml("g:"+g.id,g.name,
-   (gLast.get(g.id)?.body)||(gLast.get(g.id)?.image?t("chat.photo"):""),
-   avat({avatar_url:g.avatar},38),t("chat.grpmembers"))).join("");
-  const totalChats=groups.length+partners.size;
-  box.innerHTML=`<div class="panel pane people-search chats-container">
-    <div class="chats-header-row">
-     <div class="chats-title-group">
-      <h3>${LANG==="ru"?"Сообщения и чаты":"Messages & Chats"}</h3>
-      <span class="chats-count-badge">${totalChats}</span>
-     </div>
-     <div class="chats-actions-row">
-      <button class="btn" id="newgrp"><i data-lucide="users" width="14" height="14"></i> ${t("chat.newgrp")}</button>
-      <button class="btn primary sm" id="newdm"><i data-lucide="user-plus" width="14" height="14"></i> ${t("chat.newdm")}</button>
-     </div>
-    </div>
-    <div class="chats-list">
-     ${grpRows}${dmRows||(!grpRows?`<div class="chats-empty"><i data-lucide="message-square-dashed" width="32" height="32"></i><p class="ph" style="margin:0">${t("chat.empty")}</p></div>`:"")}
-    </div>
-   </div>`;
-  /* A DM has to be startable from the chat list, not only from a friend row. */
-  document.getElementById("newdm").onclick=async()=>{
-   const n=await askText(t("chat.addwho"));
-   if(!n)return;
-   const {data:p}=await sb.from("profiles").select("id").ilike("username",n.trim()).maybeSingle();
-   if(!p)return toast(t("soc.nouser"));
-   openChat("d:"+p.id)};
-  document.getElementById("newgrp").onclick=async()=>{
-   const n=await askText(t("chat.newgrp"));
-   if(!n)return;
-   let data=null,error=null;
-   try{({data,error}=await sb.rpc("create_group_chat",{name:n}))}
-   catch(e){error=e}
-   if(error){
-    const m=String(error.message||error);
-    toast(/does not exist|404/i.test(m)?t("soc.needsql"):m,5200);
-    return}
-   openChat("g:"+data.id)};
-  box.querySelectorAll("[data-openchat]").forEach(b=>b.onclick=()=>openChat(b.dataset.openchat));
-  icons();
-  animIn(box,"peo-enter");
-  }catch(e){box.innerHTML=socErrBox(socialFail(e))}}
+  const isGuest=!sb||!sbUser;
 
-/* ── one chat ───────────────────────────────────────────── */
+  try{
+    let groups=[], partners=new Map(), profs=[];
+
+    if(!isGuest){
+      const me=sbUser.id;
+      const mem=await sb.from("chat_members").select("chat_id,role").eq("user_id",me);
+      const gids=(mem.data||[]).map(m=>m.chat_id);
+      groups=gids.length?(await sb.from("chats").select("*").in("id",gids)).data||[]:[];
+      const dms=await sb.from("messages").select("sender,recipient,body,image,sent_at")
+        .or(`recipient.eq.${me},sender.eq.${me}`).is("room_id",null).is("chat_id",null)
+        .order("id",{ascending:false}).limit(120);
+      (dms.data||[]).forEach(m=>{const p=m.sender===me?m.recipient:m.sender;
+        if(p&&!partners.has(p))partners.set(p,m)});
+      const pids=[...partners.keys()];
+      profs=pids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",pids)).data?.map(maskProf)||[]:[];
+    }else{
+      // Mock chats for guests
+      const mockChats=getMockChats();
+      const mockFriends=getMockFriends();
+      mockChats.forEach(m=>{
+        const dm=m.chat_key.slice(2);
+        if(!partners.has(dm)) partners.set(dm, m);
+      });
+      profs=mockFriends;
+    }
+
+    const rowHtml=(key,name,last,img,extra="",status="online")=>`
+     <button class="chatrow" data-openchat="${esc(key)}">
+      ${img}
+      <span class="meta"><b>${esc(name)}</b><span>${last?esc(String(last).slice(0,64)):extra}</span></span>
+      <i data-lucide="chevron-right" width="16" height="16"></i></button>`;
+
+    const dmRows=[...partners.entries()].map(([pid,m])=>{
+      const p=profs.find(x=>x.id===pid)||{username:t("chat.anon")};
+      return rowHtml("d:"+pid,p.username,m.image?t("chat.photo"):m.body,avat(p,38,p.status||"online"))}).join("");
+
+    const grpRows=groups.map(g=>rowHtml("g:"+g.id,g.name,
+      t("chat.grpmembers"),avat({avatar_url:g.avatar},38),t("chat.grpmembers"))).join("");
+
+    const totalChats=groups.length+partners.size;
+
+    box.innerHTML=`<div class="panel pane people-search chats-container">
+      <div class="chats-header-row">
+       <div class="chats-title-group">
+        <h3>${LANG==="ru"?"Сообщения и чаты":"Messages & Chats"}</h3>
+        <span class="chats-count-badge">${totalChats}</span>
+       </div>
+       <div class="chats-actions-row">
+        ${!isGuest?`<button class="btn" id="newgrp"><i data-lucide="users" width="14" height="14"></i> ${t("chat.newgrp")}</button>`:""}
+        <button class="btn primary sm" id="newdm"><i data-lucide="message-square-plus" width="14" height="14"></i> ${t("chat.newdm")}</button>
+       </div>
+      </div>
+      <div class="chats-list">
+       ${grpRows}${dmRows||(!grpRows?`<div class="chats-empty"><i data-lucide="message-square-dashed" width="32" height="32"></i><p class="ph" style="margin:0">${t("chat.empty")}</p></div>`:"")}
+      </div>
+     </div>`;
+
+    document.getElementById("newdm").onclick=async()=>{
+      const n=await askText(t("chat.addwho"));
+      if(!n)return;
+      if(isGuest||!sbUser){
+        const mockList=getMockFriends();
+        const p=mockList.find(x=>x.username.toLowerCase()===n.trim().toLowerCase());
+        if(!p)return toast(t("soc.nouser"));
+        openChat("d:"+p.id);
+      }else{
+        const {data:p}=await sb.from("profiles").select("id").ilike("username",n.trim()).maybeSingle();
+        if(!p)return toast(t("soc.nouser"));
+        openChat("d:"+p.id);
+      }
+    };
+
+    if(!isGuest){
+      document.getElementById("newgrp")?.addEventListener("click",async()=>{
+        const n=await askText(t("chat.newgrp"));
+        if(!n)return;
+        let data=null,error=null;
+        try{({data,error}=await sb.rpc("create_group_chat",{name:n}))}
+        catch(e){error=e}
+        if(error){
+          const m=String(error.message||error);
+          toast(/does not exist|404/i.test(m)?t("soc.needsql"):m,5200);
+          return}
+        openChat("g:"+data.id);
+      });
+    }
+
+    box.querySelectorAll("[data-openchat]").forEach(b=>b.onclick=()=>openChat(b.dataset.openchat));
+    icons();
+    animIn(box,"peo-enter");
+  }catch(e){box.innerHTML=socErrBox(socialFail(e))}
+}
+
+/* ── Open single conversation ───────────────────────────── */
 function chatKeyParts(key){return key.startsWith("d:")?{dm:key.slice(2)}:{chat:key.slice(2)}}
+
 async function openChat(key){
-  if(!sbUser){
-    toast(LANG==="ru"?"Сначала войдите в аккаунт":"Sign in first to access chat");
-    return;
-  }
-  const me=sbUser.id;const{dm,chat}=chatKeyParts(key);
+  const isGuest=!sb||!sbUser;
+  const {dm,chat}=chatKeyParts(key);
   let name=t("chat.anon");
-  if(dm){
-   const target=maskProf((await sb.from("profiles").select("id,username,avatar_url,privacy").eq("id",dm).maybeSingle()).data);
-   name=target?.username||name;
-   SOC.chat={key,name,dm,chat:null,targetCache:target,isOwner:false}}
-  else{
-   const group=(await sb.from("chats").select("*").eq("id",chat).maybeSingle()).data;
-   if(!group)return toast(t("chat.gone"));
-   SOC.chat={key,name:group.name,dm:null,chat,group,isOwner:group.created_by===me,showMembers:false};
-   await loadChatMembers()}
-  /* Each open gets its own entrance animation. */
+
+  if(isGuest){
+    const mockList=getMockFriends();
+    const target=mockList.find(m=>m.id===dm)||MOCK_COMMUNITY_USERS.find(m=>m.id===dm)||{username:t("chat.anon")};
+    name=target.username||name;
+    SOC.chat={key,name,dm,chat:null,targetCache:target,isOwner:false,isMock:true};
+  }else{
+    const me=sbUser.id;
+    if(dm){
+      let target=null;
+      try{
+        target=maskProf((await sb.from("profiles").select("id,username,avatar_url,privacy").eq("id",dm).maybeSingle()).data);
+      }catch(e){}
+      name=target?.username||name;
+      SOC.chat={key,name,dm,chat:null,targetCache:target,isOwner:false,isMock:false};
+    }else{
+      const group=(await sb.from("chats").select("*").eq("id",chat).maybeSingle()).data;
+      if(!group)return toast(t("chat.gone"));
+      SOC.chat={key,name:group.name,dm:null,chat,group,isOwner:group.created_by===me,showMembers:false,isMock:false};
+      await loadChatMembers();
+    }
+  }
+
   if(SOC.chat)SOC.chat._painted=false;
   go("people");
   PEOPLE_TAB="chats";
   document.querySelectorAll("#peopletabs [data-ptab]").forEach(b=>
-   b.setAttribute("aria-selected",String(b.dataset.ptab==="chats")));
+    b.setAttribute("aria-selected",String(b.dataset.ptab==="chats")));
   const list=document.getElementById("peoplebody");if(list)list.innerHTML="";
-  /* The pane slides in only on open, not on every 5 s repaint. */
   const box=document.getElementById("chatbody");
   if(box)box.classList.add("chat-open");
   await paintChat();
   animIn(box,"chat-enter");
-  socTimer("chat",paintChat,5000)}
+  socTimer("chat",paintChat,5000);
+}
 
-/* "14:32" — a chat needs the clock time, not "5 minutes ago". */
 function msgClock(ts){
  const d=new Date(ts);
  if(isNaN(d))return "";
  return d.toLocaleTimeString(LANG==="ru"?"ru-RU":"en-GB",{hour:"2-digit",minute:"2-digit"});
 }
+
 async function paintChat(){
-  const box=document.getElementById("chatbody");if(!box||!SOC.chat||!sbUser)return;
-  /* The poll runs every five seconds for as long as the conversation is open;
-     one dropped request must not blank it or spam unhandled rejections. */
+  const box=document.getElementById("chatbody");if(!box||!SOC.chat)return;
   try{await paintChatInner(box)}
   catch(e){console.warn("paintChat:",e?.message||e)}
 }
+
 let editingChatMsgId=null;
+
 async function paintChatInner(box){
-  if(!sbUser||!SOC.chat)return;
+  if(!SOC.chat)return;
   const list0=document.getElementById("peoplebody");if(list0)list0.innerHTML="";
-  const{dm,chat}=SOC.chat;
-  const me=sbUser.id;
-  const {data}=dm
-   ?await sb.from("messages").select("*")
-       .or(`and(recipient.eq.${dm},sender.eq.${me}),and(recipient.eq.${me},sender.eq.${dm})`)
-       .order("id",{ascending:false}).limit(100)
-   :await sb.from("messages").select("*").eq("chat_id",chat).order("id",{ascending:false}).limit(100);
-  const msgs=(data||[]).reverse();
+  const {dm,chat,isMock}=SOC.chat;
+  let msgs=[];
+
+  if(isMock||!sbUser){
+    const allMock=getMockChats();
+    msgs=allMock.filter(m=>m.chat_key===SOC.chat.key);
+  }else{
+    const me=sbUser.id;
+    const {data}=dm
+      ?await sb.from("messages").select("*")
+          .or(`and(recipient.eq.${dm},sender.eq.${me}),and(recipient.eq.${me},sender.eq.${dm})`)
+          .order("id",{ascending:false}).limit(100)
+      :await sb.from("messages").select("*").eq("chat_id",chat).order("id",{ascending:false}).limit(100);
+    msgs=(data||[]).reverse();
+  }
+
   SOC.chat.msgsCache=msgs;
- /* Read state for a DM: the other side has seen everything up to the newest
-    message they themselves sent after ours. Approximate but honest, and it
-    needs no extra table. */
- const theirLast=dm?msgs.filter(m=>m.sender===dm).slice(-1)[0]:null;
- const seenUpTo=theirLast?theirLast.id:0;
- const list=msgs.map(m=>{
-  const mine=m.sender===me;
-  const who=SOC.chat.dm?null:(SOC.chat.membersCache||[]).find(x=>x.user_id===m.sender);
-  const read=mine&&dm&&m.id<seenUpTo;
-  const tick=mine&&dm?`<i class="tick ${read?"read":""}" title="${read?t("chat.read"):t("chat.sent")}">${read?"✓✓":"✓"}</i>`:"";
-  const badgeHtml=who?.profile?.equipped_badge?userBadgeTag(who.profile.equipped_badge):(mine?userBadgeTag(S.equippedBadge):"");
-  const editedHtml=m.edited_at?`<span class="msg-edited">(ред.)</span>`:"";
-  return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
-   <div class="msg-actions">
-    <button class="msg-act-btn" data-act="copy" title="Копировать"><i data-lucide="copy" width="13" height="13"></i></button>
-    <button class="msg-act-btn" data-act="reply" title="Ответить"><i data-lucide="reply" width="13" height="13"></i></button>
-    ${mine?`
-     <button class="msg-act-btn" data-act="edit" title="Редактировать"><i data-lucide="pencil" width="13" height="13"></i></button>
-     <button class="msg-act-btn danger" data-act="delete" title="Удалить"><i data-lucide="trash-2" width="13" height="13"></i></button>
-    `:""}
-   </div>
-   ${!mine&&SOC.chat.chat?`<span class="who">${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
-   ${chatBodyHtml(m)}
-   <time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}).join("");
- const hdr=SOC.chat.dm
-  ?`${avat(SOC.chat.targetCache||{username:SOC.chat.name},34)}<b>${esc(SOC.chat.name)}</b>`
-  :`<i data-lucide="users" width="16" height="16"></i><b>${esc(SOC.chat.name)}</b>
-    <span class="mut" data-togglemembers>${(SOC.chat.membersCache||[]).length}</span>`;
- const memberList=SOC.chat.chat&&SOC.chat.showMembers
-  ?`<div class="memstrip">${(SOC.chat.membersCache||[]).map(m=>
-     `${avat(m.profile,24)}<span>${esc(m.profile?.username||"")}</span>${m.role==="owner"?"👑":""}`).join("")}
-     <button class="btn sm" id="addmem"><i data-lucide="user-plus" width="13" height="13"></i></button></div>`:"";
+  const meId=sbUser?sbUser.id:"me";
+
+  const theirLast=dm?msgs.filter(m=>m.sender===dm).slice(-1)[0]:null;
+  const seenUpTo=theirLast?theirLast.id:0;
+
+  const list=msgs.map(m=>{
+    const mine=m.sender===meId||m.sender==="me";
+    const who=SOC.chat.dm?null:(SOC.chat.membersCache||[]).find(x=>x.user_id===m.sender);
+    const read=mine&&dm&&(isMock||m.id<seenUpTo);
+    const tick=mine&&dm?`<i class="tick ${read?"read":""}" title="${read?t("chat.read"):t("chat.sent")}">${read?"✓✓":"✓"}</i>`:"";
+    const badgeHtml=who?.profile?.equipped_badge?userBadgeTag(who.profile.equipped_badge):(mine?userBadgeTag(S.equippedBadge):"");
+    const editedHtml=m.edited_at?`<span class="msg-edited">(ред.)</span>`:"";
+    return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
+     <div class="msg-actions">
+      <button class="msg-act-btn" data-act="copy" title="Копировать"><i data-lucide="copy" width="13" height="13"></i></button>
+      <button class="msg-act-btn" data-act="reply" title="Ответить"><i data-lucide="reply" width="13" height="13"></i></button>
+      ${mine?`
+       <button class="msg-act-btn" data-act="edit" title="Редактировать"><i data-lucide="pencil" width="13" height="13"></i></button>
+       <button class="msg-act-btn danger" data-act="delete" title="Удалить"><i data-lucide="trash-2" width="13" height="13"></i></button>
+      `:""}
+     </div>
+     ${!mine&&SOC.chat.chat?`<span class="who">${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
+     ${chatBodyHtml(m)}
+     <time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}).join("");
+
+  const hdr=SOC.chat.dm
+    ?`${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,SOC.chat.targetCache?.status||"online")}<b>${esc(SOC.chat.name)}</b>`
+    :`<i data-lucide="users" width="16" height="16"></i><b>${esc(SOC.chat.name)}</b>
+      <span class="mut" data-togglemembers>${(SOC.chat.membersCache||[]).length}</span>`;
+
+  const memberList=SOC.chat.chat&&SOC.chat.showMembers
+    ?`<div class="memstrip">${(SOC.chat.membersCache||[]).map(m=>
+        `${avat(m.profile,24)}<span>${esc(m.profile?.username||"")}</span>${m.role==="owner"?"👑":""}`).join("")}
+        <button class="btn sm" id="addmem"><i data-lucide="user-plus" width="13" height="13"></i></button></div>`:"";
+
   const existingPane=box.querySelector(".chatpane");
   if(existingPane&&SOC.chat._painted){
-   const log=existingPane.querySelector(".chatlog");
-   if(log){
-    const stick=log.scrollHeight-log.scrollTop-log.clientHeight<80;
-    const newHtml=list||`<p class="ph">${t("chat.nomsgs")}</p>`;
-    if(log.innerHTML!==newHtml){
-     log.innerHTML=newHtml;
-     if(stick)log.scrollTop=log.scrollHeight;
-     wireChatTracks(existingPane);
-     wireChatActions(existingPane);
-     existingPane.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
-     icons();
+    const log=existingPane.querySelector(".chatlog");
+    if(log){
+      const stick=log.scrollHeight-log.scrollTop-log.clientHeight<80;
+      const newHtml=list||`<p class="ph">${t("chat.nomsgs")}</p>`;
+      if(log.innerHTML!==newHtml){
+        log.innerHTML=newHtml;
+        if(stick)log.scrollTop=log.scrollHeight;
+        wireChatTracks(existingPane);
+        wireChatActions(existingPane);
+        existingPane.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
+        icons();
+      }
     }
-   }
-   let memStripEl=existingPane.querySelector(".memstrip");
-   if(memberList){
-    if(!memStripEl){
-     const hdrEl=existingPane.querySelector(".chathdr");
-     if(hdrEl)hdrEl.insertAdjacentHTML("afterend",memberList);
-     existingPane.querySelector("#addmem")?.addEventListener("click",async()=>{
-      const n=await askText(t("chat.addwho"));
-      if(!n)return;
-      const p=(await sb.from("profiles").select("id").eq("username",n).maybeSingle()).data;
-      if(!p)return toast(t("soc.nouser"));
-      const {error}=await sb.from("chat_members").insert({chat_id:chat,user_id:p.id});
-      toast(error?error.message:t("chat.added"));if(!error)loadChatMembers().then(paintChat)});
-    }
-   }else if(memStripEl){
-    memStripEl.remove();
-   }
-   wireChatTracks(existingPane);
-   wireChatActions(existingPane);
-   return;
+    wireChatTracks(existingPane);
+    wireChatActions(existingPane);
+    return;
   }
 
   const firstPaint=!SOC.chat._painted;SOC.chat._painted=true;
@@ -6453,102 +7213,153 @@ async function paintChatInner(box){
     <button class="primary sm" id="chat-send"><i data-lucide="send" width="15" height="15"></i></button>
     <input type="file" id="chat-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
    </div></div>`;
+
   const log=box.querySelector(".chatlog");
   if(log)log.scrollTop=log.scrollHeight;
   box.querySelector("[data-back]").onclick=()=>{SOC.chat=null;socClear("chat");box.classList.remove("chat-open");renderChats()};
-  box.querySelector("[data-togglemembers]")?.addEventListener("click",()=>{
-   SOC.chat.showMembers=!SOC.chat.showMembers;loadChatMembers().then(()=>paintChat())});
+
   let sendingChat=false;
   const send=async(image=null)=>{
-   if(sendingChat)return;
-   const inp=document.getElementById("chat-inp");
-   const body=inp?.value.trim()||"";
-   if(!body&&!image)return;
-   sendingChat=true;
-   const btn=document.getElementById("chat-send");
-   if(btn)btn.disabled=true;
-   if(inp&&!image)inp.value="";
-   try{
-    if(editingChatMsgId){
-     const {error}=await sb.from("messages").update({body,edited_at:new Date().toISOString()}).eq("id",editingChatMsgId);
-     if(error){if(inp&&!image)inp.value=body;toast(error.message);return}
-     editingChatMsgId=null;
-     const ew=document.getElementById("chat-edit-wrap");
-     if(ew)ew.innerHTML="";
-     if(inp)inp.value="";
-     await paintChat();
-     return;
+    if(sendingChat)return;
+    const inp=document.getElementById("chat-inp");
+    const body=inp?.value.trim()||"";
+    if(!body&&!image)return;
+    sendingChat=true;
+    const btn=document.getElementById("chat-send");
+    if(btn)btn.disabled=true;
+    if(inp&&!image)inp.value="";
+
+    try{
+      if(isMock||!sbUser){
+        const allMock=getMockChats();
+        if(editingChatMsgId){
+          const m=allMock.find(x=>x.id===editingChatMsgId);
+          if(m){m.body=body;m.edited_at=new Date().toISOString()}
+          saveMockChats(allMock);
+          editingChatMsgId=null;
+          const ew=document.getElementById("chat-edit-wrap");
+          if(ew)ew.innerHTML="";
+          await paintChat();
+          return;
+        }
+        const newMsg={
+          id:"msg_"+Date.now(),
+          chat_key:SOC.chat.key,
+          sender:"me",
+          body,
+          image,
+          sent_at:new Date().toISOString()
+        };
+        allMock.push(newMsg);
+        saveMockChats(allMock);
+        await paintChat();
+        const l=box.querySelector(".chatlog");
+        if(l)l.scrollTop=l.scrollHeight;
+
+        // Interactive simulated response from mock friend
+        if(body&&!image){
+          setTimeout(()=>{
+            if(SOC.chat&&SOC.chat.key===newMsg.chat_key){
+              const repliesRu=[
+                "Отличный трек! Добавил к себе в плейлист 🎧",
+                "Звучит очень круто, спасибо за рекомендацию ✨",
+                "Вайб супер, слушаю прямо сейчас 🐱",
+                "Класс! Очень нравится такая музыка!"
+              ];
+              const repliesEn=[
+                "Awesome track! Added to my playlist 🎧",
+                "Sounds amazing, thanks for sharing ✨",
+                "Great vibes, listening right now 🐱",
+                "Love this style, right up my alley!"
+              ];
+              const text=(LANG==="ru"?repliesRu:repliesEn)[Math.floor(Math.random()*4)];
+              const cur=getMockChats();
+              cur.push({
+                id:"msg_"+Date.now(),
+                chat_key:SOC.chat.key,
+                sender:SOC.chat.dm,
+                body:text,
+                sent_at:new Date().toISOString()
+              });
+              saveMockChats(cur);
+              if(SOC.chat&&SOC.chat.key===newMsg.chat_key)paintChat();
+            }
+          }, 1200);
+        }
+        return;
+      }
+
+      if(editingChatMsgId){
+        const {error}=await sb.from("messages").update({body,edited_at:new Date().toISOString()}).eq("id",editingChatMsgId);
+        if(error){if(inp&&!image)inp.value=body;toast(error.message);return}
+        editingChatMsgId=null;
+        const ew=document.getElementById("chat-edit-wrap");
+        if(ew)ew.innerHTML="";
+        if(inp)inp.value="";
+        await paintChat();
+        return;
+      }
+      const row=dm?{recipient:dm,sender:meId,body,image}:{chat_id:chat,sender:meId,body,image};
+      const {error}=await sb.from("messages").insert(row);
+      if(error){
+        if(inp&&!image)inp.value=body;
+        toast(error.message);
+        return;
+      }
+      if(inp)inp.focus();
+      await paintChat();
+      const l=box.querySelector(".chatlog");
+      if(l)l.scrollTop=l.scrollHeight;
+    }finally{
+      sendingChat=false;
+      if(btn)btn.disabled=false;
     }
-    const row=dm?{recipient:dm,sender:me,body,image}:{chat_id:chat,sender:me,body,image};
-    const {error}=await sb.from("messages").insert(row);
-    if(error){
-     if(inp&&!image)inp.value=body;
-     toast(error.message);
-     return;
-    }
-    if(inp)inp.focus();
-    await paintChat();
-    const l=box.querySelector(".chatlog");
-    if(l)l.scrollTop=l.scrollHeight;
-   }finally{
-    sendingChat=false;
-    if(btn)btn.disabled=false;
-   }
   };
+
   document.getElementById("chat-send").onclick=()=>send();
   document.getElementById("chat-share-np")?.addEventListener("click",()=>{
-   if(!S.current||S.current.mode==="empty")return toast(t("q.none")||"Сейчас ничего не играет");
-   const inp=document.getElementById("chat-inp");
-   if(inp){
-    const text=`🎵 ${S.current.a} — ${S.current.t}`;
-    inp.value=inp.value?`${inp.value} ${text}`:text;
-    inp.focus();
-   }
-  });
-  document.getElementById("chat-inp").addEventListener("keydown",e=>{
-   if(e.key==="Escape"&&editingChatMsgId){
-    e.preventDefault();
-    editingChatMsgId=null;
-    const ew=document.getElementById("chat-edit-wrap");
-    if(ew)ew.innerHTML="";
-    e.target.value="";
-    return;
-   }
-   if(e.key==="ArrowUp"&&!e.target.value&&!editingChatMsgId){
-    const lastMine=(SOC.chat?.msgsCache||[]).slice().reverse().find(m=>m.sender===me&&m.body);
-    if(lastMine){
-     e.preventDefault();
-     const btn=box.querySelector(`.msg[data-msg-id="${lastMine.id}"] .msg-act-btn[data-act="edit"]`);
-     if(btn)btn.click();
-     return;
+    if(!S.current||S.current.mode==="empty")return toast(t("q.none")||"Сейчас ничего не играет");
+    const inp=document.getElementById("chat-inp");
+    if(inp){
+      const text=`🎵 ${S.current.a} — ${S.current.t}`;
+      inp.value=inp.value?`${inp.value} ${text}`:text;
+      inp.focus();
     }
-   }
-   if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}
   });
+
+  document.getElementById("chat-inp").addEventListener("keydown",e=>{
+    if(e.key==="Escape"&&editingChatMsgId){
+      e.preventDefault();
+      editingChatMsgId=null;
+      const ew=document.getElementById("chat-edit-wrap");
+      if(ew)ew.innerHTML="";
+      e.target.value="";
+      return;
+    }
+    if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}
+  });
+
   document.getElementById("chat-img").onclick=()=>document.getElementById("chat-file").click();
   document.getElementById("chat-file").onchange=async e=>{
-   const f=e.target.files?.[0];e.target.value="";if(!f)return;
-   const img=await compressChatImage(f);
-   if(img)send(img)};
+    const f=e.target.files?.[0];e.target.value="";if(!f)return;
+    const img=await compressChatImage(f);
+    if(img)send(img);
+  };
+
   document.getElementById("chat-invite").onclick=async()=>{
-   if(!SOC.room)return toast(t("chat.noroom"));
-   const{dm,chat}=SOC.chat;
-   const {error}=await sb.from("messages").insert(dm
-    ?{recipient:dm,sender:me,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`}
-    :{chat_id:chat,sender:me,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`});
-   toast(error?error.message:t("chat.invited"));if(!error)paintChat()};
+    if(!SOC.room)return toast(t("chat.noroom"));
+    const {error}=await sb.from("messages").insert(dm
+      ?{recipient:dm,sender:meId,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`}
+      :{chat_id:chat,sender:meId,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`});
+    toast(error?error.message:t("chat.invited"));if(!error)paintChat();
+  };
+
   document.getElementById("chat-cfg")?.addEventListener("click",customizeGroup);
-  document.getElementById("addmem")?.addEventListener("click",async()=>{
-   const n=await askText(t("chat.addwho"));
-   if(!n)return;
-   const p=(await sb.from("profiles").select("id").eq("username",n).maybeSingle()).data;
-   if(!p)return toast(t("soc.nouser"));
-   const {error}=await sb.from("chat_members").insert({chat_id:chat,user_id:p.id});
-   toast(error?error.message:t("chat.added"));if(!error)loadChatMembers().then(paintChat)});
   box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
   wireChatTracks(box);
   wireChatActions(box);
-  icons()}
+  icons();
+}
 
 function wireChatActions(root){
  if(!root)return;
@@ -6595,15 +7406,26 @@ function wireChatActions(root){
    }else if(act==="delete"){
     const ok=confirm(LANG==="ru"?"Удалить сообщение?":"Delete message?");
     if(!ok)return;
-    const {error}=await sb.from("messages").delete().eq("id",msgObj.id);
-    if(error){
-     toast(error.message);
+    if(SOC.chat?.isMock||!sbUser){
+      const allMock=getMockChats();
+      const filtered=allMock.filter(m=>String(m.id)!==String(msgObj.id));
+      saveMockChats(filtered);
+      if(SOC.chat?.msgsCache){
+        SOC.chat.msgsCache=SOC.chat.msgsCache.filter(m=>String(m.id)!==String(msgObj.id));
+      }
+      msgEl?.remove();
+      toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
     }else{
-     if(SOC.chat?.msgsCache){
-      SOC.chat.msgsCache=SOC.chat.msgsCache.filter(m=>String(m.id)!==String(msgObj.id));
-     }
-     msgEl?.remove();
-     toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
+      const {error}=await sb.from("messages").delete().eq("id",msgObj.id);
+      if(error){
+       toast(error.message);
+      }else{
+       if(SOC.chat?.msgsCache){
+        SOC.chat.msgsCache=SOC.chat.msgsCache.filter(m=>String(m.id)!==String(msgObj.id));
+       }
+       msgEl?.remove();
+       toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
+      }
     }
    }
   };
@@ -6625,6 +7447,7 @@ function wireChatTracks(root){
   };
  });
 }
+
 
 async function loadChatMembers(){
  const c=SOC.chat;if(!c||!c.chat)return;

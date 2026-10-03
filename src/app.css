@@ -3017,3 +3017,381 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
 
 
 
+
+/* ── Lyrics Offset & Timing Synchronization Controls ─────────── */
+.lyr-offset-ctrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surf-2, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.76rem;
+  margin-left: 10px;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.ly-off-btn {
+  background: transparent;
+  border: none;
+  color: var(--mute, rgba(255, 255, 255, 0.65));
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ly-off-btn:hover {
+  color: var(--text, #fff);
+  background: rgba(255, 255, 255, 0.12);
+}
+.ly-off-btn:active {
+  transform: scale(0.92);
+}
+.ly-off-val {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text, #fff);
+  padding: 0 4px;
+  min-width: 44px;
+  text-align: center;
+}
+.ly-off-val.has-offset {
+  color: var(--accent, #a855f7);
+  font-weight: 700;
+}
+
+/* ── Avatar Status Indicator Dot ───────────────────────────────── */
+.avat-wrap {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+.status-indicator {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--bg, #121216);
+  box-sizing: content-box;
+}
+.status-indicator.online {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.55);
+}
+.status-indicator.listening {
+  background: var(--accent, #a855f7);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.65);
+  animation: pulseListening 2s infinite ease-in-out;
+}
+.status-indicator.offline {
+  background: #64748b;
+}
+@keyframes pulseListening {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+}
+
+/* ── People / Social Tab Toolbar & Filter Chips ──────────────── */
+.people-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.people-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.people-filters-row::-webkit-scrollbar {
+  display: none;
+}
+.people-filter-chip {
+  background: var(--surf-2, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  color: var(--mute, #9ca3af);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap;
+}
+.people-filter-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text, #fff);
+}
+.people-filter-chip.active {
+  background: var(--accent, #a855f7);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(168, 85, 247, 0.35);
+}
+
+.people-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.people-search-box i {
+  position: absolute;
+  left: 12px;
+  color: var(--mute);
+  pointer-events: none;
+}
+.people-search-box input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border-radius: 12px;
+  background: var(--surf-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.88rem;
+  transition: all 0.2s ease;
+}
+.people-search-box input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
+}
+
+/* ── Friends List & Cards Grid ────────────────────────────────── */
+.friends-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.friend-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surf-1, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 16px;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  position: relative;
+}
+.friend-card:hover {
+  background: var(--surf-2, rgba(255, 255, 255, 0.06));
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+.friend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.friend-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.friend-name {
+  font-weight: 600;
+  font-size: 0.94rem;
+  color: var(--text, #fff);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.friend-name:hover {
+  color: var(--accent, #a855f7);
+  text-decoration: underline;
+}
+.friend-bio {
+  font-size: 0.78rem;
+  color: var(--mute, #9ca3af);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.friend-listening-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.26);
+  border-radius: 8px;
+  padding: 3px 8px;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--text, #fff);
+  max-width: fit-content;
+}
+.friend-listening-chip .eq-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+}
+.friend-listening-chip .eq-bar {
+  width: 2px;
+  background: var(--accent, #a855f7);
+  border-radius: 1px;
+  animation: eqBounce 1s infinite ease-in-out alternate;
+}
+.friend-listening-chip .eq-bar:nth-child(1) { height: 4px; animation-delay: 0.1s; }
+.friend-listening-chip .eq-bar:nth-child(2) { height: 9px; animation-delay: 0.3s; }
+.friend-listening-chip .eq-bar:nth-child(3) { height: 6px; animation-delay: 0.2s; }
+
+@keyframes eqBounce {
+  0% { height: 3px; }
+  100% { height: 10px; }
+}
+
+.friend-listening-play {
+  background: var(--accent, #a855f7);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+.friend-listening-play:hover {
+  transform: scale(1.18);
+}
+
+.friend-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+/* ── Guest Social Mode Banner ─────────────────────────────────── */
+.people-guest-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(99, 102, 241, 0.08));
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+.people-guest-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text, #fff);
+  font-size: 0.82rem;
+}
+.people-guest-info b {
+  display: block;
+  font-size: 0.88rem;
+  margin-bottom: 2px;
+}
+.people-guest-info span {
+  color: var(--mute, #9ca3af);
+}
+
+/* ── Discover Community Grid & Cards ──────────────────────────── */
+.people-find-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.people-find-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surf-1, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.people-find-card:hover {
+  background: var(--surf-2, rgba(255, 255, 255, 0.06));
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
+}
+.people-find-banner {
+  height: 60px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--surf-2);
+}
+.people-find-body {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.people-find-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: -24px;
+  margin-bottom: 8px;
+}
+.people-find-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+.people-tag {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--surf-2);
+  color: var(--mute);
+}
+
+/* ── Chat Interactive Track Chip ──────────────────────────────── */
+.chat-track-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin-top: 6px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  user-select: none;
+}
+.chat-track-chip:hover {
+  background: rgba(168, 85, 247, 0.22);
+  transform: translateY(-1px);
+}
+.chat-track-chip button {
+  background: var(--accent, #a855f7);
+  border: none;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.chat-track-chip span {
+  font-size: 0.8rem;
+  color: var(--text, #fff);
+}
