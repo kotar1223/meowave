@@ -546,18 +546,22 @@ document.addEventListener("click",e=>{
  if(e.target.closest("#modal-ok"))return closeModal(true);
  if(e.target.closest("#modal-cancel")||e.target.id==="modal")return closeModal(false)});
 document.addEventListener("keydown",e=>{
- if(e.ctrlKey&&e.shiftKey&&(e.key==="A"||e.key==="a"||e.code==="KeyA")){
-  e.preventDefault();
-  go("admin");
-  return;
- }
  const el=document.getElementById("modal");
  if(!el||el.dataset.open!=="true")return;
  if(e.key==="Escape"){e.preventDefault();closeModal(false)}
  if(e.key==="Enter"&&e.target.id==="modal-input"){e.preventDefault();closeModal(true)}});
 
+let lastToastText = "";
+let lastToastAt = 0;
 function toast(msg,ms=3200){
  const box=document.getElementById("toasts");if(!box||!msg)return;
+ const now=Date.now();
+ if(msg===lastToastText && now-lastToastAt<3000)return;
+ while(box.children.length>=3){
+  box.removeChild(box.firstChild);
+ }
+ lastToastText=msg;
+ lastToastAt=now;
  const el=document.createElement("div");el.className="toast";el.textContent=msg;
  box.appendChild(el);
  setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),320)},ms)}
@@ -591,6 +595,16 @@ function ensureAudioEl(){
      transport events. */
   au.addEventListener("play",()=>applyRate());
   au.addEventListener("playing",()=>{applyRate();S.playing=true;sync()});
+  au.addEventListener("stalled",()=>{
+    if(S.playing&&au.paused&&!au.ended){
+      au.play().catch(()=>{});
+    }
+  });
+  au.addEventListener("waiting",()=>{
+    if(S.playing&&au.paused&&!au.ended){
+      au.play().catch(()=>{});
+    }
+  });
  au.addEventListener("pause",()=>{if(!au.ended){S.playing=false;sync()}});
  if(A.ctx&&!A.media){A.media=A.ctx.createMediaElementSource(au);A.media.connect(A.bands[0])}
  return au}
@@ -671,12 +685,12 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
  A.gain.gain.value=S.muted?0:S.vol;applySpatial();applyBoost();applyRate();
  /* If <audio> existed before the first user gesture, wire it up now. */
  if(A.audio&&!A.media){A.media=ctx.createMediaElementSource(A.audio);A.media.connect(A.bands[0])}}
-function load(tr,auto){
+ function load(tr,auto){
  if(!tr||tr.mode==="empty")return;
  if(tr.s==="sp"&&!tr._resolved){
   const q=`${tr.a||""} ${tr.t||""}`.trim();
   searchRemote(q).then(hits=>{
-   const match=(hits||[]).find(x=>x.s==="ytm"||x.s==="sc")||hits?.[0];
+   const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym")||hits?.[0];
    if(match){
     tr._resolved=true;
     tr._resolvedId=match.id;
@@ -688,6 +702,26 @@ function load(tr,auto){
    }
   }).catch(()=>{
    toast(LANG==="ru"?"Ошибка разрешения Spotify трека":"Error resolving Spotify track");
+  });
+  return;
+ }
+ if(tr.s==="ytm"&&!tr._resolved){
+  const q=`${tr.a||""} ${tr.t||""}`.trim();
+  searchRemote(q).then(hits=>{
+   const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym");
+   if(match){
+    tr._resolved=true;
+    tr._resolvedId=match.id;
+    tr._resolvedSvc=match.s;
+    const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
+    load(resolvedTrack,auto);
+   }else{
+    tr._resolved=true;
+    load(tr,auto);
+   }
+  }).catch(()=>{
+   tr._resolved=true;
+   load(tr,auto);
   });
   return;
  }
@@ -734,7 +768,8 @@ function load(tr,auto){
   A.onErr=()=>{
    if(gen!==A.gen)return;
    console.error("audio load failed",au.error?.code,au.error?.message||"",url);
-   S.playing=false;sync();explainFailure(url,tr)};
+   const wasPlaying = S.playing || auto || A.started;
+   explainFailure(url,tr,wasPlaying)};
   au.load();
   /* load() has just reset the rate again; applyRate keeps default and current
      in step and the readiness listeners re-assert it after the swap. */
@@ -2763,7 +2798,6 @@ function go(v){
   if(v==="rooms")SOC.room?paintRoomShell():renderRooms();
   if(v==="top")renderTop();
   if(v==="quests")renderQuestsView();
-  if(v==="admin")renderAdminView();
   liveRefresh(v)}
 
 /* Keeps the open screen current without a tab bounce.
@@ -2849,7 +2883,6 @@ document.getElementById("settabs").addEventListener("click",e=>{
  const b=e.target.closest("[data-stab]");if(!b)return;
  S.stab=b.dataset.stab;showSettingsTab(S.stab);save()});
 function showSettingsTab(id){
- if(id==="admin"){go("admin");return}
  document.querySelectorAll("#settabs [data-stab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.stab===id));
  document.querySelectorAll(".stab").forEach(p=>p.dataset.active=(p.dataset.stab===id));
  if(id==="lib")refreshCacheSize();
@@ -3840,16 +3873,15 @@ async function fallbackResolveTrack(tr, auto){
  fallbackResolving = key;
  const query = `${tr.a || ""} ${tr.t || ""}`.trim();
  if(!query){ fallbackResolving = null; return false; }
- console.warn(`[meowave] attempting audio fallback for "${query}" (service: ${tr.s})`);
+ console.log(`[meowave] attempting silent audio fallback for "${query}" (service: ${tr.s})`);
  try {
   const hits = await searchRemote(query);
   if(!hits || !hits.length){ fallbackResolving = null; return false; }
-  const candidate = hits.find(h => h.s !== tr.s && (h.s === "sc" || h.s === "ym" || h.s === "ytm"))
+  const candidate = hits.find(h => (h.s === "sc" || h.s === "ym") && (h.s !== tr.s || String(h.id) !== String(tr.id)))
+   || hits.find(h => h.s !== tr.s)
    || hits.find(h => String(h.id) !== String(tr.id))
    || hits[0];
   if(candidate && (String(candidate.id) !== String(tr.id) || candidate.s !== tr.s)){
-   const svcName = candidate.s === "ym" ? "Яндекс Музыка" : (candidate.s === "sc" ? "SoundCloud" : "YouTube Music");
-   toast((LANG === "ru" ? "Резервный аудиопоток подключен: " : "Fallback stream switched to: ") + svcName, 3800);
    const resolved = {
     ...tr,
     id: candidate.id,
@@ -3868,8 +3900,8 @@ async function fallbackResolveTrack(tr, auto){
  return false;
 }
 
-async function explainFailure(url,tr){
- if(!url){toast(t("load.err"));return}
+async function explainFailure(url,tr,wasPlaying=true){
+ if(!url){S.playing=false;sync();toast(t("load.err"));return}
  const key=trackKey(tr);
  if(codecRetry&&codecRetry.key!==key)codecRetry=null;
  const why=await probeStream(url);
@@ -3883,12 +3915,13 @@ async function explainFailure(url,tr){
   if(playable&&wrong){
    codecRetry={key,fmt:alt};
    console.warn(`[meowave] stream refused as ${why.ct||"unknown type"}; retrying as ${alt}`);
-   load(tr,true);
+   load(tr,wasPlaying);
    return;
   }
  }
- const rescued = await fallbackResolveTrack(tr, S.playing);
+ const rescued = await fallbackResolveTrack(tr, wasPlaying);
  if(rescued) return;
+ S.playing=false;sync();
  toast(why.ok?t("load.err"):`${t("load.err")} — ${why.why}`);
 }
 /* Pure fetch: no debounce and no "is this still the newest query" check. Those
@@ -5676,14 +5709,17 @@ function renderProfile(savedVals={}){
    </div>
   </div>
   <div class="panel pane">
-   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-    <div>
-     <h3 style="margin:0 0 2px">${LANG==="ru"?"Значки и Квесты":"Badges & Quests"}</h3>
-     <p class="ph" style="margin:0">${LANG==="ru"?"Надетый значок виден в чате, комнатах и топе":"Equipped badge is visible in chat, rooms, and leaderboard"}</p>
+   <div class="quests-profile-card">
+    <div class="quests-profile-info">
+     <div class="quests-profile-icon"><i data-lucide="award" width="22" height="22"></i></div>
+     <div class="quests-profile-details">
+      <h3>${LANG==="ru"?"Квесты и Значки":"Quests & Badges"}</h3>
+      <p>${LANG==="ru"?"Выполняйте задания, открывайте уникальные значки и надевайте их":"Complete quests, unlock unique badges and equip them"}</p>
+     </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
      ${userBadgeTag(S.equippedBadge)}
-     <button class="btn primary sm" id="prof-to-quests"><i data-lucide="award" width="14" height="14"></i> ${LANG==="ru"?"Квесты и Значки":"Quests & Badges"}</button>
+     <button class="quests-profile-btn" id="prof-to-quests"><i data-lucide="sparkles" width="15" height="15"></i> ${LANG==="ru"?"Перейти к квестам":"Open Quests"}</button>
     </div>
    </div>
    <div class="tokrow" style="margin-top:16px">
@@ -6077,9 +6113,7 @@ function animIn(el,cls){
 async function renderPeople(){
   const box=document.getElementById("peoplebody");if(!box)return;
   if(!sb||!sbUser){hideChatPane();return needAuth(box)}
-  /* The chat tab paints into #chatbody, so the list container stays empty and
-     the entrance animation belongs to the pane, not here. */
-  if(PEOPLE_TAB==="chats"){box.innerHTML="";return renderChats()}
+  if(PEOPLE_TAB==="chats")return renderChats();
   hideChatPane();
   if(PEOPLE_TAB==="find")await renderPeopleFind(box);
   else await renderPeopleFriends(box);
@@ -6193,74 +6227,76 @@ function hideChatPane(){
 }
 async function renderChats(){
   SOC.chat=null;socClear("chat");
-  const box=document.getElementById("chatbody");if(!box)return;
-  const list=document.getElementById("peoplebody");if(list)list.innerHTML="";
-  /* The pane is display:none until this class lands, so it goes on before
-     anything is written into it — including the sign-in prompt, which was
-     otherwise rendered into an invisible box. */
-  box.classList.add("chat-open");
+  hideChatPane();
+  const box=document.getElementById("peoplebody");if(!box)return;
   if(!sb||!sbUser)return needAuth(box);
  try{
   const me=sbUser.id;
- /* Group chats: my memberships first, then the chat rows themselves. */
- const mem=await sb.from("chat_members").select("chat_id,role").eq("user_id",me);
- const gids=(mem.data||[]).map(m=>m.chat_id);
- const groups=gids.length?(await sb.from("chats").select("*").in("id",gids)).data||[]:[];
- /* DM partners: recent direct messages, newest per person. */
- const dms=await sb.from("messages").select("sender,recipient,body,image,sent_at")
-  .or(`recipient.eq.${me},sender.eq.${me}`).is("room_id",null).is("chat_id",null)
-  .order("id",{ascending:false}).limit(120);
- const partners=new Map();
- (dms.data||[]).forEach(m=>{const p=m.sender===me?m.recipient:m.sender;
-  if(p&&!partners.has(p))partners.set(p,m)});
- const pids=[...partners.keys()];
- const profs=pids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",pids)).data?.map(maskProf)||[]:[];
- const gl=gids.length?(await sb.from("messages").select("chat_id,body,image,sent_at").in("chat_id",gids)
-  .order("id",{ascending:false}).limit(200)).data||[]:[];
- const gLast=new Map();gl.forEach(m=>{if(!gLast.has(m.chat_id))gLast.set(m.chat_id,m)});
- const rowHtml=(key,name,last,img,extra="")=>`
-  <button class="chatrow" data-openchat="${esc(key)}">
-   ${img}
-   <span class="meta"><b>${esc(name)}</b><span>${last?esc(String(last).slice(0,64)):extra}</span></span>
-   <i data-lucide="chevron-right" width="15" height="15"></i></button>`;
- const dmRows=[...partners.entries()].map(([pid,m])=>{
-  const p=profs.find(x=>x.id===pid)||{username:t("chat.anon")};
-  return rowHtml("d:"+pid,p.username,m.image?t("chat.photo"):m.body,avat(p,34))}).join("");
- const grpRows=groups.map(g=>rowHtml("g:"+g.id,g.name,
-  (gLast.get(g.id)?.body)||(gLast.get(g.id)?.image?t("chat.photo"):""),
-  avat({avatar_url:g.avatar},34),t("chat.grpmembers"))).join("");
- box.innerHTML=`<div class="panel pane people-search">
-   <div class="tokrow" style="margin:0 0 12px">
-    <button class="btn" id="newgrp"><i data-lucide="users" width="14" height="14"></i>${t("chat.newgrp")}</button>
-    <button class="btn" id="newdm"><i data-lucide="user-plus" width="14" height="14"></i>${t("chat.newdm")}</button>
-   </div>
-   ${grpRows}${dmRows||(!grpRows?`<p class="ph">${t("chat.empty")}</p>`:"")}
-  </div>`;
- /* A DM has to be startable from the chat list, not only from a friend row. */
- document.getElementById("newdm").onclick=async()=>{
-  const n=await askText(t("chat.addwho"));
-  if(!n)return;
-  const {data:p}=await sb.from("profiles").select("id").ilike("username",n.trim()).maybeSingle();
-  if(!p)return toast(t("soc.nouser"));
-  openChat("d:"+p.id)};
- document.getElementById("newgrp").onclick=async()=>{
-  const n=await askText(t("chat.newgrp"));
-  if(!n)return;
-  /* Through the RPC, not a bare insert: the tables exist but their policies
-     once went missing mid-migration, and a raw insert then died with an
-     opaque RLS error. The RPC creates the chat and the owner membership in
-     one shot and reports real reasons. */
-  let data=null,error=null;
-  try{({data,error}=await sb.rpc("create_group_chat",{name:n}))}
-  catch(e){error=e}
-  if(error){
-   const m=String(error.message||error);
-   toast(/does not exist|404/i.test(m)?t("soc.needsql"):m,5200);
-   return}
-  openChat("g:"+data.id)};
- box.querySelectorAll("[data-openchat]").forEach(b=>b.onclick=()=>openChat(b.dataset.openchat));
- icons()
- }catch(e){box.innerHTML=socErrBox(socialFail(e))}}
+  /* Group chats: my memberships first, then the chat rows themselves. */
+  const mem=await sb.from("chat_members").select("chat_id,role").eq("user_id",me);
+  const gids=(mem.data||[]).map(m=>m.chat_id);
+  const groups=gids.length?(await sb.from("chats").select("*").in("id",gids)).data||[]:[];
+  /* DM partners: recent direct messages, newest per person. */
+  const dms=await sb.from("messages").select("sender,recipient,body,image,sent_at")
+   .or(`recipient.eq.${me},sender.eq.${me}`).is("room_id",null).is("chat_id",null)
+   .order("id",{ascending:false}).limit(120);
+  const partners=new Map();
+  (dms.data||[]).forEach(m=>{const p=m.sender===me?m.recipient:m.sender;
+   if(p&&!partners.has(p))partners.set(p,m)});
+  const pids=[...partners.keys()];
+  const profs=pids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",pids)).data?.map(maskProf)||[]:[];
+  const gl=gids.length?(await sb.from("messages").select("chat_id,body,image,sent_at").in("chat_id",gids)
+   .order("id",{ascending:false}).limit(200)).data||[]:[];
+  const gLast=new Map();gl.forEach(m=>{if(!gLast.has(m.chat_id))gLast.set(m.chat_id,m)});
+  const rowHtml=(key,name,last,img,extra="")=>`
+   <button class="chatrow" data-openchat="${esc(key)}">
+    ${img}
+    <span class="meta"><b>${esc(name)}</b><span>${last?esc(String(last).slice(0,64)):extra}</span></span>
+    <i data-lucide="chevron-right" width="16" height="16"></i></button>`;
+  const dmRows=[...partners.entries()].map(([pid,m])=>{
+   const p=profs.find(x=>x.id===pid)||{username:t("chat.anon")};
+   return rowHtml("d:"+pid,p.username,m.image?t("chat.photo"):m.body,avat(p,38))}).join("");
+  const grpRows=groups.map(g=>rowHtml("g:"+g.id,g.name,
+   (gLast.get(g.id)?.body)||(gLast.get(g.id)?.image?t("chat.photo"):""),
+   avat({avatar_url:g.avatar},38),t("chat.grpmembers"))).join("");
+  const totalChats=groups.length+partners.size;
+  box.innerHTML=`<div class="panel pane people-search chats-container">
+    <div class="chats-header-row">
+     <div class="chats-title-group">
+      <h3>${LANG==="ru"?"Сообщения и чаты":"Messages & Chats"}</h3>
+      <span class="chats-count-badge">${totalChats}</span>
+     </div>
+     <div class="chats-actions-row">
+      <button class="btn" id="newgrp"><i data-lucide="users" width="14" height="14"></i> ${t("chat.newgrp")}</button>
+      <button class="btn primary sm" id="newdm"><i data-lucide="user-plus" width="14" height="14"></i> ${t("chat.newdm")}</button>
+     </div>
+    </div>
+    <div class="chats-list">
+     ${grpRows}${dmRows||(!grpRows?`<div class="chats-empty"><i data-lucide="message-square-dashed" width="32" height="32"></i><p class="ph" style="margin:0">${t("chat.empty")}</p></div>`:"")}
+    </div>
+   </div>`;
+  /* A DM has to be startable from the chat list, not only from a friend row. */
+  document.getElementById("newdm").onclick=async()=>{
+   const n=await askText(t("chat.addwho"));
+   if(!n)return;
+   const {data:p}=await sb.from("profiles").select("id").ilike("username",n.trim()).maybeSingle();
+   if(!p)return toast(t("soc.nouser"));
+   openChat("d:"+p.id)};
+  document.getElementById("newgrp").onclick=async()=>{
+   const n=await askText(t("chat.newgrp"));
+   if(!n)return;
+   let data=null,error=null;
+   try{({data,error}=await sb.rpc("create_group_chat",{name:n}))}
+   catch(e){error=e}
+   if(error){
+    const m=String(error.message||error);
+    toast(/does not exist|404/i.test(m)?t("soc.needsql"):m,5200);
+    return}
+   openChat("g:"+data.id)};
+  box.querySelectorAll("[data-openchat]").forEach(b=>b.onclick=()=>openChat(b.dataset.openchat));
+  icons();
+  animIn(box,"peo-enter");
+  }catch(e){box.innerHTML=socErrBox(socialFail(e))}}
 
 /* ── one chat ───────────────────────────────────────────── */
 function chatKeyParts(key){return key.startsWith("d:")?{dm:key.slice(2)}:{chat:key.slice(2)}}
@@ -7143,7 +7179,7 @@ async function renderTop(){
      </div>`).join("")}
    </div>`:""}
 
-   <div class="admin-stat" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+   <div class="panel pane" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
     <div>
      <span>${LANG==="ru"?"Ваше время прослушивания":"Your listening time"}</span>
      <b>${fmtListen(mySecs)}</b>
@@ -7417,166 +7453,7 @@ async function renderQuestsView(){
  icons();
 }
 
-/* ── Local Admin Panel ─────────────────────────────────── */
-function renderAdminView(){
- const box=document.getElementById("adminbody");if(!box)return;
- const sumEl=document.getElementById("adminsum");
- if(sumEl)sumEl.textContent=`v0.1.0 · Port ${STREAM_PORT||"—"} · Local Mode`;
 
- const secs=Math.max(S.listen||0,Number(sbStats?.listen_seconds)||0);
- const hrs=(secs/3600).toFixed(2);
-
- box.innerHTML=`<div class="admin-wrap">
-  <div class="admin-card">
-   <h3><i data-lucide="cpu" width="18" height="18"></i> Системная диагностика и статус</h3>
-   <div class="admin-grid">
-    <div class="admin-stat"><span>AudioContext</span><b>${A.ctx?A.ctx.state:"none"}</b></div>
-    <div class="admin-stat"><span>Прокси-порт стриминга</span><b>${STREAM_PORT||"N/A"}</b></div>
-    <div class="admin-stat"><span>Загружено треков</span><b>${TRACKS.length}</b></div>
-    <div class="admin-stat"><span>Очередь воспроизведения</span><b>${queue.length}</b></div>
-    <div class="admin-stat"><span>Активный аккаунт</span><b>${sbUser?esc(sbUser.email):"Гость (Локально)"}</b></div>
-    <div class="admin-stat"><span>Аудиопоток</span><b>${S.current?`${S.current.s.toUpperCase()}:${S.current.id}`:"Нет"}</b></div>
-   </div>
-  </div>
-
-  <div class="admin-card">
-   <h3><i data-lucide="clock" width="18" height="18"></i> Редактор времени прослушивания</h3>
-   <p class="ph">Текущее значение: <b>${hrs} ч</b> (${Math.round(secs)} секунд). Позволяет тестировать квесты, лидерборд и ачивки.</p>
-   <div class="admin-form-row">
-    <input type="number" id="admin-hrs-inp" placeholder="Количество часов" style="max-width:180px" value="${Math.round(secs/3600)}">
-    <button class="btn" id="admin-hrs-set">Установить часы</button>
-    <button class="btn sm" id="admin-hrs-add1">+1 час</button>
-    <button class="btn sm" id="admin-hrs-add10">+10 часов</button>
-    <button class="btn sm" id="admin-hrs-add50">+50 часов</button>
-    <button class="btn sm" id="admin-hrs-zero">Сбросить в 0</button>
-   </div>
-  </div>
-
-  <div class="admin-card">
-   <h3><i data-lucide="key" width="18" height="18"></i> Генератор и проверка промокодов</h3>
-   <p class="ph">Генерация кодов для разблокировки бейджей в формате MEOW-XXXX-YYYY.</p>
-   <div class="admin-form-row">
-    <button class="btn" id="admin-gen-code">Сгенерировать случайный код</button>
-    <input type="text" id="admin-code-out" readonly style="max-width:240px;font-family:monospace;font-weight:600">
-    <button class="btn sm" id="admin-code-copy">Копировать</button>
-   </div>
-  </div>
-
-  <div class="admin-card">
-   <h3><i data-lucide="shield-check" width="18" height="18"></i> Управление значками (Разблокировка)</h3>
-   <p class="ph">Позволяет локально разблокировать и протестировать любые значки (включая секретные и стафф).</p>
-   <div style="max-height:300px;overflow-y:auto;margin-top:10px">
-    <table class="admin-table">
-     <thead>
-      <tr><th>ID</th><th>Название</th><th>Тип</th><th>Статус</th><th>Действие</th></tr>
-     </thead>
-     <tbody>
-      ${(BADGES||[]).map(b=>{
-        const isOwned=OWNED.has(b.id);
-        return `<tr>
-          <td><code>${esc(b.id)}</code></td>
-          <td><b>${esc(badgeName(b))}</b></td>
-          <td>${esc(b.source||"ach")}</td>
-          <td>${isOwned?'<span style="color:#4ade80">Открыт</span>':'<span style="color:var(--mute)">Закрыт</span>'}</td>
-          <td>
-            <button class="btn sm ${isOwned?"danger":""}" data-admin-badge="${esc(b.id)}">
-              ${isOwned?"Отозвать":"Разблокировать"}
-            </button>
-          </td>
-        </tr>`;
-      }).join("")}
-     </tbody>
-    </table>
-   </div>
-  </div>
-
-  <div class="admin-card">
-   <h3><i data-lucide="radio" width="18" height="18"></i> Тестер аудиопотока</h3>
-   <p class="ph">Прямая проверка стрима трека по ID или URL через прокси Meowave.</p>
-   <div class="admin-form-row">
-    <select id="admin-stream-svc" style="max-width:140px">
-     <option value="ytm">YouTube Music</option>
-     <option value="sc">SoundCloud</option>
-     <option value="ym">Yandex Music</option>
-    </select>
-    <input type="text" id="admin-stream-id" placeholder="ID трека (напр. dQw4w9WgXcQ)" style="flex:1;min-width:200px">
-    <button class="btn" id="admin-stream-play">Включить поток</button>
-   </div>
-  </div>
- </div>`;
-
- const updateHours=async(newSecs)=>{
-   newSecs=Math.max(0,Math.floor(newSecs));
-   S.listen=newSecs;
-   if(sbStats)sbStats.listen_seconds=newSecs;
-   save();
-   if(sb&&sbUser){
-     try{
-       await sb.from("user_stats").upsert({user_id:sbUser.id,listen_seconds:newSecs});
-       await syncAchievements();
-     }catch(e){console.warn("admin hours sync:",e)}
-   }
-   toast(`Время прослушивания обновлено: ${fmtListen(newSecs)}`);
-   renderAdminView();
- };
-
- document.getElementById("admin-hrs-set")?.addEventListener("click",()=>{
-   const val=Number(document.getElementById("admin-hrs-inp").value);
-   if(Number.isFinite(val))updateHours(val*3600);
- });
- document.getElementById("admin-hrs-add1")?.addEventListener("click",()=>updateHours(S.listen+3600));
- document.getElementById("admin-hrs-add10")?.addEventListener("click",()=>updateHours(S.listen+36000));
- document.getElementById("admin-hrs-add50")?.addEventListener("click",()=>updateHours(S.listen+180000));
- document.getElementById("admin-hrs-zero")?.addEventListener("click",()=>updateHours(0));
-
- document.getElementById("admin-gen-code")?.addEventListener("click",()=>{
-   const alphabet="23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-   const part=()=>Array.from({length:4},()=>alphabet[Math.floor(Math.random()*alphabet.length)]).join("");
-   const code=`MEOW-${part()}-${part()}`;
-   const out=document.getElementById("admin-code-out");
-   if(out)out.value=code;
- });
- document.getElementById("admin-code-copy")?.addEventListener("click",()=>{
-   const out=document.getElementById("admin-code-out");
-   if(out?.value){
-     navigator.clipboard.writeText(out.value).then(()=>toast("Код скопирован"));
-   }
- });
-
- box.querySelectorAll("[data-admin-badge]").forEach(btn=>{
-   btn.onclick=()=>{
-     const bid=btn.dataset.adminBadge;
-     if(OWNED.has(bid)){
-       OWNED.delete(bid);
-       if(S.equippedBadge===bid)equipBadge(null);
-       toast(`Значок ${bid} отозван`);
-     }else{
-       OWNED.add(bid);
-       toast(`Значок ${bid} разблокирован`);
-     }
-     renderAdminView();
-   };
- });
-
- document.getElementById("admin-stream-play")?.addEventListener("click",()=>{
-   const svc=document.getElementById("admin-stream-svc").value;
-   const tid=document.getElementById("admin-stream-id").value.trim();
-   if(!tid)return toast("Укажите ID трека");
-   const testTrack={
-     id:tid,
-     s:svc,
-     t:`Test Track (${tid})`,
-     a:"Admin Tester",
-     al:"Meowave Diagnostics",
-     d:180,
-     mode:"local"
-   };
-   load(testTrack,true);
-   toast(`Запущен поток: ${svc.toUpperCase()}:${tid}`);
- });
-
- icons();
-}
 
 /* ── Search UI Fluid Progressive Text Fill ("Заливка текста") ── */
 function initSearchReveal(){
@@ -8253,3 +8130,4 @@ if(TAURI){setTimeout(renderSpotify,800);setTimeout(renderYmAcc,900)}
 initSearchReveal();
 initImportModal();
 initUIFont();
+document.getElementById("quests-back-btn")?.addEventListener("click",()=>go("profile"));

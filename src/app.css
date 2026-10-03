@@ -230,9 +230,47 @@ html[data-theme="light"] .search:hover{background:oklch(92% 0.007 280);box-shado
 .search-leading-icon{width:52px;height:100%;display:grid;place-items:center;color:var(--mute);flex-shrink:0;
   pointer-events:none;transition:color .2s ease,transform .2s ease}
 .search:focus-within .search-leading-icon{color:var(--accent);transform:scale(1.1)}
-.search input{flex:1;height:100%;padding:0 12px 0 0;background:transparent;border:none;outline:none;
-  font-size:1rem;font-weight:400;color:var(--text);font-family:inherit;min-width:0;z-index:2}
-.search input::placeholder{color:transparent}
+.search input,
+.search input#q,
+#search-bar input {
+  flex: 1;
+  height: 100% !important;
+  padding: 0 12px 0 0 !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  margin: 0 !important;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text);
+  font-family: inherit;
+  min-width: 0;
+  z-index: 2;
+}
+.search input:focus,
+.search input#q:focus,
+#search-bar input:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+.search input::-webkit-search-decoration,
+.search input::-webkit-search-cancel-button,
+.search input::-webkit-search-results-button,
+.search input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  display: none;
+}
+.search input::placeholder {
+  color: transparent !important;
+}
 
 /* Continuous Fluid Progressive Text Reveal ("Заливка текста без таймаута") */
 .search-placeholder-flow{position:absolute;left:52px;right:48px;top:0;bottom:0;display:flex;align-items:center;
@@ -242,7 +280,6 @@ html[data-theme="light"] .search:hover{background:oklch(92% 0.007 280);box-shado
 .search-fill-base{position:relative;display:inline-block;color:var(--mute);opacity:0.38;white-space:nowrap;user-select:none}
 .search-fill-wipe{position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;
   white-space:nowrap;user-select:none;color:var(--accent);overflow:hidden;
-  border-right:2px solid var(--accent);
   filter:drop-shadow(0 0 6px rgb(var(--accent-rgb) / .7));
   text-shadow:0 0 12px rgb(var(--accent-rgb) / .4);
   pointer-events:none}
@@ -1277,10 +1314,10 @@ html[data-theme="light"] .chatrow:hover{background:oklch(0% 0 0 / .04)}
 .chatrow .meta b{font-weight:500;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chatrow .meta span{color:var(--mute);font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chatrow>i{color:var(--mute)}
-.people-search{max-width:720px;margin:0 auto}
+.people-search{width:100%;max-width:780px;margin:0 auto;box-sizing:border-box}
 .people-row{display:flex;align-items:center;gap:12px;width:100%;padding:12px 8px;border-top:1px solid var(--line);text-align:left;border-radius:var(--r);animation:peoRowIn .32s var(--e) both}
 .people-row:hover{background:var(--surf-2)}
-.public-profile{max-width:720px;margin:0 auto;padding:var(--sp-6)}
+.public-profile{width:100%;max-width:780px;margin:0 auto;padding:var(--sp-6);box-sizing:border-box}
 
 /* people tab switch animation */
 @keyframes peoIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
@@ -1309,8 +1346,8 @@ html[data-theme="light"] .chatrow:hover{background:oklch(0% 0 0 / .04)}
     and the composer stay put. */
 .chatpane{display:flex;flex-direction:column;min-height:0;height:100%}
 #chatbody{display:none}
-#chatbody.chat-open{display:flex;height:100%;position:absolute;inset:0;padding:0 var(--sp-2) var(--sp-4)}
-#chatbody.chat-open>.chatpane{flex:1}
+#chatbody.chat-open{display:flex;flex-direction:column;height:100%;position:absolute;inset:0;padding:0 var(--sp-2) var(--sp-4);box-sizing:border-box;z-index:20}
+#chatbody.chat-open>.chatpane{flex:1;width:100%;max-width:860px;margin:0 auto;box-sizing:border-box}
 
 /* chat open animation */
 @keyframes chatIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
@@ -1387,16 +1424,16 @@ html[data-theme="light"] .msg{background:oklch(0% 0 0 / .05)}
    background, beveled border — which is exactly the "browser look" the chat
    was called out for. One element-level rule fixes every field at once;
    component rules elsewhere still override it where they need to. */
-input:not([type=range]):not([type=file]):not([type=checkbox]):not([type=radio]),
+input:not([type=range]):not([type=file]):not([type=checkbox]):not([type=radio]):not(#q),
 textarea,select{
   background:var(--surf);color:var(--text);border:1px solid var(--line-2);
   border-radius:10px;padding:9px 13px;font-size:.86rem;transition:border-color .18s var(--e)}
 input::placeholder,textarea::placeholder{color:var(--mute)}
-input:not([type=range]):not([type=file]):focus,textarea:focus,select:focus{
+input:not([type=range]):not([type=file]):not(#q):focus,textarea:focus,select:focus{
   outline:none;border-color:var(--accent)}
-input:not([type=range]):not([type=file])::selection,textarea::selection{
+input:not([type=range]):not([type=file]):not(#q)::selection,textarea::selection{
   background:rgb(var(--accent-rgb) / .45)}
-html[data-theme="light"] input:not([type=range]):not([type=file]),
+html[data-theme="light"] input:not([type=range]):not([type=file]):not(#q),
 html[data-theme="light"] textarea,html[data-theme="light"] select{background:var(--surf)}
 
 /* Room screen: member chips with kick, copyable code, the add-to-queue bar. */
@@ -2829,73 +2866,134 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
   object-fit: contain;
 }
 
-/* ─── Local Admin Panel ────────────────────────────────────── */
-.admin-wrap {
+/* ─── Profile Quests & Badges Banner ───────────────────────── */
+.quests-profile-card {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-  max-width: 960px;
-  margin: 0 auto;
-}
-.admin-card {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: linear-gradient(135deg, oklch(24% 0.04 280 / .75), oklch(20% 0.02 280 / .6));
+  border: 1px solid var(--md-sys-color-outline-variant, var(--line-2));
+  border-radius: var(--md-sys-shape-corner-large, 16px);
   padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all .24s var(--md-sys-motion-easing-standard);
+  margin-bottom: var(--sp-3);
+}
+.quests-profile-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px calc(1px*var(--glow)) rgb(var(--accent-rgb) / .22);
+}
+.quests-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.quests-profile-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent), oklch(50% 0.18 300));
+  display: grid;
+  place-items: center;
+  color: #fff;
+  box-shadow: 0 4px 14px rgb(var(--accent-rgb) / .35);
+  flex-shrink: 0;
+}
+.quests-profile-details h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.quests-profile-details p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+.quests-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  box-shadow: 0 2px 8px rgb(var(--accent-rgb) / .3);
+  transition: transform .2s var(--md-sys-motion-easing-spring), box-shadow .2s ease;
+  white-space: nowrap;
+}
+.quests-profile-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 16px rgb(var(--accent-rgb) / .45);
+}
+.quests-profile-btn:active {
+  transform: scale(0.96);
+}
+
+/* ─── Chats Responsive Layout ──────────────────────────────── */
+.people-search,
+.chats-container {
+  width: 100%;
+  max-width: 860px;
+  margin: var(--sp-2) auto var(--sp-4);
+  box-sizing: border-box;
+}
+.chats-container {
   background: var(--surf);
   border: 1px solid var(--line);
-  border-radius: var(--md-sys-shape-corner-lg, 16px);
-  margin-bottom: 14px;
+  border-radius: var(--r-lg);
+  padding: clamp(16px, 2.5vw, 24px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
 }
-.admin-card h3 {
+.chats-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.chats-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chats-title-group h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.chats-count-badge {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surf-2);
+  color: var(--mute);
+  border: 1px solid var(--line);
+}
+.chats-actions-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 4px;
-  font-size: 1.05rem;
 }
-.admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-.admin-stat {
-  padding: 12px 14px;
-  background: oklch(100% 0 0 / .04);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-.admin-stat b {
-  display: block;
-  font-size: 1.3rem;
-  color: var(--text);
-}
-.admin-stat span {
-  font-size: 0.75rem;
-  color: var(--mute);
-}
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-  font-size: 0.82rem;
-}
-.admin-table th, .admin-table td {
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-}
-.admin-table th {
-  color: var(--mute);
-  font-weight: 500;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-}
-.admin-form-row {
+.chats-list {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
+}
+.chats-empty {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  margin-top: 10px;
+  justify-content: center;
+  padding: 48px 16px;
+  color: var(--mute);
+  text-align: center;
+  gap: 10px;
 }
 
 

@@ -91,7 +91,6 @@
     <button class="navbtn" data-nav="people"><i data-lucide="users-round" width="18" height="18"></i><span data-i18n="nav.people">Люди</span><b class="navbadge" id="friend-badge" hidden></b></button>
     <button class="navbtn" data-nav="rooms"><i data-lucide="radio-tower" width="18" height="18"></i><span data-i18n="nav.rooms">Комнаты</span></button>
     <button class="navbtn" data-nav="top"><i data-lucide="trophy" width="18" height="18"></i><span data-i18n="nav.top">Топ</span></button>
-    <button class="navbtn" data-nav="quests"><i data-lucide="award" width="18" height="18"></i><span data-i18n="nav.quests">Квесты</span></button>
     <button class="navbtn railend" data-nav="profile"><i data-lucide="circle-user-round" width="18" height="18"></i><span data-i18n="nav.profile">Профиль</span></button>
     <button class="navbtn" data-nav="settings"><i data-lucide="settings" width="18" height="18"></i><span data-i18n="nav.settings">Настройки</span></button>
   </nav>
@@ -158,13 +157,14 @@
       </div>
 
       <div class="view" id="v-quests">
-        <div class="vh"><h2 data-i18n="nav.quests">Квесты и Значки</h2><span id="questsum"></span></div>
+        <div class="vh">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn sm" id="quests-back-btn" title="Назад в профиль"><i data-lucide="arrow-left" width="16" height="16"></i> <span data-i18n="ob.back">Назад</span></button>
+            <h2 data-i18n="nav.quests">Квесты и Значки</h2>
+          </div>
+          <span id="questsum"></span>
+        </div>
         <div id="questbody"></div>
-      </div>
-
-      <div class="view" id="v-admin">
-        <div class="vh"><h2>Панель администратора</h2><span id="adminsum">Локальный доступ</span></div>
-        <div id="adminbody"></div>
       </div>
 
       <div class="view" id="v-profile">
@@ -184,7 +184,6 @@
           <button role="tab" aria-selected="false" data-stab="priv" data-i18n="set.tab.priv">Приватность</button>
           <button role="tab" aria-selected="false" data-stab="net" data-i18n="set.tab.net">Сеть</button>
           <button role="tab" aria-selected="false" data-stab="about" data-i18n="set.tab.about">О приложении</button>
-          <button role="tab" aria-selected="false" data-stab="admin" id="stab-admin-btn">Админка</button>
         </div>
 
         <div class="stab" data-stab="acc" data-active="true">

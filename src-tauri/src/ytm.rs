@@ -42,12 +42,14 @@ pub const WEB_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 /// that looks like one of Google's own players, so the bytes are pulled with
 /// the identity that asked for the URL.
 pub const MEDIA_UA: &str = ANDROID_UA;
+pub const TV_UA: &str = "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/2.2 Chrome/69.0.3497.106 TV Safari/537.36";
 
 /// Clients tried against the player endpoint, first that answers OK wins.
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
     ("ANDROID", ANDROID_UA),
     ("ANDROID_MUSIC", MUSIC_UA),
     ("IOS", IOS_UA),
+    ("TVHTML5_SIMPLY_EMBEDDED_PLAYER", TV_UA),
     ("ANDROID_VR", VR_UA),
 ];
 

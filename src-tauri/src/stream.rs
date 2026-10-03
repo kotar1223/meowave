@@ -87,6 +87,31 @@ struct Upstream<'a> {
     resp: Option<reqwest::Response>,
     buf: Vec<u8>,
     pos: usize,
+    upstream_url: String,
+    media_ua: Option<String>,
+    bytes_delivered: u64,
+    expected_total: Option<u64>,
+}
+
+impl<'a> Upstream<'a> {
+    fn new(
+        rt: &'a tokio::runtime::Runtime,
+        resp: Option<reqwest::Response>,
+        upstream_url: String,
+        media_ua: Option<String>,
+        expected_total: Option<u64>,
+    ) -> Self {
+        Self {
+            rt,
+            resp,
+            buf: Vec::new(),
+            pos: 0,
+            upstream_url,
+            media_ua,
+            bytes_delivered: 0,
+            expected_total,
+        }
+    }
 }
 
 impl<'a> std::io::Read for Upstream<'a> {
@@ -102,10 +127,48 @@ impl<'a> std::io::Read for Upstream<'a> {
                 }
                 // End of body: further reads report EOF rather than blocking.
                 Ok(None) => {
+                    if let Some(total) = self.expected_total {
+                        if self.bytes_delivered < total && !self.upstream_url.is_empty() {
+                            let res = self.rt.block_on(async {
+                                let c = crate::api::media_client().ok()?;
+                                let mut req = c.get(&self.upstream_url);
+                                if let Some(ua) = &self.media_ua {
+                                    req = req.header("User-Agent", ua);
+                                }
+                                req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
+                                req.send().await.ok()
+                            });
+                            if let Some(new_resp) = res {
+                                if new_resp.status().is_success() {
+                                    self.resp = Some(new_resp);
+                                    continue;
+                                }
+                            }
+                        }
+                    }
                     self.resp = None;
                     return Ok(0);
                 }
                 Err(e) => {
+                    if let Some(total) = self.expected_total {
+                        if self.bytes_delivered < total && !self.upstream_url.is_empty() {
+                            let res = self.rt.block_on(async {
+                                let c = crate::api::media_client().ok()?;
+                                let mut req = c.get(&self.upstream_url);
+                                if let Some(ua) = &self.media_ua {
+                                    req = req.header("User-Agent", ua);
+                                }
+                                req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
+                                req.send().await.ok()
+                            });
+                            if let Some(new_resp) = res {
+                                if new_resp.status().is_success() {
+                                    self.resp = Some(new_resp);
+                                    continue;
+                                }
+                            }
+                        }
+                    }
                     self.resp = None;
                     return Err(std::io::Error::other(e.to_string()));
                 }
@@ -114,6 +177,7 @@ impl<'a> std::io::Read for Upstream<'a> {
         let n = out.len().min(self.buf.len() - self.pos);
         out[..n].copy_from_slice(&self.buf[self.pos..self.pos + n]);
         self.pos += n;
+        self.bytes_delivered += n as u64;
         Ok(n)
     }
 }
@@ -408,7 +472,7 @@ fn handle(
     // that played fine a few minutes earlier. On a bad status the cache entry is
     // dropped and the URL resolved again from scratch.
     let mut attempt = 0u8;
-    let (status, ctype, crange, clen, resp) = loop {
+    let (status, ctype, crange, clen, resp, upstream) = loop {
         attempt += 1;
 
         let upstream = match cache_get(&cache_key) {
@@ -472,7 +536,7 @@ fn handle(
                 // instead of chunked encoding, which is what makes <audio>
                 // show a duration and allow seeking immediately.
                 let clen = resp.content_length().map(|v| v as usize);
-                break (status, ctype, crange, clen, resp);
+                break (status, ctype, crange, clen, resp, upstream);
             }
             Err(e) => {
                 if attempt == 1 {
@@ -489,6 +553,12 @@ fn handle(
         }
     };
 
+    let client_status = if range.is_none() && status == 206 {
+        200
+    } else {
+        status
+    };
+
     let mut headers = vec![
         // The upstream's own value: not trusted enough to panic on, so an
         // unusable one falls back to a sane default instead.
@@ -498,25 +568,33 @@ fn handle(
         header("Cache-Control", "no-store"),
     ];
     headers.extend(cors(origin.as_deref()));
-    if let Some(cr) = &crange {
-        if let Some(h) = try_header("Content-Range", cr) {
-            headers.push(h);
+    // Only send Content-Range if the client specifically issued a range request
+    if range.is_some() {
+        if let Some(cr) = &crange {
+            if let Some(h) = try_header("Content-Range", cr) {
+                headers.push(h);
+            }
         }
     }
 
     if head_only {
-        let response = Response::new(StatusCode(status), headers, std::io::empty(), clen, None);
+        let response = Response::new(StatusCode(client_status), headers, std::io::empty(), clen, None);
         return request.respond(response).map_err(|e| e.to_string());
     }
 
-    let body = Upstream {
+    let body = Upstream::new(
         rt,
-        resp: Some(resp),
-        buf: Vec::new(),
-        pos: 0,
-    };
+        Some(resp),
+        upstream.clone(),
+        if service == "ytm" {
+            Some(crate::ytm::MEDIA_UA.to_string())
+        } else {
+            None
+        },
+        clen.map(|l| l as u64),
+    );
 
-    let response = Response::new(StatusCode(status), headers, body, clen, None);
+    let response = Response::new(StatusCode(client_status), headers, body, clen, None);
     request.respond(response).map_err(|e| e.to_string())
 }
 
@@ -787,12 +865,7 @@ fn serve_img(
             None,
         )
     } else {
-        let body = Upstream {
-            rt,
-            resp: Some(resp),
-            buf: Vec::new(),
-            pos: 0,
-        };
+        let body = Upstream::new(rt, Some(resp), String::new(), None, clen.map(|v| v as u64));
         Response::new(StatusCode(200), headers, Box::new(body), clen, None)
     };
     request.respond(response).map_err(|e| e.to_string())
@@ -903,12 +976,7 @@ fn serve_relay(
         out_headers.push(h);
     }
 
-    let body = Upstream {
-        rt,
-        resp: Some(resp),
-        buf: Vec::new(),
-        pos: 0,
-    };
+    let body = Upstream::new(rt, Some(resp), String::new(), None, clen);
     let reader: Box<dyn std::io::Read> = if request.method() == &tiny_http::Method::Head {
         Box::new(std::io::empty())
     } else {
