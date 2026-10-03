@@ -56,3 +56,6 @@ AGENT_PROGRESS.md
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Executables & Installers
+*.exe

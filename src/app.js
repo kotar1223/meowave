@@ -685,10 +685,21 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
  A.gain.gain.value=S.muted?0:S.vol;applySpatial();applyBoost();applyRate();
  /* If <audio> existed before the first user gesture, wire it up now. */
  if(A.audio&&!A.media){A.media=ctx.createMediaElementSource(A.audio);A.media.connect(A.bands[0])}}
- function load(tr,auto){
+function cleanMusicTitle(artist, title){
+ let t=(title||"").trim();
+ let a=(artist||"").trim();
+ t=t.replace(/\s*[([{\/].*?(official|music\s*video|audio|lyric|video|remaster|hd|4k|hq|clip|visualizer|album|version|explicit|prod|directed).*?[)\]}]/gi,"");
+ t=t.replace(/\s*-\s*(official|music\s*video|audio|lyrics?|video).*/gi,"");
+ t=t.replace(/\s*\|\s*.*$/gi,"");
+ t=t.replace(/\s+/g," ").trim();
+ return {a,t,query:`${a} ${t}`.trim()};
+}
+
+function load(tr,auto,resumePos=0){
  if(!tr||tr.mode==="empty")return;
  if(tr.s==="sp"&&!tr._resolved){
-  const q=`${tr.a||""} ${tr.t||""}`.trim();
+  const clean=cleanMusicTitle(tr.a,tr.t);
+  const q=clean.query||`${tr.a||""} ${tr.t||""}`.trim();
   searchRemote(q).then(hits=>{
    const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym")||hits?.[0];
    if(match){
@@ -696,7 +707,7 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
     tr._resolvedId=match.id;
     tr._resolvedSvc=match.s;
     const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
-    load(resolvedTrack,auto);
+    load(resolvedTrack,auto,resumePos);
    }else{
     toast(LANG==="ru"?"Не удалось найти аудиопоток для Spotify трека":"Could not find playable audio stream for Spotify track");
    }
@@ -706,23 +717,26 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
   return;
  }
  if(tr.s==="ytm"&&!tr._resolved){
-  const q=`${tr.a||""} ${tr.t||""}`.trim();
-  searchRemote(q).then(hits=>{
-   const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym");
-   if(match){
-    tr._resolved=true;
-    tr._resolvedId=match.id;
-    tr._resolvedSvc=match.s;
-    const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
-    load(resolvedTrack,auto);
-   }else{
-    tr._resolved=true;
-    load(tr,auto);
+  const clean=cleanMusicTitle(tr.a,tr.t);
+  const queries=[clean.query,`${tr.a||""} ${clean.t||""}`.trim(),clean.t,`${tr.a||""} ${tr.t||""}`.trim()].filter(Boolean);
+  (async()=>{
+   for(const q of queries){
+    try{
+     const hits=await searchRemote(q);
+     const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym");
+     if(match){
+      tr._resolved=true;
+      tr._resolvedId=match.id;
+      tr._resolvedSvc=match.s;
+      const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
+      load(resolvedTrack,auto,resumePos);
+      return;
+     }
+    }catch(_){}
    }
-  }).catch(()=>{
    tr._resolved=true;
-   load(tr,auto);
-  });
+   load(tr,auto,resumePos);
+  })();
   return;
  }
  initAudio();if(!A.ctx)return;
@@ -731,29 +745,24 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
  if(tr?.mode==="local"&&tr?.s!=="mock"){
   const url=streamUrl(tr)||tr.url||"";
   if(!url){/* the proxy port is unknown yet; without it src is empty and <audio> is mute */
-   ensureStreamPort().then(p=>{if(p)load(tr,auto)});return}
+   ensureStreamPort().then(p=>{if(p)load(tr,auto,resumePos)});return}
 
-  /* The <audio> element and its MediaElementSource are created EXACTLY ONCE
-     per page; changing track only swaps src. Recreating the node was the
-     cause of "you have to restart the player": a second
-     createMediaElementSource call on the same element throws
-     InvalidStateError, and the stale listeners stayed alive and fought over
-     the progress bar. */
   const au=ensureAudioEl();
   const gen=++A.gen;
   au.pause();
   au.src=url;
-  /* Assigning src resets playbackRate to 1, so the chosen speed has to be
-     reapplied per track or slowed/nightcore silently reverted on skip. */
   applyRate();
   A.src=au;A.lastPos=0;
-  /* Events from the previous track can land after the swap; gen rejects them. */
-  A.onMeta=()=>{if(gen!==A.gen)return;if(Number.isFinite(au.duration)&&au.duration>0){S.dur=au.duration;renderNP();paint();if(fp.dataset.open==="true")renderFP()}};
-  /* Listening time is measured from the element's own clock, not from the render
-     loop: rAF is throttled or stopped when the window is hidden, and the old
-     `S.listen += 0` here meant local playback — i.e. every service now — never
-     counted a single second. Deltas are clamped so a seek isn't counted as
-     listening. */
+  A.onMeta=()=>{
+   if(gen!==A.gen)return;
+   if(Number.isFinite(au.duration)&&au.duration>0){
+    S.dur=au.duration;renderNP();paint();
+    if(fp.dataset.open==="true")renderFP();
+   }
+   if(resumePos&&resumePos>0&&resumePos<(au.duration||9999)){
+    try{au.currentTime=resumePos}catch(_){}
+   }
+  };
   A.onTime=()=>{
    if(gen!==A.gen)return;
    const now=au.currentTime;
@@ -764,15 +773,24 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
    A.lastPos=now;
    if(seeking)return;
    S.pos=now;paint()};
-  A.onEnd=()=>{if(gen===A.gen)next()};
+  A.onEnd=()=>{
+   if(gen!==A.gen)return;
+   const curTime=au.currentTime;
+   if(S.dur&&curTime>4&&curTime<(S.dur-8)&&(tr.s==="ytm"||tr._resolvedSvc==="ytm")){
+    console.warn(`[meowave] premature stream stall at ${curTime.toFixed(1)}s (dur ${S.dur}s), seamless resume`);
+    fallbackResolveTrack(tr,true,curTime).then(rescued=>{
+     if(!rescued)next();
+    });
+    return;
+   }
+   next();
+  };
   A.onErr=()=>{
    if(gen!==A.gen)return;
    console.error("audio load failed",au.error?.code,au.error?.message||"",url);
    const wasPlaying = S.playing || auto || A.started;
-   explainFailure(url,tr,wasPlaying)};
+   explainFailure(url,tr,wasPlaying,au.currentTime||0)};
   au.load();
-  /* load() has just reset the rate again; applyRate keeps default and current
-     in step and the readiness listeners re-assert it after the swap. */
   applyRate();
   if(auto){A.ctx.resume();au.play().catch(e=>{if(gen!==A.gen)return;console.error("play() rejected:",e);S.playing=false;sync()});A.started=true}
   return}
@@ -3866,41 +3884,42 @@ async function probeStream(url){
  }catch(e){return {ok:false,why:String(e.message||e)}}
 }
 let fallbackResolving = null;
-async function fallbackResolveTrack(tr, auto){
+async function fallbackResolveTrack(tr, auto, resumePos=0){
  if(!tr || tr.mode === "empty") return false;
  const key = trackKey(tr);
  if(fallbackResolving === key) return false;
  fallbackResolving = key;
- const query = `${tr.a || ""} ${tr.t || ""}`.trim();
- if(!query){ fallbackResolving = null; return false; }
- console.log(`[meowave] attempting silent audio fallback for "${query}" (service: ${tr.s})`);
+ const clean = typeof cleanMusicTitle === "function" ? cleanMusicTitle(tr.a, tr.t) : { query: `${tr.a||""} ${tr.t||""}`.trim() };
+ const queries = [clean.query, `${tr.a||""} ${clean.t||""}`.trim(), clean.t, `${tr.a||""} ${tr.t||""}`.trim()].filter(Boolean);
+ console.log(`[meowave] attempting silent audio fallback for "${clean.query}" (service: ${tr.s})`);
  try {
-  const hits = await searchRemote(query);
-  if(!hits || !hits.length){ fallbackResolving = null; return false; }
-  const candidate = hits.find(h => (h.s === "sc" || h.s === "ym") && (h.s !== tr.s || String(h.id) !== String(tr.id)))
-   || hits.find(h => h.s !== tr.s)
-   || hits.find(h => String(h.id) !== String(tr.id))
-   || hits[0];
-  if(candidate && (String(candidate.id) !== String(tr.id) || candidate.s !== tr.s)){
-   const resolved = {
-    ...tr,
-    id: candidate.id,
-    s: candidate.s,
-    mode: "local",
-    _resolved: true,
-    _resolvedId: candidate.id,
-    _resolvedSvc: candidate.s
-   };
-   fallbackResolving = null;
-   load(resolved, auto);
-   return true;
+  for(const query of queries){
+   const hits = await searchRemote(query);
+   if(!hits || !hits.length) continue;
+   const candidate = hits.find(h => (h.s === "sc" || h.s === "ym") && (h.s !== tr.s || String(h.id) !== String(tr.id)))
+    || hits.find(h => h.s !== tr.s)
+    || hits.find(h => String(h.id) !== String(tr.id));
+   if(candidate && (String(candidate.id) !== String(tr.id) || candidate.s !== tr.s)){
+    const resolved = {
+     ...tr,
+     id: candidate.id,
+     s: candidate.s,
+     mode: "local",
+     _resolved: true,
+     _resolvedId: candidate.id,
+     _resolvedSvc: candidate.s
+    };
+    fallbackResolving = null;
+    load(resolved, auto, resumePos);
+    return true;
+   }
   }
  } catch(e){ console.warn("fallbackResolveTrack failed:", e); }
  fallbackResolving = null;
  return false;
 }
 
-async function explainFailure(url,tr,wasPlaying=true){
+async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  if(!url){S.playing=false;sync();toast(t("load.err"));return}
  const key=trackKey(tr);
  if(codecRetry&&codecRetry.key!==key)codecRetry=null;
@@ -3915,11 +3934,11 @@ async function explainFailure(url,tr,wasPlaying=true){
   if(playable&&wrong){
    codecRetry={key,fmt:alt};
    console.warn(`[meowave] stream refused as ${why.ct||"unknown type"}; retrying as ${alt}`);
-   load(tr,wasPlaying);
+   load(tr,wasPlaying,resumePos);
    return;
   }
  }
- const rescued = await fallbackResolveTrack(tr, wasPlaying);
+ const rescued = await fallbackResolveTrack(tr, wasPlaying, resumePos);
  if(rescued) return;
  S.playing=false;sync();
  toast(why.ok?t("load.err"):`${t("load.err")} — ${why.why}`);
@@ -5722,12 +5741,6 @@ function renderProfile(savedVals={}){
      <button class="quests-profile-btn" id="prof-to-quests"><i data-lucide="sparkles" width="15" height="15"></i> ${LANG==="ru"?"Перейти к квестам":"Open Quests"}</button>
     </div>
    </div>
-   <div class="tokrow" style="margin-top:16px">
-    <input id="bd-code" placeholder="${t("bd.code.ph")}" autocomplete="off" maxlength="40">
-    <button class="btn" id="bd-redeem">${t("bd.code.go")}</button>
-    <small style="color:var(--mute);font-size:.72rem" id="bd-msg">${t("bd.code.hint")}</small>
-   </div>
-  </div>
   <div class="panel pane">
    <div class="authrow">
     <button class="btn" id="au-out">${t("pr.logout")}</button>
@@ -5746,8 +5759,6 @@ function renderProfile(savedVals={}){
  document.getElementById("prof-track-play")?.addEventListener("click",()=>{
   if(S.profileTrack)setTrack(S.profileTrack,true,false,"prof");
  });
- document.getElementById("bd-redeem").onclick=redeemCode;
- document.getElementById("bd-code").addEventListener("keydown",e=>{if(e.key==="Enter")redeemCode()});
  renderPinned();
  /* Friends live in the People tab now; a second copy under the player was the
     reported "friends are stuck at the bottom". */
@@ -7190,7 +7201,7 @@ async function renderTop(){
    <p class="eyebrow" style="margin:16px 0 8px">${LANG==="ru"?"Общий зачёт":"General Ranking"}</p>
    <div class="top-list">
     ${processedRows.map((r,i)=>`
-     <div class="chatrow asrow ${r.user_id===me?"me":""}" style="grid-template-columns:36px auto 1fr auto">
+     <div class="chatrow asrow ${r.user_id===me?"me":""}" >
       <b class="rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</b>
       ${avat(r,34)}
       <span class="meta" style="display:flex;align-items:center;gap:6px">
@@ -7440,8 +7451,19 @@ async function renderQuestsView(){
     }).join("")}
    </div>
   </div>
+  <div class="panel pane" style="margin-top:16px">
+   <h3 style="margin:0 0 4px">${LANG==="ru"?"Активация промокода":"Redeem Promo Code"}</h3>
+   <p class="ph" style="margin:0 0 12px">${LANG==="ru"?"Введите секретный код для получения особого значка":"Enter a secret code to unlock an exclusive badge"}</p>
+   <div class="tokrow">
+    <input id="bd-code" placeholder="${t("bd.code.ph")}" autocomplete="off" maxlength="40">
+    <button class="btn primary" id="bd-redeem">${t("bd.code.go")}</button>
+    <small style="color:var(--mute);font-size:.72rem" id="bd-msg">${t("bd.code.hint")}</small>
+   </div>
+  </div>
  </div>`;
 
+ document.getElementById("bd-redeem")?.addEventListener("click",redeemCode);
+ document.getElementById("bd-code")?.addEventListener("keydown",e=>{if(e.key==="Enter")redeemCode()});
  document.getElementById("unequip-btn")?.addEventListener("click",()=>equipBadge(null));
  box.querySelectorAll("[data-quest-equip]").forEach(btn=>{
    btn.onclick=()=>{
