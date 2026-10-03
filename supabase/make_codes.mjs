@@ -90,10 +90,10 @@ const plain = [
 ];
 
 for (const b of targets) {
-  const code = `${prefix}-${b.id.toUpperCase().replace(/_/g, "")}-${chunk(5)}`;
+  const code = `${prefix}-${b.id.toUpperCase().replace(/_/g, "")}-${chunk(10)}`;
   sql.push(
     `insert into public.badge_codes (code_hash, badge_id, max_uses, expires_at, note)`,
-    `values ('${hashCode(code)}', '${b.id}', ${uses ?? "null"}, ${
+    `values ('${hashCode(code)}', '${b.id}', ${uses ?? 100}, ${
       expires ? `'${expires}'` : "null"
     }, 'minted ${new Date().toISOString().slice(0, 10)}')`,
     `on conflict (code_hash) do update set`,

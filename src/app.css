@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Comfortaa:wght@600;700&family=Fira+Code:wght@500;600&family=Geist:wght@500;600;700&family=Golos+Text:wght@500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Manrope:wght@500;700;800&family=Montserrat:wght@500;700;800&family=Outfit:wght@500;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Roboto:wght@400;500;700&family=Rubik:wght@500;700&family=Russo+One&family=Space+Grotesk:wght@500;700&family=Syne:wght@600;700;800&family=Unbounded:wght@500;700;800&subset=cyrillic,cyrillic-ext,latin&display=swap');
 .splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#101017;transition:opacity .55s ease,visibility .55s ease}.splash[hidden]{opacity:0;visibility:hidden;pointer-events:none}.splash img{width:112px;height:112px;border-radius:50%;z-index:1;box-shadow:0 0 50px rgb(255 255 255/.12)}.splash span{position:absolute;margin-top:175px;letter-spacing:.18em;text-transform:uppercase;color:#b9b9c4;font-size:.78rem}.splash-ring{position:absolute;width:190px;height:190px;border:1px solid rgb(255 255 255/.25);border-radius:50%;animation:splashPulse 1.8s ease-in-out infinite}.splash-ring:after{content:"";position:absolute;inset:-18px;border:1px solid rgb(255 255 255/.1);border-radius:50%;animation:splashPulse 1.8s .25s ease-in-out infinite}@keyframes splashPulse{0%,100%{transform:scale(.82);opacity:.25}50%{transform:scale(1.08);opacity:1}}
 /* boot: частицы рисуются ПОВЕРХ сплэша и сами собирают круг */
 html.booting #field{z-index:101;pointer-events:none}
@@ -23,6 +22,7 @@ html.booting .splash img,html.booting .splash-ring{display:none}
   --accent:oklch(97% 0.002 280);
   --accent-soft:oklch(97% 0.002 280 / .14);
   --accent-rgb:250 250 253;
+  --red:oklch(64.5% 0.215 16.4); /* danger / heart — matches the fullscreen player heart colour */
   --pr:250; --pg:250; --pb:253;
 
   --glow:1; --blur:14px;
@@ -225,6 +225,8 @@ button[aria-pressed="true"] .material-symbols-rounded {
   color: var(--accent);
   flex-shrink: 0;
 }
+/* Error toasts read as errors: red icon instead of the accent. */
+.toast.err .toast-icon{color:var(--red)}
 
 /* Chat & room chips */
 .chat-track-chip button .material-symbols-rounded {
@@ -239,37 +241,44 @@ button[aria-pressed="true"] .material-symbols-rounded {
 .ic, .heart, .search-clear-btn, .fpclose-btn, .fp-settings-btn, .msg-act-btn, .qrm {
   position: relative;
 }
-.ic::before, .heart::before, .search-clear-btn::before, .fpclose-btn::before, .fp-settings-btn::before, .msg-act-btn::before, .qrm::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 40px;
-  min-height: 40px;
-  width: 100%;
-  height: 100%;
-  pointer-events: auto;
-  border-radius: inherit;
-  z-index: 0;
+/* The 40px expansion must not apply to the mouse: on desktop the 28px row
+   hearts sit side by side, and two overlapping 40px zones made clicks near
+   the seam hit the wrong button. Touch keeps the fat targets. */
+@media (pointer: coarse){
+  .ic::before, .heart::before, .search-clear-btn::before, .fpclose-btn::before, .fp-settings-btn::before, .msg-act-btn::before, .qrm::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 40px;
+    min-height: 40px;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    border-radius: inherit;
+    z-index: 0;
+  }
 }
 .ic > *, .heart > *, .search-clear-btn > *, .fpclose-btn > *, .fp-settings-btn > *, .msg-act-btn > *, .qrm > * {
   position: relative;
   z-index: 1;
 }
 
-/* M3 State layers */
-.ic, .msg-act-btn, .fp-settings-btn, .fpclose-btn {
+/* M3 State layers. .ic is NOT here: its base rule further down defines its own
+   10px radius, hover and active backgrounds, and overflow:hidden would clip
+   the pointer:coarse hit-area pseudo-element (the other buttons keep the 12px
+   default because nothing later redefines it). */
+.msg-act-btn, .fp-settings-btn, .fpclose-btn {
   position: relative;
-  overflow: hidden;
   border-radius: var(--md-sys-shape-corner-md, 12px);
   transition: background-color 0.2s var(--md-sys-motion-easing-standard),
               transform 0.18s var(--md-sys-motion-easing-standard);
 }
-.ic:hover, .msg-act-btn:hover, .fp-settings-btn:hover, .fpclose-btn:hover {
+.msg-act-btn:hover, .fp-settings-btn:hover, .fpclose-btn:hover {
   background-color: color-mix(in srgb, currentColor 8%, transparent);
 }
-.ic:active, .msg-act-btn:active, .fp-settings-btn:active, .fpclose-btn:active {
+.msg-act-btn:active, .fp-settings-btn:active, .fpclose-btn:active {
   background-color: color-mix(in srgb, currentColor 12%, transparent);
 }
 .ic:focus-visible, .msg-act-btn:focus-visible {
@@ -493,6 +502,10 @@ html[data-theme="light"] .search-clear-btn:hover{background:oklch(0% 0 0 / .08)}
   border:1px solid var(--line);transition:all .22s var(--md-sys-motion-easing-standard);
   white-space:nowrap;user-select:none;cursor:pointer}
 html[data-theme="light"] .s{background:oklch(0% 0 0 / .03)}
+/* Unconnected chips dim through opacity, which in light theme blends the label
+   into the chip surface at ~1.5:1. Swap the dimming to a darker mixed ink so
+   the label holds ≥4.5:1; connected and active chips keep their own colors. */
+html[data-theme="light"] .s[data-conn="false"]{opacity:1;color:color-mix(in srgb,var(--text) 80%,var(--bg))}
 .s .d{width:6px;height:6px;border-radius:50%;background:currentColor;transition:background .2s ease,box-shadow .2s ease}
 .s .sic{display:block;flex:none;opacity:.8;transition:opacity .2s ease}
 .s:hover{color:var(--text);background:oklch(100% 0 0 / .08);border-color:var(--line-2);transform:translateY(-1px)}
@@ -687,6 +700,8 @@ html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(1
 .btn{padding:8px 15px;border-radius:999px;font-size:.8rem;font-weight:450;border:1px solid var(--line-2);transition:color .2s var(--e),border-color .2s var(--e),background-color .2s var(--e),transform .2s var(--e),box-shadow .2s var(--e);white-space:nowrap}
 .btn:hover{background:var(--surf-2)}
 .btn.on{border-color:var(--accent);color:var(--accent)}
+/* Same FILL mechanism as the heart: the "on" state fills the glyph, not just recolours it. */
+.btn.on .material-symbols-rounded{font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;}
 /* Used by the lyrics panel, where a full-size button would dominate a body that
    is only ~96px tall. */
 .btn.sm{padding:6px 12px;font-size:.74rem}
@@ -901,6 +916,8 @@ html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(1
 .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--mute);transition:color .2s var(--e),background-color .2s var(--e),transform .2s var(--e)}
 .ic:hover{color:var(--text);background:oklch(100% 0 0 / .06)}
 html[data-theme="light"] .ic:hover{background:oklch(20% 0.01 280 / .05)}
+.ic:active{color:var(--text);background:oklch(100% 0 0 / .1)}
+html[data-theme="light"] .ic:active{background:oklch(20% 0.01 280 / .09)}
 .ic[aria-pressed="true"]{color:var(--accent)}
 .play{width:42px;height:42px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center;
   transition:transform .16s var(--e-q)}
@@ -1458,8 +1475,19 @@ html[data-lite] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!im
   .cover{max-width:250px}
 }
 @media (max-width:880px){
-  .app{grid-template-columns:1fr;grid-template-areas:"main" "bar" "rail";gap:var(--sp-1);padding:var(--sp-1)}
+  .app{grid-template-columns:1fr;grid-template-areas:"main" "bar" "rail";gap:var(--sp-1);padding:var(--sp-1);
+    padding-top:calc(var(--tb) + var(--sp-1))}
   .rail{flex-direction:row;justify-content:space-around;padding:var(--sp-1)}
+  /* Fixed 56px buttons set a ~424px min-content width on the single-column
+     grid track, so on a 390px screen every row (top bar, chips, seek) stretched
+     to 426px and clipped off the right edge. Flexible widths let the track
+     follow the viewport again. */
+  .rail .navbtn{width:auto;min-width:0;flex:1 1 0;max-width:72px;
+    grid-template-columns:minmax(0,1fr)}
+  /* "Настройки" is wider than the flexed button and spilled past the rail's
+     right padding. Constrain the label to its button so the bar keeps symmetric
+     end insets. */
+  .rail .navbtn span:last-child{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mark,.railend{display:none}
   .barmain{grid-template-columns:1fr auto;gap:var(--sp-2)}
   .right{display:none}
@@ -1516,7 +1544,9 @@ html[data-theme="light"] .chatrow:hover{background:oklch(0% 0 0 / .04)}
 @keyframes peoIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 @keyframes peoRowIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .peo-enter{animation:peoIn .28s var(--e) both}
-#v-people{position:relative}
+#v-people{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
+#v-people:has(#chatbody.chat-open){overflow:hidden}
+#peoplebody{min-height:0;padding-bottom:120px}
 
 /* smooth tab underline */
 .tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--accent);
@@ -3567,5 +3597,146 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
   background: var(--surf-2);
   color: var(--mute);
 }
+
+/* ── Interactive Avatar Upload in Profile & Settings ─────────── */
+.avatar-clickable {
+  position: relative;
+  cursor: pointer;
+  display: inline-block;
+  border-radius: inherit;
+}
+.avatar-clickable:hover .avatar-edit-overlay {
+  opacity: 1;
+}
+.avatar-edit-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.58);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+  color: #fff;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+.avatar-edit-overlay span {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.prof-ava-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  cursor: pointer;
+  background: var(--surf-2);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+.prof-ava-badge:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* ── Fallback Music Cover Placeholder ────────────────────────── */
+.art.fallback-art,
+.art[data-fallback="1"],
+.art:not([style*="background-image"]),
+.cover.fallback-cover,
+.cover[data-fallback="1"],
+.cover:not([style*="background-image"]) {
+  position: relative;
+  display: grid !important;
+  place-items: center;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+.art.fallback-art::after,
+.art[data-fallback="1"]::after,
+.art:not([style*="background-image"])::after {
+  content: "music_note";
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-size: 20px;
+  color: var(--mute);
+  opacity: 0.65;
+  pointer-events: none;
+}
+.cover.fallback-cover::after,
+.cover[data-fallback="1"]::after,
+.cover:not([style*="background-image"])::after {
+  content: "album";
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-size: 64px;
+  color: var(--mute);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ── People Discover Pagination & Empty State ────────────────── */
+.people-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0 32px;
+}
+.people-load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  background: var(--surf-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.people-load-more-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.people-empty-state {
+  text-align: center;
+  padding: 56px 16px;
+  color: var(--mute);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.people-empty-state .material-symbols-rounded {
+  font-size: 48px;
+  opacity: 0.4;
+  color: var(--accent);
+}
+.people-empty-state h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+.people-empty-state p {
+  margin: 0;
+  max-width: 380px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 
 

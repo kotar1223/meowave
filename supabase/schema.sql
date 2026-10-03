@@ -54,6 +54,9 @@
 \echo '== 12_social_fix: standalone social recovery =='
 \ir migrations/12_social_fix.sql
 
+\echo '== 13_security_fix: audit fixes (badge privacy, requests, chats, promo throttle) =='
+\ir migrations/13_security_fix.sql
+
 \echo ''
 \echo 'Schema applied. Next:'
 \echo '  SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed_badges.mjs'

@@ -73,7 +73,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "bd.code.ph":"Промокод","bd.code.go":"Активировать","bd.code.hint":"Код проверяется на сервере, в приложении его нет",
 "bd.code.empty":"Введите код","bd.code.auth":"Сначала войдите в аккаунт","bd.code.checking":"Проверяем…",
 "bd.code.ok":"Значок открыт","bd.code.dup":"Этот значок у вас уже есть","bd.code.bad":"Код не найден",
-"bd.code.exp":"Срок кода истёк","bd.code.used":"Код исчерпан",
+"bd.code.exp":"Срок кода истёк","bd.code.used":"Код исчерпан","bd.code.throttle":"Слишком много попыток — попробуйте через 15 минут",
 "unit.min":"мин","unit.hr":"ч",
 "np.addto":"В плейлист","np.dislike":"Больше не предлагать",
 "dis.on":"Трек скрыт — больше не попадётся","dis.off":"Трек снова в подборках",
@@ -189,7 +189,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "bd.code.ph":"Promo code","bd.code.go":"Redeem","bd.code.hint":"Codes are verified server-side; the app holds no list",
 "bd.code.empty":"Enter a code","bd.code.auth":"Sign in first","bd.code.checking":"Checking…",
 "bd.code.ok":"Badge unlocked","bd.code.dup":"You already have this badge","bd.code.bad":"Code not found",
-"bd.code.exp":"Code expired","bd.code.used":"Code exhausted",
+"bd.code.exp":"Code expired","bd.code.used":"Code exhausted","bd.code.throttle":"Too many attempts — try again in 15 minutes",
 "unit.min":"min","unit.hr":"h",
 "np.addto":"Add to playlist","np.dislike":"Don't play this again",
 "dis.on":"Hidden — this will not come up again","dis.off":"Track is back in rotation",
@@ -451,7 +451,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
  /* Large-lyrics customization: px size, weight, glow multiplier, cover size,
     font family. Applied as CSS variables by applyLyVars(). */
  ly:{size:44,weight:640,glow:1,cov:320,gap:14,font:""},
- fpBgMode:"dynamic",fpGlow:100,fpBlur:75,lyKaraoke:"karaoke",fpWobble:true,fpZoom:"normal",fpDrift:true,profileTrack:null,
+ fpBgMode:"dynamic",fpGlow:100,fpBlur:75,lyKaraoke:"karaoke",fpWobble:true,fpZoom:"normal",fpDrift:true,profileTrack:null,avatar:null,banner:null,
  glow:1,blur:14,theme:"dark",accent:"none",dens:2200,pspeed:.35,
  /* One explicit switch for weak machines. No auto-detection: the automatic
    tier system misjudged real hardware and its cuts looked like breakage, so
@@ -565,9 +565,14 @@ function toast(msg,ms=3200){
  const el=document.createElement("div");el.className="toast";
  const iconName=/ошибк|не удалось|fail|error|запрещ/i.test(msg)?"error":(/сохран|готов|успеш|done|copied|скопир/i.test(msg)?"check_circle":"info");
  el.innerHTML=`<span class="material-symbols-rounded toast-icon" aria-hidden="true">${iconName}</span><span>${esc(msg)}</span>`;
+ if(iconName==="error")el.classList.add("err");
  box.appendChild(el);
  setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),320)},ms)}
 const icons=()=>(window.m3Icons?.createIcons?window.m3Icons.createIcons():(window.lucide&&lucide.createIcons()));
+/* The font-picker families load from Google Fonts asynchronously: media=print
+   keeps the CDN stylesheet out of the render-blocking set, and this flip to
+   media=all applies it right after the DOM is parsed, past first paint. */
+document.querySelectorAll('link[data-fonts-async]').forEach(l=>{l.media="all"});
 const fp=document.getElementById("fp");
 
 /* audio
@@ -706,6 +711,9 @@ function load(tr,auto,resumePos=0){
   const clean=cleanMusicTitle(tr.a,tr.t);
   const q=clean.query||`${tr.a||""} ${tr.t||""}`.trim();
   searchRemote(q).then(hits=>{
+   /* The user may have picked another track while the name search ran: a late
+      resolution used to steal the audio element back for the stale pick. */
+   if(!sameTrack(tr,S.current))return;
    const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym")||hits?.[0];
    if(match){
     tr._resolved=true;
@@ -714,9 +722,14 @@ function load(tr,auto,resumePos=0){
     const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
     load(resolvedTrack,auto,resumePos);
    }else{
+    /* setTrack already flipped the UI to "playing"; leaving it there showed a
+       frozen progress bar over silence. */
+    S.playing=false;sync();
     toast(LANG==="ru"?"Не удалось найти аудиопоток для Spotify трека":"Could not find playable audio stream for Spotify track");
    }
   }).catch(()=>{
+   if(!sameTrack(tr,S.current))return;
+   S.playing=false;sync();
    toast(LANG==="ru"?"Ошибка разрешения Spotify трека":"Error resolving Spotify track");
   });
   return;
@@ -728,6 +741,7 @@ function load(tr,auto,resumePos=0){
    for(const q of queries){
     try{
      const hits=await searchRemote(q);
+     if(!sameTrack(tr,S.current))return;
      const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym");
      if(match){
       tr._resolved=true;
@@ -739,6 +753,7 @@ function load(tr,auto,resumePos=0){
      }
     }catch(_){}
    }
+   if(!sameTrack(tr,S.current))return;
    tr._resolved=true;
    load(tr,auto,resumePos);
   })();
@@ -750,7 +765,13 @@ function load(tr,auto,resumePos=0){
  if(tr?.mode==="local"&&tr?.s!=="mock"){
   const url=streamUrl(tr)||tr.url||"";
   if(!url){/* the proxy port is unknown yet; without it src is empty and <audio> is mute */
-   ensureStreamPort().then(p=>{if(p)load(tr,auto,resumePos)});return}
+   ensureStreamPort().then(p=>{
+    if(!sameTrack(tr,S.current))return;
+    if(p)load(tr,auto,resumePos);
+    else{/* the port never arrived: a fake "playing" state over silence is
+            worse than admitting the failure */
+     S.playing=false;sync();toast(t("load.err"))}});
+   return}
 
   const au=ensureAudioEl();
   const gen=++A.gen;
@@ -1121,6 +1142,12 @@ function drawVis(){
    machine, including the 120 Hz ones, and that cap was the 30 fps the user
    saw. An unfocused window still gets throttled, just not a focused one. */
 let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=0;
+/* Advances the clock for non-local playback: rAF drives it while the window
+   is visible, the orbit interval takes over while it is hidden. */
+function advanceClock(dt){
+ S.pos+=dt;S.listen+=dt;noteListening(dt);
+ if(S.pos>=S.dur){S.repeat?S.pos=0:next()}
+ paint()}
 function frame(now){
  if(!renderOn||document.hidden){raf=0;return}
  const effectiveBudget=S.lite?Math.max(33,budget):budget;
@@ -1131,7 +1158,7 @@ function frame(now){
  if(fp.dataset.open==="true")drawVis();
  /* Non-local playback has no media element to read a clock from, so its
     position and listening time advance here instead. */
- if(S.playing&&S.current?.mode!=="local"){S.pos+=dt;S.listen+=dt;noteListening(dt);if(S.pos>=S.dur){S.repeat?S.pos=0:next()}paint()}
+ if(S.playing&&S.current?.mode!=="local")advanceClock(dt)
  const curPos=(A.audio&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
  if(S.playing)syncKaraokeFrame(curPos);
 
@@ -1174,6 +1201,10 @@ let orbitLast=performance.now();
 setInterval(()=>{
  const now=performance.now(),dt=Math.min(.25,(now-orbitLast)/1000);orbitLast=now;
  if(S.sp.on&&S.playing)orbit(dt);
+ /* A hidden window gets no rAF, so for non-local tracks the position clock,
+    listening time and auto-advance froze until the window came back. This
+    timer is not throttled, so it drives them instead. */
+ if(document.hidden&&S.playing&&S.current?.mode!=="local")advanceClock(dt)
 },1000/30);
 function setRender(on){
  /* on comes from Rust meaning "the window is visible"; document.hidden concurs */
@@ -1409,8 +1440,10 @@ const cssEsc=s=>window.CSS?.escape?CSS.escape(String(s)):String(s).replace(/[^\w
    "image/gif%3bbase64" as the MIME type and refuses to decode the image, which
    is how playlist covers went invisible. */
 const cssUrlRaw=s=>{
-  const u=String(s??"");
-  if(!u||!/^(https?:\/\/|data:image\/|blob:)/i.test(u))return "";
+  let u=String(s??"").trim();
+  if(!u)return "";
+  if(u.startsWith("//"))u="https:"+u;
+  if(!/^(https?:\/\/|data:image\/|blob:)/i.test(u))return "";
   /* Remote artwork is relayed through our own proxy: the cover hosts are
      blocked on many networks even when search works, and a direct cross-origin
      image taints the canvas the adaptive accent samples from. data:/blob: pass
@@ -1430,7 +1463,8 @@ const coverStyle=(url,l1,l2)=>{
  const u=cssUrl(url);
  return u
   ?`style="--l1:${l1||"54%"};--l2:${l2||"22%"};background-image:url('${u}'),linear-gradient(150deg,oklch(var(--l1) 0 0),oklch(var(--l2) 0 0))"`
-  :`style="--l1:${l1||"54%"};--l2:${l2||"22%"}"`};
+  :`style="--l1:${l1||"54%"};--l2:${l2||"22%"};background-image:linear-gradient(150deg,oklch(var(--l1) 0 0),oklch(var(--l2) 0 0))" data-fallback="1"`;
+};
 function findTrack(id,s){
  const key=String(id);
  const hit=TRACKS.find(x=>String(x.id)===key&&(!s||x.s===s))||TRACKS.find(x=>String(x.id)===key);
@@ -1496,7 +1530,7 @@ function renderArtist(name){
  b.innerHTML=`<div class="plhead">
    <button class="btn" id="artback"><span class="material-symbols-rounded" style="font-size:16px">arrow_back</span> ${t("lib.art")}</button>
    <b>${esc(a.name)}</b><span>${a.list.length} ${t("tracks")}</span>
-   <button class="btn ${a.fav?"on":""}" id="artfav"><span class="material-symbols-rounded" style="font-size:16px">${a.fav?"favorite":"favorite"}</span> ${a.fav?t("art.unfollow"):t("art.follow")}</button>
+   <button class="btn ${a.fav?"on":""}" id="artfav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span> ${a.fav?t("art.unfollow"):t("art.follow")}</button>
    <button class="btn" id="artplay"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span> ${t("pl.playall")}</button></div>
    <div class="rows" data-listctx="art:${esc(a.name)}">`+a.list.map(x=>row(x)).join("")+`</div>`;
  document.getElementById("artback").onclick=()=>{artOpen=null;renderLib()};
@@ -1775,7 +1809,7 @@ function renderNP(){
   /* Assigned through the style property, so there is no HTML parsing step —
      but the url() still has to be closed safely, hence cssUrlRaw. */
   const u=empty?"":cssUrlRaw(tr?.art);
-  if(u){b.art.style.backgroundImage=`url('${u}')`;b.art.style.removeProperty("--l1");b.art.style.removeProperty("--l2")}
+  if(u){b.art.style.backgroundImage=`url('${u}'),linear-gradient(150deg,oklch(var(--l1,54%) 0 0),oklch(var(--l2,22%) 0 0))`;b.art.style.setProperty("--l1",tr?.l1||"54%");b.art.style.setProperty("--l2",tr?.l2||"22%")}
   else{b.art.style.removeProperty("background-image");b.art.style.setProperty("--l1",tr?.l1||"54%");b.art.style.setProperty("--l2",tr?.l2||"22%")}
   b.lastArt=artKey}
 
@@ -2324,7 +2358,10 @@ function renderLyrics(){
 function lySeekFrom(el){
  const at=parseFloat(el?.dataset.at||"");
  if(!isFinite(at))return;
- seekSeconds(at);
+ /* Highlight math runs on pos+offset: seeking to the raw timestamp with a
+    calibrated offset lit up a line below the one the user clicked. */
+ const offset=typeof getLyricOffset==="function"?getLyricOffset(S.current):0;
+ seekSeconds(Math.max(0,at-offset));
  lyUserScroll=0;syncLyrics(true)}
 document.addEventListener("click",e=>{
  const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at],.lyr-big p[data-at]");
@@ -2669,6 +2706,10 @@ async function setTrack(tr,play=true,openFull=false,ctx,keepQueue){
  /* The cover drives the accent colour when adaptive mode is on. */
  adaptAccent(tr);
  pushHistory(tr);noteTrackStart(tr);
+ if(PLAYCTX.key==="wave"&&tr){
+  if(typeof WAVE_SESSION_PLAYED!=="undefined")WAVE_SESSION_PLAYED.add(String(tr.s)+":"+String(tr.id));
+  if(queue.length<5&&typeof waveExtend==="function")waveExtend().catch(()=>{});
+ }
  document.querySelectorAll(".row").forEach(r=>r.dataset.playing=
   (String(r.dataset.track)===String(tr.id)&&r.dataset.svc===tr.s));
  if(openFull)openFP();else if(fp.dataset.open==="true")renderFP()}
@@ -2797,13 +2838,19 @@ function queueRemove(id,s){
  queue=queue.filter(x=>!(String(x.id)===String(id)&&x.s===s));
  if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody()}
 
-function next(){
- if(S.repeat&&A.audio&&S.current?.mode==="local"){A.audio.currentTime=0;A.audio.play().catch(console.warn);return}
+function next(userInitiated){
+ /* Repeat-one restart lives here for a track's natural end, but a manual skip
+    (button, media keys, Shift+Arrow) must always advance — an unconditional
+    restart made "Next" replay the same song whenever repeat was on. */
+ if(!userInitiated&&S.repeat&&A.audio&&S.current?.mode==="local"){A.audio.currentTime=0;A.audio.play().catch(console.warn);return}
  /* Take the head of the visible queue — that is the promise the panel made. */
  let nx=null;
  while(queue.length&&!nx){
   const c=queue.shift();
   if(c&&!isDisliked(c)&&c.mode!=="empty"&&svc(c.s).on)nx=c}
+ if(PLAYCTX.key==="wave"&&queue.length<5){
+  if(typeof waveExtend==="function")waveExtend().catch(()=>{});
+ }
  if(!nx){
   const l=contextPool().filter(x=>!sameTrack(x,S.current));
   /* The queue is drained; what follows decides what "the end" means. */
@@ -2837,32 +2884,105 @@ function next(){
 function stopAtEnd(){
  S.playing=false;S.pos=S.dur;sync();renderNP();paint()}
 
-/* Pulls more tracks for the wave from artists already in it, skipping
-   everything ever played. Returns false when there is nothing new left. */
-async function waveExtend(){
- const played=new Set(HISTORY.map(h=>h.tr&&h.tr.s+":"+h.tr.id));
- const artists=[...new Set(WAVE.map(x=>x.a).filter(Boolean))];
- if(!artists.length)return false;
- /* Random artist each attempt: the search returns the same top-N per query,
-    so walking them in order exhausts the first artist before touching the rest. */
- const order=artists.slice().sort(()=>Math.random()-.5);
- for(const a of order){
-  const r=await searchRemote(a).catch(()=>[]);
-  const fresh=r.filter(x=>x.mode!=="empty"&&!isDisliked(x)&&svc(x.s).on
-   &&!played.has(x.s+":"+x.id)&&!WAVE.some(w=>sameTrack(w,x)));
-  if(!fresh.length)continue;
-  /* Prune what has been played so the rebuilt queue is only unheard music —
-     otherwise the old tracks keep coming back around forever. */
-  WAVE=WAVE.filter(w=>!played.has(w.s+":"+w.id));
-  fresh.slice(0,4).forEach(x=>{
-   WAVE.push(x);
-   /* Straight into the queue as well: next() re-enters itself right after a
-      successful extension and only the queue can hand it something to play. */
-   queue.push(x);
-   if(!TRACKS.some(t=>sameTrack(t,x)))TRACKS.push(x)});
-  if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
-  return true}
- return false}
+/* ── Wave / Radio Session & Recommendations ─────────────────────── */
+let WAVE=[];
+const WAVE_SESSION_PLAYED=new Set();
+
+async function fetchRadioTracks(seed){
+ if(!seed)return [];
+ let list=[];
+ if(TAURI&&seed.s&&seed.id&&seed.s!=="local"){
+  try{
+   const r=await inv("api_radio",{service:seed.s,id:String(seed.id)});
+   if(Array.isArray(r)&&r.length)list=r;
+  }catch(e){console.warn("api_radio fallback:",e)}
+ }
+ if(!list.length&&seed.a){
+  const queries=[`${seed.a} radio`,`${seed.a} mix`,seed.a];
+  for(const q of queries){
+   const r=await searchRemote(q).catch(()=>[]);
+   if(r&&r.length){list=r;break}
+  }
+ }
+ return (list||[]).filter(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on);
+}
+
+/* Pulls more tracks for the wave using smart recommendations,
+   skipping everything played in this session and history. */
+let waveExtendPromise=null;
+function waveExtend(){
+ if(waveExtendPromise)return waveExtendPromise;
+ waveExtendPromise=(async()=>{
+  try{
+   const played=new Set([
+    ...HISTORY.map(h=>h.tr&&String(h.tr.s)+":"+String(h.tr.id)),
+    ...[...WAVE_SESSION_PLAYED].map(k=>String(k))
+   ]);
+   const seeds=[];
+   if(S.current&&S.current.mode!=="empty")seeds.push(S.current);
+   WAVE.slice(-6).reverse().forEach(x=>{if(!seeds.some(s=>sameTrack(s,x)))seeds.push(x)});
+   favTracks().slice(0,3).forEach(x=>{if(!seeds.some(s=>sameTrack(s,x)))seeds.push(x)});
+
+   const isFav = tr => favTracks().some(f=>sameTrack(f,tr));
+   const fresh=[];
+   for(const seed of seeds){
+    if(fresh.length>=8)break;
+    const rad=await fetchRadioTracks(seed);
+    for(const x of rad){
+     const key=String(x.s)+":"+String(x.id);
+     if(x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on&&!isFav(x)&&!played.has(key)&&!WAVE.some(w=>sameTrack(w,x))&&!queue.some(q=>sameTrack(q,x))&&!fresh.some(f=>sameTrack(f,x))){
+      fresh.push(x);
+      if(fresh.length>=8)break;
+     }
+    }
+   }
+
+   // Fallback to related artist queries if radio was sparse
+   if(fresh.length<4){
+    const artists=[...new Set(WAVE.map(x=>x.a).concat(FAV_ARTISTS).filter(Boolean))].sort(()=>Math.random()-.5);
+    for(const a of artists){
+     if(fresh.length>=8)break;
+     const r=await searchRemote(`${a} radio`).catch(()=>[]);
+     const list=r.length?r:(await searchRemote(`${a} mix`).catch(()=>[]));
+     for(const x of list){
+      const key=String(x.s)+":"+String(x.id);
+      if(x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on&&!isFav(x)&&!played.has(key)&&!WAVE.some(w=>sameTrack(w,x))&&!queue.some(q=>sameTrack(q,x))&&!fresh.some(f=>sameTrack(f,x))){
+       fresh.push(x);
+       if(fresh.length>=8)break;
+      }
+     }
+    }
+   }
+
+   // Genre exploration if still sparse to prevent stopping or looping
+   if(fresh.length<3){
+    const genres=["synthwave chill","indie pop","future garage","ambient electronic","melodic house"];
+    const g=genres[Math.floor(Math.random()*genres.length)];
+    const hits=await searchRemote(g).catch(()=>[]);
+    for(const x of hits){
+     const key=String(x.s)+":"+String(x.id);
+     if(x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on&&!isFav(x)&&!played.has(key)&&!WAVE.some(w=>sameTrack(w,x))&&!queue.some(q=>sameTrack(q,x))&&!fresh.some(f=>sameTrack(f,x))){
+      fresh.push(x);
+      if(fresh.length>=6)break;
+     }
+    }
+   }
+
+   if(!fresh.length)return false;
+   // Deduplicate and append fresh discovery tracks
+   fresh.forEach(x=>{
+    WAVE.push(x);
+    queue.push(x);
+    if(!TRACKS.some(t=>sameTrack(t,x)))TRACKS.push(x);
+   });
+   if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
+   return true;
+  }finally{
+   waveExtendPromise=null;
+  }
+ })();
+ return waveExtendPromise;
+}
 
 function prev(){
  if(S.pos>4){S.pos=0;if(A.audio&&S.current?.mode==="local")A.audio.currentTime=0;return paint()}
@@ -2894,7 +3014,7 @@ function initMediaSession(){
   window.__TAURI__.event.listen("meowave://media-action",(e)=>{
    if(e.payload==="prev")prev();
    else if(e.payload==="play_pause")toggle();
-   else if(e.payload==="next")next();
+   else if(e.payload==="next")next(true);
   });
  }
  if(!('mediaSession' in navigator))return;
@@ -2902,7 +3022,7 @@ function initMediaSession(){
   navigator.mediaSession.setActionHandler('play',()=>{if(!S.playing)toggle()});
   navigator.mediaSession.setActionHandler('pause',()=>{if(S.playing)toggle()});
   navigator.mediaSession.setActionHandler('previoustrack',()=>prev());
-  navigator.mediaSession.setActionHandler('nexttrack',()=>next());
+  navigator.mediaSession.setActionHandler('nexttrack',()=>next(true));
   navigator.mediaSession.setActionHandler('seekto',details=>{if(details.seekTime!=null)seekSeconds(details.seekTime)});
   navigator.mediaSession.setActionHandler('seekforward',details=>{seekSeconds(Math.min(S.dur||0,S.pos+(details.seekOffset||10)))});
   navigator.mediaSession.setActionHandler('seekbackward',details=>{seekSeconds(Math.max(0,S.pos-(details.seekOffset||10)))});
@@ -3044,7 +3164,7 @@ document.getElementById("srv").addEventListener("click",e=>{
   queue=queue.filter(x=>x.s!==sid);
   if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
   if(S.current?.s===sid){
-   if(queue.length)next();
+   if(queue.length)next(true);
    else stopAtEnd();
   }
  }
@@ -3196,54 +3316,116 @@ document.body.addEventListener("click",e=>{
   const f=document.getElementById("px-url");if(f)f.value=u;
   pxSave({url:u,enabled:true});return}
  const sw=e.target.closest("[data-sw]");if(sw){if(e.target.closest("input"))return;setAccent(sw.dataset.sw);return}});
-/* The wave is seeded from favorite TRACKS (it used to key off artists).
-   It needs at least WAVE_MIN of them, or there is nothing to build on. */
-const WAVE_MIN=5;
+/* The wave is seeded from favorite tracks, history, or favorite artists,
+   then extended indefinitely using radio recommendation streams. */
+const WAVE_MIN=1;
 const favTracks=()=>TRACKS.filter(x=>x.fav&&x.mode!=="empty");
 function renderWaveHint(){
  const el=document.getElementById("wavehint");if(!el)return;
- const n=favTracks().filter(x=>svc(x.s).on).length,ok=n>=WAVE_MIN;
- el.dataset.ready=ok;
+ const favCount=favTracks().filter(x=>svc(x.s)?.on).length;
+ const totalSeeds=favCount + (FAV_ARTISTS.length?1:0) + (HISTORY.length?1:0);
+ const ok=totalSeeds>=WAVE_MIN;
+ el.dataset.ready=ok?"true":"false";
  el.innerHTML=ok
-  ?t("wave.ready").replace("{n}",`<b>${n}</b>`)
-  :t("wave.need").replace("{n}",`<b>${n}/${WAVE_MIN}</b>`)}
+  ?t("wave.ready").replace("{n}",`<b>${Math.max(favCount,1)}</b>`)
+  :t("wave.need").replace("{n}",`<b>${favCount}/${WAVE_MIN}</b>`)}
 
-/* Seed with the favorites, pull more through a search on their artists,
-   shuffle the union and use it as the queue. */
+/* Starts the wave: picks seeds, retrieves radio recommendations, mixes 20% anchors
+   with 80% discovery, and launches uninterrupted playback. */
 async function startWave(){
- const seeds=favTracks().filter(x=>svc(x.s).on);
- if(seeds.length<WAVE_MIN){
+ const favs=favTracks().filter(x=>svc(x.s)?.on);
+ const hist=HISTORY.map(h=>h.tr).filter(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on);
+ const library=TRACKS.filter(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on);
+
+ let seedCandidates=[...favs];
+ if(!seedCandidates.length)seedCandidates=[...hist];
+ if(!seedCandidates.length)seedCandidates=[...library];
+
+ if(!seedCandidates.length&&!FAV_ARTISTS.length){
   go("search");
-  toast(t("wave.need.toast").replace("{n}",WAVE_MIN-seeds.length));
+  toast(t("wave.need.toast").replace("{n}","1"));
   document.getElementById("q")?.focus();
-  return}
+  return;
+ }
+
  await ensureStreamPort();
  const btn=document.getElementById("start");
  btn?.setAttribute("aria-busy","true");
  try{
-  const artists=[...new Set(seeds.map(x=>x.a).filter(Boolean))].slice(0,4);
-  const found=[];
-  for(const a of artists){
-   const r=await searchRemote(a).catch(()=>[]);
-   r.slice(0,6).forEach(x=>{
-    /* A search for the artist can still surface the disliked track itself —
-       that is exactly the track the user said never to offer again. */
-    if(isDisliked(x)||!svc(x.s).on)return;
-    if(!TRACKS.some(y=>String(y.id)===String(x.id)&&y.s===x.s)){TRACKS.push(x);found.push(x)}
-    else found.push(TRACKS.find(y=>String(y.id)===String(x.id)&&y.s===x.s))})}
-  const pool=[...seeds,...found].filter(Boolean).filter(x=>svc(x.s).on);
-  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
-  if(!pool.length){toast(t("wave.empty"));return}
-  WAVE=pool;
-  /* The wave is its own context: the shuffled union is the schedule, and
-     buildQueue reads it back from WAVE via listFor("wave"). */
-  await setTrack(pool[0],true,true,"wave");
+  WAVE_SESSION_PLAYED.clear();
+  const shuffledSeeds=seedCandidates.slice().sort(()=>Math.random()-.5);
+  const pickedSeeds=shuffledSeeds.slice(0,3);
+
+  const isFavorite = tr => favs.some(f=>sameTrack(f,tr));
+  const discovered=[];
+  for(const s of pickedSeeds){
+   const rad=await fetchRadioTracks(s);
+   rad.forEach(x=>{
+    if(!isDisliked(x)&&svc(x.s)?.on&&!isFavorite(x)&&!discovered.some(y=>sameTrack(y,x))){
+     discovered.push(x);
+     if(!TRACKS.some(y=>sameTrack(y,x)))TRACKS.push(x);
+    }
+   });
+   if(discovered.length>=12)break;
+  }
+
+  // Broaden discovery via favorite artists and seed artists
+  const allArtists=[...new Set([...pickedSeeds.map(s=>s.a),...FAV_ARTISTS,...seedCandidates.map(s=>s.a)].filter(Boolean))].sort(()=>Math.random()-.5);
+  for(const art of allArtists){
+   if(discovered.length>=14)break;
+   const r=await searchRemote(`${art} radio`).catch(()=>[]);
+   const hits=r.length?r:(await searchRemote(`${art} mix`).catch(()=>[]));
+   hits.forEach(x=>{
+    if(!isDisliked(x)&&svc(x.s)?.on&&!isFavorite(x)&&!discovered.some(y=>sameTrack(y,x))){
+     discovered.push(x);
+     if(!TRACKS.some(y=>sameTrack(y,x)))TRACKS.push(x);
+    }
+   });
+  }
+
+  // Broaden with genres / mood queries if still needed
+  if(discovered.length<8){
+   const queries=["chill indie","electronic synthwave","cyberpunk phonk","lo-fi beats","alternative rock"];
+   const q=queries[Math.floor(Math.random()*queries.length)];
+   const fallbackHits=await searchRemote(q).catch(()=>[]);
+   fallbackHits.forEach(x=>{
+    if(!isDisliked(x)&&svc(x.s)?.on&&!isFavorite(x)&&!discovered.some(y=>sameTrack(y,x))){
+     discovered.push(x);
+     if(!TRACKS.some(y=>sameTrack(y,x)))TRACKS.push(x);
+    }
+   });
+  }
+
+  // 1 anchor (20%) to 4 discovery (80%)
+  const anchors=pickedSeeds.length?pickedSeeds:seedCandidates.slice(0,2);
+  const discPool=discovered.slice().sort(()=>Math.random()-.5);
+  const pool=[];
+  let aIdx=0,dIdx=0;
+  while(dIdx<discPool.length||aIdx<anchors.length){
+   if(aIdx<anchors.length&&(pool.length===0||pool.length%5===0)){
+    pool.push(anchors[aIdx++]);
+   }else if(dIdx<discPool.length){
+    pool.push(discPool[dIdx++]);
+   }else if(aIdx<anchors.length){
+    pool.push(anchors[aIdx++]);
+   }
+  }
+
+  const finalPool=pool.filter(x=>x&&svc(x.s)?.on&&!isDisliked(x));
+  if(!finalPool.length){toast(t("wave.empty"));return}
+  WAVE=finalPool;
+  await setTrack(finalPool[0],true,true,"wave");
   if(fp.dataset.open==="true")renderFPBody();
- }finally{btn?.removeAttribute("aria-busy")}}
-let WAVE=[];
+ }catch(err){
+  console.error("startWave error:",err);
+  toast(err.message||String(err));
+ }finally{
+  btn?.removeAttribute("aria-busy");
+ }
+}
 document.getElementById("start").onclick=startWave;
 document.getElementById("play").onclick=toggle;
-document.getElementById("next").onclick=next;
+document.getElementById("next").onclick=()=>next(true);
 document.getElementById("prev").onclick=prev;
 document.getElementById("shuffle").onclick=()=>setShuffle(!S.shuffle);
 document.getElementById("repeat").onclick=()=>setRepeat(!S.repeat);
@@ -3293,7 +3475,9 @@ function seekTo(trackEl, x, commit){
  const pos = ratio * (effectiveDur || 0);
  S.pos = pos;
  paint();
- if(commit && A.audio){
+ /* Without a known duration a committed drag always lands on 0:00; only the
+    visual preview is meaningful while metadata is still loading. */
+ if(commit && effectiveDur > 0 && A.audio){
   try{
    A.pendingSeek = pos;
    A.seekingUntil = Date.now() + 800;
@@ -3697,7 +3881,7 @@ fp.addEventListener("click",e=>{
   renderFPBody(true);return}
  const a=e.target.closest("[data-act]");
  if(a){const k=a.dataset.act;
-  if(k==="play")toggle();if(k==="next")next();if(k==="prev")prev();
+  if(k==="play")toggle();if(k==="next")next(true);if(k==="prev")prev();
   if(k==="shuffle")setShuffle(!S.shuffle);
   if(k==="repeat")setRepeat(!S.repeat)}
  });
@@ -3778,6 +3962,7 @@ function save(){try{localStorage.setItem("meowave",JSON.stringify({
  svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
   ?Object.fromEntries(SERVICES.filter(s=>!s.local).map(s=>[s.id,s.on])):null,
  discord:{on:S.discord.on,tmpl:S.discord.tmpl},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,profileTrack:S.profileTrack||null,
+ avatar:S.avatar||null,banner:S.banner||null,username:S.username||null,
  lite:S.lite,litePrev,quality:S.quality,vol:S.vol,eq:S.eq,preset:S.preset,custom:S.custom,
   sp:{on:S.sp.on,speed:S.sp.speed,rad:S.sp.rad,elev:S.sp.elev},ob:obDone,listen:Math.round(S.listen),
  /* Store whole tracks: an id alone is useless because TRACKS starts empty on
@@ -3794,7 +3979,7 @@ function save(){try{localStorage.setItem("meowave",JSON.stringify({
  pls:PLAYLISTS.map(plSerialize),
  favArtists:FAV_ARTISTS,
  /* Local tracks with their paths, so the library survives a restart */
- loct:TRACKS.filter(x=>x.s==="local").map(({id,s,t,a,al,d,art,mode,path,fav})=>({id,s,t,a,al,d,art,mode,path,fav:!!fav}))}))}catch(e){}}
+ loct:TRACKS.filter(x=>x.s==="local").map(({id,s,t,a,al,d,art,mode,path,fav})=>({id,s,t,a,al,d,art,mode,path,fav:!!fav}))}))}catch(e){console.warn("save:",e)}}
 function restore(){try{
  const d=JSON.parse(localStorage.getItem("meowave")||"null");if(!d)return;
  if(d.lang)LANG=d.lang;
@@ -3853,6 +4038,9 @@ function restore(){try{
   if(d.blur===0||d.blur===8)S.blur=14;
   if(d.dens===260||d.dens===500||d.dens===900||d.dens===1200)S.dens=2200}
  if(d.listen)S.listen=d.listen;
+ if(d.avatar)S.avatar=d.avatar;
+ if(d.banner)S.banner=d.banner;
+ if(d.username)S.username=d.username;
  /* Service switches must land before initServices() runs (it reads SVC_ON); */
  if(d.svcOn&&typeof d.svcOn==="object")S.svcOn=d.svcOn;
  if(d.discord&&typeof d.discord==="object"){
@@ -3895,10 +4083,12 @@ addEventListener("keydown",e=>{
   }
   if(e.key.toLowerCase()==="l"&&fp.dataset.open==="true"){S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()}
   if(e.key.toLowerCase()==="e")eqbtn.click();
-  if(e.code==="BracketLeft"||e.key==="["||e.key==="х"||(e.altKey&&e.key==="ArrowLeft")){e.preventDefault();adjustLyricOffset(-0.5)}
-  if(e.code==="BracketRight"||e.key==="]"||e.key==="ъ"||(e.altKey&&e.key==="ArrowRight")){e.preventDefault();adjustLyricOffset(0.5)}
+  /* Shift+[ produces both "BracketLeft" and "{": chained, the reset used to
+     undo the adjust from the same keystroke. Reset goes first for that reason. */
   if(e.code==="BraceLeft"||e.key==="{"||(e.altKey&&e.key==="0")){e.preventDefault();resetLyricOffset()}
-  if(e.shiftKey&&e.key==="ArrowRight")next();
+  else if(e.code==="BracketLeft"||e.key==="["||e.key==="х"||(e.altKey&&e.key==="ArrowLeft")){e.preventDefault();adjustLyricOffset(-0.5)}
+  else if(e.code==="BracketRight"||e.key==="]"||e.key==="ъ"||(e.altKey&&e.key==="ArrowRight")){e.preventDefault();adjustLyricOffset(0.5)}
+  if(e.shiftKey&&e.key==="ArrowRight")next(true);
   if(e.shiftKey&&e.key==="ArrowLeft")prev()});
 
 /* onboarding */
@@ -4080,13 +4270,13 @@ function streamUrl(tr){
    two apart, and it is only ever spent after something has already failed. */
 async function probeStream(url){
  try{
-  const r=await fetch(url,{headers:{Range:"bytes=0-64"}});
+  const r=await fetch(url,{headers:{Range:"bytes=0-64"},signal:AbortSignal.timeout(3000)});
   if(r.status>=400){
    const txt=(await r.text().catch(()=>"")).trim().replace(/\s+/g," ");
    return {ok:false,why:txt.slice(0,200)||`HTTP ${r.status}`};
   }
   return {ok:true,ct:(r.headers.get("content-type")||"").toLowerCase()};
- }catch(e){return {ok:false,why:String(e.message||e)}}
+ }catch(e){return {ok:false,why:e?.name==="TimeoutError"?"timeout":String(e.message||e)}}
 }
 let fallbackResolving = null;
 async function fallbackResolveTrack(tr, auto, resumePos=0){
@@ -4100,6 +4290,8 @@ async function fallbackResolveTrack(tr, auto, resumePos=0){
  try {
   for(const query of queries){
    const hits = await searchRemote(query);
+   /* Same stale-resolution guard as load(): the user may have moved on. */
+   if(!sameTrack(tr,S.current)){fallbackResolving=null;return false}
    if(!hits || !hits.length) continue;
    const candidate = hits.find(h => (h.s === "sc" || h.s === "ym") && (h.s !== tr.s || String(h.id) !== String(tr.id)))
     || hits.find(h => h.s !== tr.s)
@@ -4129,6 +4321,9 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  const key=trackKey(tr);
  if(codecRetry&&codecRetry.key!==key)codecRetry=null;
  const why=await probeStream(url);
+ /* The probe can outlive the track: the user may have picked another one
+    during its 3 s window, and everything below would act on the stale pick. */
+ if(!sameTrack(tr,S.current))return;
  /* Bytes arrived but this webview will not decode that container, and YouTube
     Music ships the other one too: swap and try exactly once before believing
     the track itself is broken. */
@@ -4263,11 +4458,11 @@ async function initSupabase(){
    if(!cfg?.url||!cfg?.anon_key)throw new Error("no supabase config");
    /* createClient comes from the locally bundled UMD build (window.supabase).
       The old dynamic import from jsdelivr died on networks where the CDN is
-      blocked — which took account sign-in down with it. The CDN import stays
-      only as a fallback for stale checkouts that predate the vendored file. */
-   let createClient=window.supabase?.createClient;
-   if(!createClient){
-    ({createClient}=await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"))}
+      blocked — which took account sign-in down with it — and it kept
+      `cdn.jsdelivr.net` in the CSP script-src, where any npm path is
+      scriptable. A missing vendor file is a broken build: fail loudly. */
+   const createClient=window.supabase?.createClient;
+   if(!createClient)throw new Error("supabase vendor script missing");
    /* Route every Supabase call through our own relay: the webview's network
       stack dies on machines with an IPv6 address but no v6 route ("Load
       failed" on sign-in), while the Rust side falls back to v4 properly. */
@@ -4545,7 +4740,7 @@ function cropZoom(next){
 /* Renders the visible region at the target resolution. */
 async function cropResult(){
  const f=cropFrameSize();
- const out=CROP.shape==="banner"?{w:1200,h:400}:{w:512,h:512};
+ const out=CROP.shape==="banner"?{w:1200,h:400}:{w:256,h:256};
  const c=document.createElement("canvas");
  c.width=out.w;c.height=out.h;
  const x=c.getContext("2d");
@@ -4676,33 +4871,45 @@ async function prepImage(file,kind){
  return {blob,ext:webp?"webp":"jpg",type}}
 
 async function uploadImage(file,kind){
- if(!file||!sb||!sbUser)return;
- const bucket=kind==="avatar"?"avatars":"banners";
- /* Let the user frame the picture instead of silently centre-cropping it.
-    Cancelling the editor cancels the upload — nothing is written until they
-    confirm what they can see. */
+ if(!file)return;
  const cropped=await openCropper(file,kind==="avatar"?"square":"banner");
  if(!cropped)return;
+ const {blob,ext,type,dataUrl}=cropped;
+ if(blob.size>IMG_MAX[kind]){toast(t(kind==="avatar"?"img.big":"img.big.gif"));return}
+ const col=kind==="avatar"?"avatar_url":"banner_url";
+ const sProp=kind==="avatar"?"avatar":"banner";
+
+ // 1. Always save locally immediately so the user's avatar is instantly updated and persisted
+ S[sProp]=dataUrl;
+ if(sbProfile)sbProfile={...sbProfile,[col]:dataUrl};
+ else sbProfile={[col]:dataUrl,username:S.username||t("pr.auth.guest")};
+ save();
+ renderProfile();
+ fillProfileSettings();
+ toast(t("img.ok"));
+
+ if(!sb||!sbUser)return;
+
+ // 2. Graceful background sync with Supabase Storage and database
  try{
-  toast(t("img.up"));
-  const {blob,ext,type}=cropped;
-  if(blob.size>IMG_MAX[kind])throw new Error(t(kind==="avatar"?"img.big":"img.big.gif"));
-  /* The extension is part of the name, so switching from gif to webp would
-     otherwise leave the old animated file being served. Remove the variants
-     we might have written before. */
+  const bucket=kind==="avatar"?"avatars":"banners";
   const base=`${sbUser.id}/${kind}`;
   const path=`${base}.${ext}`;
   const stale=["gif","webp","jpg"].filter(e=>e!==ext).map(e=>`${base}.${e}`);
   const {error}=await sb.storage.from(bucket).upload(path,blob,{upsert:true,contentType:type});
-  if(error)throw error;
-  sb.storage.from(bucket).remove(stale).catch(()=>{});
-  const url=sb.storage.from(bucket).getPublicUrl(path).data.publicUrl+"?v="+Date.now();
-  const col=kind==="avatar"?"avatar_url":"banner_url";
-  const {error:e2}=await sb.from("profiles").upsert({id:sbUser.id,[col]:url});
-  if(e2)throw e2;
-  sbProfile={...sbProfile,[col]:url};renderProfile();
-  toast(t("img.ok"));
- }catch(e){toast(e.message||String(e))}}
+  if(!error){
+   sb.storage.from(bucket).remove(stale).catch(()=>{});
+   const pubUrl=sb.storage.from(bucket).getPublicUrl(path).data.publicUrl+"?v="+Date.now();
+   S[sProp]=pubUrl;
+   sbProfile={...sbProfile,[col]:pubUrl};
+   save();
+   renderProfile();
+   fillProfileSettings();
+   await sb.from("profiles").upsert({id:sbUser.id,[col]:pubUrl}).catch(console.warn);
+  }
+ }catch(e){
+  console.warn("Storage upload failed (local image is preserved):",e);
+ }}
 const uploadAvatar=f=>uploadImage(f,"avatar");
 const uploadBanner=f=>uploadImage(f,"banner");
 /* Favorites sync.
@@ -4713,7 +4920,7 @@ const uploadBanner=f=>uploadImage(f,"banner");
    machine expects to end up with both sets, and a "server wins" rule would
    silently delete everything they hearted while signed out. Deletions are
    therefore explicit — they travel as removals, not as an absence. */
-const FAVQ={adds:new Map(),removes:new Map(),timer:0};
+const FAVQ={adds:new Map(),removes:new Map(),timer:0,retries:0};
 const favKey=tr=>tr.s+"\u0000"+tr.id;
 
 function favRow(tr){
@@ -4741,11 +4948,17 @@ async function flushFavorites(){
  try{
   const {error}=await sb.rpc("sync_favorites",{adds,removes});
   if(error)throw error;
+  FAVQ.retries=0;
  }catch(e){
   console.warn("sync_favorites:",e.message||e);
-  /* Put it back so nothing is lost when the network returns. */
+  /* Put it back so nothing is lost when the network returns, and come back to
+     it with a growing delay — otherwise the batch sat until the next manual
+     heart click or app close. */
   adds.forEach(r=>FAVQ.adds.set(r.source+"\u0000"+r.source_track_id,r));
-  removes.forEach(r=>FAVQ.removes.set(r[0]+"\u0000"+r[1],r))}}
+  removes.forEach(r=>FAVQ.removes.set(r[0]+"\u0000"+r[1],r));
+  FAVQ.retries+=1;
+  clearTimeout(FAVQ.timer);
+  FAVQ.timer=setTimeout(()=>flushFavorites(),Math.min(30000,1000*2**FAVQ.retries))}}
 
 /* Pull the account's favorites and merge them into the local set. */
 async function pullFavorites(){
@@ -4927,7 +5140,7 @@ function toggleDislike(tr){
  pushPrefs();
  toast(t(was?"dis.off":"dis.on"));
  /* Skip forward when the thing being hidden is the thing playing. */
- if(!was&&sameTrack(tr,S.current))next();
+ if(!was&&sameTrack(tr,S.current))next(true);
  else{renderNP();renderWaveHint();if(S.view==="library")renderLib()}
  if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
  renderDislikes();
@@ -5729,6 +5942,15 @@ async function redeemCode(){
   if(error)throw error;
   const row=Array.isArray(data)?data[0]:data;
   if(!row)throw new Error(t("bd.code.bad"));
+  if(row.error){
+   /* Validation failures come back through the row instead of raising: a
+      raised error aborts the transaction and rolls back the attempt ledger
+      that throttles code brute-forcing. */
+   const m=String(row.error);
+   const key={"invalid code":"bd.code.bad","code expired":"bd.code.exp",
+    "code exhausted":"bd.code.used","too many attempts":"bd.code.throttle"};
+   const hit=Object.keys(key).find(k=>m.includes(k));
+   say(hit?t(key[hit]):m,"err");return}
   await loadOwnedBadges();renderBadges();
   if(row.already_owned)say(t("bd.code.dup"),"ok");
   else{say(t("bd.code.ok"),"ok");announceBadge(row.badge_id)}
@@ -5748,15 +5970,23 @@ function renderProfile(savedVals={}){
  if(!sbUser){
   if(S.guest){
    const favs=TRACKS.filter(x=>x.fav).length;
+   const ava=S.avatar||sbProfile?.avatar_url||"./icons/icon.png";
+   const ban=S.banner||sbProfile?.banner_url||"";
    box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
-     <div class="banner" style="background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))"></div>
+     <label class="banner" title="${t("pr.ban.hint")}" style="${!ban?'background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))':''}">
+      ${ban?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
+      <span class="cam"><span class="material-symbols-rounded" style="font-size:16px">photo_camera</span> <span>${t("pr.ban.cta")}</span></span>
+      <input type="file" id="prof-ban-input" accept="image/*">
+     </label>
      <div style="padding:var(--sp-6)">
      <div class="profhead">
-      <span class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--bg-pane);box-shadow:0 4px 12px rgba(0,0,0,0.3)">
-       <img src="./icons/icon.png" style="width:48px;height:48px;border-radius:12px" alt="">
-      </span>
+      <label class="avatar" title="${t("pr.ava.hint")}">
+       <img src="${esc(ava)}" alt="" id="prof-ava-img">
+       <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
+       <input type="file" id="prof-ava-input" accept="image/*">
+      </label>
       <div>
-       <div class="uname"><b class="unview">${t("pr.auth.guest")}</b> ${userBadgeTag(S.equippedBadge)} <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
+       <div class="uname"><b class="unview">${esc(S.username||sbProfile?.username||t("pr.auth.guest"))}</b> ${userBadgeTag(S.equippedBadge)} <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
        <p class="pbio" style="margin-top:4px;color:var(--mute);font-size:0.85rem">${t("pr.auth.guest.desc")||"Локальный профиль Meowave"}</p>
       </div>
      </div>
@@ -5772,9 +6002,22 @@ function renderProfile(savedVals={}){
      <p class="ph" style="margin:0 0 14px">${t("pr.auth.s")}</p>
      <button class="primary" id="guest-to-auth">${t("pr.signin")} / ${t("pr.signup")}</button>
     </div>`;
+   box.querySelectorAll("label.avatar").forEach(lbl=>{
+    lbl.onclick=e=>{if(e.target.id!=="prof-ava-input"){e.preventDefault();document.getElementById("prof-ava-input")?.click()}};
+   });
+   box.querySelectorAll("label.banner").forEach(lbl=>{
+    lbl.onclick=e=>{if(e.target.id!=="prof-ban-input"){e.preventDefault();document.getElementById("prof-ban-input")?.click()}};
+   });
+   document.getElementById("prof-ava-input")?.addEventListener("change",async e=>{
+    const f=e.target.files?.[0];e.target.value="";
+    if(f){await uploadAvatar(f);fillProfileSettings()}});
+   document.getElementById("prof-ban-input")?.addEventListener("change",async e=>{
+    const f=e.target.files?.[0];e.target.value="";
+    if(f){await uploadBanner(f);fillProfileSettings()}});
    document.getElementById("guest-to-auth")?.addEventListener("click",()=>{
     S.guest=false;save();renderProfile();
    });
+   icons();
    return}
 
   box.innerHTML=`<div class="panel pane quasar-auth-card" style="position:relative;overflow:hidden">
@@ -5882,15 +6125,21 @@ function renderProfile(savedVals={}){
  /* Badges count what the catalog can actually show, not raw rows: a legacy id
     with no tile would otherwise read as "owned but dark". */
  const ownedShown=(BADGES||[]).filter(b=>OWNED.has(b.id)).length;
+ const ava=p.avatar_url||S.avatar||"";
+ const ban=p.banner_url||S.banner||"";
  box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
-   <div class="banner">
-    ${p.banner_url?`<img src="${esc(p.banner_url)}" alt="">`:""}
-   </div>
+   <label class="banner" title="${t("pr.ban.hint")}">
+    ${ban?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
+    <span class="cam"><span class="material-symbols-rounded" style="font-size:16px">photo_camera</span> <span>${t("pr.ban.cta")}</span></span>
+    <input type="file" id="prof-ban-input" accept="image/*">
+   </label>
    <div style="padding:var(--sp-6)">
    <div class="profhead">
-    <span class="avatar">
-     ${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="">`:""}
-    </span>
+    <label class="avatar" title="${t("pr.ava.hint")}">
+     ${ava?`<img src="${esc(ava)}" alt="" id="prof-ava-img">`:`<span class="avatar-ph">${esc(((p.username||sbUser.email||"M")[0]||"M").toUpperCase())}</span>`}
+     <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
+     <input type="file" id="prof-ava-input" accept="image/*">
+    </label>
     <div>
      <div class="uname"><b class="unview">${esc(p.username||t("pr.name.ph"))}</b> ${userBadgeTag(S.equippedBadge||p.equipped_badge)}</div>
      <div class="pinrow" id="pinrow"></div>
@@ -5975,6 +6224,18 @@ function renderProfile(savedVals={}){
   const {error}=await sb.rpc("delete_account");
   if(error){authMsg(error.message,"err");delArmed=false;return}
   await sb.auth.signOut()};
+ box.querySelectorAll("label.avatar").forEach(lbl=>{
+  lbl.onclick=e=>{if(e.target.id!=="prof-ava-input"){e.preventDefault();document.getElementById("prof-ava-input")?.click()}};
+ });
+ box.querySelectorAll("label.banner").forEach(lbl=>{
+  lbl.onclick=e=>{if(e.target.id!=="prof-ban-input"){e.preventDefault();document.getElementById("prof-ban-input")?.click()}};
+ });
+ document.getElementById("prof-ava-input")?.addEventListener("change",async e=>{
+  const f=e.target.files?.[0];e.target.value="";
+  if(f){await uploadAvatar(f);fillProfileSettings()}});
+ document.getElementById("prof-ban-input")?.addEventListener("change",async e=>{
+  const f=e.target.files?.[0];e.target.value="";
+  if(f){await uploadBanner(f);fillProfileSettings()}});
  icons()}
 
 /* ─────────────────────── social ───────────────────────
@@ -6132,12 +6393,15 @@ function socialFail(e){
   ?`${t("soc.needsql")} (${m})`:m}
 const socErrBox=(msg)=>`<div class="panel pane"><p class="ph" style="margin:0;color:oklch(72% .17 25)">${esc(msg)}</p></div>`;
 
-/* Profile bubble: the picture when there is one, the first letter when not, with optional status badge. */
+/* Profile bubble: the picture when there is one, the first letter or person icon when not, with optional status badge. */
 const avat=(p,size=34,status=null)=>{
  const u=p?.avatar_url?cssUrl(p.avatar_url):"";
+ const un=(p?.username||"").trim();
+ const letter=(un&&un!=="…"&&un!=="..."&&!/^\.+$/.test(un))?un[0].toUpperCase():"";
+ const ghostInner=letter?esc(letter):`<span class="material-symbols-rounded" style="font-size:${Math.round(size*0.58)}px">person</span>`;
  const base=u
   ?`<span class="avat" style="width:${size}px;height:${size}px;background-image:url('${u}')"></span>`
-  :`<span class="avat ghost" style="width:${size}px;height:${size}px">${esc((p?.username||"?")[0].toUpperCase())}</span>`;
+  :`<span class="avat ghost" style="width:${size}px;height:${size}px">${ghostInner}</span>`;
  if(!status)return base;
  const dotCls=status==="listening"?"listening":(status==="online"?"online":"offline");
  const dotTitle=status==="listening"?(LANG==="ru"?"Слушает музыку":"Listening to music"):(status==="online"?(LANG==="ru"?"В сети":"Online"):(LANG==="ru"?"Не в сети":"Offline"));
@@ -6147,8 +6411,8 @@ const avat=(p,size=34,status=null)=>{
 /* ── Social Mock Store & Community Directory ─────────────────────────
    Allows guest and offline users to explore profiles, interact with friends,
    and test chats, while Supabase users get full cloud sync. */
-const MOCK_STORAGE_KEY_FRIENDS = "mw.social.mock_friends.v2";
-const MOCK_STORAGE_KEY_CHATS = "mw.social.mock_chats.v2";
+const MOCK_STORAGE_KEY_FRIENDS = "mw.social.mock_friends.v3";
+const MOCK_STORAGE_KEY_CHATS = "mw.social.mock_chats.v3";
 
 const MOCK_COMMUNITY_USERS = [
   {
@@ -6163,7 +6427,7 @@ const MOCK_COMMUNITY_USERS = [
     genres: ["Synthwave", "Chillout", "Lo-Fi"],
     equipped_badge: "cat_dj",
     mutual: 3,
-    isFriend: true
+    isFriend: false
   },
   {
     id: "usr_marcus",
@@ -6177,7 +6441,7 @@ const MOCK_COMMUNITY_USERS = [
     genres: ["Jazz", "Soul", "Funk"],
     equipped_badge: "audiophile",
     mutual: 2,
-    isFriend: true
+    isFriend: false
   },
   {
     id: "usr_elena",
@@ -6191,7 +6455,7 @@ const MOCK_COMMUNITY_USERS = [
     genres: ["Darkwave", "Electro", "Cyberpunk"],
     equipped_badge: "cyber_cat",
     mutual: 5,
-    isFriend: true
+    isFriend: false
   },
   {
     id: "usr_dmitry",
@@ -6205,7 +6469,7 @@ const MOCK_COMMUNITY_USERS = [
     genres: ["Indie Rock", "Post-Punk"],
     equipped_badge: "vinyl_lover",
     mutual: 1,
-    isFriend: true
+    isFriend: false
   },
   {
     id: "usr_yuki",
@@ -6234,15 +6498,108 @@ const MOCK_COMMUNITY_USERS = [
     equipped_badge: "audiophile",
     mutual: 0,
     isFriend: false
+  },
+  {
+    id: "usr_kai",
+    username: "Kai_Ambient",
+    avatar_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80",
+    bio: "Deep ambient, drone & meditative modular synth patches 🌌",
+    status: "listening",
+    listening: { t: "Stone in Focus", a: "Aphex Twin" },
+    listen_seconds: 172000,
+    genres: ["Ambient", "Drone", "IDM"],
+    equipped_badge: "audiophile",
+    mutual: 2,
+    isFriend: false
+  },
+  {
+    id: "usr_sofia",
+    username: "Sofia_Indie",
+    avatar_url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&auto=format&fit=crop&q=80",
+    bio: "Indie pop, bedroom acoustic & warm autumn playlists 🍂",
+    status: "online",
+    listening: null,
+    listen_seconds: 134000,
+    genres: ["Indie Pop", "Acoustic", "Folk"],
+    equipped_badge: "vinyl_lover",
+    mutual: 1,
+    isFriend: false
+  },
+  {
+    id: "usr_artem",
+    username: "Artem_Phonk",
+    avatar_url: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80",
+    bio: "Drift phonk, memphis rap & nighttime bass heavy tracks 🏎️",
+    status: "listening",
+    listening: { t: "Metamorphosis", a: "INTERWORLD" },
+    listen_seconds: 289000,
+    genres: ["Phonk", "Drift", "Bass"],
+    equipped_badge: "cyber_cat",
+    mutual: 3,
+    isFriend: false
+  },
+  {
+    id: "usr_maya",
+    username: "Maya_Piano",
+    avatar_url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop&q=80",
+    bio: "Neoclassical composer, piano keys & cinema soundtracks 🎹",
+    status: "offline",
+    listening: null,
+    listen_seconds: 161000,
+    genres: ["Classical", "Piano", "Cinematic"],
+    equipped_badge: "audiophile",
+    mutual: 0,
+    isFriend: false
+  },
+  {
+    id: "usr_hana",
+    username: "Hana_Retro",
+    avatar_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80",
+    bio: "80s City Pop, Japanese disco & nostalgic summer memories 🌆",
+    status: "listening",
+    listening: { t: "Plastic Love", a: "Mariya Takeuchi" },
+    listen_seconds: 224000,
+    genres: ["City Pop", "Disco", "Retro"],
+    equipped_badge: "vinyl_lover",
+    mutual: 4,
+    isFriend: false
+  },
+  {
+    id: "usr_roman",
+    username: "Roman_Metal",
+    avatar_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=160&auto=format&fit=crop&q=80",
+    banner_url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",
+    bio: "Prog metal, djent riffs, blast beats & guitar solos ⚡",
+    status: "online",
+    listening: null,
+    listen_seconds: 198000,
+    genres: ["Metal", "Prog Rock", "Djent"],
+    equipped_badge: "cat_dj",
+    mutual: 2,
+    isFriend: false
   }
 ];
 
 function getMockFriends(){
   try{
     const raw=localStorage.getItem(MOCK_STORAGE_KEY_FRIENDS);
-    if(raw)return JSON.parse(raw);
+    if(raw){
+      const list=JSON.parse(raw);
+      if(Array.isArray(list)&&list.length>0){
+        // Sanitize corrupted names or legacy auto-friends
+        const isCorrupt=list.some(x=>!x||!x.username||x.username==="…"||x.username==="..."||x.username.trim()==="");
+        if(!isCorrupt)return list;
+      }
+    }
   }catch(e){}
-  return JSON.parse(JSON.stringify(MOCK_COMMUNITY_USERS));
+  const fresh=JSON.parse(JSON.stringify(MOCK_COMMUNITY_USERS));
+  saveMockFriends(fresh);
+  return fresh;
 }
 
 function saveMockFriends(list){
@@ -6299,16 +6656,21 @@ function updatePeopleSummary(friendsCount=0, listeningCount=0){
 const JOIN_RE=/MEOW-[2-9A-HJ-NP-Z]{4}/;
 function chatBodyHtml(m){
  const img=m.image?`<img class="chatimg" src="${esc(m.image)}" alt="" loading="lazy">`:"";
- let body=esc(m.body||"");
- if(m.body){
-  body=body.replace(/MEOW-[2-9A-HJ-NP-Z]{4}/gi,code=>`<button class="btn sm joinchip" data-join="${code}"><span class="material-symbols-rounded" style="font-size:16px">podcasts</span>${code}</button>`);
-  body=body.replace(/(https?:\/\/[^\s<]+)/g,url=>`<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;word-break:break-all">${url}</a>`);
-  body=body.replace(/🎵\s*([^\n—–-]+)\s*[—–-]\s*([^\n]+)/g,(match,art,tit)=>{
-   const cleanArt=art.trim(), cleanTit=tit.trim();
-   const fullQ=`${cleanArt} ${cleanTit}`;
-   return `<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><span class="material-symbols-rounded" style="font-size:14px">play_arrow</span></button><span>${esc(cleanArt)} — <b>${esc(cleanTit)}</b></span></div>`;
-  });
- }
+ if(!m.body)return img;
+ /* Track chips are cut out of the RAW body and put back after escaping: the
+    old order escaped first and then escaped the chip pieces again, so "AT&T"
+    rendered as "AT&amp;T" and the chip searched for the literal "&amp;". */
+ const chips=[];
+ let body=m.body.replace(/🎵\s*([^\n—–-]+)\s*[—–-]\s*([^\n]+)/g,(match,art,tit)=>{
+  const cleanArt=art.trim(), cleanTit=tit.trim();
+  const fullQ=`${cleanArt} ${cleanTit}`;
+  chips.push(`<div class="chat-track-chip" data-chat-play="${esc(fullQ)}" title="${LANG==="ru"?"Включить трек":"Play track"}"><button type="button" aria-label="Play"><span class="material-symbols-rounded" style="font-size:14px">play_arrow</span></button><span>${esc(cleanArt)} — <b>${esc(cleanTit)}</b></span></div>`);
+  return `\u0000CHIP${chips.length-1}\u0000`;
+ });
+ body=esc(body);
+ body=body.replace(/MEOW-[2-9A-HJ-NP-Z]{4}/gi,code=>`<button class="btn sm joinchip" data-join="${code}"><span class="material-symbols-rounded" style="font-size:16px">podcasts</span>${code}</button>`);
+ body=body.replace(/(https?:\/\/[^\s<]+)/g,url=>`<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;word-break:break-all">${url}</a>`);
+ body=body.replace(/\u0000CHIP(\d+)\u0000/g,(_,i)=>chips[+i]||"");
  return img+body;
 }
 
@@ -6377,7 +6739,7 @@ async function renderPeopleProfile(id){
   if(sb&&sbUser){
     try{
       const {data,error}=await sb.from("profiles")
-        .select("id,username,avatar_url,banner_url,bio,privacy,pinned_badges,profile_track")
+        .select("id,username,avatar_url,banner_url,bio,privacy,pinned_badges,prefs")
         .eq("id",id).maybeSingle();
       if(!error&&data)p=data;
     }catch(e){}
@@ -6441,7 +6803,7 @@ async function renderPeopleProfile(id){
     return `<span class="pinb" style="--ring:${c}" title="${esc(badgeName(b))}"><img src="assets/badges/${esc(b.file)}" alt=""></span>`;
   }).join("");
 
-  const profTr=mine?S.profileTrack:(p.profile_track||(p.listening?{t:p.listening.t,a:p.listening.a,art:p.listening.art}:null));
+  const profTr=mine?S.profileTrack:(p.prefs?.profile_track||p.profile_track||(p.listening?{t:p.listening.t,a:p.listening.a,art:p.listening.art}:null));
 
   box.innerHTML=`<div class="panel pane public-profile" style="padding:0;overflow:hidden">
     <div class="banner">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
@@ -6611,12 +6973,18 @@ async function renderPeopleFind(box){
     PEOPLE_QUERY=q;
     let foundList=[];
 
-    if(q&&sb&&sbUser){
+    if(sb&&sbUser){
       try{
-        const {data,error}=await sb.from("profiles").select("id,username,avatar_url,bio,privacy")
-          .ilike("username",`%${q}%`).neq("id",sbUser.id).limit(12);
-        if(!error&&data)foundList=data.map(maskProf);
-      }catch(e){}
+        if(q){
+          const {data,error}=await sb.from("profiles").select("id,username,avatar_url,bio,privacy")
+            .ilike("username",`%${q}%`).neq("id",sbUser.id).limit(16);
+          if(!error&&data)foundList=data.map(maskProf);
+        }else{
+          const {data,error}=await sb.from("profiles").select("id,username,avatar_url,bio,privacy,updated_at")
+            .neq("id",sbUser.id).order("updated_at",{ascending:false}).limit(16);
+          if(!error&&data)foundList=data.map(maskProf);
+        }
+      }catch(e){console.warn("fetch community profiles:",e)}
     }
 
     const mockAll=getMockFriends();
@@ -6628,11 +6996,13 @@ async function renderPeopleFind(box){
              (m.genres&&m.genres.some(g=>g.toLowerCase().includes(lq)));
     });
 
-    // Merge mock with foundList
+    // Merge: if real community profiles found, use them; supplement with mock only if offline or empty
     const combined=[...foundList];
-    matchedMock.forEach(m=>{
-      if(!combined.some(x=>x.id===m.id||x.username===m.username)) combined.push(m);
-    });
+    if(!combined.length||isGuest||!sbUser){
+      matchedMock.forEach(m=>{
+        if(!combined.some(x=>x.id===m.id||x.username===m.username)) combined.push(m);
+      });
+    }
 
     if(!combined.length){
       results.innerHTML=`<div style="text-align:center;padding:36px 16px;color:var(--mute)">
@@ -6643,89 +7013,123 @@ async function renderPeopleFind(box){
       return;
     }
 
-    results.innerHTML=`
-      <div style="font-size:0.82rem;font-weight:600;color:var(--mute);margin:8px 0 10px">
-        ${q?(LANG==="ru"?"Результаты поиска:":"Search results:"):(LANG==="ru"?"Рекомендации сообщества:":"Community Recommendations:")}
-      </div>
-      <div class="people-find-grid">
-        ${combined.map(p=>{
-          const isFr=!!p.isFriend;
-          const banner=p.banner_url||"";
-          const tags=(p.genres||[]).map(g=>`<span class="people-tag">${esc(g)}</span>`).join("");
-          const listeningChip=p.listening?`
-            <div class="friend-listening-chip" style="margin-top:6px">
-              <div class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></div>
-              <span>${esc(p.listening.a)} — <b>${esc(p.listening.t)}</b></span>
-              <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><span class="material-symbols-rounded" style="font-size:14px">play_arrow</span></button>
-            </div>`:"" ;
-          return `
-          <div class="people-find-card">
-            <div class="people-find-banner" style="${banner?`background-image:url('${cssUrl(banner)}')`:""}"></div>
-            <div class="people-find-body">
-              <div class="people-find-top">
-                ${avat(p, 46, p.status||"online")}
-                <button class="btn sm ${isFr?"":"primary"}" data-find-action="${esc(p.id)}" style="font-size:0.75rem">
-                  <span class="material-symbols-rounded" style="font-size:16px" check":"user-plus"}">${isFr?"check":"person_add"}</span> ${isFr?(LANG==="ru"?"В друзьях":"Friends"):(LANG==="ru"?"Добавить":"Add")}
-                </button>
+    const sectionTitle=q
+      ? (LANG==="ru"?"Результаты поиска:":"Search results:")
+      : (isGuest||!sbUser
+          ? (LANG==="ru"?"Рекомендации сообщества (Демо):":"Community Recommendations (Demo):")
+          : (LANG==="ru"?"Участники сообщества:":"Community Members:"));
+    const sectionSubtitle=(isGuest||!sbUser)&&!q
+      ? `<span style="font-size:0.75rem;font-weight:normal;opacity:0.8">${LANG==="ru"?"Демонстрация функций":"Feature preview"}</span>`
+      : "";
+
+    let findLimit = 8;
+    const renderCards = () => {
+      const visible = combined.slice(0, findLimit);
+      const remaining = combined.length - findLimit;
+      const loadMoreHtml = remaining > 0 ? `
+        <div class="people-load-more-wrap">
+          <button class="people-load-more-btn" id="people-load-more">
+            <span class="material-symbols-rounded">expand_more</span>
+            <span>${LANG==="ru" ? `Показать ещё (${remaining})` : `Show more (${remaining})`}</span>
+          </button>
+        </div>` : "";
+
+      results.innerHTML=`
+        <div style="font-size:0.82rem;font-weight:600;color:var(--mute);margin:8px 0 10px;display:flex;align-items:center;justify-content:space-between">
+          <span>${sectionTitle} (${combined.length})</span>
+          ${sectionSubtitle}
+        </div>
+        <div class="people-find-grid">
+          ${visible.map(p=>{
+            const isFr=!!p.isFriend;
+            const banner=p.banner_url||"";
+            const tags=(p.genres||[]).map(g=>`<span class="people-tag">${esc(g)}</span>`).join("");
+            const listeningChip=p.listening?`
+              <div class="friend-listening-chip" style="margin-top:6px">
+                <div class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></div>
+                <span>${esc(p.listening.a)} — <b>${esc(p.listening.t)}</b></span>
+                <button class="friend-listening-play" data-play-track="${esc(p.listening.a)} — ${esc(p.listening.t)}" title="${LANG==='ru'?'Включить':'Play'}"><span class="material-symbols-rounded" style="font-size:14px">play_arrow</span></button>
+              </div>`:"" ;
+            return `
+            <div class="people-find-card">
+              <div class="people-find-banner" style="${banner?`background-image:url('${cssUrl(banner)}')`:""}"></div>
+              <div class="people-find-body">
+                <div class="people-find-top">
+                  ${avat(p, 46, p.status||"online")}
+                  <button class="btn sm ${isFr?"":"primary"}" data-find-action="${esc(p.id)}" style="font-size:0.75rem">
+                    <span class="material-symbols-rounded" style="font-size:16px">${isFr?"check":"person_add"}</span> ${isFr?(LANG==="ru"?"В друзьях":"Friends"):(LANG==="ru"?"Добавить":"Add")}
+                  </button>
+                </div>
+                <div style="font-weight:600;font-size:0.92rem;cursor:pointer" data-person="${esc(p.id)}">${esc(p.username)}</div>
+                ${p.bio?`<div style="font-size:0.78rem;color:var(--mute);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.bio)}</div>`:""}
+                ${tags?`<div class="people-find-tags">${tags}</div>`:""}
+                ${listeningChip}
               </div>
-              <div style="font-weight:600;font-size:0.92rem;cursor:pointer" data-person="${esc(p.id)}">${esc(p.username)}</div>
-              ${p.bio?`<div style="font-size:0.78rem;color:var(--mute);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.bio)}</div>`:""}
-              ${tags?`<div class="people-find-tags">${tags}</div>`:""}
-              ${listeningChip}
-            </div>
-          </div>`;
-        }).join("")}
-      </div>`;
+            </div>`;
+          }).join("")}
+        </div>
+        ${loadMoreHtml}`;
 
-    results.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>renderPeopleProfile(b.dataset.person));
-    results.querySelectorAll("[data-find-action]").forEach(btn=>{
-      btn.onclick=async e=>{
-        e.stopPropagation();
-        const pid=btn.dataset.findAction;
-        const target=combined.find(x=>x.id===pid);
-        if(!target)return;
-        if(isGuest||!sbUser){
-          const mList=getMockFriends();
-          const item=mList.find(x=>x.id===pid);
-          if(item){
-            item.isFriend=!item.isFriend;
-            saveMockFriends(mList);
-            toast(item.isFriend?(LANG==="ru"?"Добавлен в друзья!":"Added to friends!"):(LANG==="ru"?"Удален из друзей":"Removed from friends"));
-            run(input.value);
-          }
-        }else{
-          const {error}=await sb.rpc("add_friend_by_username",{name:target.username});
-          if(error)return toast(error.message);
-          notify(t("people.pending"),target.username||"",{icon:"user-plus"});
-          btn.innerHTML=`<span class="material-symbols-rounded" style="font-size:16px">schedule</span> ${t("people.pending")}`;
-          btn.disabled=true;
-          icons();
-        }
-      };
-    });
+      results.querySelector("#people-load-more")?.addEventListener("click",()=>{
+        findLimit += 8;
+        renderCards();
+      });
 
-    results.querySelectorAll("[data-play-track]").forEach(btn=>{
-      btn.onclick=async e=>{
-        e.stopPropagation();
-        const trQ=btn.dataset.playTrack;
-        if(trQ){
-          toast((LANG==="ru"?"Поиск и запуск: ":"Playing: ")+trQ);
-          try{
-            const hits=await searchRemote(trQ);
-            if(hits&&hits.length>0){
-              await setTrack(hits[0],true,false,"find");
-              return;
+      results.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>renderPeopleProfile(b.dataset.person));
+      results.querySelectorAll("[data-find-action]").forEach(btn=>{
+        btn.onclick=async e=>{
+          e.stopPropagation();
+          const pid=btn.dataset.findAction;
+          const target=combined.find(x=>x.id===pid);
+          if(!target)return;
+          if(isGuest||!sbUser){
+            const mList=getMockFriends();
+            const item=mList.find(x=>x.id===pid);
+            if(item){
+              item.isFriend=!item.isFriend;
+              saveMockFriends(mList);
+              target.isFriend=item.isFriend;
+              toast(item.isFriend?(LANG==="ru"?"Добавлен в друзья!":"Added to friends!"):(LANG==="ru"?"Удален из друзей":"Removed from friends"));
+              renderCards();
             }
-          }catch(_){}
-          go("search");
-          const qInp=document.getElementById("q");
-          if(qInp){qInp.value=trQ;search(trQ)}
-        }
-      };
-    });
+          }else{
+            const {error}=await sb.rpc("add_friend_by_username",{name:target.username});
+            if(error)return toast(error.message);
+            notify(t("people.pending"),target.username||"",{icon:"user-plus"});
+            btn.innerHTML=`<span class="material-symbols-rounded" style="font-size:16px">schedule</span> ${t("people.pending")}`;
+            btn.disabled=true;
+            icons();
+          }
+        };
+      });
 
-    icons();
+      results.querySelectorAll("[data-play-track]").forEach(btn=>{
+        btn.onclick=async e=>{
+          e.stopPropagation();
+          const trQ=btn.dataset.playTrack;
+          if(trQ){
+            toast((LANG==="ru"?"Поиск и запуск: ":"Playing: ")+trQ);
+            try{
+              const hits=await searchRemote(trQ);
+              if(hits&&hits.length>0){
+                await setTrack(hits[0],true,false,"find");
+                return;
+              }
+            }catch(_){}
+            go("search");
+            const qInp=document.getElementById("q");
+            if(qInp){qInp.value=trQ;search(trQ)}
+          }
+        };
+      });
+
+      icons();
+    };
+
+    renderCards();
+    return;
   };
+
 
   document.getElementById("people-guest-auth-btn")?.addEventListener("click",()=>{
     needAuth(box);
@@ -6767,14 +7171,24 @@ async function renderPeopleFriends(box){
 
         let profs=[];
         if(allIds.length){
-          const pRes=await sb.from("profiles").select("id,username,avatar_url,bio,privacy,profile_track").in("id",allIds);
+          let pRes=await sb.from("profiles").select("id,username,avatar_url,bio,privacy").in("id",allIds);
+          if(pRes.error){
+            pRes=await sb.from("profiles").select("id,username,avatar_url,bio").in("id",allIds);
+          }
           if(!pRes.error&&pRes.data) profs=pRes.data.map(maskProf);
         }
-        const prof=id=>profs.find(p=>p.id===id)||{id,username:"…"};
+        const mockListAll=getMockFriends();
+        const prof=id=>{
+          const found=profs.find(p=>p&&p.id===id);
+          if(found&&found.username)return found;
+          const mock=mockListAll.find(m=>m.id===id);
+          if(mock)return mock;
+          return {id, username:found?.username||(LANG==="ru"?"Пользователь":"User"), bio:found?.bio||""};
+        };
 
         accepted=accRows.map(r=>{
           const p=prof(otherId(r));
-          return {...p, reqData:r, status:"online"};
+          return {...p, reqData:r, status:p.status||"online", listening:p.listening||null};
         });
         pendingIn=inRows.map(r=>({r, p:prof(otherId(r))}));
         pendingOut=outRows.map(r=>({r, p:prof(otherId(r))}));
@@ -6901,7 +7315,8 @@ async function renderPeopleFriends(box){
       }else{
         html+=`<div style="text-align:center;padding:48px 16px;color:var(--mute)">
           <span class="material-symbols-rounded" style="font-size:32px;opacity:0.4;margin-bottom:8px">person_off</span>
-          <p class="ph" style="margin:0">${LANG==="ru"?"Друзья не найдены. Попробуйте изменить фильтр или найти новых людей.":"No friends found. Try adjusting filter or discover new people."}</p>
+          <p class="ph" style="margin:0 0 12px">${LANG==="ru"?"Друзья не найдены. Попробуйте изменить фильтр или найти новых людей.":"No friends found. Try adjusting filter or discover new people."}</p>
+          <button class="btn primary sm" id="fr-go-find" style="display:inline-flex;align-items:center;gap:6px"><span class="material-symbols-rounded" style="font-size:16px">explore</span> ${LANG==="ru"?"Найти людей":"Discover People"}</button>
         </div>`;
       }
     }else{
@@ -7645,8 +8060,25 @@ function roomTrackOf(tr){
   /* Room tracks use the same proxy/audio path as normal search results. */
   return tr?{...tr,mode:"local"}:null}
 
+/* Server-clock anchor for room sync, measured once per room. A tiny RPC
+   returns the database's now(): one round trip gives server-now, half the
+   round trip estimates the one-way delay. A Date header can't be used — the
+   relay forwards a fixed header set and Date is not CORS-exposed. Without
+   the anchor, a skewed client clock plays every room track early or late. */
+async function measureRoomSkew(){
+ try{
+  const t0=Date.now();
+  const {data,error}=await sb.rpc("server_time");
+  if(error||!data)return 0;
+  const serverMs=Date.parse(String(data).replace(/(\.\d{3})\d+/,"$1"));
+  if(!isFinite(serverMs))return 0;
+  return serverMs+(Date.now()-t0)/2-Date.now();
+ }catch(e){return 0}}
 async function enterRoom(row){
  SOC.room=row;
+ /* Best-effort: the consumer tolerates a missing anchor, so a slow probe
+    must not hold the rooms screen open. */
+ measureRoomSkew().then(v=>SOC.roomSkew=v);
  await refreshRoomState();
  go("rooms");
  paintRoomShell();
@@ -7659,28 +8091,36 @@ async function enterRoom(row){
    than being a little off. */
 function roomLoop(){
  socTimer("room",roomTick,3000)}
+let roomTickBusy=false;
 async function roomTick(){
- if(!SOC.room)return;
- const dj=SOC.roomRole==="owner"||SOC.roomRole==="dj";
- /* The host broadcasts whatever they are playing, full stop.
+ if(!SOC.room||roomTickBusy)return;
+ /* A slow network can stretch one tick past the 3 s interval; overlapping
+    ticks both saw "not following yet" and the second load() restarted the
+    track from zero. */
+ roomTickBusy=true;
+ try{
+  const dj=SOC.roomRole==="owner"||SOC.roomRole==="dj";
+  /* The host broadcasts whatever they are playing, full stop.
 
-    This used to require PLAYCTX.key to equal "room:<id>", i.e. the track had to
-    have been started from the room's own queue panel. Playing anything the
-    normal way — from the wave, a search result, the library — left the room row
-    untouched, so the host heard music and everyone else sat in silence looking
-    at "тишина". That is the reported "rooms work very strangely": the
-    expectation is simply that the host presses play and the room follows.
+     This used to require PLAYCTX.key to equal "room:<id>", i.e. the track had to
+     have been started from the room's own queue panel. Playing anything the
+     normal way — from the wave, a search result, the library — left the room row
+     untouched, so the host heard music and everyone else sat in silence looking
+     at "тишина". That is the reported "rooms work very strangely": the
+     expectation is simply that the host presses play and the room follows.
 
-    So the condition is the role, not the playback context. */
- if(dj&&S.current&&S.current.mode!=="empty"){
-  const playing=!!S.playing;
-  const sameTrack=SOC.room.track&&String(S.current.id)===String(SOC.room.track.id)&&S.current.s===SOC.room.track.s;
-  if(!sameTrack||Math.abs((SOC.room.position||0)-S.pos)>2||SOC.room.playing!==playing){
-   const patch={track:stripTrack(S.current),position:S.pos,playing,updated_at:new Date().toISOString()};
-   const {data,error}=await sb.from("rooms").update(patch).eq("id",SOC.room.id).select().single();
-   if(!error&&data)SOC.room=data}}
- await refreshRoomState();
- paintRoomPlayback()}
+     So the condition is the role, not the playback context. */
+  if(dj&&S.current&&S.current.mode!=="empty"){
+   const playing=!!S.playing;
+   const sameTrack=SOC.room.track&&String(S.current.id)===String(SOC.room.track.id)&&S.current.s===SOC.room.track.s;
+   if(!sameTrack||Math.abs((SOC.room.position||0)-S.pos)>2||SOC.room.playing!==playing){
+    const patch={track:stripTrack(S.current),position:S.pos,playing,updated_at:new Date().toISOString()};
+    const {data,error}=await sb.from("rooms").update(patch).eq("id",SOC.room.id).select().single();
+    if(!error&&data)SOC.room=data}
+  }
+  await refreshRoomState();
+  paintRoomPlayback();
+ }finally{roomTickBusy=false}}
 
 function stripTrack(tr){return tr&&tr.mode!=="empty"
  ?{s:tr.s,id:tr.id,t:tr.t,a:tr.a,al:tr.al,art:tr.art,d:tr.d}:null}
@@ -7691,7 +8131,7 @@ async function refreshRoomState(){
      throw through roomTick and kill the interval chain. */
   try{
   const {data}=await sb.from("rooms").select("*").eq("id",SOC.room.id).maybeSingle();
-  if(!data){SOC.room=null;return renderRooms()}
+  if(!data){SOC.room=null;socClear("room");return renderRooms()}
   SOC.room=data;
   const mem=(await sb.from("room_members").select("user_id,role").eq("room_id",data.id)).data||[];
   SOC.roomRole=mem.find(m=>m.user_id===sbUser.id)?.role||null;
@@ -7715,13 +8155,22 @@ function paintRoomPlayback(){
     anywhere but the room panel. */
  if(isDj)return;
  const localIsIt=S.current&&String(S.current.id)===String(r.track.id)&&S.current.s===r.track.s;
- const ahead=(Date.now()-new Date(r.updated_at).getTime())/1000;
+ /* ahead is anchored to the server clock (measureRoomSkew): comparing raw
+    Date.now() with the row's timestamp turned any client clock skew into a
+    permanent playback offset. */
+ const ahead=(Date.now()+(SOC.roomSkew||0)-new Date(r.updated_at).getTime())/1000;
  const want=r.playing?(r.position||0)+ahead:(r.position||0);
  if(!localIsIt){
   const tr=roomTrackOf(r.track);
-  if(tr)setTrack(tr,r.playing,r.playing,"room:"+r.id);
+  /* openFull stays off: the fullscreen player popping open over chat or
+     settings whenever the DJ started a track read as the app hijacking the
+     screen. */
+  if(tr)setTrack(tr,r.playing,false,"room:"+r.id);
   return}
-  if(r.playing&&Math.abs(S.pos-want)>1.5&&S.current?.mode==="local")
+  /* A listener who paused on purpose stays paused: dragging their position
+     forward every tick made "resume where I paused" impossible. The drift
+     check picks the correction back up on the tick after they resume. */
+  if(r.playing&&S.playing&&Math.abs(S.pos-want)>1.5&&S.current?.mode==="local")
   seekSeconds(Math.max(0,want));
  else if(!r.playing&&S.playing)toggle()}
 
@@ -7993,7 +8442,8 @@ function paintRoomLists(){
    if(error)toast(error.message);
    refreshRoomState().then(()=>{paintRoomLists();paintRoomNow()})});
   rq.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{
-   await sb.from("room_requests").update({status:"declined"}).eq("id",+b.dataset.no);
+   const {error}=await sb.rpc("decline_request",{req:+b.dataset.no});
+   if(error)toast(error.message);
    refreshRoomState().then(paintRoomLists)})}}
 
 /* The row whose track is starting leaves the server queue. Fire-and-forget:
@@ -8144,15 +8594,32 @@ async function renderFriendsBox(){
  let box=document.getElementById("frbox");
  if(!box){box=document.createElement("div");box.id="frbox";host.appendChild(box)}
  const me=sbUser.id;
- const {data}=await sb.from("friendships").select("*").or(`requester.eq.${me},addressee.eq.${me}`);
- const rows=data||[];
+ let rows=[];
+ try{
+  const {data}=await sb.from("friendships").select("*").or(`requester.eq.${me},addressee.eq.${me}`);
+  rows=data||[];
+ }catch(e){console.warn("friendships error:",e)}
  const accepted=rows.filter(r=>r.status==="accepted");
  const pendingIn=rows.filter(r=>r.status==="pending"&&r.addressee===me);
  const pendingOut=rows.filter(r=>r.status==="pending"&&r.requester===me);
  const otherId=r=>r.requester===me?r.addressee:r.requester;
  const ids=[...accepted,...pendingIn,...pendingOut].map(otherId);
- const profs=ids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",ids)).data?.map(maskProf)||[]:[];
- const prof=id=>profs.find(p=>p.id===id)||{username:"…"};
+ let profs=[];
+ if(ids.length){
+  try{
+   let pRes=await sb.from("profiles").select("id,username,avatar_url,bio,privacy").in("id",ids);
+   if(pRes?.error) pRes=await sb.from("profiles").select("id,username,avatar_url,bio").in("id",ids);
+   if(pRes?.data) profs=pRes.data.map(maskProf);
+  }catch(e){console.warn("profiles error:",e)}
+ }
+ const mockListAll=typeof getMockFriends==="function"?getMockFriends():[];
+ const prof=id=>{
+  const found=profs.find(p=>p&&p.id===id);
+  if(found&&found.username&&found.username!=="…")return found;
+  const mock=mockListAll.find(m=>m.id===id);
+  if(mock)return mock;
+  return {id, username:found?.username||(LANG==="ru"?"Пользователь":"User"), avatar_url:found?.avatar_url||null};
+ };
  box.innerHTML=`<div class="panel pane">
   <h3>${t("fr.t")}</h3>
   <div class="tokrow" style="margin:0 0 12px">
@@ -8644,12 +9111,18 @@ function fillProfileSettings(){
  un.value=sbProfile?.username||"";
  bio.value=sbProfile?.bio||"";
  const hint=document.getElementById("set-ava-hint");
- if(hint)hint.textContent=sbProfile?.avatar_url?t("sprof.set"):"";
+ if(hint)hint.textContent=(sbProfile?.avatar_url||S.avatar)?t("sprof.set"):"";
  un.onchange=async()=>{
-  if(!sbUser||!un.value.trim())return;
+  if(!un.value.trim())return;
+  if(!sbUser){
+   S.username=un.value.trim();
+   if(sbProfile)sbProfile.username=un.value.trim();
+   save();renderProfile();toast(t("pr.name.saved"));
+   return;
+  }
   const {error}=await sb.from("profiles").upsert({id:sbUser.id,username:un.value.trim()});
   toast(error?error.message:t("pr.name.saved"));
-  if(!error)sbProfile={...sbProfile,username:un.value.trim()}}}
+  if(!error){sbProfile={...sbProfile,username:un.value.trim()};renderProfile()}}}
 /* ── Yandex Music account: one-click sign-in + library sync ──
    Defined here (past every helper it calls) but logically part of Accounts.
    The one-click flow opens a Yandex page and a local helper page; the token
@@ -8711,10 +9184,10 @@ document.getElementById("set-ava-pick")?.addEventListener("click",()=>document.g
 document.getElementById("set-ban-pick")?.addEventListener("click",()=>document.getElementById("set-ban").click());
 document.getElementById("set-ava")?.addEventListener("change",async e=>{
  const f=e.target.files?.[0];e.target.value="";
- if(f&&sbUser){await uploadAvatar(f);fillProfileSettings()}});
+ if(f){await uploadAvatar(f);fillProfileSettings()}});
 document.getElementById("set-ban")?.addEventListener("change",async e=>{
  const f=e.target.files?.[0];e.target.value="";
- if(f&&sbUser){await uploadBanner(f);fillProfileSettings()}});
+ if(f){await uploadBanner(f);fillProfileSettings()}});
 
 /* Privacy masking for other people's profiles: applied where a name or an
    avatar is about to be shown in chats, rooms, friends and the leaderboard.

@@ -469,6 +469,55 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         .ok_or_else(|| "SoundCloud did not return a stream URL".into())
 }
 
+pub async fn sc_related(token: &str, id: &str) -> Result<Vec<Track>, String> {
+    let url = format!("{SC_API}/tracks/{id}/related?limit=20");
+    let c = client()?;
+    let body: serde_json::Value = sc_req(&c, &url, token)
+        .await?
+        .send()
+        .await
+        .map_err(|e| format!("network: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("SoundCloud rejected related request: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("bad response: {e}"))?;
+
+    let items = body
+        .get("collection")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    Ok(items
+        .iter()
+        .filter(|v| v.get("kind").and_then(|k| k.as_str()) == Some("track"))
+        .filter_map(|v| {
+            Some(Track {
+                id: v.get("id")?.to_string().trim_matches('"').to_string(),
+                s: "sc".into(),
+                t: v.get("title").and_then(|t| t.as_str()).unwrap_or("—").into(),
+                a: v.pointer("/user/username")
+                    .and_then(|u| u.as_str())
+                    .unwrap_or("—")
+                    .into(),
+                al: v
+                    .pointer("/publisher_metadata/album_title")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("")
+                    .into(),
+                d: sec(v.get("duration").and_then(|d| d.as_u64()).unwrap_or(0)),
+                art: v
+                    .get("artwork_url")
+                    .and_then(|a| a.as_str())
+                    .map(|a| a.replace("-large.", "-t500x500."))
+                    .or_else(|| v.pointer("/user/avatar_url").and_then(|a| a.as_str()).map(|s| s.to_string())),
+                mode: "local".into(),
+            })
+        })
+        .collect())
+}
+
 /* ═══════════════════ YouTube Music ═══════════════════
    Guest InnerTube, no API key and no sign-in — see ytm.rs. The Android music
    client hands back plain audio URLs, so playback stays local (mode: "local")
@@ -562,6 +611,22 @@ pub async fn api_probe_service(service: String) -> Result<bool, String> {
         "ym" => Err("Yandex Music needs your token".into()),
         "sp" => Ok(crate::spotify::configured()),
         other => Err(format!("unknown service: {other}")),
+    }
+}
+
+/// Radio / related recommendations for a track from connected streaming services.
+#[tauri::command]
+pub async fn api_radio(service: String, id: String) -> Result<Vec<Track>, String> {
+    match service.as_str() {
+        "ytm" => crate::ytm::radio(&id).await,
+        "sc" => {
+            let token = match crate::tokens::read_token("sc") {
+                Ok(t) => t.unwrap_or_default(),
+                Err(_) => String::new(),
+            };
+            sc_related(&token, &id).await
+        }
+        _ => Ok(vec![]),
     }
 }
 

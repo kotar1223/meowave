@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark" data-accent="none">
 <head>
-<!-- lucide and supabase-js are bundled locally, not from a CDN: the CDN is
+<!-- Icons and supabase-js are bundled locally, not from a CDN: the CDN is
      blocked on some networks, and when it failed every icon vanished and
      account sign-in died with it.
      Update with: npm i -D <pkg> && cp node_modules/<pkg>/dist/... src/vendor/ -->
-<script src="./vendor/lucide.min.js"></script>
 <script src="./vendor/m3-icons.js"></script>
 <script src="./vendor/supabase.js"></script>
 
@@ -18,7 +17,13 @@
      networks and the fallback metrics shifted every heading. Regenerate with
      the python snippet in scripts/ if weights ever change. -->
 <link rel="stylesheet" href="./vendor/fonts.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<link rel="preload" href="./vendor/fonts/MaterialSymbolsRounded.woff2" as="font" type="font/woff2" crossorigin>
+<!-- The local Material Symbols font is authoritative (it is the complete
+     variable font): no remote icon stylesheet may shadow it, or a blocked
+     CDN turns every icon back into raw ligature text.
+     The font-picker families stay on Google Fonts but load asynchronously:
+     the local defaults render first, the CDN never blocks boot. -->
+<link rel="stylesheet" data-fonts-async media="print" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Comfortaa:wght@600;700&family=Fira+Code:wght@500;600&family=Geist:wght@500;600;700&family=Manrope:wght@500;700;800&family=Montserrat:wght@500;700;800&family=Outfit:wght@500;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Roboto:wght@400;500;700&family=Rubik:wght@500;700&family=Russo+One&family=Space+Grotesk:wght@500;700&family=Syne:wght@600;700;800&family=Unbounded:wght@500;700;800&subset=cyrillic,cyrillic-ext,latin&display=swap">
 <link rel="stylesheet" href="./app.css">
 </head>
 <body>

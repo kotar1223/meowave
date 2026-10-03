@@ -338,6 +338,7 @@ fn main() {
             api::api_search,
             api::api_check_token,
             api::api_probe_service,
+            api::api_radio,
             api::sc_playlist_tracks,
             api::spotify_public_playlist_tracks,
             api::ytm_playlist_tracks,

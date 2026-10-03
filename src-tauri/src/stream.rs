@@ -231,7 +231,7 @@ fn token_ok(given: &str) -> bool {
 /// The port is passed in rather than read from a global: `spawn` can be called
 /// more than once in a process (the tests do), and a process-wide OnceLock would
 /// leave the second instance validating against the first one's port.
-fn host_ok(request: &tiny_http::Request, port: u16) -> bool {
+pub(crate) fn host_ok(request: &tiny_http::Request, port: u16) -> bool {
     let Some(host) = request
         .headers()
         .iter()
@@ -778,13 +778,42 @@ const IMG_HOSTS: &[&str] = &[
     "ytimg.com",
     "ggpht.com",
     "googleusercontent.com",
+    "googlevideo.com",
+    "youtube.com",
     "sndcdn.com",
+    "soundcloud.com",
+    "scdn.co",
+    "spotify.com",
+    "spotifycdn.com",
+    "unsplash.com",
     "yandex.net",
     "yandex.ru",
     "last.fm",
     "lastfm.freetls.fastly.net",
+    "fastly.net",
     "supabase.co",
     "supabase.in",
+    "mzstatic.com",
+    "apple.com",
+    "githubusercontent.com",
+    "discordapp.com",
+    "discord.com",
+    "discord.net",
+    "dzcdn.net",
+    "deezer.com",
+    "bcbits.com",
+    "bandcamp.com",
+    "gravatar.com",
+    "imgur.com",
+    "vk.com",
+    "userapi.com",
+    "cloudinary.com",
+    "genius.com",
+    "images.genius.com",
+    "assets.genius.com",
+    "itunes.apple.com",
+    "discogs.com",
+    "musixmatch.com",
 ];
 
 fn serve_img(
@@ -793,7 +822,8 @@ fn serve_img(
     head_only: bool,
     origin: Option<&str>,
     request: tiny_http::Request,
-) -> Result<(), String> {    let fail = |request: tiny_http::Request, code: u16, msg: &str| {
+) -> Result<(), String> {
+    let fail = |request: tiny_http::Request, code: u16, msg: &str| {
         let mut resp = Response::from_string(msg.to_string()).with_status_code(StatusCode(code));
         for h in cors(origin) {
             resp = resp.with_header(h);
@@ -801,10 +831,13 @@ fn serve_img(
         request.respond(resp).map_err(|e| e.to_string())
     };
 
-    let url = urlencoding::decode(raw)
+    let mut url = urlencoding::decode(raw)
         .map(|c| c.into_owned())
         .unwrap_or_else(|_| raw.to_string());
-    if !url.starts_with("https://") {
+    if url.starts_with("//") {
+        url = format!("https:{url}");
+    }
+    if !url.starts_with("https://") && !url.starts_with("http://") {
         return fail(request, 400, "https urls only");
     }
     let parsed = match reqwest::Url::parse(&url) {

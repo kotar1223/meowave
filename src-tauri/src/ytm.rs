@@ -218,6 +218,7 @@ fn collect<'a>(v: &'a Value, out: &mut Vec<&'a Value>) {
                 "musicTwoColumnItemRenderer",
                 "musicResponsiveListItemRenderer",
                 "musicListItemWrapperModel",
+                "playlistPanelVideoRenderer",
             ] {
                 if let Some(item) = map.get(key) {
                     out.push(item);
@@ -315,7 +316,35 @@ fn parse_item(item: &Value) -> Option<Track> {
         });
     }
 
-    // 2. Web Responsive List Items and Two-Column Items
+    // 2. Playlist Panel Video Renderer (watch next / radio)
+    if let Some(vid) = item.get("videoId").and_then(|v| v.as_str()) {
+        let title = runs_text(item.get("title"));
+        if !title.is_empty() {
+            let artist = runs_text(item.get("shortBylineText").or_else(|| item.get("longBylineText")));
+            let dur = item.get("lengthText")
+                .map(|t| runs_text(Some(t)))
+                .map(|s| hms(&s))
+                .unwrap_or(0);
+            let art = item.pointer("/thumbnail/thumbnails")
+                .and_then(|t| t.as_array())
+                .and_then(|t| t.last())
+                .and_then(|t| t.get("url"))
+                .and_then(|u| u.as_str())
+                .map(|u| u.replace("w60-h60", "w400-h400").replace("w120-h120", "w400-h400"));
+            return Some(Track {
+                id: vid.to_string(),
+                s: "ytm".into(),
+                t: title,
+                a: if artist.is_empty() { "—".to_string() } else { artist },
+                al: String::new(),
+                d: dur,
+                art,
+                mode: "local".into(),
+            });
+        }
+    }
+
+    // 3. Web Responsive List Items and Two-Column Items
     let id = item
         .pointer("/navigationEndpoint/watchEndpoint/videoId")
         .or_else(|| item.pointer("/overlay/musicItemThumbnailOverlayRenderer/content/musicPlayButtonRenderer/playNavigationEndpoint/watchEndpoint/videoId"))
@@ -370,6 +399,27 @@ fn parse_item(item: &Value) -> Option<Track> {
         art,
         mode: "local".into(),
     })
+}
+
+/// Radio / related tracks for a video id from the Watch Next queue.
+pub async fn radio(video_id: &str) -> Result<Vec<Track>, String> {
+    let body = json!({
+        "context": music_ctx(),
+        "videoId": video_id,
+        "isAudioOnly": true
+    });
+    let resp = post(MUSIC_API, "next", MUSIC_UA, None, body).await?;
+    let mut renderers = Vec::new();
+    collect(&resp, &mut renderers);
+    let mut tracks = Vec::new();
+    for r in renderers {
+        if let Some(tr) = parse_item(r) {
+            if tr.id != video_id && !tracks.iter().any(|existing: &Track| existing.id == tr.id) {
+                tracks.push(tr);
+            }
+        }
+    }
+    Ok(tracks)
 }
 
 /// Search YouTube Music songs. Tries WEB_REMIX first, falls back to ANDROID_MUSIC.

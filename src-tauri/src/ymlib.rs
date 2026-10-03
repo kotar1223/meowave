@@ -19,6 +19,8 @@ use base64::Engine;
 use rand::Rng;
 use serde::Serialize;
 
+use crate::stream::host_ok;
+
 const AUTH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
 
 fn client_id() -> Option<String> {
@@ -86,7 +88,7 @@ pub async fn ym_login_start() -> Result<YmStarted, String> {
 
     // Serve the paste page in the background; the process answers GET (the
     // page) and POST (the token) until the token or the deadline arrives.
-    std::thread::spawn(move || serve_paste(server, state));
+    std::thread::spawn(move || serve_paste(server, state, port));
 
     Ok(YmStarted {
         url,
@@ -98,8 +100,10 @@ pub async fn ym_login_start() -> Result<YmStarted, String> {
 /// Page served locally: the user pastes either the OAuth access_token (the
 /// success page lets you copy it) or the `yandex_music` cookie value.
 /// Everything runs in the page; the token only ever goes to 127.0.0.1.
-fn paste_page() -> String {
-    r#"<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+fn paste_page(state: &str) -> String {
+    // format! runs the {{}}-escaped template: {state} reaches the page JS
+    // and every double brace becomes a real one.
+    format!(r#"<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
 <title>Meowave — вход в Яндекс Музыку</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
@@ -132,19 +136,19 @@ button:disabled{{opacity:.6;cursor:default}}
 <div class="brand">Meowave</div>
 <script>
 const b=document.getElementById('go'),t=document.getElementById('t'),m=document.getElementById('m');
+const STATE='{state}';
 b.onclick=async()=>{{
  const v=t.value.trim().split('\n')[0].replace(/^yandex_music=/,'').trim();
  if(!v){{m.textContent='Вставьте значение куки';m.className='err';return}}
  b.disabled=true;
  try{{
   const r=await fetch('/token',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-   body:JSON.stringify({{token:v}})}});
+   body:JSON.stringify({{token:v,state:STATE}})}});
   if(!r.ok)throw 0;
   m.textContent='Готово! Вернитесь в Meowave.';m.className='ok';t.value='';
  }}catch(e){{m.textContent='Не отправилось — попробуйте ещё раз';m.className='err';b.disabled=false}}
 }};
-</script></div></body></html>"#
-    .to_string()
+</script></div></body></html>"#)
 }
 
 fn respond(req: tiny_http::Request, code: u16, body: &str, ctype: &str) {
@@ -156,7 +160,7 @@ fn respond(req: tiny_http::Request, code: u16, body: &str, ctype: &str) {
     let _ = req.respond(resp);
 }
 
-fn serve_paste(server: tiny_http::Server, state: String) {
+fn serve_paste(server: tiny_http::Server, state: String, port: u16) {
     let deadline = std::time::Instant::now() + AUTH_TIMEOUT;
     loop {
         if std::time::Instant::now() >= deadline {
@@ -170,16 +174,31 @@ fn serve_paste(server: tiny_http::Server, state: String) {
         let path = req.url().split('?').next().unwrap_or("").to_string();
         match path.as_str() {
             "/" => {
-                let page = paste_page();
+                let page = paste_page(&state);
                 respond(req, 200, &page, "text/html; charset=utf-8");
             }
             "/token" => {
                 let mut body = String::new();
                 let _ = req.as_reader().read_to_string(&mut body);
-                let token = serde_json::from_str::<serde_json::Value>(&body)
-                    .ok()
+                let parsed = serde_json::from_str::<serde_json::Value>(&body).ok();
+                let token = parsed
+                    .as_ref()
                     .and_then(|v| v["token"].as_str().map(|s| s.to_string()))
                     .unwrap_or_default();
+                // Two gates before anything touches the keychain: the request
+                // must name loopback in `Host` (a DNS-rebinding page sends its
+                // own host), and it must echo the random state issued with
+                // this listener. Without them any local process — or any web
+                // page via a no-cors form post — could plant a chosen token
+                // in the keychain during the 10-minute window.
+                let state_ok = parsed
+                    .as_ref()
+                    .and_then(|v| v["state"].as_str())
+                    .is_some_and(|s| s == state);
+                if !host_ok(&req, port) || !state_ok {
+                    respond(req, 403, "{\"error\":\"forbidden\"}", "application/json");
+                    continue;
+                }
                 if token.len() < 10 {
                     respond(
                         req,
@@ -191,7 +210,6 @@ fn serve_paste(server: tiny_http::Server, state: String) {
                 }
                 // Persist through the same keychain path as every other service.
                 let _ = crate::tokens::set_service_token("ym".into(), token.clone());
-                let _ = state; // reserved for a future strict check
                 respond(req, 200, "{\"ok\":true}", "application/json");
                 return; // token received: stop serving
             }
