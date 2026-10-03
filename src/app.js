@@ -562,10 +562,12 @@ function toast(msg,ms=3200){
  }
  lastToastText=msg;
  lastToastAt=now;
- const el=document.createElement("div");el.className="toast";el.textContent=msg;
+ const el=document.createElement("div");el.className="toast";
+ const iconName=/ошибк|не удалось|fail|error|запрещ/i.test(msg)?"error":(/сохран|готов|успеш|done|copied|скопир/i.test(msg)?"check_circle":"info");
+ el.innerHTML=`<span class="material-symbols-rounded toast-icon" aria-hidden="true">${iconName}</span><span>${esc(msg)}</span>`;
  box.appendChild(el);
  setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),320)},ms)}
-const icons=()=>window.lucide&&lucide.createIcons();
+const icons=()=>(window.m3Icons?.createIcons?window.m3Icons.createIcons():(window.lucide&&lucide.createIcons()));
 const fp=document.getElementById("fp");
 
 /* audio
@@ -1453,9 +1455,9 @@ function row(tr,extra="",removable=false,rmPid=null){
   <span class="art" ${coverStyle(tr.art,tr.l1,tr.l2)}></span>
   <span class="meta"><b>${esc(tr.t)}</b><span>${esc(tr.a)}${tr.al?" · "+esc(tr.al):""}${extra?" · "+esc(extra):""}</span></span>
   <span class="src">${SVC_ICONS[tr.s]||""}<span class="src-txt">${esc(svc(tr.s).name)}</span></span><span class="dur">${fmt(tr.d)}</span>
-  <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" aria-label="fav"><i data-lucide="heart" width="14" height="14"></i></button>
-  ${removable?`<button class="heart rm" data-rmlocal="${esc(tr.id)}" aria-label="remove"><i data-lucide="x" width="14" height="14"></i></button>`:""}
-  ${rmPid?`<button class="heart rm" data-rmpl="${esc(rmPid)}" data-rmtrack="${esc(tr.id)}" data-rmsvc="${esc(tr.s)}" aria-label="remove from playlist" title="${esc(t("plctx.rmtrack"))}"><i data-lucide="x" width="14" height="14"></i></button>`:""}</div>`}
+  <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" aria-label="fav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span></button>
+  ${removable?`<button class="heart rm" data-rmlocal="${esc(tr.id)}" aria-label="remove"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}
+  ${rmPid?`<button class="heart rm" data-rmpl="${esc(rmPid)}" data-rmtrack="${esc(tr.id)}" data-rmsvc="${esc(tr.s)}" aria-label="remove from playlist" title="${esc(t("plctx.rmtrack"))}"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}</div>`}
 
 /* Artists, derived from the library rather than stored: a track always knows
    its artist, so a separate table would only be one more thing to keep in
@@ -1492,10 +1494,10 @@ function renderArtist(name){
  const a=artistList().find(x=>x.name===name);
  if(!a){artOpen=null;return renderLib()}
  b.innerHTML=`<div class="plhead">
-   <button class="btn" id="artback">← ${t("lib.art")}</button>
+   <button class="btn" id="artback"><span class="material-symbols-rounded" style="font-size:16px">arrow_back</span> ${t("lib.art")}</button>
    <b>${esc(a.name)}</b><span>${a.list.length} ${t("tracks")}</span>
-   <button class="btn ${a.fav?"on":""}" id="artfav">${a.fav?t("art.unfollow"):t("art.follow")}</button>
-   <button class="btn" id="artplay">${t("pl.playall")}</button></div>
+   <button class="btn ${a.fav?"on":""}" id="artfav"><span class="material-symbols-rounded" style="font-size:16px">${a.fav?"favorite":"favorite"}</span> ${a.fav?t("art.unfollow"):t("art.follow")}</button>
+   <button class="btn" id="artplay"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span> ${t("pl.playall")}</button></div>
    <div class="rows" data-listctx="art:${esc(a.name)}">`+a.list.map(x=>row(x)).join("")+`</div>`;
  document.getElementById("artback").onclick=()=>{artOpen=null;renderLib()};
  document.getElementById("artfav").onclick=()=>{toggleFavArtist(a.name);renderArtist(a.name)};
@@ -1521,7 +1523,10 @@ async function clearLocal(){
  LOCAL_PATHS=[];
  save();renderLib();renderLocalInfo();renderWaveHint();
  toast(t("loc.cleared"))}
-const empty=(ic,h,p)=>`<div class="empty"><div class="empty-art"><img src="./icons/icon.png" class="empty-brand-icon" width="44" height="44" alt=""><div class="empty-sub-icon"><i data-lucide="${ic}" width="18" height="18"></i></div></div><h3>${h}</h3><p>${p}</p></div>`;
+const empty=(ic,h,p)=>{
+ const sym=window.m3Icons?.toSymbolName?window.m3Icons.toSymbolName(ic):ic;
+ return `<div class="empty"><div class="empty-art"><img src="./icons/icon.png" class="empty-brand-icon" width="44" height="44" alt=""><div class="empty-sub-icon"><span class="material-symbols-rounded" style="font-size:20px">${sym}</span></div></div><h3>${h}</h3><p>${p}</p></div>`;
+};
 /* Playlist artwork.
 
    A single stretched cover told you nothing about the playlist and looked
@@ -1564,11 +1569,11 @@ function renderLib(){
    const pl=PLAYLISTS.find(p=>p.id===plOpen);
    if(pl){
     b.innerHTML=`<div class="plhead">
-      <button class="btn" id="plback">← ${t("pl.back")}</button>
+      <button class="btn" id="plback"><span class="material-symbols-rounded" style="font-size:16px">arrow_back</span> ${t("pl.back")}</button>
       <b>${esc(pl.name)}</b><span>${pl.tracks.length} ${t("tracks")}</span>
-      ${pl.tracks.length?`<button class="btn" id="plplay">${t("pl.playall")}</button>`:""}
-      ${pl.tracks.length?`<button class="btn" id="pldl">${t("pl.dl")}</button>`:""}
-      <button class="btn danger" id="pldel">${t("pl.del")}</button></div>`
+      ${pl.tracks.length?`<button class="btn" id="plplay"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span> ${t("pl.playall")}</button>`:""}
+      ${pl.tracks.length?`<button class="btn" id="pldl"><span class="material-symbols-rounded" style="font-size:16px">download</span> ${t("pl.dl")}</button>`:""}
+      <button class="btn danger" id="pldel"><span class="material-symbols-rounded" style="font-size:16px">delete</span> ${t("pl.del")}</button></div>`
      +(pl.tracks.length
        ?`<div class="rows" data-listctx="pl:${esc(pl.id)}">`+pl.tracks.map(x=>row(x,"",false,pl.id)).join("")+`</div>`
        :empty("list-music",t("pl.empty.t"),t("pl.empty.s")));
@@ -1594,8 +1599,8 @@ function renderLib(){
    .filter(g=>g.list.length>1).sort((x,y)=>y.list.length-x.list.length).slice(0,12);
   PL_GROUPS=groups;
 
-  const mkBtn=`<button class="plc plnew" id="plnew"><span class="sq"><i data-lucide="plus" width="22" height="22"></i></span><b>${t("pl.new")}</b><span>${t("pl.new.s")}</span></button>
-  <button class="plc plimport" id="plimport"><span class="sq"><i data-lucide="download-cloud" width="22" height="22"></i></span><b>${t("import.btn")||"Импорт"}</b><span>Spotify, YTM, SC</span></button>`;
+  const mkBtn=`<button class="plc plnew" id="plnew"><span class="sq"><span class="material-symbols-rounded" style="font-size:24px">add</span></span><b>${t("pl.new")}</b><span>${t("pl.new.s")}</span></button>
+  <button class="plc plimport" id="plimport"><span class="sq"><span class="material-symbols-rounded" style="font-size:24px">cloud_download</span></span><b>${t("import.btn")||"Импорт"}</b><span>Spotify, YTM, SC</span></button>`;
   const mine=PLAYLISTS.map(p=>
    `<button class="plc" data-plid="${esc(p.id)}">${plCover(p)}
     <b>${esc(p.name)}</b><span>${p.tracks.length} ${t("tracks")}</span></button>`).join("");
@@ -1730,9 +1735,9 @@ function npBuild(){
  host.innerHTML=`<span class="art"></span>
   <span class="meta"><b></b><span></span></span>
   <span class="npacts">
-   <button class="heart" data-fav="" data-svc="" aria-pressed="false" aria-label="fav" style="opacity:1"><i data-lucide="heart" width="15" height="15"></i></button>
-   <button class="ic npic" id="npadd" aria-label="playlist" title=""><i data-lucide="list-plus" width="16" height="16"></i></button>
-   <button class="ic npic npdis" id="npdislike" aria-label="dislike" title=""><i data-lucide="thumbs-down" width="16" height="16"></i></button>
+   <button class="heart" data-fav="" data-svc="" aria-pressed="false" aria-label="fav" style="opacity:1"><span class="material-symbols-rounded" style="font-size:16px">favorite</span></button>
+   <button class="ic npic" id="npadd" aria-label="playlist" title=""><span class="material-symbols-rounded" style="font-size:18px">playlist_add</span></button>
+   <button class="ic npic npdis" id="npdislike" aria-label="dislike" title=""><span class="material-symbols-rounded" style="font-size:18px">thumb_down</span></button>
   </span>`;
  NPB={host,art:host.querySelector(".art"),ttl:host.querySelector(".meta b"),
   sub:host.querySelector(".meta span"),heart:host.querySelector(".heart"),
@@ -2878,12 +2883,11 @@ function prev(){
    existing svg costs nothing. */
 function setPlayIcon(btn,name,size){
  if(!btn)return;
+ const sym=(window.m3Icons?.toSymbolName?window.m3Icons.toSymbolName(name):(name==="pause"?"pause":"play_arrow"));
  const cur=btn.firstElementChild;
- if(cur&&cur.tagName.toLowerCase()==="svg"&&cur.dataset.icon===name)return;
- btn.innerHTML=`<i data-lucide="${name}" width="${size}" height="${size}"></i>`;
- window.lucide&&lucide.createIcons({nameAttr:"data-lucide",attrs:{}});
- const made=btn.firstElementChild;
- if(made)made.dataset.icon=name}
+ if(cur&&cur.dataset.icon===sym)return;
+ btn.innerHTML=`<span class="material-symbols-rounded" data-icon="${sym}" style="font-size:${size}px">${sym}</span>`;
+}
 function initMediaSession(){
  ensureAudioEl();
  if(window.__TAURI__?.event?.listen){
@@ -3247,7 +3251,7 @@ document.getElementById("vol").oninput=e=>{S.vol=e.target.value/100;S.muted=fals
  if(A.gain)A.gain.gain.setTargetAtTime(S.vol,A.ctx.currentTime,.02);save()};
 document.getElementById("mute").onclick=e=>{S.muted=!S.muted;const b=e.currentTarget;
  b.setAttribute("aria-pressed",S.muted);
- b.innerHTML=`<i data-lucide="${S.muted?"volume-x":"volume-2"}" width="16" height="16"></i>`;icons();
+ b.innerHTML=`<span class="material-symbols-rounded">${S.muted?"volume_off":"volume_up"}</span>`;
  if(A.gain)A.gain.gain.setTargetAtTime(S.muted?0:S.vol,A.ctx.currentTime,.02)};
 /* Speed and loudness. initAudio() is called first because the graph may not
    exist yet if the user reaches for these before pressing play. */

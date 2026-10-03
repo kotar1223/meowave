@@ -84,6 +84,160 @@ html:not([data-accent="none"]) .play{
   --md-sys-motion-easing-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
   --md-sys-motion-easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* ════ Material Symbols Rounded & M3 Icon System ════ */
+.material-symbols-rounded,
+.ms-icon {
+  font-family: 'Material Symbols Rounded', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  user-select: none;
+  flex-shrink: 0;
+
+  /* Default inactive state: outlined, 400 weight */
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  transition: font-variation-settings 0.25s var(--md-sys-motion-easing-standard),
+              color 0.2s var(--md-sys-motion-easing-standard),
+              transform 0.2s var(--md-sys-motion-easing-standard);
+}
+
+/* Explicit filled variant or active states */
+.material-symbols-rounded.filled,
+.ms-icon.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Optical Size variants */
+.material-symbols-rounded.sm { font-size: 16px; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+.material-symbols-rounded.md { font-size: 20px; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+.material-symbols-rounded.lg { font-size: 24px; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.material-symbols-rounded.xl { font-size: 32px; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 40; }
+
+/* Navigation Rail Active Tab: seamless transition to filled glyph */
+.navbtn .material-symbols-rounded {
+  font-size: 22px;
+  transition: font-variation-settings 0.25s var(--md-sys-motion-easing-standard),
+              color 0.2s var(--e),
+              transform 0.2s var(--e);
+}
+.navbtn[aria-current="true"] .material-symbols-rounded,
+.navbtn.active .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  color: var(--md-sys-color-primary, var(--accent));
+}
+.navbtn:hover .material-symbols-rounded {
+  transform: scale(1.1);
+}
+.navbtn:active .material-symbols-rounded {
+  transform: scale(0.92);
+}
+
+/* Sub-views Tabs: Active Tab filled state */
+.tabs button .material-symbols-rounded {
+  font-size: 18px;
+  margin-right: 4px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+.tabs button[aria-selected="true"] .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+  color: var(--md-sys-color-primary, var(--accent));
+}
+
+/* Button pressed states (Shuffle, Repeat, 3D Audio, toggles) */
+.ic[aria-pressed="true"] .material-symbols-rounded,
+button[aria-pressed="true"] .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  color: var(--md-sys-color-primary, var(--accent));
+}
+
+/* Favorite heart: outlined inactive, filled + heartbeat active */
+.heart .material-symbols-rounded {
+  font-size: 16px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  transition: font-variation-settings 0.25s var(--md-sys-motion-easing-standard),
+              color 0.2s var(--e),
+              transform 0.2s var(--md-sys-motion-easing-spring);
+}
+.heart[aria-pressed="true"] .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+  color: var(--red, #f43f5e) !important;
+  animation: heartBeat 0.5s var(--e-q);
+}
+.heart:hover .material-symbols-rounded {
+  transform: scale(1.15);
+}
+.heart:active .material-symbols-rounded {
+  transform: scale(0.88);
+}
+
+/* Search bar focused icon */
+.search:focus-within .search-leading-icon .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  color: var(--md-sys-color-primary, var(--accent));
+}
+
+/* Toast indicator styling */
+.toast-icon {
+  font-size: 18px !important;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Touch targets: Ensure minimum 40x40 hit area for icon buttons */
+.ic, .heart, .search-clear-btn, .fpclose-btn, .fp-settings-btn {
+  position: relative;
+}
+.ic::before, .heart::before, .search-clear-btn::before, .fpclose-btn::before, .fp-settings-btn::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 40px;
+  min-height: 40px;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  border-radius: inherit;
+  z-index: 0;
+}
+.ic > *, .heart > *, .search-clear-btn > *, .fpclose-btn > *, .fp-settings-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* M3 State layers */
+.ic {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-md, 12px);
+}
+.ic:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+.ic:active {
+  background-color: color-mix(in srgb, currentColor 12%, transparent);
+}
+.ic:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary, var(--accent));
+  outline-offset: 2px;
+}
+
 .titlebar{position:fixed;top:0;left:0;right:0;height:var(--tb);z-index:400;
   display:flex;align-items:center;gap:12px;padding:0 12px 0 16px;
   -webkit-app-region:drag;
@@ -1529,20 +1683,20 @@ html[data-theme="light"] textarea,html[data-theme="light"] select{background:var
 /* ── buttons: lift on hover, settle on press ─────────────────────────── */
 .btn:hover{transform:translateY(-1px)}
 .btn:active{transform:translateY(0) scale(.97)}
-.ic:hover svg{transform:scale(1.1)}
-.ic svg{transition:transform .18s var(--e-q)}
-.ic:active svg{transform:scale(.94)}
+.ic:hover svg, .ic:hover .material-symbols-rounded{transform:scale(1.1)}
+.ic svg, .ic .material-symbols-rounded{transition:transform .18s var(--e-q)}
+.ic:active svg, .ic:active .material-symbols-rounded{transform:scale(.94)}
 .primary:active{transform:scale(.98)}
 
 /* heart gets a beat when it turns on */
 @keyframes heartBeat{0%{transform:scale(1)}30%{transform:scale(1.35)}55%{transform:scale(.92)}100%{transform:scale(1)}}
-.heart svg{transition:color .2s var(--e)}
-.heart[aria-pressed="true"] svg{animation:heartBeat .5s var(--e-q)}
+.heart svg, .heart .material-symbols-rounded{transition:color .2s var(--e), font-variation-settings .25s var(--md-sys-motion-easing-standard)}
+.heart[aria-pressed="true"] svg, .heart[aria-pressed="true"] .material-symbols-rounded{animation:heartBeat .5s var(--e-q)}
 .navbadge{animation:rowIn .3s var(--e) both}
 
 /* play button: a small kick whenever playback starts */
-.play svg{transition:transform .2s var(--e-q)}
-#fpc [data-act="play"]:active svg,.play:active svg{transform:scale(.85)}
+.play svg, .play .material-symbols-rounded{transition:transform .2s var(--e-q)}
+#fpc [data-act="play"]:active svg, #fpc [data-act="play"]:active .material-symbols-rounded, .play:active svg, .play:active .material-symbols-rounded{transform:scale(.85)}
 
 /* ── segmented control + dock + modal: springier arrivals ─────────────── */
 .seg::before{transition:left .46s cubic-bezier(.3,1.35,.45,1),width .46s cubic-bezier(.3,1.35,.45,1),opacity .25s var(--e)}
