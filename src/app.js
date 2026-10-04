@@ -893,12 +893,13 @@ function load(tr,auto,resumePos=0){
    if(gen!==A.gen)return;
    if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
    const curTime=au.currentTime;
-   if(S.dur&&curTime>2&&curTime<(S.dur-6)){
-    console.warn(`[meowave] premature stream end at ${curTime.toFixed(1)}s (dur ${S.dur}s); attempting seamless resume`);
+   const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d?+tr.d:0);
+   if(effectiveDur&&curTime>2&&curTime<(effectiveDur-4)){
+    console.warn(`[meowave] premature stream end at ${curTime.toFixed(1)}s (dur ${effectiveDur}s); attempting seamless resume`);
     if(!A._resumingSameTrack){
      A._resumingSameTrack=true;
      load(tr,true,curTime);
-     setTimeout(()=>{A._resumingSameTrack=false},3000);
+     setTimeout(()=>{A._resumingSameTrack=false},4000);
      return;
     }
     fallbackResolveTrack(tr,true,curTime).then(rescued=>{
@@ -1324,9 +1325,10 @@ function frame(now){
  /* Non-local playback has no media element to read a clock from, so its
     position and listening time advance here instead. */
  if(S.playing&&S.current?.mode!=="local")advanceClock(dt)
+ const isSeeking = A.pendingSeek !== null && Date.now() < A.seekingUntil;
  const curPos=(A.audio&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
- if(S.playing)syncKaraokeFrame(curPos);
- updateWavyProgress(dt, curPos, S.dur || 1);
+ if(S.playing && !isSeeking)syncKaraokeFrame(curPos);
+ if(!isSeeking)updateWavyProgress(dt, curPos, S.dur || 1);
 
  raf=requestAnimationFrame(frame)
 }
@@ -2023,6 +2025,35 @@ function renderFP(){
  if(!L||L.state==="idle"){fetchLyrics(tr)}
  const hasLyrics=!!(L&&L.state==="done"&&L.lines?.length>0);
  const lyricMode=S.fpMode==="lyric"&&hasLyrics;
+ const desiredMode=lyricMode?"lyric":"stage";
+
+ const fpc=document.getElementById("fpc");
+ if(!fpc)return;
+
+ /* If container already matches current track and mode, update in-place without wiping DOM and triggering text jitter */
+ if(!swapped && fpc.dataset.mode===desiredMode && fpc.querySelector(".fp-title")){
+  const titleEl=fpc.querySelector(".fp-title");
+  if(titleEl && titleEl.textContent!==(tr?.t||"")) titleEl.textContent=tr?.t||"";
+  const artistEl=fpc.querySelector(".fp-artist");
+  if(artistEl && artistEl.textContent!==(tr?.a||"—")) artistEl.textContent=tr?.a||"—";
+  const curTimeEl=fpc.querySelector("#fpcur");
+  if(curTimeEl) curTimeEl.textContent=fmt(S.pos);
+  const durTimeEl=fpc.querySelector("#fpdur");
+  const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0);
+  if(durTimeEl) durTimeEl.textContent=fmt(effectiveDur);
+  const trackBar=fpc.querySelector("#fptrack .f");
+  if(trackBar) trackBar.style.width=`${pc}%`;
+  const trackThumb=fpc.querySelector("#fptrack .h");
+  if(trackThumb) trackThumb.style.left=`${pc}%`;
+  const playBtn=fpc.querySelector(".play");
+  if(playBtn){
+   playBtn.title=S.playing?t("np.pause"):t("np.play");
+   playBtn.innerHTML=`<span class="material-symbols-rounded" style="font-size:24px">${S.playing?"pause":"play_arrow"}</span>`;
+  }
+  fpc.dataset.playing=S.playing?"true":"false";
+  return;
+ }
+
  const art=coverStyle(tr?.art,tr?.l1,tr?.l2);
  const u=cssUrlRaw(tr?.art);
  const fpbg=document.getElementById("fpbg");
@@ -2030,7 +2061,7 @@ function renderFP(){
   if(u){fpbg.style.backgroundImage=`url('${u}')`;fpbg.style.display=""}
   else{fpbg.style.backgroundImage="";fpbg.style.display="none"}}
  const expBadge=isExplicit(tr)?`<span class="fp-badge-exp" title="Explicit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="11.5" r="1" fill="currentColor"/><path d="M8 4.2v4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>`:"";
- document.getElementById("fpc").innerHTML=lyricMode?`
+ fpc.innerHTML=lyricMode?`
   <div class="fp-actions-top">
    <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><span class="material-symbols-rounded" style="font-size:20px">fullscreen</span></button>
    <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><span class="material-symbols-rounded" style="font-size:20px">tune</span></button>
@@ -4457,11 +4488,75 @@ async function probeStream(url){
  }catch(e){return {ok:false,why:e?.name==="TimeoutError"?"timeout":String(e.message||e)}}
 }
 let fallbackResolving = null;
+const fallbackAttempted = new Set();
+
+function pickFallbackCandidate(hits, tr, attempted = new Set()) {
+ if (!hits || !hits.length) return null;
+ const origDur = tr.d ? (+tr.d || 0) : 0;
+ const origTitleLower = (tr.t || "").toLowerCase();
+ const isRemix = /remix|sped\s*up|speed\s*up|slowed|nightcore|reverb|edit|tribute|cover/i.test(origTitleLower);
+
+ let best = null;
+ let bestScore = -99999;
+
+ for (const h of hits) {
+  if (!h || !h.id) continue;
+  const hKey = trackKey(h);
+  if (attempted.has(hKey) || (h.s === tr.s && String(h.id) === String(tr.id))) {
+   continue;
+  }
+  let score = 0;
+  const hTitleLower = (h.t || "").toLowerCase();
+
+  // Strongly prioritize ALTERNATIVE services when current service failed
+  if (h.s !== tr.s) {
+   score += 100;
+  } else {
+   score -= 50;
+  }
+
+  // Service reliability bonus (YouTube Music has universal anonymous streaming without DRM)
+  if (h.s === "ytm") score += 35;
+  else if (h.s === "ym") score += 20;
+  else if (h.s === "sc") score += 5;
+
+  // Title match penalties/bonuses (avoid sped up / slowed when original wasn't)
+  const candidateHasRemix = /remix|sped\s*up|speed\s*up|slowed|nightcore|reverb|edit|tribute|cover/i.test(hTitleLower);
+  if (!isRemix && candidateHasRemix) {
+   score -= 80;
+  } else if (isRemix && candidateHasRemix) {
+   score += 30;
+  }
+
+  // Duration proximity
+  const hDur = h.d ? (+h.d || 0) : 0;
+  if (origDur > 30) {
+   if (hDur > 0 && hDur <= 35) {
+    score -= 100;
+   } else if (hDur > 0) {
+    const diff = Math.abs(hDur - origDur);
+    if (diff <= 5) score += 60;
+    else if (diff <= 15) score += 40;
+    else if (diff <= 35) score += 15;
+    else score -= 30;
+   }
+  }
+
+  if (score > bestScore) {
+   bestScore = score;
+   best = h;
+  }
+ }
+ return best;
+}
+
 async function fallbackResolveTrack(tr, auto, resumePos=0){
  if(!tr || tr.mode === "empty") return false;
  const key = trackKey(tr);
  if(fallbackResolving === key) return false;
  fallbackResolving = key;
+ fallbackAttempted.add(key);
+
  const clean = typeof cleanMusicTitle === "function" ? cleanMusicTitle(tr.a, tr.t) : { query: `${tr.a||""} ${tr.t||""}`.trim() };
  const queries = [clean.query, `${tr.a||""} ${clean.t||""}`.trim(), clean.t, `${tr.a||""} ${tr.t||""}`.trim()].filter(Boolean);
  console.log(`[meowave] attempting silent audio fallback for "${clean.query}" (service: ${tr.s})`);
@@ -4471,10 +4566,10 @@ async function fallbackResolveTrack(tr, auto, resumePos=0){
    /* Same stale-resolution guard as load(): the user may have moved on. */
    if(!sameTrack(tr,S.current)){fallbackResolving=null;return false}
    if(!hits || !hits.length) continue;
-   const candidate = hits.find(h => (h.s === "sc" || h.s === "ym") && (h.s !== tr.s || String(h.id) !== String(tr.id)))
-    || hits.find(h => h.s !== tr.s)
-    || hits.find(h => String(h.id) !== String(tr.id));
+
+   const candidate = pickFallbackCandidate(hits, tr, fallbackAttempted);
    if(candidate && (String(candidate.id) !== String(tr.id) || candidate.s !== tr.s)){
+    fallbackAttempted.add(trackKey(candidate));
     const resolved = {
      ...tr,
      id: candidate.id,
@@ -4484,6 +4579,13 @@ async function fallbackResolveTrack(tr, auto, resumePos=0){
      _resolvedId: candidate.id,
      _resolvedSvc: candidate.s
     };
+    if(sameTrack(tr, S.current)){
+     S.current = resolved;
+     if(auto) S.playing = true;
+     renderNP();
+     paint();
+     sync();
+    }
     fallbackResolving = null;
     load(resolved, auto, resumePos);
     return true;
@@ -4498,10 +4600,7 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  if(!url){S.playing=false;sync();toast(t("load.err"));return}
  const key=trackKey(tr);
  if(codecRetry&&codecRetry.key!==key)codecRetry=null;
- const why=await probeStream(url);
- /* The probe can outlive the track: the user may have picked another one
-    during its 3 s window, and everything below would act on the stale pick. */
- if(!sameTrack(tr,S.current))return;
+
  /* Bytes arrived but this webview will not decode that container, and YouTube
     Music ships the other one too: swap and try exactly once before believing
     the track itself is broken. */
@@ -4511,13 +4610,18 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
   const playable=alt==="webm"?CAN.webm:CAN.mp4;
   if(playable){
    codecRetry={key,fmt:alt};
-   console.warn(`[meowave] stream error (type ${why.ct||"unknown"}); retrying as ${alt}`);
+   console.warn(`[meowave] stream error; retrying as ${alt}`);
    load(tr,wasPlaying,resumePos);
    return;
   }
  }
+
+ // Try fallback rescue immediately before slow network probe
  const rescued = await fallbackResolveTrack(tr, wasPlaying, resumePos);
  if(rescued) return;
+
+ if(!sameTrack(tr,S.current))return;
+ const why=await probeStream(url);
  S.playing=false;sync();
  toast(why.ok?t("load.err"):`${t("load.err")} — ${why.why}`);
 }

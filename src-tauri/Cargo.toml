@@ -35,7 +35,6 @@ base64 = "0.22"
 open = "5"
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-opener = "2.5.4"
-tauri-plugin-updater = "2.10.1"
 tauri-plugin-process = "2.3.1"
 # Memory readout for the About panel. The window's real footprint is this
 # process plus the webview's own processes (separate executables on Windows
@@ -43,12 +42,16 @@ tauri-plugin-process = "2.3.1"
 # platforms — no per-OS unsafe code in this repo.
 sysinfo = "0.39"
 
+[lib]
+name = "meowave_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 # keyring is per-OS on purpose: each target compiles only its own backend, so
 # the Linux build does not drag in the Windows crate and vice versa.
 [target.'cfg(target_os = "windows")'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }
 
-[target.'cfg(target_os = "macos")'.dependencies]
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 keyring = { version = "3", features = ["apple-native"] }
 
 # sync-secret-service talks to gnome-keyring/KWallet over DBus. It links the
@@ -57,6 +60,9 @@ keyring = { version = "3", features = ["apple-native"] }
 # AppImage bundles it.
 [target.'cfg(target_os = "linux")'.dependencies]
 keyring = { version = "3", features = ["sync-secret-service"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2.10.1"
 
 [profile.release]
 codegen-units = 1

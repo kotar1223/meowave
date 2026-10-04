@@ -314,6 +314,7 @@ fn sc_store_id(id: &str) {
 }
 
 const SC_FALLBACK_IDS: &[&str] = &[
+    "dkevB9EsY4jIoSm8RfddPNUKyn6hurXF",
     "dkevB9EsZ18L5zQ04iS3G8qg2N7Gv7wA",
     "b8t5kLqV8A83d7p1r2q9W0e4t6y8u0i2",
 ];
@@ -339,15 +340,20 @@ pub async fn sc_client_id() -> Result<String, String> {
     for piece in html.split("src=\"").skip(1) {
         if let Some(end) = piece.find('"') {
             let url = &piece[..end];
-            if url.starts_with("https://a-v2.sndcdn.com/assets/") && url.ends_with(".js") {
-                scripts.push(url.to_string());
+            if (url.contains(".sndcdn.com/assets/") || url.contains(".dcdn.com/assets/") || url.starts_with("/assets/")) && url.ends_with(".js") {
+                let full_url = if url.starts_with('/') {
+                    format!("https://soundcloud.com{url}")
+                } else {
+                    url.to_string()
+                };
+                scripts.push(full_url);
             }
         }
     }
     // The id lives in one of the last bundles more often than not.
     scripts.reverse();
 
-    for url in scripts.iter().take(8) {
+    for url in scripts.iter().take(12) {
         let Ok(resp) = c.get(url).header(reqwest::header::USER_AGENT, BROWSER_UA).send().await else { continue };
         let Ok(js) = resp.text().await else { continue };
         for marker in ["client_id:\"", "client_id=", "\"client_id\":\""] {
@@ -366,7 +372,7 @@ pub async fn sc_client_id() -> Result<String, String> {
     }
 
     // Try known recent fallback client IDs if scraping was blocked
-    for &fallback in SC_FALLBACK_IDS {
+    if let Some(&fallback) = SC_FALLBACK_IDS.first() {
         sc_store_id(fallback);
         return Ok(fallback.to_string());
     }
@@ -477,55 +483,102 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         .await
         .map_err(|e| format!("bad response: {e}"))?;
 
-    // Prioritize formats for best playback stability:
-    // 1. Progressive MP3 (plays natively anywhere)
-    // 2. Any progressive stream
-    // 3. HLS MP3 (transmuxed smoothly by our proxy)
-    // 4. HLS AAC / MP4
-    // 5. Any available transcoding
+    let artist = track
+        .pointer("/user/username")
+        .and_then(|u| u.as_str())
+        .unwrap_or("")
+        .to_string();
+    let title = track
+        .get("title")
+        .and_then(|t| t.as_str())
+        .unwrap_or("")
+        .to_string();
+
     let transcodings = track
         .pointer("/media/transcodings")
         .and_then(|t| t.as_array())
-        .ok_or("track has no transcodings")?;
-    let pick = transcodings
-        .iter()
-        .find(|t| {
-            t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("progressive")
-                && t.pointer("/format/mime_type").and_then(|m| m.as_str()).map(|m| m.contains("mpeg")).unwrap_or(false)
-        })
-        .or_else(|| {
-            transcodings.iter().find(|t| t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("progressive"))
-        })
-        .or_else(|| {
-            transcodings.iter().find(|t| {
-                t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("hls")
-                    && t.pointer("/format/mime_type").and_then(|m| m.as_str()).map(|m| m.contains("mpeg")).unwrap_or(false)
-            })
-        })
-        .or_else(|| {
-            transcodings.iter().find(|t| {
-                t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("hls")
-                    && t.pointer("/format/mime_type").and_then(|m| m.as_str()).map(|m| m.contains("aac") || m.contains("mp4")).unwrap_or(false)
-            })
-        })
-        .or_else(|| transcodings.first())
-        .ok_or("empty transcoding list")?;
-    let url = pick.get("url").and_then(|u| u.as_str()).ok_or("transcoding has no url")?;
+        .cloned()
+        .unwrap_or_default();
 
-    let resolved: serde_json::Value = sc_req(&c, url, token)
-        .await?
-        .send()
-        .await
-        .map_err(|e| format!("network: {e}"))?
-        .json()
-        .await
-        .map_err(|e| format!("bad response: {e}"))?;
+    // Filter out encrypted DRM transcodings (cbc-encrypted-hls, ctr-encrypted-hls, cenc, cbcs)
+    let mut playable: Vec<serde_json::Value> = transcodings
+        .into_iter()
+        .filter(|t| {
+            let proto = t.pointer("/format/protocol").and_then(|p| p.as_str()).unwrap_or("");
+            !proto.contains("encrypted") && !proto.contains("cenc") && !proto.contains("cbcs")
+        })
+        .collect();
 
-    resolved
-        .get("url")
-        .and_then(|u| u.as_str())
-        .map(|s| s.to_string())
-        .ok_or_else(|| "SoundCloud did not return a stream URL".into())
+    // Sort playable candidates by format stability:
+    // 1. Progressive MP3
+    // 2. Any progressive stream
+    // 3. HLS MP3 (transmuxed smoothly by our proxy)
+    // 4. HLS AAC / MP4
+    // 5. Any other HLS
+    playable.sort_by_key(|t| {
+        let proto = t.pointer("/format/protocol").and_then(|p| p.as_str()).unwrap_or("");
+        let mime = t.pointer("/format/mime_type").and_then(|m| m.as_str()).unwrap_or("");
+        if proto == "progressive" && mime.contains("mpeg") {
+            0
+        } else if proto == "progressive" {
+            1
+        } else if proto == "hls" && mime.contains("mpeg") {
+            2
+        } else if proto == "hls" && (mime.contains("aac") || mime.contains("mp4")) {
+            3
+        } else if proto == "hls" {
+            4
+        } else {
+            5
+        }
+    });
+
+    for t in playable {
+        if let Some(url) = t.get("url").and_then(|u| u.as_str()) {
+            if let Ok(rb) = sc_req(&c, url, token).await {
+                if let Ok(res) = rb.send().await {
+                    if res.status().is_success() {
+                        if let Ok(resolved) = res.json::<serde_json::Value>().await {
+                            if let Some(stream_url) = resolved.get("url").and_then(|u| u.as_str()) {
+                                return Ok(stream_url.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If unencrypted SoundCloud streams are 404 or DRM-restricted, transparently rescue via YouTube Music
+    if !title.is_empty() {
+        let query = if !artist.is_empty() && artist != "—" {
+            format!("{artist} {title}")
+        } else {
+            title.clone()
+        };
+        if let Ok(hits) = ytm_search(&query).await {
+            let orig_dur = track.get("duration").and_then(|d| d.as_u64()).map(|ms| (ms / 1000) as u32).unwrap_or(0);
+            let pick = hits.iter().find(|h| {
+                if orig_dur > 30 && h.d > 0 {
+                    (h.d as i64 - orig_dur as i64).abs() <= 15
+                } else {
+                    true
+                }
+            }).or_else(|| hits.first());
+
+            if let Some(ytm_track) = pick {
+                if let Ok(stream_res) = crate::ytm::stream(&ytm_track.id, true, "best").await {
+                    eprintln!(
+                        "[meowave] sc_stream_url: track '{}' id={} unencrypted stream unavailable; rescued via YTM id={}",
+                        title, id, ytm_track.id
+                    );
+                    return Ok(stream_res.url);
+                }
+            }
+        }
+    }
+
+    Err("SoundCloud did not return a playable stream URL".into())
 }
 
 pub async fn sc_related(token: &str, id: &str) -> Result<Vec<Track>, String> {

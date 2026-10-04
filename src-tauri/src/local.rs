@@ -717,6 +717,9 @@ fn ffmpeg_bin() -> Option<std::path::PathBuf> {
 }
 
 fn locate_ffmpeg() -> Option<std::path::PathBuf> {
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    return None;
+
     // The bundled copy first. `externalBin` in tauri.conf.json installs it right
     // next to our own executable with the target-triple suffix stripped, so the
     // installed layout is meowave.exe + ffmpeg.exe in one directory.

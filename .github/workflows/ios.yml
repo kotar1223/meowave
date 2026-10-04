@@ -1,0 +1,129 @@
+name: iOS Build
+
+# Builds Meowave for iOS (Tauri 2 mobile architecture) and produces an unsigned .ipa
+# suitable for sideloading via AltStore, Sideloadly, Scarlet, TrollStore, etc.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - '.github/workflows/ios.yml'
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install NPM dependencies and Tauri CLI
+        run: |
+          npm ci || npm install
+          npm install -g @tauri-apps/cli@^2.0.0
+
+      - name: Precompile Rust core for iOS
+        working-directory: src-tauri
+        run: |
+          cargo build --release --target aarch64-apple-ios --lib
+
+      - name: Initialize Tauri iOS project
+        run: |
+          npx tauri ios init
+
+      - name: Enable Background Audio in Info.plist
+        run: |
+          find src-tauri/gen/apple -name "Info.plist" | while read -r plist; do
+            echo "Injecting UIBackgroundModes (audio) into $plist"
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$plist" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" "$plist" 2>/dev/null || true
+          done
+
+      - name: Build iOS App with Xcode
+        run: |
+          PROJECT=$(find src-tauri/gen/apple -name "*.xcodeproj" -maxdepth 2 | head -n 1)
+          if [ -z "$PROJECT" ]; then
+            echo "Error: Xcode project not found in src-tauri/gen/apple"
+            exit 1
+          fi
+          echo "Found Xcode project: $PROJECT"
+
+          SCHEME=$(xcodebuild -list -project "$PROJECT" | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | grep -i ios | head -n 1)
+          if [ -z "$SCHEME" ]; then
+            SCHEME=$(xcodebuild -list -project "$PROJECT" | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | head -n 1)
+          fi
+          echo "Using scheme: $SCHEME"
+
+          xcodebuild build \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1 | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Compiled .app bundle not found in build/Build/Products/Release-iphoneos"
+            exit 1
+          fi
+          echo "Found application bundle: $APP_PATH"
+          cp -R "$APP_PATH" Payload/
+          zip -r Meowave.ipa Payload
+          ls -lh Meowave.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meowave-iOS-IPA
+          path: Meowave.ipa
+          if-no-files-found: error
+
+      - name: Attach IPA to GitHub Release
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Meowave.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

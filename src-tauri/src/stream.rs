@@ -105,6 +105,7 @@ struct Upstream<'a> {
     media_ua: Option<String>,
     bytes_delivered: u64,
     expected_total: Option<u64>,
+    initial_offset: u64,
     reconnect_attempts: u8,
 }
 
@@ -115,6 +116,7 @@ impl<'a> Upstream<'a> {
         upstream_url: String,
         media_ua: Option<String>,
         expected_total: Option<u64>,
+        initial_offset: u64,
     ) -> Self {
         Self {
             rt,
@@ -125,6 +127,7 @@ impl<'a> Upstream<'a> {
             media_ua,
             bytes_delivered: 0,
             expected_total,
+            initial_offset,
             reconnect_attempts: 0,
         }
     }
@@ -148,6 +151,7 @@ impl<'a> Upstream<'a> {
             media_ua,
             bytes_delivered: 0,
             expected_total: None,
+            initial_offset: 0,
             reconnect_attempts: 0,
         }
     }
@@ -179,7 +183,7 @@ impl<'a> std::io::Read for Upstream<'a> {
                         return Ok(0);
                     };
                     let chunk_res = self.rt.block_on(async {
-                        tokio::time::timeout(std::time::Duration::from_secs(12), resp.chunk()).await
+                        tokio::time::timeout(std::time::Duration::from_secs(45), resp.chunk()).await
                     });
                     match chunk_res {
                         Ok(Ok(Some(chunk))) => {
@@ -195,15 +199,14 @@ impl<'a> std::io::Read for Upstream<'a> {
                             };
                             if premature && !self.upstream_url.is_empty() && self.reconnect_attempts < 3 {
                                 self.reconnect_attempts += 1;
+                                let current_offset = self.initial_offset + self.bytes_delivered;
                                 let res = self.rt.block_on(async {
                                     let c = crate::api::media_client().ok()?;
                                     let mut req = c.get(&self.upstream_url);
                                     if let Some(ua) = &self.media_ua {
                                         req = req.header("User-Agent", ua);
                                     }
-                                    if self.bytes_delivered > 0 {
-                                        req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
-                                    }
+                                    req = req.header("Range", format!("bytes={current_offset}-"));
                                     req.send().await.ok()
                                 });
                                 if let Some(new_resp) = res {
@@ -220,15 +223,14 @@ impl<'a> std::io::Read for Upstream<'a> {
                             // Timeout or network drop
                             if !self.upstream_url.is_empty() && self.reconnect_attempts < 3 {
                                 self.reconnect_attempts += 1;
+                                let current_offset = self.initial_offset + self.bytes_delivered;
                                 let res = self.rt.block_on(async {
                                     let c = crate::api::media_client().ok()?;
                                     let mut req = c.get(&self.upstream_url);
                                     if let Some(ua) = &self.media_ua {
                                         req = req.header("User-Agent", ua);
                                     }
-                                    if self.bytes_delivered > 0 {
-                                        req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
-                                    }
+                                    req = req.header("Range", format!("bytes={current_offset}-"));
                                     req.send().await.ok()
                                 });
                                 if let Some(new_resp) = res {
@@ -573,6 +575,13 @@ fn handle(
         .find(|h| h.field.equiv("Range"))
         .map(|h| h.value.as_str().to_string());
 
+    let initial_offset = range
+        .as_deref()
+        .and_then(|r| r.strip_prefix("bytes="))
+        .and_then(|r| r.split('-').next())
+        .and_then(|s| s.trim().parse::<u64>().ok())
+        .unwrap_or(0);
+
     // Local files never touch the network: read the requested byte range
     // straight off the disk.
     if service == "local" {
@@ -616,7 +625,8 @@ fn handle(
             let mut req = c.get(&upstream);
             // googlevideo only serves a media stream to a client that looks like
             // one of Google's own players and always asks for a byte range.
-            if service == "ytm" {
+            let is_google = service == "ytm" || upstream.contains("googlevideo.com");
+            if is_google {
                 req = req.header("User-Agent", crate::ytm::MEDIA_UA);
                 if range.is_none() {
                     req = req.header("Range", "bytes=0-");
@@ -711,11 +721,12 @@ fn handle(
             .map(|l| resolve_hls_url(&final_url, l))
             .collect();
 
+        let is_google = service == "ytm" || upstream.contains("googlevideo.com");
         let body = Upstream::hls(
             rt,
             segments,
             final_url,
-            if service == "ytm" {
+            if is_google {
                 Some(crate::ytm::MEDIA_UA.to_string())
             } else {
                 None
@@ -723,9 +734,10 @@ fn handle(
         );
         (body, 200u16, None, None, "audio/mpeg".to_string())
     } else {
+        let is_google = service == "ytm" || upstream.contains("googlevideo.com");
         let mut normalized = ctype;
         if normalized == "application/octet-stream" || normalized == "text/plain" {
-            if service == "ytm" {
+            if is_google {
                 normalized = if fmt == "mp4" { "audio/mp4" } else { "audio/webm" }.to_string();
             } else {
                 normalized = "audio/mpeg".to_string();
@@ -735,12 +747,13 @@ fn handle(
             rt,
             Some(resp),
             upstream.clone(),
-            if service == "ytm" {
+            if is_google {
                 Some(crate::ytm::MEDIA_UA.to_string())
             } else {
                 None
             },
             clen.map(|l| l as u64),
+            initial_offset,
         );
         (body, client_status, clen, crange, normalized)
     };
@@ -1070,7 +1083,7 @@ fn serve_img(
             None,
         )
     } else {
-        let body = Upstream::new(rt, Some(resp), String::new(), None, clen.map(|v| v as u64));
+        let body = Upstream::new(rt, Some(resp), String::new(), None, clen.map(|v| v as u64), 0);
         Response::new(StatusCode(200), headers, Box::new(body), clen, None)
     };
     request.respond(response).map_err(|e| e.to_string())
@@ -1181,7 +1194,7 @@ fn serve_relay(
         out_headers.push(h);
     }
 
-    let body = Upstream::new(rt, Some(resp), String::new(), None, clen);
+    let body = Upstream::new(rt, Some(resp), String::new(), None, clen, 0);
     let reader: Box<dyn std::io::Read> = if request.method() == &tiny_http::Method::Head {
         Box::new(std::io::empty())
     } else {
