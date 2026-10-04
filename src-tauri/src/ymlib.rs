@@ -101,27 +101,25 @@ pub async fn ym_login_start() -> Result<YmStarted, String> {
 /// success page lets you copy it) or the `yandex_music` cookie value.
 /// Everything runs in the page; the token only ever goes to 127.0.0.1.
 fn paste_page(state: &str) -> String {
-    // format! runs the {{}}-escaped template: {state} reaches the page JS
-    // and every double brace becomes a real one.
-    format!(r#"<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
+    let tpl = r#"<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">
 <title>Meowave — вход в Яндекс Музыку</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-*{{box-sizing:border-box}}body{{margin:0;min-height:100vh;display:grid;place-items:center;
- background:#0b0b0d;color:#f4f4f5;font:400 15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}}
-.card{{max-width:520px;width:100%;padding:38px 40px;background:#141417;border:1px solid #26262b;
- border-radius:20px;box-shadow:0 24px 60px rgb(0 0 0/.5)}}
-h1{{margin:0 0 8px;font-size:1.2rem;letter-spacing:-.01em}}
-p{{margin:0 0 14px;color:#a1a1aa;font-size:.9rem}}
-ol{{margin:0 0 16px;padding-left:20px;color:#d4d4d8;font-size:.9rem}}
-ol li{{margin:6px 0}}code{{background:#1c1c21;padding:1px 6px;border-radius:6px;font-size:.85em}}
-textarea{{width:100%;min-height:92px;background:#0f0f12;color:#f4f4f5;border:1px solid #2e2e34;
- border-radius:12px;padding:10px 12px;font:inherit;resize:vertical}}
-button{{margin-top:14px;width:100%;padding:11px;border:0;border-radius:12px;background:#ffdb4d;
- color:#1a1a1a;font:600 15px/1 inherit;cursor:pointer}}
-button:disabled{{opacity:.6;cursor:default}}
-.ok{{color:#4ade80}}.err{{color:#f87171}}
-.brand{{margin-top:18px;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#52525b;text-align:center}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;
+ background:#0b0b0d;color:#f4f4f5;font:400 15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.card{max-width:520px;width:100%;padding:38px 40px;background:#141417;border:1px solid #26262b;
+ border-radius:20px;box-shadow:0 24px 60px rgb(0 0 0/.5)}
+h1{margin:0 0 8px;font-size:1.2rem;letter-spacing:-.01em}
+p{margin:0 0 14px;color:#a1a1aa;font-size:.9rem}
+ol{margin:0 0 16px;padding-left:20px;color:#d4d4d8;font-size:.9rem}
+ol li{margin:6px 0}code{background:#1c1c21;padding:1px 6px;border-radius:6px;font-size:.85em}
+textarea{width:100%;min-height:92px;background:#0f0f12;color:#f4f4f5;border:1px solid #2e2e34;
+ border-radius:12px;padding:10px 12px;font:inherit;resize:vertical}
+button{margin-top:14px;width:100%;padding:11px;border:0;border-radius:12px;background:#ffdb4d;
+ color:#1a1a1a;font:600 15px/1 inherit;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+.ok{color:#4ade80}.err{color:#f87171}
+.brand{margin-top:18px;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#52525b;text-align:center}
 </style></head><body><div class="card">
 <h1>Вход в Яндекс Музыку</h1>
 <ol>
@@ -136,19 +134,20 @@ button:disabled{{opacity:.6;cursor:default}}
 <div class="brand">Meowave</div>
 <script>
 const b=document.getElementById('go'),t=document.getElementById('t'),m=document.getElementById('m');
-const STATE='{state}';
-b.onclick=async()=>{{
+const STATE='__STATE__';
+b.onclick=async()=>{
  const v=t.value.trim().split('\n')[0].replace(/^yandex_music=/,'').trim();
- if(!v){{m.textContent='Вставьте значение куки';m.className='err';return}}
+ if(!v){m.textContent='Вставьте значение куки';m.className='err';return}
  b.disabled=true;
- try{{
-  const r=await fetch('/token',{{method:'POST',headers:{{'Content-Type':'application/json'}},
-   body:JSON.stringify({{token:v,state:STATE}})}});
+ try{
+  const r=await fetch('/token',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({token:v,state:STATE})});
   if(!r.ok)throw 0;
   m.textContent='Готово! Вернитесь в Meowave.';m.className='ok';t.value='';
- }}catch(e){{m.textContent='Не отправилось — попробуйте ещё раз';m.className='err';b.disabled=false}}
-}};
-</script></div></body></html>"#)
+ }catch(e){m.textContent='Не отправилось — попробуйте ещё раз';m.className='err';b.disabled=false}
+};
+</script></div></body></html>"#;
+    tpl.replace("__STATE__", state)
 }
 
 fn respond(req: tiny_http::Request, code: u16, body: &str, ctype: &str) {
@@ -591,4 +590,14 @@ mod tests {
         assert_eq!(row["al"], "Depression Cherry");
         assert_eq!(row["d"].as_f64().unwrap(), 320.0);
     }
+
+    #[test]
+    fn test_paste_page_no_double_braces() {
+        let page = paste_page("oauth_state_secret_123");
+        assert!(page.contains("STATE='oauth_state_secret_123'"));
+        assert!(!page.contains("{{"));
+        assert!(!page.contains("}}"));
+        assert!(page.contains("JSON.stringify({token:v,state:STATE})"));
+    }
 }
+

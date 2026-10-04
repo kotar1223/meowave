@@ -160,7 +160,7 @@ returns timestamptz language sql volatile set search_path = public as $$
 $$;
 
 revoke all on function public.server_time() from public;
-grant execute on function public.server_time() to authenticated;
+grant execute on function public.server_time() to authenticated, anon;
 
 -- ── 4b. rooms.updated_at: the server is the clock ───────────
 create or replace function public.touch_rooms_updated_at()

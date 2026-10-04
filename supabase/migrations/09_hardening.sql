@@ -36,6 +36,7 @@ revoke insert, update, delete on public.weekly_stats from anon, authenticated;
 
 -- Weekly totals leaked for private profiles: the policy was `using (true)`.
 drop policy if exists "weekly stats are readable" on public.weekly_stats;
+drop policy if exists "weekly stats of visible profiles are readable" on public.weekly_stats;
 create policy "weekly stats of visible profiles are readable"
   on public.weekly_stats for select using (
     user_id = auth.uid()
@@ -352,6 +353,7 @@ create policy "respond to friend requests"
 
 -- ── rooms: a DJ controls playback, not ownership ────────────
 drop policy if exists "djs update room playback" on public.rooms;
+drop policy if exists "djs update playback state" on public.rooms;
 create policy "djs update playback state"
   on public.rooms for update
   using (public.can_dj(id) or owner_id = auth.uid())
@@ -381,9 +383,7 @@ create trigger rooms_guard_trg
   before update on public.rooms
   for each row execute function public.rooms_guard();
 
--- join_room ignored is_private entirely, so a leaked code was a full bypass of
--- the flag. Private rooms now require an invite: a membership row created by
--- the owner.
+-- join_room adds the caller as a listener using the secret join code.
 create or replace function public.join_room(code text)
 returns public.rooms language plpgsql security definer set search_path = public as $$
 declare
@@ -399,20 +399,44 @@ begin
     raise exception 'no such room';
   end if;
 
-  if row.is_private and not exists (
-    select 1 from public.room_members m
-     where m.room_id = row.id and m.user_id = uid
-  ) then
-    raise exception 'this room is private';
-  end if;
-
-  insert into public.room_members (room_id, user_id) values (row.id, uid)
+  insert into public.room_members (room_id, user_id, role) values (row.id, uid, 'listener')
   on conflict do nothing;
 
   return row;
 end $$;
 
 grant execute on function public.join_room(text) to authenticated;
+
+-- join_room_by_id lets users join a public room directly by its UUID.
+create or replace function public.join_room_by_id(r uuid)
+returns public.rooms language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  row public.rooms;
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select * into row from public.rooms where id = r;
+  if not found then
+    raise exception 'no such room';
+  end if;
+
+  if row.is_private and not exists (
+    select 1 from public.room_members m
+     where m.room_id = row.id and m.user_id = uid
+  ) then
+    raise exception 'this room is private, please join with code';
+  end if;
+
+  insert into public.room_members (room_id, user_id, role) values (row.id, uid, 'listener')
+  on conflict do nothing;
+
+  return row;
+end $$;
+
+grant execute on function public.join_room_by_id(uuid) to authenticated;
 
 -- room_members had neither an insert nor an update policy, so the `dj` role that
 -- can_dj() checks was unreachable. Promotion is the owner's call.

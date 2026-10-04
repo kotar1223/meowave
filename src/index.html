@@ -43,12 +43,12 @@
   <span class="tb-fill" data-tauri-drag-region></span>
   <div class="tb-btns">
     <button class="tb-btn" id="tb-min" aria-label="minimize" title="—"><span class="material-symbols-rounded" style="font-size:14px">remove</span></button>
-    <button class="tb-btn" id="tb-fs" aria-label="fullscreen" title="Полноэкранный режим (F11)"><span class="material-symbols-rounded" style="font-size:14px">fit_screen</span></button>
-    <button class="tb-btn" id="tb-max" aria-label="maximize" title="Развернуть"><span class="material-symbols-rounded" style="font-size:14px">crop_square</span></button>
+    <button class="tb-btn" id="tb-fs" aria-label="fullscreen" data-i18n-title="tb.fs" title="Полноэкранный режим (F11)"><span class="material-symbols-rounded" style="font-size:14px">fit_screen</span></button>
+    <button class="tb-btn" id="tb-max" aria-label="maximize" data-i18n-title="tb.max" title="Развернуть"><span class="material-symbols-rounded" style="font-size:14px">crop_square</span></button>
     <!-- tb-close, not "close": the bare .close class is the fullscreen
          player's absolute-positioned button and dragged this one out of the
          row (the "кривой заголовок" bug). -->
-    <button class="tb-btn tb-close" id="tb-close" aria-label="close" title="Закрыть"><span class="material-symbols-rounded" style="font-size:14px">close</span></button>
+    <button class="tb-btn tb-close" id="tb-close" aria-label="close" data-i18n-title="close" title="Закрыть"><span class="material-symbols-rounded" style="font-size:14px">close</span></button>
   </div>
 </div>
 
@@ -108,7 +108,7 @@
         <span class="search-leading-icon"><span class="material-symbols-rounded">search</span></span>
         <div class="search-placeholder-flow" id="search-flow" aria-hidden="true"></div>
         <input id="q" type="search" autocomplete="off" placeholder="Поиск по всем сервисам" data-i18n-ph="top.ph">
-        <button class="search-clear-btn" id="search-clear" aria-label="Clear search" title="Очистить"><span class="material-symbols-rounded">close</span></button>
+        <button class="search-clear-btn" id="search-clear" aria-label="Clear search" data-i18n-title="search.clear" title="Очистить"><span class="material-symbols-rounded">close</span></button>
       </div>
       <div class="srv" id="srv" role="group"></div>
     </header>
@@ -718,17 +718,17 @@
         <button class="sw on" id="fp-wobble-sw" aria-pressed="true"></button>
       </div>
       <div class="fpset-row">
-        <label>Масштаб обложки (YouTube Music)</label>
+        <label data-i18n="fp.set.zoom">Масштаб обложки (YouTube Music)</label>
         <div class="seg-group" id="fp-zoom-mode-group">
-          <button class="seg-btn active" data-zoom="normal">Обычный</button>
-          <button class="seg-btn" data-zoom="large">Крупный</button>
-          <button class="seg-btn" data-zoom="full">На весь экран</button>
+          <button class="seg-btn active" data-zoom="normal" data-i18n="fp.zoom.normal">Обычный</button>
+          <button class="seg-btn" data-zoom="large" data-i18n="fp.zoom.large">Крупный</button>
+          <button class="seg-btn" data-zoom="full" data-i18n="fp.zoom.full">На весь экран</button>
         </div>
       </div>
       <div class="fpset-row fpset-switch-row">
         <div>
-          <label>Плавный дрейф и парение</label>
-          <small>Анимация движения обложки на весь экран</small>
+          <label data-i18n="fp.set.drift">Плавный дрейф и парение</label>
+          <small data-i18n="fp.set.drift_sub">Анимация движения обложки на весь экран</small>
         </div>
         <button class="sw on" id="fp-drift-sw" aria-pressed="true"></button>
       </div>
@@ -796,23 +796,23 @@
     <div class="modal-head">
       <div class="import-head-icon"><span class="material-symbols-rounded" style="font-size:26px">description</span></div>
       <div>
-        <h3 id="lyric-edit-title">Редактор текста и таймингов</h3>
-        <p class="ph" style="margin:2px 0 0">Свой текст с таймингами [мм:сс.хх] или авто-синхронизация по треку</p>
+        <h3 id="lyric-edit-title" data-i18n="ly.edit.title">Редактор текста и таймингов</h3>
+        <p class="ph" style="margin:2px 0 0" data-i18n="ly.edit.desc">Свой текст с таймингами [мм:сс.хх] или авто-синхронизация по треку</p>
       </div>
-      <button class="ic close modalclose" id="lyric-edit-close"><span class="material-symbols-rounded">close</span></button>
+      <button class="ic close modalclose" id="lyric-edit-close" data-i18n-title="close" title="Закрыть"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="lyric-edit-body">
       <div class="lyric-edit-toolbar">
-        <button class="btn sm" id="lyric-auto-time" title="Равномерно распределить метки времени по треку"><span class="material-symbols-rounded">auto_fix_high</span> Авто-тайминги (Genius/текст)</button>
-        <button class="btn sm" id="lyric-stamp-btn" title="Записать текущую секунду трека"><span class="material-symbols-rounded">timer</span> Поставить метку (<span id="lyric-cur-time">0:00</span>)</button>
-        <button class="btn sm ghost" id="lyric-clear-times" title="Очистить все тайминги и оставить чистый текст"><span class="material-symbols-rounded">ink_eraser</span> Очистить метки</button>
+        <button class="btn sm" id="lyric-auto-time" data-i18n-title="ly.edit.auto.title" title="Равномерно распределить метки времени по треку"><span class="material-symbols-rounded">auto_fix_high</span> <span data-i18n="ly.edit.auto">Авто-тайминги (Genius/текст)</span></button>
+        <button class="btn sm" id="lyric-stamp-btn" data-i18n-title="ly.edit.stamp.title" title="Записать текущую секунду трека"><span class="material-symbols-rounded">timer</span> <span data-i18n="ly.edit.stamp">Поставить метку</span> (<span id="lyric-cur-time">0:00</span>)</button>
+        <button class="btn sm ghost" id="lyric-clear-times" data-i18n-title="ly.edit.clear.title" title="Очистить все тайминги и оставить чистый текст"><span class="material-symbols-rounded">ink_eraser</span> <span data-i18n="ly.edit.clear">Очистить метки</span></button>
       </div>
-      <textarea id="lyric-edit-text" placeholder="[00:12.50] Первая строка текста&#10;[00:16.80] Вторая строка текста..." rows="12" spellcheck="false"></textarea>
+      <textarea id="lyric-edit-text" data-i18n-ph="ly.edit.ph" placeholder="[00:12.50] Первая строка текста&#10;[00:16.80] Вторая строка текста..." rows="12" spellcheck="false"></textarea>
       <div class="lyric-edit-footer">
-        <button class="btn ghost sm danger" id="lyric-reset-btn">Сбросить на оригинал</button>
+        <button class="btn ghost sm danger" id="lyric-reset-btn" data-i18n="ly.edit.reset">Сбросить на оригинал</button>
         <div style="flex:1"></div>
-        <button class="ghost" id="lyric-edit-cancel">Отмена</button>
-        <button class="primary" id="lyric-edit-save"><span class="material-symbols-rounded">check</span> Сохранить</button>
+        <button class="ghost" id="lyric-edit-cancel" data-i18n="cancel">Отмена</button>
+        <button class="primary" id="lyric-edit-save"><span class="material-symbols-rounded">check</span> <span data-i18n="crop.save">Сохранить</span></button>
       </div>
     </div>
   </div>

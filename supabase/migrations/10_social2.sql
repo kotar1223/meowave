@@ -111,6 +111,7 @@ alter table public.messages add constraint messages_image_cap check (
 create index if not exists messages_chat_idx on public.messages (chat_id, id desc);
 
 drop policy if exists "read room chat and own dms" on public.messages;
+drop policy if exists "read room chat, group chats and own dms" on public.messages;
 create policy "read room chat, group chats and own dms"
   on public.messages for select using (
     (room_id is not null and public.in_room(room_id))
@@ -119,6 +120,7 @@ create policy "read room chat, group chats and own dms"
   );
 
 drop policy if exists "send to own rooms and to friends" on public.messages;
+drop policy if exists "send to rooms, chats and friends" on public.messages;
 create policy "send to rooms, chats and friends"
   on public.messages for insert with check (
     auth.uid() = sender and (

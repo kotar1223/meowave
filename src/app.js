@@ -150,6 +150,17 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "import.t":"Импорт плейлиста","import.s":"Вставьте ссылку на плейлист из Spotify, YouTube Music или SoundCloud","import.btn":"Импорт","import.check":"Проверить","import.dest_pl":"Создать новый плейлист","import.dest_fav":"Добавить в Избранное","import.submit":"Импортировать","import.enter_url":"Введите ссылку на плейлист",
 "fp.set.t":"Настройки плеера","fp.set.bg":"Фон плеера","fp.bg.dynamic":"Альбом","fp.bg.ambient":"Эмбиент","fp.bg.black":"OLED","fp.set.glow":"Подсветка","fp.set.blur":"Размытие фона","fp.set.font":"Шрифт текста","fp.set.fill":"Режим караоке","fp.fill.smooth":"Плавное","fp.fill.line":"Построчно","fp.set.wobble":"Раскачка обложки","fp.set.wobble_sub":"Анимация бита и парения",
 "chat.share_np":"Поделиться текущим треком","wave.moods":"Настроения и жанры","wave.artists":"Рекомендованные артисты",
+"cancel":"Отмена","close":"Закрыть","fp.fill.off":"Без заливки","np.play":"Воспроизвести","np.pause":"Пауза","np.prev":"Предыдущий","np.next":"Следующий","np.shuffle":"Перемешать","np.repeat":"Повтор","act.fav":"В избранное","nav.quests":"Квесты и Значки","upd.up_to_date":"Установлена последняя версия","pr.auth.guest.desc":"Локальный профиль Meowave","fp.set.zoom":"Масштаб обложки (YouTube Music)","fp.zoom.normal":"Обычный","fp.zoom.large":"Крупный","fp.zoom.full":"На весь экран","fp.set.drift":"Плавный дрейф и парение","fp.set.drift_sub":"Анимация движения обложки на весь экран",
+"pr.err.email":"Введите email","pr.err.pass":"Введите пароль","pr.welcome":"Добро пожаловать!","people.profile":"Профиль",
+"ly.edit.title":"Редактор текста и таймингов","ly.edit.desc":"Свой текст с таймингами [мм:сс.хх] или авто-синхронизация по треку",
+"ly.edit.auto":"Авто-тайминги (Genius/текст)","ly.edit.auto.title":"Равномерно распределить метки времени по треку",
+"ly.edit.stamp":"Поставить метку","ly.edit.stamp.title":"Записать текущую секунду трека",
+"ly.edit.clear":"Очистить метки","ly.edit.clear.title":"Очистить все тайминги и оставить чистый текст",
+"ly.edit.ph":"[00:12.50] Первая строка текста\\n[00:16.80] Вторая строка текста...",
+"ly.edit.reset":"Сбросить на оригинал","ly.edit.cleared":"Метки времени очищены",
+"ly.edit.nolines":"Нет строк текста для расстановки таймингов","ly.edit.applied":"Авто-тайминги распределены по треку",
+"ly.edit.reset_ok":"Сброшено на оригинальный текст","ly.edit.saved":"Текст песни сохранён",
+"tb.fs":"Полноэкранный режим (F11)","tb.max":"Развернуть","search.clear":"Очистить",
 "nologin":"Без входа","ready":"Готов"},
 en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings":"Settings",
 "top.ph":"Search across services",
@@ -266,6 +277,17 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "import.t":"Import Playlist","import.s":"Paste a playlist link from Spotify, YouTube Music or SoundCloud","import.btn":"Import","import.check":"Check","import.dest_pl":"Create new playlist","import.dest_fav":"Add to Favorites","import.submit":"Import","import.enter_url":"Enter a playlist URL",
 "fp.set.t":"Player Settings","fp.set.bg":"Player Background","fp.bg.dynamic":"Album","fp.bg.ambient":"Ambient","fp.bg.black":"OLED","fp.set.glow":"Backlight Glow","fp.set.blur":"Background Blur","fp.set.font":"Lyrics Font","fp.set.fill":"Karaoke Mode","fp.fill.smooth":"Smooth","fp.fill.line":"Per-line","fp.set.wobble":"Cover Wobble & Float","fp.set.wobble_sub":"Beat bounce & floating animation",
 "chat.share_np":"Share current track","wave.moods":"Moods & Genres","wave.artists":"Recommended Artists",
+"cancel":"Cancel","close":"Close","fp.fill.off":"Off","np.play":"Play","np.pause":"Pause","np.prev":"Previous","np.next":"Next","np.shuffle":"Shuffle","np.repeat":"Repeat","act.fav":"Add to favorites","nav.quests":"Quests & Badges","upd.up_to_date":"You are on the latest version","pr.auth.guest.desc":"Local Meowave profile","fp.set.zoom":"Artwork scale (YouTube Music)","fp.zoom.normal":"Normal","fp.zoom.large":"Large","fp.zoom.full":"Fullscreen","fp.set.drift":"Smooth drift and float","fp.set.drift_sub":"Fullscreen cover floating animation",
+"pr.err.email":"Enter your email","pr.err.pass":"Enter your password","pr.welcome":"Welcome!","people.profile":"Profile",
+"ly.edit.title":"Lyrics & Timings Editor","ly.edit.desc":"Custom lyrics with timestamps [mm:ss.xx] or auto-sync",
+"ly.edit.auto":"Auto-timings (Genius/text)","ly.edit.auto.title":"Evenly distribute timestamps across track",
+"ly.edit.stamp":"Add stamp","ly.edit.stamp.title":"Record current playback second",
+"ly.edit.clear":"Clear stamps","ly.edit.clear.title":"Clear all timestamps and keep plain text",
+"ly.edit.ph":"[00:12.50] First lyrics line\\n[00:16.80] Second lyrics line...",
+"ly.edit.reset":"Reset to original","ly.edit.cleared":"Timestamps cleared",
+"ly.edit.nolines":"No lyrics lines to timestamp","ly.edit.applied":"Auto-timings distributed across track",
+"ly.edit.reset_ok":"Reset to original lyrics","ly.edit.saved":"Lyrics saved",
+"tb.fs":"Fullscreen (F11)","tb.max":"Maximize","search.clear":"Clear",
 "nologin":"No sign-in needed","ready":"Ready"}};
 let LANG="ru";
 const t=k=>I18N[LANG][k]??I18N.ru[k]??k;
@@ -342,6 +364,7 @@ function applyI18n(){
    if(txt){if(txt.textContent!==s)txt.textContent=s}
    else e.append(s)});
   document.querySelectorAll("[data-i18n-ph]").forEach(e=>e.placeholder=t(e.dataset.i18nPh));
+  document.querySelectorAll("[data-i18n-title]").forEach(e=>e.title=t(e.dataset.i18nTitle));
   /* The re-renders below rebuild whole panels, which discards anything half
      typed. Switching language used to wipe the username field and the promo
      code box mid-entry. */
@@ -393,6 +416,7 @@ let TRACKS=[];
 
 /* Real listening history instead of hardcoded demo rows. */
 let HISTORY=[];
+let PREV_STACK=[];
 function pushHistory(tr){
  if(!tr||tr.mode==="empty")return;
  HISTORY=HISTORY.filter(h=>!(String(h.tr.id)===String(tr.id)&&h.tr.s===tr.s));
@@ -577,7 +601,7 @@ const fp=document.getElementById("fp");
 
 /* audio
    source -> 9×Biquad -> [HRTF Panner -> dry + Convolver wet] | bypass -> gain -> analyser -> out */
-const A={ctx:null,src:null,audio:null,media:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0,
+const A={ctx:null,src:null,audio:null,media:null,pre:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0,
  /* gen bumps on every track change; events from the previous src are dropped */
  gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0,pendingSeek:null,seekingUntil:0};
 /* Exactly one <audio> element for the whole app. */
@@ -616,7 +640,7 @@ function ensureAudioEl(){
     }
   });
  au.addEventListener("pause",()=>{if(!au.ended){S.playing=false;sync()}});
- if(A.ctx&&!A.media){A.media=A.ctx.createMediaElementSource(au);A.media.connect(A.bands[0])}
+ if(A.ctx&&!A.media){A.media=A.ctx.createMediaElementSource(au);A.media.connect(A.pre||A.bands[0])}
  return au}
 function ir(ctx,room="hall"){
  /* Room impulse responses, generated rather than shipped as .wav files: a
@@ -692,9 +716,9 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
   A.dry.connect(A.gain);A.wet.connect(A.gain);A.byp.connect(A.gain);
   A.gain.connect(A.boost);A.boost.connect(A.lim);A.lim.connect(A.an);A.an.connect(ctx.destination);
  if(ctx.listener.positionZ){ctx.listener.positionX.value=0;ctx.listener.positionY.value=0;ctx.listener.positionZ.value=0}
- A.gain.gain.value=S.muted?0:S.vol;applySpatial();applyBoost();applyRate();
+ A.gain.gain.value=S.muted?0:S.vol;applySpatial();applyBoost();applyRate();applyEQ();
  /* If <audio> existed before the first user gesture, wire it up now. */
- if(A.audio&&!A.media){A.media=ctx.createMediaElementSource(A.audio);A.media.connect(A.bands[0])}}
+ if(A.audio&&!A.media){A.media=ctx.createMediaElementSource(A.audio);A.media.connect(A.pre||A.bands[0])}}
 function cleanMusicTitle(artist, title){
  let t=(title||"").trim();
  let a=(artist||"").trim();
@@ -732,31 +756,6 @@ function load(tr,auto,resumePos=0){
    S.playing=false;sync();
    toast(LANG==="ru"?"Ошибка разрешения Spotify трека":"Error resolving Spotify track");
   });
-  return;
- }
- if(tr.s==="ytm"&&!tr._resolved){
-  const clean=cleanMusicTitle(tr.a,tr.t);
-  const queries=[clean.query,`${tr.a||""} ${clean.t||""}`.trim(),clean.t,`${tr.a||""} ${tr.t||""}`.trim()].filter(Boolean);
-  (async()=>{
-   for(const q of queries){
-    try{
-     const hits=await searchRemote(q);
-     if(!sameTrack(tr,S.current))return;
-     const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym");
-     if(match){
-      tr._resolved=true;
-      tr._resolvedId=match.id;
-      tr._resolvedSvc=match.s;
-      const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
-      load(resolvedTrack,auto,resumePos);
-      return;
-     }
-    }catch(_){}
-   }
-   if(!sameTrack(tr,S.current))return;
-   tr._resolved=true;
-   load(tr,auto,resumePos);
-  })();
   return;
  }
  initAudio();if(!A.ctx)return;
@@ -1885,7 +1884,7 @@ function renderFP(){
      <div class="fpctrls fpctrls-lyric">
       <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><span class="material-symbols-rounded" style="font-size:20px">shuffle</span></button>
       <button class="ic" data-act="prev" title="${t("np.prev")}"><span class="material-symbols-rounded" style="font-size:20px">skip_previous</span></button>
-      <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px" pause":"play"}">${S.playing?"pause":"play_arrow"}</span></button>
+      <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px">${S.playing?"pause":"play_arrow"}</span></button>
       <button class="ic" data-act="next" title="${t("np.next")}"><span class="material-symbols-rounded" style="font-size:20px">skip_next</span></button>
       <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><span class="material-symbols-rounded" style="font-size:20px">repeat</span></button>
       <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><span class="material-symbols-rounded" style="font-size:20px">favorite</span></button>
@@ -1916,11 +1915,11 @@ function renderFP(){
     <div class="fpctrls fpctrls-stage">
      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><span class="material-symbols-rounded" style="font-size:20px">shuffle</span></button>
      <button class="ic" data-act="prev" title="${t("np.prev")}"><span class="material-symbols-rounded" style="font-size:24px">skip_previous</span></button>
-     <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px" pause":"play"}">${S.playing?"pause":"play_arrow"}</span></button>
+     <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px">${S.playing?"pause":"play_arrow"}</span></button>
      <button class="ic" data-act="next" title="${t("np.next")}"><span class="material-symbols-rounded" style="font-size:24px">skip_next</span></button>
      <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><span class="material-symbols-rounded" style="font-size:20px">repeat</span></button>
      <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><span class="material-symbols-rounded" style="font-size:20px">favorite</span></button>
-     <button class="ic" id="fp-mode" title="${hasLyrics?t("lyrics"):t("ly.search_genius")}"><span class="material-symbols-rounded" style="font-size:20px" mic-2":"search"}">${hasLyrics?"lyrics":"search"}</span></button>
+     <button class="ic" id="fp-mode" title="${hasLyrics?t("lyrics"):t("ly.search_genius")}"><span class="material-symbols-rounded" style="font-size:20px">${hasLyrics?"lyrics":"search"}</span></button>
     </div>
    </div>
   </div>`;
@@ -2673,8 +2672,12 @@ function setBand(i,v){S.eq[i]=Math.max(-12,Math.min(12,v));paintBand(i);applyEQ(
 /* playback */
 /* ctx: which list this play came from — see PLAYCTX. Passing it here rather
    than setting a global first keeps "what plays next" decided in one place. */
-async function setTrack(tr,play=true,openFull=false,ctx,keepQueue){
+async function setTrack(tr,play=true,openFull=false,ctx,keepQueue,isBack=false){
  if(!tr)return;
+ if(!isBack&&S.current&&S.current.mode!=="empty"&&!sameTrack(S.current,tr)){
+  PREV_STACK.push(S.current);
+  if(PREV_STACK.length>50)PREV_STACK.shift();
+ }
  if(ctx!==undefined)setContext(ctx);
  if(tr.mode==="local")await ensureStreamPort();
  const trackDur = tr.d ? (+tr.d || 0) : 0;
@@ -2986,13 +2989,21 @@ function waveExtend(){
 
 function prev(){
  if(S.pos>4){S.pos=0;if(A.audio&&S.current?.mode==="local")A.audio.currentTime=0;return paint()}
- /* History is the honest "previous": it is what was actually played, in order,
-    which walking TRACKS backwards was never able to reproduce. */
+ while(PREV_STACK.length){
+  const candidate=PREV_STACK.pop();
+  if(candidate&&!sameTrack(candidate,S.current)&&!isDisliked(candidate)){
+   return setTrack(candidate,S.playing,false,undefined,true,true);
+  }
+ }
  const back=HISTORY.map(h=>h.tr).filter(x=>x&&!sameTrack(x,S.current)&&!isDisliked(x));
- if(back.length)return setTrack(back[0],S.playing);
+ if(back.length){
+  const target=back[0];
+  for(let k=back.length-1;k>=1;k--){PREV_STACK.push(back[k])}
+  return setTrack(target,S.playing,false,undefined,true,true);
+ }
  const l=contextPool();if(!l.length)return;
  const i=l.findIndex(x=>sameTrack(x,S.current));
- setTrack(l[(i-1+l.length)%l.length],S.playing)}
+ setTrack(l[(i-1+l.length)%l.length],S.playing,false,undefined,true,true)}
 /* Play/pause icon swap without rebuilding every icon on the page.
 
    sync() runs on play, pause, seek, error and track change. It used to assign
@@ -4607,7 +4618,7 @@ async function flushListening(force){
   try{
    const {error}=await sb.rpc("report_listening_v2",payload);
    if(error)throw error;
-   REPORT.secs-=secs;REPORT.spatial=0;REPORT.tracks=0;
+   REPORT.secs-=secs;REPORT.spatial=0;REPORT.tracks=0;REPORT.ids.clear();
   /* Keep the card in step with what the server now holds. */
   if(sbStats)sbStats.listen_seconds=(Number(sbStats.listen_seconds)||0)+secs;
   if(S.view==="profile")renderProfile();
@@ -5475,7 +5486,7 @@ async function downloadProcessed(tr,sub,dirOverride){
    name:`${tr.a||"—"} - ${tr.t||"track"}`,
    folder:dir,hq:hqFlag()===1,
    fmt:tr.s==="ytm"?ytmFmt(tr):"best",
-   gains:S.eq.map(Number),rate,suffix:tag});
+   gains:S.eq.map(Number),rate,preserve_pitch:false,suffix:tag});
   toast(t("dl.ok").replace("{n}",String(path).split(/[\\/]/).pop()),5200);
   return path;
  }catch(e){
@@ -5503,13 +5514,33 @@ async function downloadPlaylist(pid){
 
 /* Optional: keep a copy whenever a track is favourited or added to a playlist.
    Off by default — quietly filling someone's disk is not a nice surprise. */
+const DL_QUEUE=[];
+let dlActive=0;
+const MAX_CONCURRENT_DL=2;
+
+function pumpAutoDownload(){
+ while(dlActive<MAX_CONCURRENT_DL&&DL_QUEUE.length){
+  const item=DL_QUEUE.shift();
+  dlActive++;
+  const fn=(S.dlMode==="fx"&&HAS_FFMPEG?downloadProcessed:downloadTrack);
+  Promise.resolve(fn(item.tr,item.playlistName||null))
+   .catch(e=>console.warn("autoDownload error:",e))
+   .finally(()=>{
+    dlActive--;
+    pumpAutoDownload();
+   });
+ }
+}
+
 function autoDownload(tr,playlistName){
  if(!TAURI||!tr||tr.s==="local")return;
  const want=playlistName?S.dlAutoPl:S.dlAutoFav;
  if(!want||!S.dlDir)return;
  /* Honours the raw/processed choice, so an automatic copy is the same file the
-    user would have got by hand. */
- (S.dlMode==="fx"&&HAS_FFMPEG?downloadProcessed:downloadTrack)(tr,playlistName||null)}
+    user would have got by hand. Throttled via concurrent DL_QUEUE. */
+ DL_QUEUE.push({tr,playlistName});
+ pumpAutoDownload();
+}
 
 /* Context menu. Right-click used to fall through to the webview's own menu
    ("reload", "view source"), which is useless in a player. */
@@ -8075,13 +8106,31 @@ async function measureRoomSkew(){
   return serverMs+(Date.now()-t0)/2-Date.now();
  }catch(e){return 0}}
 async function enterRoom(row){
+ if(!row)return;
  SOC.room=row;
- /* Best-effort: the consumer tolerates a missing anchor, so a slow probe
-    must not hold the rooms screen open. */
+ if(sb&&sbUser){
+  try{
+   if(row.join_code){
+    await sb.rpc("join_room",{code:row.join_code});
+   }else if(row.id){
+    const res=await sb.rpc("join_room_by_id",{r:row.id});
+    if(res.error)await sb.from("room_members").upsert({room_id:row.id,user_id:sbUser.id,role:"listener"},{onConflict:"room_id,user_id",ignoreDuplicates:true});
+   }
+  }catch(e){console.warn("join room membership:",e)}
+ }
  measureRoomSkew().then(v=>SOC.roomSkew=v);
  await refreshRoomState();
  go("rooms");
  paintRoomShell();
+ const isDj=SOC.roomRole==="owner"||SOC.roomRole==="dj"||row.owner_id===(sbUser?.id);
+ if(isDj&&S.current&&S.current.mode!=="empty"&&S.playing){
+  try{
+   const patch={track:stripTrack(S.current),position:S.pos||0,playing:true,updated_at:new Date().toISOString()};
+   const {data}=await sb.from("rooms").update(patch).eq("id",row.id).select().single();
+   if(data)SOC.room=data;
+  }catch(e){}
+ }
+ paintRoomPlayback();
  roomLoop()}
 
 /* The room loop: one interval that both publishes (DJ) and follows (listener).
@@ -8134,10 +8183,25 @@ async function refreshRoomState(){
   if(!data){SOC.room=null;socClear("room");return renderRooms()}
   SOC.room=data;
   const mem=(await sb.from("room_members").select("user_id,role").eq("room_id",data.id)).data||[];
-  SOC.roomRole=mem.find(m=>m.user_id===sbUser.id)?.role||null;
+  SOC.roomRole=mem.find(m=>m.user_id===sbUser?.id)?.role||(data.owner_id===sbUser?.id?"owner":null);
   const ids=mem.map(m=>m.user_id);
-  const ps=ids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",ids)).data?.map(maskProf)||[]:[];
-  SOC.roomMembers=mem.map(m=>({...m,profile:ps.find(p=>p.id===m.user_id)}));
+  let ps=[];
+  if(ids.length){
+   let pRes=await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",ids);
+   if(pRes.error){
+    pRes=await sb.from("profiles").select("id,username,avatar_url").in("id",ids);
+   }
+   ps=(pRes.data||[]).map(maskProf);
+  }
+  SOC.roomMembers=mem.map(m=>{
+   let prof=ps.find(p=>p?.id===m.user_id);
+   if(!prof&&m.user_id===sbUser?.id){
+    prof={id:sbUser.id,username:S.username||sbUser.email?.split("@")[0]||"Я",avatar_url:S.avatarUrl||null};
+   }else if(!prof){
+    prof={id:m.user_id,username:m.role==="owner"?(LANG==="ru"?"Владелец":"Owner"):(LANG==="ru"?"Слушатель":"Listener"),avatar_url:null};
+   }
+   return {...m,profile:prof};
+  });
   SOC.roomQueue=(await sb.from("room_queue").select("*").eq("room_id",data.id).order("position")).data||[];
   SOC.requests=(await sb.from("room_requests").select("*").eq("room_id",data.id).eq("status","pending").order("id",{ascending:false}).limit(20)).data||[];
   const roomChat=((await sb.from("messages").select("*").eq("room_id",data.id).order("id",{ascending:false}).limit(80)).data||[]).reverse();
@@ -8159,20 +8223,37 @@ function paintRoomPlayback(){
     Date.now() with the row's timestamp turned any client clock skew into a
     permanent playback offset. */
  const ahead=(Date.now()+(SOC.roomSkew||0)-new Date(r.updated_at).getTime())/1000;
- const want=r.playing?(r.position||0)+ahead:(r.position||0);
+ const want=r.playing?Math.max(0,(r.position||0)+ahead):Math.max(0,r.position||0);
  if(!localIsIt){
   const tr=roomTrackOf(r.track);
   /* openFull stays off: the fullscreen player popping open over chat or
      settings whenever the DJ started a track read as the app hijacking the
      screen. */
-  if(tr)setTrack(tr,r.playing,false,"room:"+r.id);
+  if(tr){
+   setTrack(tr,r.playing,false,"room:"+r.id);
+   if(r.playing&&want>1){
+    setTimeout(()=>{if(sameTrack(tr,S.current)&&A.audio)seekSeconds(want)},600);
+   }
+  }
   return}
-  /* A listener who paused on purpose stays paused: dragging their position
-     forward every tick made "resume where I paused" impossible. The drift
-     check picks the correction back up on the tick after they resume. */
-  if(r.playing&&S.playing&&Math.abs(S.pos-want)>1.5&&S.current?.mode==="local")
-  seekSeconds(Math.max(0,want));
- else if(!r.playing&&S.playing)toggle()}
+ if(r.playing){
+  if(!S.playing){
+   if(A.audio&&A.audio.src){
+    A.ctx?.resume();
+    A.audio.play().then(()=>{S.playing=true;sync();if(want>1)seekSeconds(want)}).catch(e=>{
+     console.warn("listener play catch:",e);
+    });
+   }else{
+    const tr=roomTrackOf(r.track);
+    if(tr)setTrack(tr,true,false,"room:"+r.id);
+   }
+  }else if(Math.abs(S.pos-want)>1.5&&S.current?.mode==="local"){
+   seekSeconds(Math.max(0,want));
+  }
+ }else if(!r.playing&&S.playing){
+  toggle();
+ }
+}
 
 function paintRoomShell(){
  const box=document.getElementById("roombody");if(!box)return;
@@ -8182,12 +8263,15 @@ function paintRoomShell(){
  const me=sbUser.id;
  const chat=SOC.roomChat||[];
  const members=SOC.roomMembers||[];
- const memberHtml=members.map(m=>`
-  <span class="memchip" data-uid="${m.user_id}" title="${esc(m.profile?.username||"")}">
-   ${avat(m.profile,22)}
-   <i>${esc((m.profile?.username||"?").slice(0,12))}${m.role==="owner"?" 👑":""}</i>
+ const memberHtml=members.map(m=>{
+  const name=m.profile?.username||(m.user_id===me?(S.username||"Я"):(m.role==="owner"?(LANG==="ru"?"Владелец":"Owner"):(LANG==="ru"?"Слушатель":"Listener")));
+  const profForAvat=m.profile||{username:name,id:m.user_id};
+  return `
+  <span class="memchip" data-uid="${m.user_id}" title="${esc(name)}">
+   ${avat(profForAvat,22)}
+   <i>${esc(name.slice(0,12))}${m.role==="owner"?" 👑":""}</i>
    ${isOwner&&m.user_id!==me?`<button class="qrm" data-kick="${m.user_id}" title="${t("room.kick")}"><span class="material-symbols-rounded" style="font-size:14px">close</span></button>`:""}
-  </span>`).join("");
+  </span>`}).join("");
 
  const existing=box.querySelector(".roompane");
  if(existing){
@@ -8407,13 +8491,23 @@ function paintRoomNow(){
  el.innerHTML=tr?`
   <span class="art" ${coverStyle(tr.art)}></span>
   <span class="meta"><b>${esc(tr.t)}</b><span>${esc(tr.a)}</span></span>
-  ${isDj?`<button class="ic" id="roomplay"><span class="material-symbols-rounded" style="font-size:18px" pause":"play"}">${S.playing?"pause":"play_arrow"}</span></button>`:
-    `<span class="mut">${r.playing?t("room.live"):t("room.paused")}</span>`}`
+  ${isDj?`<button class="ic" id="roomplay"><span class="material-symbols-rounded" style="font-size:18px">${S.playing?"pause":"play_arrow"}</span></button>`:
+    `<button class="btn sm ghost" id="roomlisten" style="display:inline-flex;align-items:center;gap:6px">
+      <span class="material-symbols-rounded" style="font-size:16px">${S.playing?"volume_up":"play_arrow"}</span>
+      <span>${r.playing?(S.playing?t("room.live"):(LANG==="ru"?"Слушать эфир":"Listen live")):t("room.paused")}</span>
+    </button>`}`
   :`<p class="ph" style="margin:0">${t("room.silent")}</p>`;
  document.getElementById("roomplay")?.addEventListener("click",()=>{
   if(PLAYCTX.key!=="room:"+r.id&&r.track)setTrack(roomTrackOf(r.track),true,true,"room:"+r.id);
   else toggle();
-  roomTick()})}
+  roomTick()});
+ document.getElementById("roomlisten")?.addEventListener("click",()=>{
+  if(r.track){
+   setTrack(roomTrackOf(r.track),true,false,"room:"+r.id);
+   paintRoomPlayback();
+  }
+ });
+}
 
 function paintRoomLists(){
  const ql=document.getElementById("roomql");if(!ql)return;
@@ -9026,8 +9120,8 @@ function dcPush(){
  if(!TAURI||!S.discord.on)return;
  const v=dcVars(S.current);
  const d={...v,
-  elapsed:S.playing?Math.floor(Date.now()/1000)-v._start:undefined,
-  remaining:S.playing&&S.dur>0?v._end-Math.floor(Date.now()/1000):undefined,
+  start:S.playing?v._start:undefined,
+  end:S.playing&&S.dur>0?v._end:undefined,
   art:S.current?.art||null};
  inv("discord_update",{data:d}).catch(()=>{})}
 async function paintDiscord(){
@@ -9399,10 +9493,16 @@ async function importRows(rows,svcId,name,asFavorites){
   if(!hit)continue;
   if(asFavorites){
    if(!hit.fav){hit.fav=true;hit.favAt=Date.now();queueFav(hit,true);
-    if(!TRACKS.some(x=>x.id===hit.id&&x.s===hit.s))TRACKS.push(hit);ok++}}
+    if(!TRACKS.some(x=>x.id===hit.id&&x.s===hit.s))TRACKS.push(hit);autoDownload(hit,null);ok++}}
   else if(pl&&!pl.tracks.some(x=>String(x.id)===String(hit.id)&&x.s===hit.s)){
-   await addToPlaylist(plId,hit);ok++}
+   pl.tracks.push(hit);autoDownload(hit,pl.name);ok++}
   await new Promise(res=>setTimeout(res,60))}
+ if(!asFavorites&&pl&&ok>0&&sb&&sbUser&&!isLocalPl(pl)){
+  try{
+   const {error}=await sb.rpc("playlist_sync",{pid:plId,tracks:pl.tracks.map(plPayload),replace_all:true});
+   if(error)console.warn("playlist_sync:",error.message||error);
+  }catch(e){console.warn("playlist_sync:",e.message||e)}
+ }
  save();renderLib();renderWaveHint();
  toast(t("sp.imported").replace("{ok}",ok).replace("{n}",take.length),5200)}
 

@@ -1419,7 +1419,7 @@ html[data-lite] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!im
 
 /* Toasts. Failures used to reach the console only, so from the UI a dead
    stream was indistinguishable from silence. */
-.toasts{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:120;
+.toasts{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:450;
   width:min(520px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
 .toast{padding:10px 18px;border-radius:999px;font-size:.82rem;background:var(--surf-2);
   border:1px solid var(--line-2);color:var(--text);box-shadow:0 10px 30px oklch(0% 0 0 / .35);
@@ -2682,10 +2682,24 @@ html[data-fullscreen="true"] {
   --tb: 0px;
 }
 html[data-fullscreen="true"] .titlebar {
+  height: 34px;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transform: translateY(-100%);
+  background: oklch(0% 0 0 / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   transition: opacity 0.25s var(--md-sys-motion-easing-standard), transform 0.25s var(--md-sys-motion-easing-standard);
+}
+html[data-fullscreen="true"] .titlebar::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background: transparent;
+  pointer-events: auto;
 }
 html[data-fullscreen="true"] .titlebar:hover {
   opacity: 1;

@@ -156,11 +156,13 @@ fn nonce() -> String {
 /// Expands the user's template. Unknown placeholders stay as written so a
 /// typo is visible in Discord instead of silently disappearing.
 fn render(template: &str, vars: &serde_json::Value) -> String {
-    let get = |k: &str| {
-        vars.get(k)
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string()
+    let get = |k: &str| -> String {
+        match vars.get(k) {
+            Some(serde_json::Value::String(s)) => s.clone(),
+            Some(serde_json::Value::Number(n)) => n.to_string(),
+            Some(serde_json::Value::Bool(b)) => b.to_string(),
+            _ => String::new(),
+        }
     };
     let mut out = template.to_string();
     for key in [
@@ -179,19 +181,35 @@ fn render(template: &str, vars: &serde_json::Value) -> String {
 }
 
 fn presence_payload(d: &serde_json::Value, rendered: &str) -> serde_json::Value {
-    let elapsed = d.get("elapsed").and_then(|v| v.as_i64());
-    let remaining = d.get("remaining").and_then(|v| v.as_i64());
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|x| x.as_secs())
+        .unwrap_or(0) as i64;
+
+    let start = d.get("start")
+        .or_else(|| d.get("_start"))
+        .and_then(|v| v.as_i64())
+        .or_else(|| {
+            d.get("elapsed").and_then(|v| v.as_i64()).map(|e| {
+                if e > 1_000_000_000 { e } else { now.saturating_sub(e) }
+            })
+        });
+
+    let end = d.get("end")
+        .or_else(|| d.get("_end"))
+        .and_then(|v| v.as_i64())
+        .or_else(|| {
+            d.get("remaining").and_then(|v| v.as_i64()).map(|r| {
+                if r > 1_000_000_000 { r } else { now + r }
+            })
+        });
+
     let mut timestamps = serde_json::Map::new();
-    if let Some(e) = elapsed {
-        timestamps.insert("start".into(), json!(e));
+    if let Some(s) = start {
+        timestamps.insert("start".into(), json!(s));
     }
-    if let Some(r) = remaining {
-        // Discord wants an end instant, not a duration.
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|x| x.as_secs())
-            .unwrap_or(0) as i64;
-        timestamps.insert("end".into(), json!(now + r));
+    if let Some(e) = end {
+        timestamps.insert("end".into(), json!(e));
     }
     json!({
         "cmd": "SET_ACTIVITY",
@@ -219,14 +237,22 @@ fn send_now(state: &mut State, payload: &serde_json::Value, raw: &str) -> Result
     if state.conn.is_none() {
         state.conn = Ipc::connect();
     }
-    let conn = state
-        .conn
-        .as_mut()
-        .ok_or("Discord не запущен — обновление пропущено")?;
+    let conn = match state.conn.as_mut() {
+        Some(c) => c,
+        None => return Err("Discord не запущен — обновление пропущено".into()),
+    };
     if state.last_payload.is_empty() {
-        conn.handshake(&cid)?;
+        if let Err(e) = conn.handshake(&cid) {
+            state.conn = None;
+            state.last_payload.clear();
+            return Err(e);
+        }
     }
-    conn.write_frame(OPCODE_FRAME, payload)?;
+    if let Err(e) = conn.write_frame(OPCODE_FRAME, payload) {
+        state.conn = None;
+        state.last_payload.clear();
+        return Err(e);
+    }
     state.last_payload = raw.to_string();
     Ok(())
 }
@@ -325,3 +351,49 @@ pub fn discord_configure(enabled: bool, template: String) -> Result<(), String> 
 pub fn discord_available() -> bool {
     Ipc::connect().is_some()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_render_numeric_and_string_vars() {
+        let vars = json!({
+            "title": "Song Title",
+            "artist": "Artist Name",
+            "elapsed": 45,
+            "remaining": "03:15"
+        });
+        let res = render("{artist} — {title} [{elapsed}] ({remaining})", &vars);
+        assert_eq!(res, "Artist Name — Song Title [45] (03:15)");
+    }
+
+    #[test]
+    fn test_presence_payload_start_timestamp() {
+        let d = json!({
+            "start": 1740000000i64,
+            "end": 1740000200i64,
+            "status": "Listening",
+            "art": "cover.jpg",
+            "title": "Song",
+            "service": "ytm"
+        });
+        let payload = presence_payload(&d, "Song");
+        let start = payload.pointer("/args/activity/timestamps/start").and_then(|v| v.as_i64());
+        assert_eq!(start, Some(1740000000i64));
+    }
+
+    #[test]
+    fn test_presence_payload_relative_elapsed() {
+        let d = json!({
+            "elapsed": 30i64,
+            "remaining": 150i64
+        });
+        let payload = presence_payload(&d, "Song");
+        let start = payload.pointer("/args/activity/timestamps/start").and_then(|v| v.as_i64()).unwrap();
+        let end = payload.pointer("/args/activity/timestamps/end").and_then(|v| v.as_i64()).unwrap();
+        assert!(start > 1_000_000_000);
+        assert!(end > start);
+    }
+}
+

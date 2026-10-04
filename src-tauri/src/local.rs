@@ -534,19 +534,32 @@ fn reserve_names(
 }
 
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+fn new_command<S: AsRef<std::ffi::OsStr>>(program: S) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
 /// Downloads a track and bakes the current sound settings into the file.
 ///
 /// The plain download saves what the service sent. This one applies what the
-/// user is actually hearing: the nine-band equaliser and the playback rate.
+/// user is actually hearing: the ten-band equaliser and the playback rate.
 /// That is the whole point of a "speedup" or "slowed" export — the effect has
 /// to survive leaving Meowave, and a normal download loses it because those
 /// live in the Web Audio graph, not in the bytes.
 ///
-/// Speed is done with `atempo` rather than `asetrate`, so a 1.25× export sounds
-/// faster without turning the vocal into a chipmunk. atempo only accepts
-/// 0.5–2.0 per instance, so wider factors are chained.
+/// Speed alteration can preserve pitch (via `atempo`) or alter pitch (via
+/// `asetrate`/`aresample`), matching the frontend where `preservesPitch = false`
+/// gives classic Nightcore / Slowed behaviour.
 // The arguments arrive from the frontend by name, so a parameter struct would
-// only move the same eight fields behind one more type.
+// only move the same nine fields behind one more type.
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn download_processed(
@@ -555,9 +568,10 @@ pub async fn download_processed(
     name: String,
     folder: Option<String>,
     hq: bool,
-    // Nine gains in dB, matching FREQ in the frontend. Empty means flat.
+    // Ten gains in dB, matching FREQ in the frontend. Empty means flat.
     gains: Vec<f32>,
     rate: f32,
+    preserve_pitch: Option<bool>,
     // Appended to the file name, e.g. "speed up", so the export is
     // recognisable next to the original in a file manager.
     suffix: Option<String>,
@@ -572,7 +586,7 @@ pub async fn download_processed(
     let src = download_track(service, id, name, folder, hq, fmt).await?;
     let src = std::path::PathBuf::from(src);
 
-    let filters = build_filters(&gains, rate);
+    let filters = build_filters(&gains, rate, preserve_pitch.unwrap_or(false));
     if filters.is_empty() {
         // Nothing to apply; the untouched download is the correct answer
         // rather than a pointless re-encode that only loses quality.
@@ -610,7 +624,7 @@ pub async fn download_processed(
     let ok = {
         let (src, dst, filters) = (src.clone(), dst.clone(), filters.clone());
         tokio::task::spawn_blocking(move || {
-            std::process::Command::new(ff)
+            new_command(ff)
                 .args(["-y", "-loglevel", "error", "-i"])
                 .arg(&src)
                 .args(["-vn", "-af", &filters])
@@ -641,10 +655,10 @@ pub async fn download_processed(
 ///
 /// Kept separate so the "nothing to do" case is obvious: a flat EQ at 1.0×
 /// produces an empty chain and the caller skips the re-encode entirely.
-fn build_filters(gains: &[f32], rate: f32) -> String {
+fn build_filters(gains: &[f32], rate: f32, preserve_pitch: bool) -> String {
     // Same centre frequencies as the frontend's FREQ array. They have to match,
     // or the exported file will not sound like what was playing.
-    const FREQ: [u32; 9] = [60, 150, 400, 1000, 2400, 4000, 8000, 12000, 16000];
+    const FREQ: [u32; 10] = [32, 60, 150, 400, 1000, 2400, 4000, 8000, 12000, 16000];
     let mut parts: Vec<String> = Vec::new();
 
     for (i, f) in FREQ.iter().enumerate() {
@@ -661,18 +675,24 @@ fn build_filters(gains: &[f32], rate: f32) -> String {
     let r = if rate.is_finite() { rate } else { 1.0 };
     if (r - 1.0).abs() > 0.005 {
         let r = r.clamp(0.25, 4.0);
-        // atempo is limited to 0.5..=2.0, so anything wider is split into
-        // several stages whose product is the requested rate.
-        let mut left = r;
-        while left > 2.0 {
-            parts.push("atempo=2.0".into());
-            left /= 2.0;
+        if preserve_pitch {
+            // atempo is limited to 0.5..=2.0, so anything wider is split into
+            // several stages whose product is the requested rate.
+            let mut left = r;
+            while left > 2.0 {
+                parts.push("atempo=2.0".into());
+                left /= 2.0;
+            }
+            while left < 0.5 {
+                parts.push("atempo=0.5".into());
+                left /= 0.5;
+            }
+            parts.push(format!("atempo={left:.4}"));
+        } else {
+            let base_sr: u32 = 44100;
+            let target_sr = ((base_sr as f32) * r).round() as u32;
+            parts.push(format!("aresample={base_sr},asetrate={target_sr},aresample={base_sr}"));
         }
-        while left < 0.5 {
-            parts.push("atempo=0.5".into());
-            left /= 0.5;
-        }
-        parts.push(format!("atempo={left:.4}"));
     }
 
     parts.join(",")
@@ -750,7 +770,7 @@ fn locate_ffmpeg() -> Option<std::path::PathBuf> {
         }
     }
     // Then PATH.
-    let probe = std::process::Command::new(if cfg!(windows) { "where" } else { "which" })
+    let probe = new_command(if cfg!(windows) { "where" } else { "which" })
         .arg("ffmpeg")
         .output()
         .ok()?;
@@ -787,7 +807,7 @@ async fn has_ffmpeg_async() -> bool {
 /// file outright.
 fn to_mp3(src: &std::path::Path, dst: &std::path::Path) -> Option<std::path::PathBuf> {
     let ff = ffmpeg_bin()?;
-    let status = std::process::Command::new(ff)
+    let status = new_command(ff)
         .args(["-y", "-loglevel", "error", "-i"])
         .arg(src)
         // 192k CBR: transparent enough for a re-encode of a lossy source, and
@@ -831,7 +851,7 @@ pub fn open_external(url: String) -> Result<(), String> {
     {
         // `cmd /c start` would need escaping of & and ^; ShellExecute via
         // rundll32 avoids the shell entirely.
-        std::process::Command::new("rundll32.exe")
+        new_command("rundll32.exe")
             .args(["url.dll,FileProtocolHandler", u])
             .spawn()
             .map_err(|e| e.to_string())?;
@@ -848,3 +868,32 @@ pub fn open_external(url: String) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_filters_eq_frequencies() {
+        let gains = vec![3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -2.5];
+        let f = build_filters(&gains, 1.0, false);
+        assert!(f.contains("equalizer=f=32:width_type=q:w=1.05:g=3.00"));
+        assert!(f.contains("equalizer=f=16000:width_type=q:w=1.05:g=-2.50"));
+    }
+
+    #[test]
+    fn test_build_filters_pitch_altering() {
+        let f = build_filters(&[], 1.25, false);
+        assert!(f.contains("asetrate=55125"));
+        assert!(f.contains("aresample=44100"));
+        assert!(!f.contains("atempo"));
+    }
+
+    #[test]
+    fn test_build_filters_pitch_preserving() {
+        let f = build_filters(&[], 1.25, true);
+        assert!(f.contains("atempo=1.25"));
+        assert!(!f.contains("asetrate"));
+    }
+}
+
