@@ -114,15 +114,23 @@ jobs:
           if [ -z "$TARGET" ]; then
             TARGET="meowave_iOS"
           fi
-          echo "Using target: $TARGET"
+
+          SCHEME=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | grep -i ios | head -n 1)
+          if [ -z "$SCHEME" ]; then
+            SCHEME="$TARGET"
+          fi
+
+          CONFIG=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Build Configurations:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | grep -i release | head -n 1)
+          CONFIG=${CONFIG:-"Release"}
+
+          echo "Building scheme: $SCHEME (target: $TARGET, config: $CONFIG)"
 
           xcodebuild build \
             -project "$PROJECT" \
-            -target "$TARGET" \
-            -configuration Release \
+            -scheme "$SCHEME" \
+            -configuration "$CONFIG" \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
-            CONFIGURATION=Release \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
