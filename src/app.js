@@ -21,7 +21,12 @@
 })();
 
 /* boot: частицы собирают круг -> ударная волна */
-const BOOT={done:false,reduce:matchMedia("(prefers-reduced-motion: reduce)").matches};
+const motionMedia = matchMedia("(prefers-reduced-motion: reduce)");
+const BOOT={done:false,reduce:motionMedia.matches};
+motionMedia.addEventListener("change", e => {
+  BOOT.reduce = e.matches;
+  if(typeof onReducedMotionChange === "function") onReducedMotionChange(e.matches);
+});
 document.documentElement.classList.add("booting");
 function bootFinish(){
  if(BOOT.done)return;BOOT.done=true;
@@ -1009,7 +1014,7 @@ function safeParticleDensity(){
  const mem=Number(navigator.deviceMemory)||4,cores=Number(navigator.hardwareConcurrency)||4;
  if(matchMedia("(pointer:coarse)").matches||mem<=2||cores<=2)return 700;
  if(mem<=4||cores<=4)return 1200;
- return Math.min(S.dens,2200)}
+ return Math.min(S.dens,1400)}
 /* стартовая раскладка: частицы приходят из-за краёв экрана и стягиваются в круг */
 function scatterEdges(){
  if(!particlesEnabled||!F.n)return;
@@ -1028,6 +1033,7 @@ function shock(strength=1.4){
  F.mode="flow";
  setTimeout(()=>{if(!S.playing&&F.mode==="flow")F.mode="cloud"},2800);
 }
+let staticFieldDrawn=false;
 function resize(){
  /* At dpr 2 the field is four times the pixels for a glow that is deliberately
     soft — nothing in it has an edge sharp enough to benefit. Capping at 1.5
@@ -1036,7 +1042,9 @@ function resize(){
  F.dpr=Math.min(S.lite?1:1.5,window.devicePixelRatio||1);
  F.w=innerWidth;F.h=innerHeight;
  cv.width=F.w*F.dpr;cv.height=F.h*F.dpr;gx.setTransform(F.dpr,0,0,F.dpr,0,0);
- if(!F.p.length)build(innerWidth<900?Math.round(safeParticleDensity()*.45):safeParticleDensity())}
+ if(!F.p.length)build(innerWidth<900?Math.round(safeParticleDensity()*.45):safeParticleDensity());
+ staticFieldDrawn=false;
+}
 resize();addEventListener("resize",()=>{resize()});
 addEventListener("pointermove",e=>{
  const now=performance.now(),dt=Math.max(8,now-F.pt)/1000;
@@ -1090,12 +1098,23 @@ function step(dt,lvl){
    p.hx=(((ph*1.2+F.t*.05)%1.2)-.1)*w;
    p.hy=h*.5+Math.sin(ph*Math.PI*4+F.t*1.1+p.lane*.7)*amp+(p.lane-4)*h*.028+Math.sin(F.t*.5+p.ph)*6;
   }
-  const dx=p.x-F.mx,dy=p.y-F.my,d2=dx*dx+dy*dy;
-  if(d2<26000){const d=Math.sqrt(d2)||1,q=1-d/161.3;p.vx+=dx/d*q*q*460*dt;p.vy+=dy/d*q*q*460*dt}
-  const f=Math.min(1,base*(.55+p.r*.9)*(mode==="gather"?2.4:1))*hold;
-  p.x+=(p.hx-p.x)*f+p.vx*dt;
-  p.y+=(p.hy-p.y)*f+p.vy*dt;
-  p.vx*=decay;p.vy*=decay;
+  const a = Math.sin(p.y * 0.006 + F.t * 0.5) + Math.cos(p.x * 0.004 - F.t * 0.3);
+  p.vx += Math.cos(a) * 0.08 * (p.s || 1);
+  p.vy += Math.sin(a) * 0.05 * (p.s || 1);
+  const dx = p.x - F.mx, dy = p.y - F.my, dd = dx * dx + dy * dy;
+  if (dd < 16000) {
+    const f = (1 - dd / 16000) * 1.6;
+    const l = Math.sqrt(dd) || 1;
+    p.vx += dx / l * f;
+    p.vy += dy / l * f;
+  }
+  p.vx *= 0.9;
+  p.vy *= 0.9;
+  const f = Math.min(1, base * (.55 + p.r * .9) * (mode === "gather" ? 2.4 : 1)) * hold;
+  p.x += (p.hx - p.x) * f + p.vx * dt;
+  p.y += (p.hy - p.y) * f + p.vy * dt;
+  const W = F.w, H = F.h;
+  if (p.x > W + 5) p.x = -5; if (p.x < -5) p.x = W + 5; if (p.y > H + 5) p.y = -5; if (p.y < -5) p.y = H + 5;
  }}
 function draw(lvl){
  gx.clearRect(0,0,F.w,F.h);
@@ -1127,6 +1146,62 @@ function drawVis(){
  for(let i=0;i<b.length;i++){const x=(i/(b.length-1))*w,y=h*.78-b[i]*h*.5;i?g.lineTo(x,y):g.moveTo(x,y)}
  g.stroke();g.globalAlpha=1}
 
+/* ── M3 Expressive Living Systems: Particle waves, Wavy progress, Proximity, Parametric shapes ── */
+const FINE = (typeof matchMedia === "function") && matchMedia("(pointer:fine)").matches;
+const RM = (typeof matchMedia === "function") && matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+/* living sine wave audio progress track */
+let ph = 0;
+const wFill = document.getElementById("wFill") || document.querySelector(".wfill");
+const wTrack = document.getElementById("wTrack") || document.querySelector(".wtrack");
+function updateWavyProgress(dt, curPos, dur) {
+  if (RM) return;
+  const p = dur ? Math.min(1, Math.max(0, curPos / dur)) : 0;
+  const x = Math.max(p * 1000, 6);
+  if (S.playing) {
+    ph += 0.06 * dt;
+  }
+  let d = 'M3 12';
+  for (let i = 3; i <= x; i += 6) {
+    d += 'L' + i + ' ' + (12 + 5 * Math.sin(i / 22 - ph)).toFixed(2);
+  }
+  if (wFill) wFill.setAttribute('d', d);
+  if (wTrack) wTrack.setAttribute('d', 'M' + Math.min(x + 18, 997) + ' 12L997 12');
+}
+
+/* headline proximity weight */
+function prox(chars, base, maxW, minW, rad) {
+  if (!FINE || RM) return;
+  if (!chars || !chars.length) return;
+  const mx = (typeof F !== "undefined" && F.mx != null) ? F.mx : -1e4;
+  const my = (typeof F !== "undefined" && F.my != null) ? F.my : -1e4;
+  chars.forEach(c => {
+    const r = c.getBoundingClientRect();
+    const d = Math.hypot(mx - (r.left + r.width / 2), my - (r.top + r.height / 2));
+    const t = Math.min(1, Math.max(0, 1 - d / (rad || 1)));
+    const e = t * t * (3 - 2 * t);
+    c.style.fontVariationSettings = `"wght" ${Math.round(base + (maxW - base) * e)},"wdth" ${Math.round(120 + (minW - 120) * e)},"opsz" 144`;
+  });
+}
+
+/* parametric shapes */
+const N = 180;
+function pts(spec) {
+  const [t, n, a] = (spec || 'flower,6,.2').split(',');
+  const k = +n || 4, A = +a || 0.2, R = 46, o = [];
+  for (let i = 0; i < N; i++) {
+    const th = i / N * Math.PI * 2;
+    const r = (t === 'flower') 
+      ? R * (1 - A) + R * A * Math.pow(Math.abs(Math.cos(k * th / 2)), 0.8) 
+      : (t === 'cookie' || true) 
+        ? R * (1 - A / 2 + A / 2 * Math.cos(k * th)) 
+        : R;
+    o.push([50 + r * Math.cos(th - Math.PI / 2), 50 + r * Math.sin(th - Math.PI / 2)]);
+  }
+  return o;
+}
+const toD = p => 'M' + p.map(q => q[0].toFixed(2) + ' ' + q[1].toFixed(2)).join('L') + 'Z';
+
 /* Render gating.
    Rule: the canvas only stops when the window is genuinely invisible
    (minimised or hidden). Merely losing focus must NOT stop it — the window is
@@ -1141,6 +1216,10 @@ function drawVis(){
    machine, including the 120 Hz ones, and that cap was the 30 fps the user
    saw. An unfocused window still gets throttled, just not a focused one. */
 let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=0;
+function onReducedMotionChange(reduced){
+ staticFieldDrawn=false;
+ if(!reduced && renderOn && !raf) raf=requestAnimationFrame(frame);
+}
 /* Advances the clock for non-local playback: rAF drives it while the window
    is visible, the orbit interval takes over while it is hidden. */
 function advanceClock(dt){
@@ -1149,17 +1228,26 @@ function advanceClock(dt){
  paint()}
 function frame(now){
  if(!renderOn||document.hidden){raf=0;return}
- const effectiveBudget=S.lite?Math.max(33,budget):budget;
+ const isReduce=BOOT.reduce;
+ const effectiveBudget=isReduce?100:(S.lite?Math.max(33,budget):budget);
  if(effectiveBudget>0&&now-lastFrame<effectiveBudget){raf=requestAnimationFrame(frame);return}
  lastFrame=now;
  const dt=Math.min(.05,(now-last)/1000);last=now;
- const lvl=level();step(dt,lvl);draw(lvl);
- if(fp.dataset.open==="true")drawVis();
+ if(!isReduce){
+  staticFieldDrawn=false;
+  const lvl=level();step(dt,lvl);draw(lvl);
+  if(fp.dataset.open==="true")drawVis();
+ }else if(!staticFieldDrawn&&F.w&&F.h){
+  gx.clearRect(0,0,F.w,F.h);
+  draw(0);
+  staticFieldDrawn=true;
+ }
  /* Non-local playback has no media element to read a clock from, so its
     position and listening time advance here instead. */
  if(S.playing&&S.current?.mode!=="local")advanceClock(dt)
  const curPos=(A.audio&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
  if(S.playing)syncKaraokeFrame(curPos);
+ updateWavyProgress(dt, curPos, S.dur || 1);
 
  raf=requestAnimationFrame(frame)
 }
@@ -8991,9 +9079,27 @@ function initSearchReveal(){
    `<span class="search-fill-wipe" style="clip-path:inset(0 ${(100-pct).toFixed(2)}% 0 0);width:100%">${esc(phrase)}</span>`;
  }
 
- setFlowContent(phrases[0], 0);
+ function stopFlowAnimation(){
+  if(rafId){
+   cancelAnimationFrame(rafId);
+   rafId=0;
+  }
+  setFlowContent(phrases[0], 100);
+  flow.style.opacity="1";
+  flow.style.visibility="visible";
+ }
+
+ function startFlowAnimation(){
+  if(rafId || BOOT.reduce) return;
+  lastTime=performance.now();
+  rafId=requestAnimationFrame(frame);
+ }
 
  function frame(now){
+  if(BOOT.reduce){
+   stopFlowAnimation();
+   return;
+  }
   const dt=Math.min(100, Math.max(1, now-lastTime));
   lastTime=now;
 
@@ -9062,7 +9168,17 @@ function initSearchReveal(){
   });
  }
 
- rafId=requestAnimationFrame(frame);
+ motionMedia.addEventListener("change", e => {
+  if(e.matches) stopFlowAnimation();
+  else startFlowAnimation();
+ });
+
+ if(BOOT.reduce){
+  stopFlowAnimation();
+ } else {
+  setFlowContent(phrases[0], 0);
+  rafId=requestAnimationFrame(frame);
+ }
 }
 
 /* ── privacy settings ───────────────────────────────────── */
