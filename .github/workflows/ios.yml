@@ -95,6 +95,11 @@ jobs:
 
       - name: Build iOS App with Xcode
         run: |
+          BUNDLE_ID=$(grep '"identifier"' src-tauri/tauri.conf.json | head -n 1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+          BUNDLE_ID=${BUNDLE_ID:-"app.meowave.desktop"}
+          echo "http://127.0.0.1:1420" > "${TMPDIR}${BUNDLE_ID}-server-addr" 2>/dev/null || true
+          echo "http://127.0.0.1:1420" > "/tmp/${BUNDLE_ID}-server-addr" 2>/dev/null || true
+
           PROJECT=$(find src-tauri/gen/apple -name "*.xcodeproj" -maxdepth 2 | head -n 1)
           if [ -z "$PROJECT" ]; then
             echo "Error: Xcode project not found in src-tauri/gen/apple"
@@ -102,21 +107,22 @@ jobs:
           fi
           echo "Found Xcode project: $PROJECT"
 
-          SCHEME=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | grep -i ios | head -n 1)
-          if [ -z "$SCHEME" ]; then
-            SCHEME=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | head -n 1)
+          TARGET=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Targets:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | grep -i ios | head -n 1)
+          if [ -z "$TARGET" ]; then
+            TARGET=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Targets:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | head -n 1)
           fi
-          if [ -z "$SCHEME" ]; then
-            SCHEME="meowave_iOS"
+          if [ -z "$TARGET" ]; then
+            TARGET="meowave_iOS"
           fi
-          echo "Using scheme: $SCHEME"
+          echo "Using target: $TARGET"
 
           xcodebuild build \
             -project "$PROJECT" \
-            -scheme "$SCHEME" \
+            -target "$TARGET" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
+            CONFIGURATION=Release \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
@@ -124,9 +130,9 @@ jobs:
       - name: Package IPA
         run: |
           mkdir -p Payload
-          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1 | head -n 1)
+          APP_PATH=$(find build/Build/Products -name "*.app" -type d | head -n 1)
           if [ -z "$APP_PATH" ]; then
-            echo "Error: Compiled .app bundle not found in build/Build/Products/Release-iphoneos"
+            echo "Error: Compiled .app bundle not found in build/Build/Products"
             exit 1
           fi
           echo "Found application bundle: $APP_PATH"
