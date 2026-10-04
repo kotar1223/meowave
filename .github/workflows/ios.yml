@@ -58,6 +58,11 @@ jobs:
           npm ci || npm install
           npm install -g @tauri-apps/cli@^2.0.0
 
+      - name: Create mobile externalBin placeholder
+        run: |
+          mkdir -p src-tauri/ffmpeg
+          touch src-tauri/ffmpeg/ffmpeg-aarch64-apple-ios
+
       - name: Precompile Rust core for iOS
         working-directory: src-tauri
         run: |
