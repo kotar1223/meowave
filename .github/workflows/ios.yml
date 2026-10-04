@@ -34,7 +34,13 @@ jobs:
 
       - name: Select Xcode version
         run: |
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          LATEST_XCODE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -n "$LATEST_XCODE" ]; then
+            echo "Selecting Xcode 16: $LATEST_XCODE"
+            sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          else
+            echo "Xcode 16 not found, keeping default Xcode"
+          fi
           xcodebuild -version
 
       - name: Setup Node.js
@@ -72,6 +78,13 @@ jobs:
         run: |
           npx tauri ios init
 
+      - name: Ensure Xcode Project Compatibility
+        run: |
+          find src-tauri/gen/apple -name "project.pbxproj" | while read -r pbx; do
+            echo "Patching objectVersion in $pbx for broad Xcode compatibility"
+            sed -i '' 's/objectVersion = 77;/objectVersion = 60;/g' "$pbx" 2>/dev/null || true
+          done
+
       - name: Enable Background Audio in Info.plist
         run: |
           find src-tauri/gen/apple -name "Info.plist" | while read -r plist; do
@@ -89,9 +102,12 @@ jobs:
           fi
           echo "Found Xcode project: $PROJECT"
 
-          SCHEME=$(xcodebuild -list -project "$PROJECT" | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | grep -i ios | head -n 1)
+          SCHEME=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | grep -i ios | head -n 1)
           if [ -z "$SCHEME" ]; then
-            SCHEME=$(xcodebuild -list -project "$PROJECT" | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | head -n 1)
+            SCHEME=$(xcodebuild -list -project "$PROJECT" 2>/dev/null | awk '/Schemes:/{flag=1;next}/^$/{flag=0}flag' | tr -d ' ' | head -n 1)
+          fi
+          if [ -z "$SCHEME" ]; then
+            SCHEME="meowave_iOS"
           fi
           echo "Using scheme: $SCHEME"
 
