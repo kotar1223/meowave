@@ -11,6 +11,7 @@ on:
     paths:
       - 'src/**'
       - 'src-tauri/**'
+      - 'scripts/**'
       - '.github/workflows/ios.yml'
   release:
     types: [published]
@@ -78,12 +79,69 @@ jobs:
         run: |
           npx tauri ios init
 
+      - name: Setup iOS Rust Build Stub and Populate Libraries
+        run: |
+          chmod +x scripts/ios-rust-stub.sh
+          cp -f scripts/ios-rust-stub.sh /tmp/ios-rust-stub.sh
+
+          LIB_SRC="src-tauri/target/aarch64-apple-ios/release/libmeowave_lib.a"
+          if [ ! -f "$LIB_SRC" ]; then
+            echo "Error: Precompiled Rust lib not found at $LIB_SRC"
+            exit 1
+          fi
+          echo "Precompiled Rust lib verified: $LIB_SRC ($(ls -lh "$LIB_SRC" | awk '{print $5}'))"
+
+          # Populate all possible Externals directories in src-tauri/gen/apple
+          find src-tauri/gen/apple -type d | while read -r d; do
+            case "$d" in
+              *apple|*meowave)
+                for conf in release Release debug Debug; do
+                  for arch in arm64 aarch64; do
+                    mkdir -p "$d/Externals/$arch/$conf"
+                    cp -f "$LIB_SRC" "$d/Externals/$arch/$conf/libapp.a"
+                    cp -f "$LIB_SRC" "$d/Externals/$arch/$conf/libmeowave_lib.a"
+                    cp -f "$LIB_SRC" "$d/Externals/$arch/$conf/libmeowave.a"
+                  done
+                done
+                ;;
+            esac
+          done
+
       - name: Ensure Xcode Project Compatibility
         run: |
-          find src-tauri/gen/apple -name "project.pbxproj" | while read -r pbx; do
-            echo "Patching objectVersion in $pbx for broad Xcode compatibility"
-            sed -i '' 's/objectVersion = 77;/objectVersion = 60;/g' "$pbx" 2>/dev/null || true
-          done
+          python3 - << 'EOF'
+          import glob
+
+          for pbx in glob.glob("src-tauri/gen/apple/**/project.pbxproj", recursive=True):
+              print(f"Patching {pbx} for broad Xcode compatibility and stubbing Rust script")
+              with open(pbx, "r", encoding="utf-8") as f:
+                  lines = f.readlines()
+
+              out_lines = []
+              in_rust_script = False
+              replaced = False
+              for line in lines:
+                  if "objectVersion = 77;" in line:
+                      line = line.replace("objectVersion = 77;", "objectVersion = 60;")
+
+                  if "tauri ios xcode-script" in line:
+                      out_lines.append('\t\t\tshellScript = "/bin/sh /tmp/ios-rust-stub.sh\\n";\n')
+                      replaced = True
+                      if not line.strip().endswith('";'):
+                          in_rust_script = True
+                      continue
+
+                  if in_rust_script:
+                      if line.strip().endswith('";'):
+                          in_rust_script = False
+                      continue
+
+                  out_lines.append(line)
+
+              with open(pbx, "w", encoding="utf-8") as f:
+                  f.writelines(out_lines)
+              print(f"Patched {pbx} (Rust script phase replaced: {replaced})")
+          EOF
 
       - name: Enable Background Audio in Info.plist
         run: |
@@ -95,10 +153,8 @@ jobs:
 
       - name: Build iOS App with Xcode
         run: |
-          BUNDLE_ID=$(grep '"identifier"' src-tauri/tauri.conf.json | head -n 1 | sed 's/.*: *"\([^"]*\)".*/\1/')
-          BUNDLE_ID=${BUNDLE_ID:-"app.meowave.desktop"}
-          echo "http://127.0.0.1:1420" > "${TMPDIR}${BUNDLE_ID}-server-addr" 2>/dev/null || true
-          echo "http://127.0.0.1:1420" > "/tmp/${BUNDLE_ID}-server-addr" 2>/dev/null || true
+          # Clean any stale server-addr file
+          rm -f "${TMPDIR}"*server-addr /tmp/*server-addr 2>/dev/null || true
 
           PROJECT=$(find src-tauri/gen/apple -name "*.xcodeproj" -maxdepth 2 | head -n 1)
           if [ -z "$PROJECT" ]; then
@@ -133,14 +189,17 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            EXPANDED_CODE_SIGN_IDENTITY=""
 
       - name: Package IPA
         run: |
           mkdir -p Payload
-          APP_PATH=$(find build/Build/Products -name "*.app" -type d | head -n 1)
+          APP_PATH=$(find build/Build/Products -name "*.app" -type d | grep -v "Intermediate" | head -n 1)
           if [ -z "$APP_PATH" ]; then
             echo "Error: Compiled .app bundle not found in build/Build/Products"
+            find build/Build/Products -maxdepth 4 || true
             exit 1
           fi
           echo "Found application bundle: $APP_PATH"
