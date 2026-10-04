@@ -47,6 +47,7 @@ pub const TV_UA: &str = "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/53
 /// Clients tried against the player endpoint, first that answers OK wins.
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
     ("ANDROID", ANDROID_UA),
+    ("ANDROID_TESTSUITE", "Google-Test-Suite"),
     ("ANDROID_MUSIC", MUSIC_UA),
     ("IOS", IOS_UA),
     ("TVHTML5_SIMPLY_EMBEDDED_PLAYER", TV_UA),
@@ -68,7 +69,7 @@ fn music_ctx() -> Value {
     json!({
         "client": {
             "clientName": "ANDROID_MUSIC",
-            "clientVersion": "6.42.52",
+            "clientVersion": "7.20.51",
             "androidSdkVersion": 33,
             "osName": "Android",
             "osVersion": "13",
@@ -85,6 +86,15 @@ fn music_ctx() -> Value {
 /// the request is refused as inconsistent.
 fn player_ctx(name: &str, visitor: Option<&str>) -> Value {
     let mut client = match name {
+        "ANDROID_TESTSUITE" => json!({
+            "clientName": "ANDROID_TESTSUITE",
+            "clientVersion": "1.9",
+            "androidSdkVersion": 30,
+            "osName": "Android",
+            "osVersion": "11",
+            "hl": "en",
+            "gl": "US"
+        }),
         "ANDROID_VR" => json!({
             "clientName": "ANDROID_VR",
             "clientVersion": "1.65.10",
@@ -99,7 +109,7 @@ fn player_ctx(name: &str, visitor: Option<&str>) -> Value {
         }),
         "ANDROID_MUSIC" => json!({
             "clientName": "ANDROID_MUSIC",
-            "clientVersion": "6.42.52",
+            "clientVersion": "7.20.51",
             "androidSdkVersion": 33,
             "osName": "Android",
             "osVersion": "13",
@@ -493,20 +503,18 @@ async fn player_response(
     client: &str,
     ua: &str,
 ) -> Result<Value, String> {
-    let body = json!({
+    let mut body = json!({
         "context": player_ctx(client, visitor),
         "videoId": video_id,
-        // Missing entirely before: the real app always sends this, and its
-        // absence is one more signal the bot check keys on. Requesting the
-        // HTML5 player explicitly is also what turns LOGIN_REQUIRED on a normal
-        // video into a plain OK — confirmed against a batch of ids that all
-        // failed without it and all passed with it.
         "playbackContext": {
             "contentPlaybackContext": { "html5Preference": "HTML5_PREF_WANTS" }
         },
         "contentCheckOk": true,
         "racyCheckOk": true
     });
+    if client == "TVHTML5_SIMPLY_EMBEDDED_PLAYER" {
+        body["thirdParty"] = json!({ "embedUrl": format!("https://www.youtube.com/watch?v={video_id}") });
+    }
     post(PLAYER_API, "player", ua, visitor, body).await
 }
 
@@ -559,7 +567,19 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
                             && f.get("url").and_then(|u| u.as_str()).is_some()
                     })
                 })
-                .unwrap_or(false);
+                .unwrap_or(false)
+                || r.pointer("/streamingData/formats")
+                    .and_then(|f| f.as_array())
+                    .map(|formats| {
+                        formats.iter().any(|f| {
+                            f.get("mimeType")
+                                .and_then(|m| m.as_str())
+                                .map(|m| m.contains("audio") || m.contains("mp4a") || m.contains("opus"))
+                                .unwrap_or(false)
+                                && f.get("url").and_then(|u| u.as_str()).is_some()
+                        })
+                    })
+                    .unwrap_or(false);
 
             let good = status_of(&r) == "OK" && has_playable_audio;
             resp = Some(r);
@@ -592,24 +612,34 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
         return Err(format!("YouTube will not play this track: {reason}"));
     }
 
-    let formats = resp
-        .pointer("/streamingData/adaptiveFormats")
-        .and_then(|f| f.as_array())
-        .ok_or("no adaptive formats")?;
+    let mut audio: Vec<&Value> = Vec::new();
 
-    let audio: Vec<&Value> = formats
-        .iter()
-        .filter(|f| {
-            f.get("mimeType")
+    if let Some(formats) = resp.pointer("/streamingData/adaptiveFormats").and_then(|f| f.as_array()) {
+        for f in formats {
+            let is_audio = f.get("mimeType")
                 .and_then(|m| m.as_str())
                 .map(|m| m.starts_with("audio/"))
-                .unwrap_or(false)
-        })
-        // A `signatureCipher` format needs the JS player's decipher routine;
-        // the Android client normally hands out plain `url` fields, so skip
-        // anything still encrypted rather than shipping a broken link.
-        .filter(|f| f.get("url").is_some())
-        .collect();
+                .unwrap_or(false);
+            if is_audio && f.get("url").is_some() {
+                audio.push(f);
+            }
+        }
+    }
+
+    // Fall back to combined formats containing audio if adaptive pure audio is missing
+    if audio.is_empty() {
+        if let Some(formats) = resp.pointer("/streamingData/formats").and_then(|f| f.as_array()) {
+            for f in formats {
+                let has_audio = f.get("mimeType")
+                    .and_then(|m| m.as_str())
+                    .map(|m| m.contains("audio") || m.contains("mp4a") || m.contains("opus"))
+                    .unwrap_or(false);
+                if has_audio && f.get("url").is_some() {
+                    audio.push(f);
+                }
+            }
+        }
+    }
 
     if audio.is_empty() {
         return Err("no plain audio stream available".into());

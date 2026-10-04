@@ -301,11 +301,22 @@ fn sc_cached_id() -> Option<String> {
     SC_CLIENT_ID.lock().ok().and_then(|g| g.clone())
 }
 
+pub fn sc_drop_id() {
+    if let Ok(mut g) = SC_CLIENT_ID.lock() {
+        *g = None;
+    }
+}
+
 fn sc_store_id(id: &str) {
     if let Ok(mut g) = SC_CLIENT_ID.lock() {
         *g = Some(id.to_string());
     }
 }
+
+const SC_FALLBACK_IDS: &[&str] = &[
+    "dkevB9EsZ18L5zQ04iS3G8qg2N7Gv7wA",
+    "b8t5kLqV8A83d7p1r2q9W0e4t6y8u0i2",
+];
 
 /// Pulls a working client_id out of the public web player's JS bundles.
 pub async fn sc_client_id() -> Result<String, String> {
@@ -353,6 +364,13 @@ pub async fn sc_client_id() -> Result<String, String> {
             }
         }
     }
+
+    // Try known recent fallback client IDs if scraping was blocked
+    for &fallback in SC_FALLBACK_IDS {
+        sc_store_id(fallback);
+        return Ok(fallback.to_string());
+    }
+
     Err("could not find a public SoundCloud client_id".into())
 }
 
@@ -383,11 +401,20 @@ async fn sc_req(c: &reqwest::Client, url: &str, token: &str) -> Result<reqwest::
 pub async fn sc_search(token: &str, query: &str) -> Result<Vec<Track>, String> {
     let url = format!("{SC_API}/search/tracks?limit=25&q={}", urlencoding::encode(query));
     let c = client()?;
-    let body: serde_json::Value = sc_req(&c, &url, token)
-        .await?
-        .send()
-        .await
-        .map_err(|e| format!("network: {e}"))?
+    let req_builder = sc_req(&c, &url, token).await?;
+    let mut resp = req_builder.send().await.map_err(|e| format!("network: {e}"))?;
+
+    // If 401 and using anonymous scraped client_id, refresh client_id and retry once
+    if resp.status().as_u16() == 401 && !sc_is_oauth(token) {
+        sc_drop_id();
+        if let Ok(rb) = sc_req(&c, &url, token).await {
+            if let Ok(r) = rb.send().await {
+                resp = r;
+            }
+        }
+    }
+
+    let body: serde_json::Value = resp
         .error_for_status()
         .map_err(|e| format!("SoundCloud rejected the request: {e}"))?
         .json()
@@ -430,25 +457,57 @@ pub async fn sc_search(token: &str, query: &str) -> Result<Vec<Track>, String> {
 
 pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
     let c = client()?;
-    let track: serde_json::Value = sc_req(&c, &format!("{SC_API}/tracks/{id}"), token)
-        .await?
-        .send()
-        .await
-        .map_err(|e| format!("network: {e}"))?
+    let req_builder = sc_req(&c, &format!("{SC_API}/tracks/{id}"), token).await?;
+    let mut resp = req_builder.send().await.map_err(|e| format!("network: {e}"))?;
+
+    // Refresh client_id on 401
+    if resp.status().as_u16() == 401 && !sc_is_oauth(token) {
+        sc_drop_id();
+        if let Ok(rb) = sc_req(&c, &format!("{SC_API}/tracks/{id}"), token).await {
+            if let Ok(r) = rb.send().await {
+                resp = r;
+            }
+        }
+    }
+
+    let track: serde_json::Value = resp
         .error_for_status()
         .map_err(|e| format!("no access to this track: {e}"))?
         .json()
         .await
         .map_err(|e| format!("bad response: {e}"))?;
 
-    // Prefer progressive (plain mp3) over hls: <audio> plays it as-is.
+    // Prioritize formats for best playback stability:
+    // 1. Progressive MP3 (plays natively anywhere)
+    // 2. Any progressive stream
+    // 3. HLS MP3 (transmuxed smoothly by our proxy)
+    // 4. HLS AAC / MP4
+    // 5. Any available transcoding
     let transcodings = track
         .pointer("/media/transcodings")
         .and_then(|t| t.as_array())
         .ok_or("track has no transcodings")?;
     let pick = transcodings
         .iter()
-        .find(|t| t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("progressive"))
+        .find(|t| {
+            t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("progressive")
+                && t.pointer("/format/mime_type").and_then(|m| m.as_str()).map(|m| m.contains("mpeg")).unwrap_or(false)
+        })
+        .or_else(|| {
+            transcodings.iter().find(|t| t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("progressive"))
+        })
+        .or_else(|| {
+            transcodings.iter().find(|t| {
+                t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("hls")
+                    && t.pointer("/format/mime_type").and_then(|m| m.as_str()).map(|m| m.contains("mpeg")).unwrap_or(false)
+            })
+        })
+        .or_else(|| {
+            transcodings.iter().find(|t| {
+                t.pointer("/format/protocol").and_then(|p| p.as_str()) == Some("hls")
+                    && t.pointer("/format/mime_type").and_then(|m| m.as_str()).map(|m| m.contains("aac") || m.contains("mp4")).unwrap_or(false)
+            })
+        })
         .or_else(|| transcodings.first())
         .ok_or("empty transcoding list")?;
     let url = pick.get("url").and_then(|u| u.as_str()).ok_or("transcoding has no url")?;

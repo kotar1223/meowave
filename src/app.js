@@ -608,7 +608,7 @@ const fp=document.getElementById("fp");
    source -> 9×Biquad -> [HRTF Panner -> dry + Convolver wet] | bypass -> gain -> analyser -> out */
 const A={ctx:null,src:null,audio:null,media:null,pre:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0,
  /* gen bumps on every track change; events from the previous src are dropped */
- gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0,pendingSeek:null,seekingUntil:0};
+ gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0,pendingSeek:null,seekingUntil:0,watchdog:null,transitioning:false,_resumingSameTrack:false};
 /* Exactly one <audio> element for the whole app. */
 function ensureAudioEl(){
  if(A.audio)return A.audio;
@@ -618,7 +618,7 @@ function ensureAudioEl(){
  au.crossOrigin="anonymous";au.preload="auto";
  au.addEventListener("loadedmetadata",()=>A.onMeta?.());
  au.addEventListener("durationchange",()=>A.onMeta?.());
- au.addEventListener("canplay",()=>A.onMeta?.());
+ au.addEventListener("canplay",()=>{if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}A.onMeta?.();applyRate()});
  au.addEventListener("timeupdate",()=>A.onTime?.());
  au.addEventListener("seeking",()=>{/* seek initiated */});
  au.addEventListener("seeked",()=>{A.pendingSeek=null;A.seekingUntil=0});
@@ -628,23 +628,25 @@ function ensureAudioEl(){
     runs again on every src swap. Re-asserting the rate once the new resource is
     actually ready is what stops slowed/nightcore reverting to 1x on skip. */
   au.addEventListener("loadedmetadata",()=>applyRate());
-  au.addEventListener("canplay",()=>applyRate());
   /* WebKitGTK re-clamps the rate when playback actually starts, not only on
      load — the speed slider "did nothing" exactly there. Re-assert on both
      transport events. */
   au.addEventListener("play",()=>applyRate());
-  au.addEventListener("playing",()=>{applyRate();S.playing=true;sync()});
+  au.addEventListener("playing",()=>{
+    if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
+    applyRate();S.playing=true;sync();
+  });
   au.addEventListener("stalled",()=>{
-    if(S.playing&&au.paused&&!au.ended){
-      au.play().catch(()=>{});
+    if(S.playing&&!au.ended){
+      if(au.paused)au.play().catch(()=>{});
     }
   });
   au.addEventListener("waiting",()=>{
-    if(S.playing&&au.paused&&!au.ended){
-      au.play().catch(()=>{});
+    if(S.playing&&!au.ended){
+      if(au.paused)au.play().catch(()=>{});
     }
   });
- au.addEventListener("pause",()=>{if(!au.ended){S.playing=false;sync()}});
+ au.addEventListener("pause",()=>{if(!au.ended&&!A.transitioning){S.playing=false;sync()}});
  if(A.ctx&&!A.media){A.media=A.ctx.createMediaElementSource(au);A.media.connect(A.pre||A.bands[0])}
  return au}
 function ir(ctx,room="hall"){
@@ -727,40 +729,73 @@ A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
 function cleanMusicTitle(artist, title){
  let t=(title||"").trim();
  let a=(artist||"").trim();
- t=t.replace(/\s*[([{\/].*?(official|music\s*video|audio|lyric|video|remaster|hd|4k|hq|clip|visualizer|album|version|explicit|prod|directed).*?[)\]}]/gi,"");
+ t=t.replace(/\s*[([{\/].*?(official|music\s*video|audio|lyric|video|remaster|hd|4k|hq|clip|visualizer|album|version|explicit|prod|directed|при\s*уч|feat|ft\.).*?[)\]}]/gi,"");
  t=t.replace(/\s*-\s*(official|music\s*video|audio|lyrics?|video).*/gi,"");
  t=t.replace(/\s*\|\s*.*$/gi,"");
  t=t.replace(/\s+/g," ").trim();
- return {a,t,query:`${a} ${t}`.trim()};
+ const primaryArtist=a.split(/[,;&\/]|\s+(?:feat|ft|featuring|x)\s+/i)[0].trim()||a;
+ return {a,t,primaryArtist,query:`${a} ${t}`.trim(),altQuery:`${primaryArtist} ${t}`.trim()};
 }
 
 function load(tr,auto,resumePos=0){
  if(!tr||tr.mode==="empty")return;
  if(tr.s==="sp"&&!tr._resolved){
   const clean=cleanMusicTitle(tr.a,tr.t);
-  const q=clean.query||`${tr.a||""} ${tr.t||""}`.trim();
-  searchRemote(q).then(hits=>{
-   /* The user may have picked another track while the name search ran: a late
-      resolution used to steal the audio element back for the stale pick. */
-   if(!sameTrack(tr,S.current))return;
-   const match=(hits||[]).find(x=>x.s==="sc"||x.s==="ym")||hits?.[0];
-   if(match){
-    tr._resolved=true;
-    tr._resolvedId=match.id;
-    tr._resolvedSvc=match.s;
-    const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
-    load(resolvedTrack,auto,resumePos);
-   }else{
-    /* setTrack already flipped the UI to "playing"; leaving it there showed a
-       frozen progress bar over silence. */
-    S.playing=false;sync();
-    toast(LANG==="ru"?"Не удалось найти аудиопоток для Spotify трека":"Could not find playable audio stream for Spotify track");
+  const queries=[clean.query, clean.altQuery, `${clean.primaryArtist} ${clean.t}`, clean.t, `${tr.a||""} ${tr.t||""}`.trim()]
+   .filter((q,idx,arr)=>Boolean(q)&&arr.indexOf(q)===idx);
+
+  const pickBestCandidate=(hits)=>{
+   if(!hits||!hits.length)return null;
+   const origDur=tr.d?(+tr.d||0):0;
+   let best=null;
+   let bestScore=-9999;
+   for(const h of hits){
+    if(!h||!h.id)continue;
+    let score=0;
+    const hDur=h.d?(+h.d||0):0;
+    if(origDur>45){
+     if(hDur>0&&hDur<=35){
+      score-=100;
+     }else if(hDur>0){
+      const diff=Math.abs(hDur-origDur);
+      if(diff<=12)score+=50;
+      else if(diff<=30)score+=30;
+      else if(diff<=60)score+=10;
+      else score-=20;
+     }
+    }
+    if(h.s==="ym")score+=10;
+    else if(h.s==="ytm")score+=8;
+    else if(h.s==="sc")score+=5;
+    if(score>bestScore){
+     bestScore=score;
+     best=h;
+    }
    }
-  }).catch(()=>{
+   return best||hits[0];
+  };
+
+  (async()=>{
+   for(const q of queries){
+    if(!sameTrack(tr,S.current))return;
+    try{
+     const hits=await searchRemote(q);
+     if(!sameTrack(tr,S.current))return;
+     const match=pickBestCandidate(hits);
+     if(match){
+      tr._resolved=true;
+      tr._resolvedId=match.id;
+      tr._resolvedSvc=match.s;
+      const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
+      load(resolvedTrack,auto,resumePos);
+      return;
+     }
+    }catch(e){console.warn("[meowave] remote resolve attempt error:",e)}
+   }
    if(!sameTrack(tr,S.current))return;
    S.playing=false;sync();
-   toast(LANG==="ru"?"Ошибка разрешения Spotify трека":"Error resolving Spotify track");
-  });
+   toast(LANG==="ru"?"Не удалось найти аудиопоток для Spotify трека":"Could not find playable audio stream for Spotify track");
+  })();
   return;
  }
  initAudio();if(!A.ctx)return;
@@ -779,8 +814,10 @@ function load(tr,auto,resumePos=0){
 
   const au=ensureAudioEl();
   const gen=++A.gen;
+  A.transitioning=true;
   au.pause();
   au.src=url;
+  A.transitioning=false;
   applyRate();
   A.src=au;A.lastPos=0;
   A.onMeta=()=>{
@@ -812,6 +849,10 @@ function load(tr,auto,resumePos=0){
   A.onTime=()=>{
    if(gen!==A.gen)return;
    const now=au.currentTime;
+   if(A.watchdog&&now>0.2){
+    clearTimeout(A.watchdog);
+    A.watchdog=null;
+   }
    if(!seeking){
     const dt=now-(A.lastPos??now);
     if(dt>0&&dt<2){S.listen+=dt;noteListening(dt)}
@@ -850,9 +891,16 @@ function load(tr,auto,resumePos=0){
    S.pos=now;paint()};
   A.onEnd=()=>{
    if(gen!==A.gen)return;
+   if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
    const curTime=au.currentTime;
-   if(S.dur&&curTime>4&&curTime<(S.dur-8)&&(tr.s==="ytm"||tr._resolvedSvc==="ytm")){
-    console.warn(`[meowave] premature stream stall at ${curTime.toFixed(1)}s (dur ${S.dur}s), seamless resume`);
+   if(S.dur&&curTime>2&&curTime<(S.dur-6)){
+    console.warn(`[meowave] premature stream end at ${curTime.toFixed(1)}s (dur ${S.dur}s); attempting seamless resume`);
+    if(!A._resumingSameTrack){
+     A._resumingSameTrack=true;
+     load(tr,true,curTime);
+     setTimeout(()=>{A._resumingSameTrack=false},3000);
+     return;
+    }
     fallbackResolveTrack(tr,true,curTime).then(rescued=>{
      if(!rescued)next();
     });
@@ -862,12 +910,43 @@ function load(tr,auto,resumePos=0){
   };
   A.onErr=()=>{
    if(gen!==A.gen)return;
+   if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
    console.error("audio load failed",au.error?.code,au.error?.message||"",url);
    const wasPlaying = S.playing || auto || A.started;
    explainFailure(url,tr,wasPlaying,au.currentTime||0)};
   au.load();
   applyRate();
-  if(auto){A.ctx.resume();au.play().catch(e=>{if(gen!==A.gen)return;console.error("play() rejected:",e);S.playing=false;sync()});A.started=true}
+  if(auto){
+   A.ctx.resume();
+   au.play().catch(e=>{
+    if(gen!==A.gen)return;
+    console.warn("[meowave] play() rejected:",e);
+    if(e.name==="NotAllowedError"){S.playing=false;sync();return}
+   });
+   A.started=true;
+   clearTimeout(A.watchdog);
+   A.watchdog=setTimeout(async()=>{
+    if(gen!==A.gen)return;
+    const el=A.audio;
+    if(!el||!S.playing)return;
+    if(el.currentTime===0&&el.readyState<2){
+     console.warn(`[meowave] playback watchdog fired for "${tr.t}" (svc: ${tr.s})`);
+     if(tr.s==="ytm"&&!codecRetry){
+      const alt=ytmFmt(tr)==="mp4"?"webm":"mp4";
+      if(alt==="webm"?CAN.webm:CAN.mp4){
+       codecRetry={key:trackKey(tr),fmt:alt};
+       console.log(`[meowave] watchdog retrying with alternate format: ${alt}`);
+       load(tr,true,resumePos);
+       return;
+      }
+     }
+     const rescued=await fallbackResolveTrack(tr,true,resumePos);
+     if(!rescued&&el.readyState===0){
+      try{el.load();el.play().catch(()=>{})}catch(_){}
+     }
+    }
+   },4500);
+  }
   return}
  const b=A.ctx.createBufferSource();b.buffer=loop(A.ctx,tr.root||1);b.loop=true;b.connect(A.bands[0]);A.src=b;
  if(auto){A.ctx.resume();b.start();A.started=true}}
@@ -4426,13 +4505,13 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  /* Bytes arrived but this webview will not decode that container, and YouTube
     Music ships the other one too: swap and try exactly once before believing
     the track itself is broken. */
- if(why.ok&&tr?.s==="ytm"&&!codecRetry){
-  const alt=ytmFmt(tr)==="mp4"?"webm":"mp4";
+ if(tr?.s==="ytm"&&!codecRetry){
+  const cur=ytmFmt(tr);
+  const alt=cur==="mp4"?"webm":"mp4";
   const playable=alt==="webm"?CAN.webm:CAN.mp4;
-  const wrong=!!why.ct&&((why.ct.includes("webm")&&!CAN.webm)||(why.ct.includes("mp4")&&!CAN.mp4));
-  if(playable&&wrong){
+  if(playable){
    codecRetry={key,fmt:alt};
-   console.warn(`[meowave] stream refused as ${why.ct||"unknown type"}; retrying as ${alt}`);
+   console.warn(`[meowave] stream error (type ${why.ct||"unknown"}); retrying as ${alt}`);
    load(tr,wasPlaying,resumePos);
    return;
   }

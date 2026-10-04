@@ -81,16 +81,31 @@ fn cache_drop(key: &str) {
 /// reached `<audio>` until the entire track had been downloaded — a whole FLAC
 /// held in RAM and several seconds of silence before playback started. Reading
 /// chunk by chunk means the first bytes leave the proxy as soon as they arrive.
+enum UpstreamKind {
+    Direct(Option<reqwest::Response>),
+    Hls {
+        segments: Vec<String>,
+        seg_idx: usize,
+        current_resp: Option<reqwest::Response>,
+    },
+}
+
+/// Pipes an upstream response body straight to the client.
+///
+/// Supports both direct HTTP chunk streaming (with read timeouts and seamless
+/// reconnect) and sequential HLS playlist segment streaming (e.g. for SoundCloud
+/// tracks with only HLS transcodings).
 struct Upstream<'a> {
     // Borrowed from the per-request thread's Arc, which outlives the response.
     rt: &'a tokio::runtime::Runtime,
-    resp: Option<reqwest::Response>,
+    kind: UpstreamKind,
     buf: Vec<u8>,
     pos: usize,
     upstream_url: String,
     media_ua: Option<String>,
     bytes_delivered: u64,
     expected_total: Option<u64>,
+    reconnect_attempts: u8,
 }
 
 impl<'a> Upstream<'a> {
@@ -103,74 +118,174 @@ impl<'a> Upstream<'a> {
     ) -> Self {
         Self {
             rt,
-            resp,
+            kind: UpstreamKind::Direct(resp),
             buf: Vec::new(),
             pos: 0,
             upstream_url,
             media_ua,
             bytes_delivered: 0,
             expected_total,
+            reconnect_attempts: 0,
         }
+    }
+
+    fn hls(
+        rt: &'a tokio::runtime::Runtime,
+        segments: Vec<String>,
+        upstream_url: String,
+        media_ua: Option<String>,
+    ) -> Self {
+        Self {
+            rt,
+            kind: UpstreamKind::Hls {
+                segments,
+                seg_idx: 0,
+                current_resp: None,
+            },
+            buf: Vec::new(),
+            pos: 0,
+            upstream_url,
+            media_ua,
+            bytes_delivered: 0,
+            expected_total: None,
+            reconnect_attempts: 0,
+        }
+    }
+}
+
+fn resolve_hls_url(base: &str, target: &str) -> String {
+    let target = target.trim();
+    if target.starts_with("http://") || target.starts_with("https://") {
+        target.to_string()
+    } else if target.starts_with('/') {
+        if let Ok(parsed) = reqwest::Url::parse(base) {
+            format!("{}://{}{}", parsed.scheme(), parsed.authority(), target)
+        } else {
+            target.to_string()
+        }
+    } else if let Some((prefix, _)) = base.rsplit_once('/') {
+        format!("{prefix}/{target}")
+    } else {
+        target.to_string()
     }
 }
 
 impl<'a> std::io::Read for Upstream<'a> {
     fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
         while self.pos >= self.buf.len() {
-            let Some(resp) = self.resp.as_mut() else {
-                return Ok(0);
-            };
-            match self.rt.block_on(resp.chunk()) {
-                Ok(Some(chunk)) => {
-                    self.buf = chunk.to_vec();
-                    self.pos = 0;
+            match &mut self.kind {
+                UpstreamKind::Direct(resp_slot) => {
+                    let Some(resp) = resp_slot.as_mut() else {
+                        return Ok(0);
+                    };
+                    let chunk_res = self.rt.block_on(async {
+                        tokio::time::timeout(std::time::Duration::from_secs(12), resp.chunk()).await
+                    });
+                    match chunk_res {
+                        Ok(Ok(Some(chunk))) => {
+                            self.buf = chunk.to_vec();
+                            self.pos = 0;
+                            self.reconnect_attempts = 0;
+                        }
+                        Ok(Ok(None)) => {
+                            // Check if stream ended prematurely
+                            let premature = match self.expected_total {
+                                Some(total) => self.bytes_delivered < total,
+                                None => self.bytes_delivered == 0,
+                            };
+                            if premature && !self.upstream_url.is_empty() && self.reconnect_attempts < 3 {
+                                self.reconnect_attempts += 1;
+                                let res = self.rt.block_on(async {
+                                    let c = crate::api::media_client().ok()?;
+                                    let mut req = c.get(&self.upstream_url);
+                                    if let Some(ua) = &self.media_ua {
+                                        req = req.header("User-Agent", ua);
+                                    }
+                                    if self.bytes_delivered > 0 {
+                                        req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
+                                    }
+                                    req.send().await.ok()
+                                });
+                                if let Some(new_resp) = res {
+                                    if new_resp.status().is_success() {
+                                        *resp_slot = Some(new_resp);
+                                        continue;
+                                    }
+                                }
+                            }
+                            *resp_slot = None;
+                            return Ok(0);
+                        }
+                        _ => {
+                            // Timeout or network drop
+                            if !self.upstream_url.is_empty() && self.reconnect_attempts < 3 {
+                                self.reconnect_attempts += 1;
+                                let res = self.rt.block_on(async {
+                                    let c = crate::api::media_client().ok()?;
+                                    let mut req = c.get(&self.upstream_url);
+                                    if let Some(ua) = &self.media_ua {
+                                        req = req.header("User-Agent", ua);
+                                    }
+                                    if self.bytes_delivered > 0 {
+                                        req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
+                                    }
+                                    req.send().await.ok()
+                                });
+                                if let Some(new_resp) = res {
+                                    if new_resp.status().is_success() {
+                                        *resp_slot = Some(new_resp);
+                                        continue;
+                                    }
+                                }
+                            }
+                            *resp_slot = None;
+                            return Ok(0);
+                        }
+                    }
                 }
-                // End of body: further reads report EOF rather than blocking.
-                Ok(None) => {
-                    if let Some(total) = self.expected_total {
-                        if self.bytes_delivered < total && !self.upstream_url.is_empty() {
-                            let res = self.rt.block_on(async {
-                                let c = crate::api::media_client().ok()?;
-                                let mut req = c.get(&self.upstream_url);
-                                if let Some(ua) = &self.media_ua {
-                                    req = req.header("User-Agent", ua);
-                                }
-                                req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
-                                req.send().await.ok()
-                            });
-                            if let Some(new_resp) = res {
-                                if new_resp.status().is_success() {
-                                    self.resp = Some(new_resp);
-                                    continue;
-                                }
+                UpstreamKind::Hls { segments, seg_idx, current_resp } => {
+                    if *seg_idx >= segments.len() {
+                        return Ok(0);
+                    }
+                    if current_resp.is_none() {
+                        let seg_url = segments[*seg_idx].clone();
+                        let res = self.rt.block_on(async {
+                            let c = crate::api::media_client().ok()?;
+                            let mut req = c.get(&seg_url);
+                            if let Some(ua) = &self.media_ua {
+                                req = req.header("User-Agent", ua);
+                            }
+                            req.send().await.ok()
+                        });
+                        match res {
+                            Some(r) if r.status().is_success() => {
+                                *current_resp = Some(r);
+                            }
+                            _ => {
+                                // Skip failing segment and try next
+                                *seg_idx += 1;
+                                continue;
                             }
                         }
                     }
-                    self.resp = None;
-                    return Ok(0);
-                }
-                Err(e) => {
-                    if let Some(total) = self.expected_total {
-                        if self.bytes_delivered < total && !self.upstream_url.is_empty() {
-                            let res = self.rt.block_on(async {
-                                let c = crate::api::media_client().ok()?;
-                                let mut req = c.get(&self.upstream_url);
-                                if let Some(ua) = &self.media_ua {
-                                    req = req.header("User-Agent", ua);
-                                }
-                                req = req.header("Range", format!("bytes={}-", self.bytes_delivered));
-                                req.send().await.ok()
-                            });
-                            if let Some(new_resp) = res {
-                                if new_resp.status().is_success() {
-                                    self.resp = Some(new_resp);
-                                    continue;
-                                }
-                            }
+                    let Some(resp) = current_resp.as_mut() else {
+                        *seg_idx += 1;
+                        continue;
+                    };
+                    let chunk_res = self.rt.block_on(async {
+                        tokio::time::timeout(std::time::Duration::from_secs(10), resp.chunk()).await
+                    });
+                    match chunk_res {
+                        Ok(Ok(Some(chunk))) => {
+                            self.buf = chunk.to_vec();
+                            self.pos = 0;
+                        }
+                        _ => {
+                            // Segment finished or stalled: advance to next segment
+                            *current_resp = None;
+                            *seg_idx += 1;
                         }
                     }
-                    self.resp = None;
-                    return Err(std::io::Error::other(e.to_string()));
                 }
             }
         }
@@ -517,9 +632,17 @@ fn handle(
         match sent {
             Ok(resp) => {
                 let status = resp.status().as_u16();
-                if status >= 400 && attempt == 1 {
+                if status >= 400 {
                     cache_drop(&cache_key);
-                    continue;
+                    if attempt == 1 {
+                        continue;
+                    }
+                    let mut resp = Response::from_string(format!("upstream rejected stream with HTTP {status}"))
+                        .with_status_code(StatusCode(502));
+                    for h in cors(origin.as_deref()) {
+                        resp = resp.with_header(h);
+                    }
+                    return request.respond(resp).map_err(|e| e.to_string());
                 }
                 let ctype = resp
                     .headers()
@@ -559,10 +682,71 @@ fn handle(
         status
     };
 
+    let is_hls = upstream.contains(".m3u8") || ctype.contains("mpegurl");
+    let (body, final_status, final_clen, final_crange, final_ctype) = if is_hls {
+        let m3u8_text = rt.block_on(resp.text()).unwrap_or_default();
+        let mut target_m3u8 = m3u8_text.clone();
+        let mut final_url = upstream.clone();
+        if m3u8_text.contains("#EXT-X-STREAM-INF") {
+            // Master playlist: resolve variant playlist
+            if let Some(sub) = m3u8_text
+                .lines()
+                .map(str::trim)
+                .find(|l| !l.starts_with('#') && !l.is_empty())
+            {
+                let sub_url = resolve_hls_url(&upstream, sub);
+                final_url = sub_url.clone();
+                if let Some(text) = rt.block_on(async {
+                    let c = crate::api::media_client().ok()?;
+                    c.get(&sub_url).send().await.ok()?.text().await.ok()
+                }) {
+                    target_m3u8 = text;
+                }
+            }
+        }
+        let segments: Vec<String> = target_m3u8
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with('#') && !l.is_empty())
+            .map(|l| resolve_hls_url(&final_url, l))
+            .collect();
+
+        let body = Upstream::hls(
+            rt,
+            segments,
+            final_url,
+            if service == "ytm" {
+                Some(crate::ytm::MEDIA_UA.to_string())
+            } else {
+                None
+            },
+        );
+        (body, 200u16, None, None, "audio/mpeg".to_string())
+    } else {
+        let mut normalized = ctype;
+        if normalized == "application/octet-stream" || normalized == "text/plain" {
+            if service == "ytm" {
+                normalized = if fmt == "mp4" { "audio/mp4" } else { "audio/webm" }.to_string();
+            } else {
+                normalized = "audio/mpeg".to_string();
+            }
+        }
+        let body = Upstream::new(
+            rt,
+            Some(resp),
+            upstream.clone(),
+            if service == "ytm" {
+                Some(crate::ytm::MEDIA_UA.to_string())
+            } else {
+                None
+            },
+            clen.map(|l| l as u64),
+        );
+        (body, client_status, clen, crange, normalized)
+    };
+
     let mut headers = vec![
-        // The upstream's own value: not trusted enough to panic on, so an
-        // unusable one falls back to a sane default instead.
-        try_header("Content-Type", &ctype)
+        try_header("Content-Type", &final_ctype)
             .unwrap_or_else(|| header("Content-Type", "audio/mpeg")),
         header("Accept-Ranges", "bytes"),
         header("Cache-Control", "no-store"),
@@ -570,7 +754,7 @@ fn handle(
     headers.extend(cors(origin.as_deref()));
     // Only send Content-Range if the client specifically issued a range request
     if range.is_some() {
-        if let Some(cr) = &crange {
+        if let Some(cr) = &final_crange {
             if let Some(h) = try_header("Content-Range", cr) {
                 headers.push(h);
             }
@@ -578,23 +762,11 @@ fn handle(
     }
 
     if head_only {
-        let response = Response::new(StatusCode(client_status), headers, std::io::empty(), clen, None);
+        let response = Response::new(StatusCode(final_status), headers, std::io::empty(), final_clen, None);
         return request.respond(response).map_err(|e| e.to_string());
     }
 
-    let body = Upstream::new(
-        rt,
-        Some(resp),
-        upstream.clone(),
-        if service == "ytm" {
-            Some(crate::ytm::MEDIA_UA.to_string())
-        } else {
-            None
-        },
-        clen.map(|l| l as u64),
-    );
-
-    let response = Response::new(StatusCode(client_status), headers, body, clen, None);
+    let response = Response::new(StatusCode(final_status), headers, body, final_clen, None);
     request.respond(response).map_err(|e| e.to_string())
 }
 
