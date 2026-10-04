@@ -443,6 +443,7 @@ pub fn init_window(window: &tauri::WebviewWindow) {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
