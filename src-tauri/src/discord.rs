@@ -22,7 +22,12 @@ use std::sync::Mutex;
 const OPCODE_HANDSHAKE: u32 = 0;
 const OPCODE_FRAME: u32 = 1;
 const OPCODE_CLOSE: u32 = 2;
-/// One update per 15 s: inside Discord's 5-per-20 s budget with margin.
+/// Rate limit: Discord allows 5 updates per 20 seconds. 15 s is 4 per window,
+/// inside the budget with margin. A shorter interval does not "lose less":
+/// it turns every fast track switch into a guaranteed 429, because the
+/// presence endpoint is the one place where being early costs more than being
+/// late. Debouncing below means a switch inside the window is still delivered,
+/// just at the window edge.
 const MIN_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
 
 #[cfg(unix)]
@@ -127,6 +132,8 @@ struct State {
     last_payload: String,
     enabled: bool,
     template: String,
+    pending: Option<(serde_json::Value, String)>,
+    debounce_active: bool,
 }
 
 static STATE: Mutex<Option<State>> = Mutex::new(None);
@@ -270,6 +277,8 @@ pub fn discord_update(data: serde_json::Value) -> Result<(), String> {
             last_payload: String::new(),
             enabled: false,
             template: String::new(),
+            pending: None,
+            debounce_active: false,
         });
         (st.enabled, st.template.clone())
     };
@@ -281,13 +290,65 @@ pub fn discord_update(data: serde_json::Value) -> Result<(), String> {
         let payload = presence_payload(&data, &rendered);
         let raw = payload.to_string();
         if raw == st.last_payload {
+            st.pending = None;
             return Ok(());
         }
-        // Too soon after the last push: skip. The frontend heartbeats, so the
-        // update lands on the next tick instead of tripping Discord's limit.
+        // If an update arrives before MIN_INTERVAL, store it in `pending` and
+        // spin a background timer to flush it as soon as the throttle window passes.
         if st.last.elapsed() < MIN_INTERVAL {
+            st.pending = Some((payload, raw));
+            if !st.debounce_active {
+                st.debounce_active = true;
+                std::thread::spawn(move || {
+                    loop {
+                        let delay = {
+                            let Ok(g) = STATE.lock() else { break };
+                            let Some(st) = g.as_ref() else { break };
+                            if st.pending.is_none() || !st.enabled {
+                                break;
+                            }
+                            let elapsed = st.last.elapsed();
+                            if elapsed >= MIN_INTERVAL {
+                                std::time::Duration::ZERO
+                            } else {
+                                MIN_INTERVAL - elapsed
+                            }
+                        };
+                        if delay > std::time::Duration::ZERO {
+                            std::thread::sleep(delay + std::time::Duration::from_millis(20));
+                        }
+                        let Ok(mut g) = STATE.lock() else { break };
+                        let Some(st) = g.as_mut() else { break };
+                        if st.last.elapsed() < MIN_INTERVAL {
+                            continue;
+                        }
+                        if !st.enabled {
+                            st.pending = None;
+                        } else if let Some((p, r)) = st.pending.take() {
+                            if r != st.last_payload {
+                                let _ = send_now(st, &p, &r);
+                                st.last = std::time::Instant::now();
+                            }
+                        }
+                        break;
+                    }
+                    // Every exit path has to clear the flag. Leaving it set
+                    // strands the next throttled update: it sees
+                    // `debounce_active` still true, skips spawning a thread,
+                    // and the pending payload is never delivered.
+                    if let Ok(mut g) = STATE.lock() {
+                        if let Some(st) = g.as_mut() {
+                            if !st.enabled {
+                                st.pending = None;
+                            }
+                            st.debounce_active = false;
+                        }
+                    }
+                });
+            }
             return Ok(());
         }
+        st.pending = None;
         send_now(st, &payload, &raw)?;
         st.last = std::time::Instant::now();
     }
@@ -298,6 +359,8 @@ pub fn discord_update(data: serde_json::Value) -> Result<(), String> {
 pub fn discord_clear() -> Result<(), String> {
     let mut guard = STATE.lock().map_err(|e| e.to_string())?;
     if let Some(st) = guard.as_mut() {
+        st.pending = None;
+        st.debounce_active = false;
         if let Some(conn) = st.conn.as_mut() {
             let _ = conn.write_frame(
                 OPCODE_FRAME,
@@ -325,10 +388,14 @@ pub fn discord_configure(enabled: bool, template: String) -> Result<(), String> 
         last_payload: String::new(),
         enabled: false,
         template: String::new(),
+        pending: None,
+        debounce_active: false,
     });
     st.enabled = enabled;
     st.template = template;
     if !enabled {
+        st.pending = None;
+        st.debounce_active = false;
         if let Some(conn) = st.conn.as_mut() {
             let _ = conn.write_frame(
                 OPCODE_FRAME,

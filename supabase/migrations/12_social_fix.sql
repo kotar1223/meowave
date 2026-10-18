@@ -45,6 +45,31 @@ alter table public.room_requests enable row level security;
 alter table public.messages add column if not exists chat_id uuid references public.chats(id) on delete cascade;
 alter table public.messages add column if not exists image text;
 
+-- one_target / messages_body_check, repeated from 10 on purpose.
+--
+-- This file adds messages.chat_id and then recreates the messages policies, so
+-- it only ever ran against a schema whose constraint set already knew about
+-- chat_id — i.e. one where 10 had landed. Its header claims otherwise ("can be
+-- pasted into an existing Supabase project safely"), and for a project sitting
+-- at migration 09 that claim was false in the most damaging way: chat_id
+-- exists, the policies understand it, and 04's two-armed one_target still says
+-- a row with chat_id set and room_id/recipient null is invalid. Every message
+-- posted to a group chat failed with 23514 check constraint "one_target",
+-- while the chat itself was perfectly creatable. Same for an image-only
+-- message: 04's body check demands 1..2000 characters, so `body = ''` with an
+-- image was rejected outright.
+alter table public.messages drop constraint if exists one_target;
+alter table public.messages add constraint one_target check (
+  (room_id   is not null and recipient is null and chat_id is null)
+  or (room_id is null and recipient is not null and chat_id is null)
+  or (room_id is null and recipient is null and chat_id is not null)
+);
+
+alter table public.messages drop constraint if exists messages_body_check;
+alter table public.messages add constraint messages_body_check check (
+  image is not null or length(btrim(body)) between 1 and 2000
+);
+
 create index if not exists chat_members_user_idx on public.chat_members(user_id);
 create index if not exists room_queue_room_idx on public.room_queue(room_id,position);
 create index if not exists room_requests_room_idx on public.room_requests(room_id,status,id desc);
@@ -134,8 +159,9 @@ drop policy if exists "public rooms and joined rooms are visible" on public.room
 create policy "public rooms and joined rooms are visible" on public.rooms for select using (
   not is_private or public.in_room(id) or owner_id=auth.uid()
 );
+-- Dropped, not recreated: see 04_social.sql for why a client-side insert into
+-- rooms is not allowed. create_room() is SECURITY DEFINER and covers creation.
 drop policy if exists "users create own rooms" on public.rooms;
-create policy "users create own rooms" on public.rooms for insert with check (auth.uid()=owner_id);
 drop policy if exists "djs update playback state" on public.rooms;
 drop policy if exists "djs update room playback" on public.rooms;
 create policy "djs update playback state" on public.rooms for update

@@ -379,6 +379,26 @@ function initDownloadLinks() {
             note.textContent = "Открыть страницу релизов на GitHub";
     });
 }
+/* The promo clip is a 2.5 MB mp4 that sits below the fold: it starts when it
+   scrolls into view and pauses when it leaves, so the hero never competes with
+   it for bandwidth. */
+function initPromoVideo() {
+    const video = document.getElementById("promo-video");
+    if (!video)
+        return;
+    const play = () => video.play().catch(() => { });
+    if (!("IntersectionObserver" in window)) {
+        play();
+        return;
+    }
+    const io = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting)
+            play();
+        else
+            video.pause();
+    }, { threshold: 0.2 });
+    io.observe(video);
+}
 // Initialization
 document.addEventListener("DOMContentLoaded", () => {
     try {
@@ -392,6 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initThemePicker();
     new DemoPlayer();
     initSearchDemo();
+    initPromoVideo();
     loadBadgesShowcase();
     initScrollReveal();
     initThemeToggle();

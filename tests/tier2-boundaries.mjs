@@ -289,9 +289,9 @@ export function buildTier2Suite() {
   });
 
   // ─── B08: Mobile Rail Boundaries ───────────────────────────────────────────
-  suite.test("B08-01: [Boundary] Exact breakpoint width 880px boundary triggers mobile media rules", () => {
-    const media = extractMediaBlocks(css, /max-width:\s*880px/);
-    assert.ok(media.length > 0, "Breakpoint 880px must be defined");
+  suite.test("B08-01: [Boundary] Exact breakpoint width 700px boundary triggers mobile media rules", () => {
+    const media = extractMediaBlocks(css, /max-width:\s*700px/);
+    assert.ok(media.length > 0, "Breakpoint 700px must be defined");
   });
 
   suite.test("B08-02: [Boundary] Viewport width 320px (minimum mobile screen) does not cause horizontal scrollbar", () => {
@@ -314,13 +314,13 @@ export function buildTier2Suite() {
   });
 
   suite.test("B08-04: [Boundary] Mobile bottom rail height is constrained (<= 64px)", () => {
-    const media = extractMediaBlocks(css, /max-width:\s*880px/);
+    const media = extractMediaBlocks(css, /max-width:\s*700px/);
     const combined = media.map(m => m.content).join("\n");
     assert.match(combined, /\.rail/, "Mobile rail styling must be present");
   });
 
   suite.test("B08-05: [Boundary] Mobile indicator horizontal offset clamped within rail bounds", () => {
-    const media = extractMediaBlocks(css, /max-width:\s*880px/);
+    const media = extractMediaBlocks(css, /max-width:\s*700px/);
     assert.ok(media.length > 0);
   });
 
@@ -349,7 +349,7 @@ export function buildTier2Suite() {
     const env = createMockEnvironment();
     env.ctx.window.innerWidth = 3840;
     env.ctx.window.innerHeight = 2160;
-    assert.ok(env.ctx.window.innerWidth > 880);
+    assert.ok(env.ctx.window.innerWidth > 700);
   });
 
   suite.test("B09-04: [Boundary] Resize event listeners are attached to window", () => {
@@ -410,8 +410,12 @@ export function buildTier2Suite() {
   });
 
   suite.test("B11-03: [Boundary] Black drop shadow opacity across all cards <= 0.2", () => {
-    const harshShadows = css.match(/rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\.[3-9]/g) || [];
-    assert.equal(harshShadows.length, 0, "No harsh shadows with alpha >= 0.3 allowed in M3 Expressive");
+    // Scoped to box-shadow, as the title says. The previous pattern matched
+    // the colour anywhere in the stylesheet, so it failed on the two modal
+    // scrims (`.srv-dd-backdrop`, `.dock-backdrop` at rgba(0,0,0,0.65)) — which
+    // are backdrops, not elevation, and 0.65 is the correct opacity for one.
+    const harshShadows = css.match(/box-shadow\s*:[^;]*rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\.[3-9]/g) || [];
+    assert.equal(harshShadows.length, 0, "No harsh card shadows with alpha >= 0.3 allowed in M3 Expressive");
   });
 
   suite.test("B11-04: [Boundary] Missing accent color defaults gracefully to monochrome neutral surface", () => {

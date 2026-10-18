@@ -470,24 +470,77 @@ pub async fn search(query: &str) -> Result<Vec<Track>, String> {
 
 /// Fetch tracks from a YouTube Music playlist by URL or ID.
 pub async fn playlist(raw: &str) -> Result<Vec<Track>, String> {
+    /// YouTube Music answers a page at a time, roughly 100 tracks each. Twenty
+    /// pages is far past what a manual import is for, and it bounds the walk.
+    const MAX_PAGES: usize = 20;
     let id = if raw.contains("list=") {
         raw.split("list=").nth(1).and_then(|s| s.split('&').next()).unwrap_or(raw).trim()
     } else {
         raw.trim()
     };
     let browse_id = if id.starts_with("VL") { id.to_string() } else { format!("VL{id}") };
-    let body = json!({
+
+    let mut tracks: Vec<Track> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut body = json!({
         "context": web_remix_ctx(),
         "browseId": browse_id
     });
-    let resp = post(MUSIC_API, "browse", WEB_UA, None, body).await?;
-    let mut items = Vec::new();
-    collect(&resp, &mut items);
-    let mut tracks: Vec<Track> = items.iter().filter_map(|i| parse_item(i)).collect();
-    let mut seen = std::collections::HashSet::new();
-    tracks.retain(|t| seen.insert(t.id.clone()));
-    tracks.truncate(100);
+
+    for _ in 0..MAX_PAGES {
+        let resp = post(MUSIC_API, "browse", WEB_UA, None, body).await?;
+        let mut items = Vec::new();
+        collect(&resp, &mut items);
+        for t in items.iter().filter_map(|i| parse_item(i)) {
+            if seen.insert(t.id.clone()) {
+                tracks.push(t);
+            }
+        }
+        /* A playlist longer than one response comes back a page at a time and
+           the rest is reached through a token. Reading only the first response
+           and truncating the result at 100 dropped the rest of every long
+           playlist without saying so. */
+        let Some(token) = continuation_token(&resp).map(|t| t.to_string()) else {
+            break;
+        };
+        body = json!({
+            "context": web_remix_ctx(),
+            "continuation": token
+        });
+    }
+
     Ok(tracks)
+}
+
+/// Finds the next-page token in a browse or search response.
+///
+/// YouTube Music nests it under a different name depending on which shelf the
+/// response came from, so it is looked up by name rather than by walking one
+/// fixed path that a response shape change would break.
+fn continuation_token(v: &Value) -> Option<&str> {
+    fn walk(v: &Value) -> Option<&str> {
+        match v {
+            Value::Object(map) => {
+                for key in [
+                    "continuationCommand",
+                    "nextContinuationData",
+                    "nextRadioContinuationData",
+                ] {
+                    if let Some(t) = map
+                        .get(key)
+                        .and_then(|c| c.get("token"))
+                        .and_then(|t| t.as_str())
+                    {
+                        return Some(t);
+                    }
+                }
+                map.values().find_map(walk)
+            }
+            Value::Array(items) => items.iter().find_map(walk),
+            _ => None,
+        }
+    }
+    walk(v)
 }
 
 #[derive(Serialize)]
@@ -789,8 +842,36 @@ pub async fn lyrics_text(browse_id: &str) -> Result<Option<String>, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::pick_format;
+    use super::{continuation_token, pick_format};
     use serde_json::json;
+
+    /// A playlist longer than one response is only reachable through this
+    /// token, and it is nested under a different name in each shelf shape.
+    #[test]
+    fn finds_the_next_page_token_wherever_it_is_nested() {
+        let modern = json!({
+            "contents": {"singleColumnBrowseResultsRenderer": {"tabs": [{"tabRenderer": {
+                "content": {"sectionListRenderer": {"contents": [{"musicPlaylistShelfRenderer": {
+                    "contents": [
+                        {"musicResponsiveListItemRenderer": {"playlistItemData": {"videoId": "v1"}}},
+                        {"continuationItemRenderer": {"continuationEndpoint": {
+                            "continuationCommand": {"token": "TOKEN-A", "request": "CONTINUATION_REQUEST_TYPE_BROWSE"}
+                        }}}
+                    ]
+                }}]}}
+            }}]}}
+        });
+        assert_eq!(continuation_token(&modern), Some("TOKEN-A"));
+
+        // The older radio/next shape names it differently and keeps it shallow.
+        let radio = json!({"contents": [{"nextRadioContinuationData": {"token": "TOKEN-B"}}]});
+        assert_eq!(continuation_token(&radio), Some("TOKEN-B"));
+
+        // A single-page playlist has no token at all, and the walk has to stop
+        // rather than ask again with nothing.
+        let single = json!({"contents": [{"musicResponsiveListItemRenderer": {"videoId": "v1"}}]});
+        assert_eq!(continuation_token(&single), None);
+    }
 
     /// The real shape of an adaptiveFormats audio subset: one WebM/Opus pair
     /// around one AAC pair, exactly the numbers YouTube hands out for a

@@ -99,16 +99,16 @@ export function buildTier4Suite() {
     const env = createMockEnvironment();
     // 1. Desktop view (1200px)
     env.ctx.window.innerWidth = 1200;
-    assert.ok(env.ctx.window.innerWidth > 880);
+    assert.ok(env.ctx.window.innerWidth > 700);
     // 2. Resize to Mobile view (480px)
     env.ctx.window.innerWidth = 480;
-    assert.ok(env.ctx.window.innerWidth <= 880);
+    assert.ok(env.ctx.window.innerWidth <= 700);
     // 3. Resize back to Desktop (1200px)
     env.ctx.window.innerWidth = 1200;
-    assert.ok(env.ctx.window.innerWidth > 880);
+    assert.ok(env.ctx.window.innerWidth > 700);
     // Stylesheet must contain both desktop rail and mobile media rules
     assert.match(css, /\.rail\b/);
-    assert.match(css, /@media\s*\(\s*max-width\s*:\s*880px\s*\)/);
+    assert.match(css, /@media\s*\(\s*max-width\s*:\s*700px\s*\)/);
   });
 
   // ─── Scenario 06: Theme Switch & 5-Tier Surface Contrast Journey ───────────

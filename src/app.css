@@ -231,12 +231,12 @@ button[aria-pressed="true"] .material-symbols-rounded {
   margin-right: 4px;
 }
 
-/* Touch targets: Ensure minimum 40x40 hit area for icon buttons */
+/* Touch targets: Ensure minimum 44x44 hit area for icon buttons */
 .ic, .heart, .search-clear-btn, .fpclose-btn, .fp-settings-btn, .msg-act-btn, .qrm {
   position: relative;
 }
-/* The 40px expansion must not apply to the mouse: on desktop the 28px row
-   hearts sit side by side, and two overlapping 40px zones made clicks near
+/* The 44px expansion must not apply to the mouse: on desktop the 28px row
+   hearts sit side by side, and two overlapping 44px zones made clicks near
    the seam hit the wrong button. Touch keeps the fat targets. */
 @media (pointer: coarse){
   .ic::before, .heart::before, .search-clear-btn::before, .fpclose-btn::before, .fp-settings-btn::before, .msg-act-btn::before, .qrm::before {
@@ -245,8 +245,8 @@ button[aria-pressed="true"] .material-symbols-rounded {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 44px;
+    min-height: 44px;
     width: 100%;
     height: 100%;
     pointer-events: auto;
@@ -308,8 +308,9 @@ html[data-theme="light"] .tb-btn:hover{background:oklch(0% 0 0 / .08)}
 .tb-btn:focus-visible{outline:none;background:oklch(100% 0 0 / .15)}
 html[data-max="true"] .titlebar{background:transparent}
 
-*{box-sizing:border-box}
-html,body{height:100%}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;height:100dvh}
+button,input,select,textarea,.navbtn,.row,.track,.seek,.rail{touch-action:manipulation}
 body{
   margin:0;background:var(--bg);color:var(--text);overflow:hidden;
   font-family:var(--app-font,"Golos Text",Roboto,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif);
@@ -348,8 +349,13 @@ button{background:none;border:0;cursor:pointer}
    for a blur to soften. Rendering them at a fraction of the size and letting
    the compositor scale the result back up produces the same haze for a small
    fraction of the pixels: the upscale is itself a smoothing pass. */
-.haze{position:fixed;inset:-15vh -15vw;z-index:0;pointer-events:none;overflow:hidden;
-  filter:blur(24px)}
+/* No CSS filter here on purpose. A blur() on this full-screen element is
+   re-evaluated on every frame the particle canvas repaints, and on
+   software-rasterised WebKitGTK (Linux without GPU compositing) that single
+   filter cost ~35 ms of a ~90 ms frame — the difference between 11 and 27 fps.
+   The blobs are soft by their own gradient stops: at 60vw the eye cannot tell
+   them apart from the blurred version. */
+.haze{position:fixed;inset:-15vh -15vw;z-index:0;pointer-events:none;overflow:hidden}
 .haze i{position:absolute;border-radius:50%;display:block;
   background:radial-gradient(circle,oklch(100% 0 0 / .09) 0%,oklch(100% 0 0 / .05) 38%,transparent 78%)}
 html[data-theme="light"] .haze i{background:radial-gradient(circle,oklch(30% 0.02 280 / .10) 0%,oklch(30% 0.02 280 / .055) 38%,transparent 78%)}
@@ -386,24 +392,24 @@ html[data-theme="dark"] body{
 }
 
 /* shell */
-.app{position:relative;z-index:2;height:100vh;display:grid;
+.app{position:relative;z-index:2;height:100vh;height:100dvh;display:grid;
   grid-template-columns:74px 1fr;grid-template-rows:1fr auto;
-  grid-template-areas:"rail main" "rail bar";gap:var(--sp-2);padding:calc(var(--tb) + var(--sp-2)) var(--sp-2) var(--sp-2);
+  grid-template-areas:"rail main" "rail bar";gap:var(--sp-2);padding:calc(var(--tb) + var(--sp-2) + env(safe-area-inset-top, 0px)) calc(var(--sp-2) + env(safe-area-inset-right, 0px)) calc(var(--sp-2) + env(safe-area-inset-bottom, 0px)) calc(var(--sp-2) + env(safe-area-inset-left, 0px));
   opacity:0;transition:opacity .6s var(--e)}
 .app.ready{opacity:1}
 
 .rail{grid-area:rail;display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);padding:var(--sp-4) 0}
 .mark{margin-bottom:var(--sp-6);opacity:.9}
-.navbtn{width:56px;padding:9px 0;border-radius:12px;display:grid;justify-items:center;gap:5px;color:var(--mute);
-  font-size:.62rem;letter-spacing:.03em;transition:color .2s var(--e),background .2s var(--e)}
-.navbtn{position:relative}
+.rail-group{display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);width:100%}
+.rail-group-extra{margin-top:auto}
+#nav-more-btn,#nav-back-btn{display:none !important}
+.navbtn{width:56px;padding:7px 0 5px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--mute);
+  font-size:.62rem;letter-spacing:.03em;transition:color .2s var(--e),background .2s var(--e);position:relative}
+.nav-icon-box{width:36px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;transition:background-color .2s var(--e),color .2s var(--e),transform .15s var(--e)}
 .navbadge{position:absolute;top:3px;right:5px;min-width:15px;height:15px;padding:0 4px;border-radius:99px;background:var(--accent);color:var(--bg);font-size:.58rem;line-height:15px;font-weight:700}
 .navbtn:hover{color:var(--text);background:oklch(100% 0 0 / .05)}
 html[data-theme="light"] .navbtn:hover{background:oklch(20% 0.01 280 / .05)}
 .navbtn[aria-current="true"]{color:var(--text);background:var(--accent-soft)}
-/* The global :focus-visible ring lit up on the clicked rail button and read
-   as a stray border on the side of the app. The active pill already shows
-   which section is open, so the ring adds nothing here. */
 .navbtn:focus,.navbtn:focus-visible{outline:none}
 .railend{margin-top:auto}
 
@@ -515,7 +521,7 @@ html[data-theme="light"] .s:hover{background:oklch(0% 0 0 / .06)}
    it; only transform/opacity/filter animate, so the swap stays on the
    compositor. */
 .view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:0 var(--sp-2) var(--sp-4);
-  scrollbar-gutter:stable;
+  scrollbar-gutter:stable;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
   opacity:0;transform:translateY(16px) scale(.986);filter:blur(7px);pointer-events:none;
   transition:opacity .3s var(--e),transform .44s var(--e),filter .36s var(--e)}
 .view[data-active="true"]{opacity:1;transform:none;filter:none;pointer-events:auto}
@@ -898,8 +904,14 @@ html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(1
 .bar{grid-area:bar;position:relative;padding:0 var(--sp-4) var(--sp-3)}
 .seek{height:26px;display:flex;align-items:center;gap:12px;padding-top:6px}
 .seek .t{font-size:.72rem;color:var(--mute);font-variant-numeric:tabular-nums}
-.track{position:relative;flex:1;height:3px;border-radius:99px;background:var(--line-2);cursor:pointer;min-width:60px}
-.track .f{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--accent);
+.track{position:relative;flex:1;height:24px;border-radius:99px;cursor:pointer;min-width:60px;display:flex;align-items:center}
+.track .m3-wave-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.m3-track-flat{stroke:var(--line-2,rgba(255,255,255,0.22));stroke-width:4px;stroke-linecap:round}
+.m3-track-wave{stroke:var(--accent,#a06efa);stroke-width:4px;stroke-linecap:round;fill:none;filter:drop-shadow(0 0 6px rgb(var(--accent-rgb,160 110 250) / .45))}
+.m3-track-thumb{fill:var(--accent,#a06efa);filter:drop-shadow(0 0 5px rgb(var(--accent-rgb,160 110 250) / .6));transition:r .15s ease}
+.track:hover .m3-track-thumb,.track:active .m3-track-thumb{r:7.5px}
+.track:has(.m3-wave-svg) .f, .track:has(.m3-wave-svg) .h{display:none !important}
+.track .f{position:absolute;inset:10px auto 10px 0;border-radius:99px;background:var(--accent);height:4px;
   box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .55),0 0 calc(26px*var(--glow)) rgb(var(--accent-rgb) / .22)}
 .track .h{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--accent);
   opacity:0;transition:opacity .18s var(--e)}
@@ -933,14 +945,15 @@ html[data-theme="light"] .ic:active{background:oklch(20% 0.01 280 / .09)}
 .eqbtn[aria-expanded="true"]{color:var(--text);border-color:var(--line-2);background:var(--surf)}
 
 /* EQ dock */
- .dock{position:absolute;left:50%;right:auto;width:min(760px,calc(100% - 32px));bottom:calc(100% - 4px);z-index:5;
+ .dock{position:fixed;left:50%;right:auto;width:min(760px,calc(100% - 32px));bottom:84px;z-index:2200;
   padding:14px 18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;
+  max-height:calc(100vh - 96px);max-height:calc(100dvh - 96px);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;
   opacity:0;transform:translate(-50%,14px);pointer-events:none;transition:opacity .28s var(--e),transform .34s var(--e)}
 .dock[data-open="true"]{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 /* The equaliser was tall enough to cover a third of the window when open.
    Halving the strip keeps every band readable while leaving room for the
    speed and loudness controls beside it. */
-.bands{display:flex;gap:10px;flex:0 1 300px;min-width:230px}
+.bands{display:flex;gap:10px;flex:1 1 300px;min-width:230px;justify-content:space-between}
 .band{flex:1;display:grid;justify-items:center;gap:5px;min-width:18px}
 .vt{position:relative;width:3px;height:44px;border-radius:99px;background:var(--line-2);cursor:ns-resize;touch-action:none}
 .vt .f{position:absolute;left:-.5px;right:-.5px;border-radius:99px;background:var(--accent)}
@@ -986,18 +999,18 @@ html[data-theme="light"] .ic:active{background:oklch(20% 0.01 280 / .09)}
    layers, and the backdrop-filter is only attached while the panel is actually
    open, so no snapshot exists when it is closed. */
 .fp{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
-  padding:0;margin:0;background:var(--bg);
+  padding:0;margin:0;background:var(--bg);overscroll-behavior:contain;
   opacity:0;pointer-events:none;content-visibility:hidden;
   transition:opacity .35s var(--e);overflow:hidden}
 .fp[data-open="true"]{opacity:1;pointer-events:auto;content-visibility:visible}
 .fp-bg{position:absolute;inset:-60px;background-size:cover;background-position:center;
-  filter:blur(75px) saturate(1.8) brightness(0.42);opacity:0.85;pointer-events:none;z-index:0;
-  transform:scale(1.15);transition:background-image .7s ease,opacity .4s ease}
+  filter:blur(38px) saturate(1.8) brightness(0.42);opacity:0.85;pointer-events:none;z-index:0;
+  transform:scale(1.12) translateZ(0);will-change:transform;transition:background-image .7s ease,opacity .4s ease}
 html[data-lite] .fp-bg{display:none}
 
 /* 3D Volumetric dynamic lighting */
 .fp-volumetric{position:absolute;inset:-20%;overflow:hidden;pointer-events:none;z-index:1;
-  filter:blur(60px);opacity:.9;mix-blend-mode:screen;will-change:transform}
+  filter:blur(36px);opacity:.9;mix-blend-mode:screen;transform:translateZ(0);will-change:transform}
 .fp-volumetric i{position:absolute;border-radius:50%;opacity:.75;will-change:transform}
 .fp-volumetric i:nth-child(1){width:60vw;height:60vw;top:5%;left:12%;
   background:radial-gradient(circle,rgb(var(--fp-tint,var(--accent-rgb,135 90 230))/.75) 0%,transparent 70%);
@@ -1476,32 +1489,59 @@ html[data-lite] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!im
   .fpc{grid-template-columns:1fr;padding:var(--sp-6)}
   .cover{max-width:250px}
 }
-@media (max-width:880px){
-  .app{grid-template-columns:1fr;grid-template-areas:"main" "bar" "rail";gap:var(--sp-1);padding:var(--sp-1);
-    padding-top:calc(var(--tb) + var(--sp-1))}
-  .rail{flex-direction:row;justify-content:space-around;padding:var(--sp-1)}
-  /* Fixed 56px buttons set a ~424px min-content width on the single-column
-     grid track, so on a 390px screen every row (top bar, chips, seek) stretched
-     to 426px and clipped off the right edge. Flexible widths let the track
-     follow the viewport again. */
-  .rail .navbtn{width:auto;min-width:0;flex:1 1 0;max-width:72px;
-    grid-template-columns:minmax(0,1fr)}
-  /* "Настройки" is wider than the flexed button and spilled past the rail's
-     right padding. Constrain the label to its button so the bar keeps symmetric
-     end insets. */
-  .rail .navbtn span:last-child{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mark,.railend{display:none}
+@media (max-width:700px){
+  :root{--tb:0px !important}
+  .titlebar{display:none !important}
+  html, body, .app, .fp, .fpc{overflow-x:hidden !important;max-width:100vw !important;box-sizing:border-box !important;touch-action:pan-x pan-y;-webkit-user-select:none;user-select:none}
+  .app{grid-template-columns:1fr;grid-template-areas:"main" "bar" "rail";gap:var(--sp-1);
+    padding:max(var(--sp-1), env(safe-area-inset-top, 0px)) max(var(--sp-1), env(safe-area-inset-right, 0px)) 0 max(var(--sp-1), env(safe-area-inset-left, 0px))}
+  #nav-more-btn,#nav-back-btn{display:flex !important}
+  .rail{position:relative;overflow:hidden;display:flex;flex-direction:row;align-items:center;justify-content:stretch;
+    height:calc(56px + max(0px, env(safe-area-inset-bottom, 0px)));min-height:56px;box-sizing:border-box;
+    padding:2px max(var(--sp-1), env(safe-area-inset-right, 0px)) max(0px, env(safe-area-inset-bottom, 0px)) max(var(--sp-1), env(safe-area-inset-left, 0px))}
+  .rail::before{display:none !important}
+  .rail-group{display:flex;flex-direction:row;align-items:center;justify-content:space-around;width:100%;height:100%;margin-top:0;
+    transition:transform .34s cubic-bezier(0.2, 0, 0, 1), opacity .25s ease}
+  .rail[data-stage="main"] .rail-group-main{transform:translateX(0);opacity:1;pointer-events:auto;position:relative}
+  .rail[data-stage="main"] .rail-group-extra{transform:translateX(100%);opacity:0;pointer-events:none;position:absolute;inset:0}
+  .rail[data-stage="extra"] .rail-group-main{transform:translateX(-100%);opacity:0;pointer-events:none;position:absolute;inset:0}
+  .rail[data-stage="extra"] .rail-group-extra{transform:translateX(0);opacity:1;pointer-events:auto;position:relative}
+  .rail .navbtn{width:auto;min-width:44px;min-height:52px;flex:1 1 0;max-width:none;padding:2px 0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:transparent;border:none}
+  .rail .navbtn .material-symbols-rounded{font-size:24px !important}
+  .rail .navbtn .nav-icon-box{width:56px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+    color:var(--mute);transition:background-color .22s cubic-bezier(0.2, 0, 0, 1),color .2s ease,transform .15s ease}
+  .rail .navbtn:active .nav-icon-box{transform:scale(0.92)}
+  .rail .navbtn[aria-current="true"]{background:transparent !important}
+  .rail .navbtn[aria-current="true"] .nav-icon-box{background:var(--accent);color:var(--bg);box-shadow:0 2px 10px rgba(var(--accent-rgb),.35)}
+  .rail .navbtn[aria-current="true"] .nav-icon-box .material-symbols-rounded{color:var(--bg) !important}
+  .rail .navbtn span:last-child{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.67rem;font-weight:500;color:var(--mute);transition:color .2s ease,font-weight .2s ease}
+  .rail .navbtn[aria-current="true"] span:last-child{color:var(--text);font-weight:700}
+  .rail .navbtn.navbtn-more .nav-icon-box,.rail .navbtn.navbtn-back .nav-icon-box{background:rgba(255,255,255,.08);color:var(--text)}
+  .rail .navbtn.navbtn-more:active .nav-icon-box,.rail .navbtn.navbtn-back:active .nav-icon-box{background:rgba(255,255,255,.16)}
+  .mark{display:none}
+  .railend{margin-top:0}
   .barmain{grid-template-columns:1fr auto;gap:var(--sp-2)}
   .right{display:none}
   .top{flex-wrap:wrap}
-  .srv{margin-left:0;order:2;width:100%;justify-content:flex-start}
-  .row{gap:var(--sp-2)}
+  .srv{margin-left:0;order:2;width:100%;justify-content:flex-start;display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:4px 0;gap:8px}
+  .srv::-webkit-scrollbar{display:none}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:var(--sp-4);padding-bottom:2px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs button{flex-shrink:0;min-height:44px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:8px 12px 12px}
+  .row{min-height:48px;gap:var(--sp-2)}
+  .row .heart{opacity:.85}
   .row .dur,.row .src{display:none}
-   .dock{left:50%;right:auto;width:calc(100% - 16px);padding:12px;gap:12px}
-   .bands{flex:1 1 100%;min-width:0;gap:7px}
-   .fx{flex:1 1 100%;min-width:0}
+  .track::before{content:"";position:absolute;top:-14px;bottom:-14px;left:0;right:0}
+  .dock{left:50%;right:auto;width:calc(100% - 16px);padding:12px;gap:12px}
+  .bands{flex:1 1 100%;min-width:0;gap:7px}
+  .fx{flex:1 1 100%;min-width:0}
   .presets{order:-1}
   .pmini{display:none}
+  .fp-actions-top{top:max(16px, calc(env(safe-area-inset-top, 0px) + 12px));right:max(16px, calc(env(safe-area-inset-right, 0px) + 12px))}
+  .fp-actions-top .fp-action-btn,.fp-actions-top .fp-settings-btn,.fp-actions-top .fpclose-btn{width:44px;height:44px}
+  .fpctrls{opacity:1 !important;pointer-events:auto !important;transform:translateY(0) !important}
+  .fpseek-times .t{opacity:1 !important}
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1520,14 +1560,27 @@ html[data-lite] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!im
   .vh{padding-inline:0;padding-bottom:18px}
   .panel{margin-inline:0;padding:18px}
   .row{gap:10px;padding-inline:8px}
-  .row .art{width:34px;height:34px}
+  .row .art{width:38px;height:38px}
   .fpc{padding:18px;gap:18px}
   .cover{width:min(68vw,240px);margin-inline:auto}
   .fpr .fpctrls{gap:6px;margin-block:18px 14px}
-  .fpr .fpctrls .play{width:46px;height:46px}
+  .fpr .fpctrls .play{width:48px;height:48px}
   .public-head{margin-top:20px}
   .roomcols{gap:18px}
   .msg{max-width:88%}
+  .barmain .ctrls #shuffle,.barmain .ctrls #repeat{display:none !important}
+  .barmain .ctrls{gap:6px}
+  .barmain .play{width:46px;height:46px}
+  .np{cursor:pointer;user-select:none;-webkit-user-select:none}
+  .np:active{opacity:.85}
+  .top .search{flex:1 1 100%;width:100%}
+  #fp-fullscreen-toggle{display:none !important}
+  .fp-drag-handle{width:38px;height:4px;border-radius:99px;background:rgba(255,255,255,.28);margin:0 auto 12px;flex-shrink:0}
+  .titlebar .tb-btns{display:none}
+}
+
+@media (max-width:480px){
+  .np #npadd,.np #npdislike{display:none}
 }
 
 
@@ -1756,7 +1809,7 @@ html[data-theme="light"] textarea,html[data-theme="light"] select{background:var
 .rail .mark,.rail .navbtn{position:relative;z-index:1}
 .navbtn[aria-current="true"]{background:transparent}
 /* mobile rail lays out horizontally; the pill follows whatever geometry wins */
-@media (max-width:880px){
+@media (max-width:700px){
   .rail::before{width:var(--rw, 56px);height:var(--rh, 56px);transform:translate3d(var(--rx, 0px), var(--ry, 0px), 0) translate3d(0, 0, 0)}
 }
 
@@ -1853,7 +1906,7 @@ html[data-theme="light"] .msg:hover{background:oklch(0% 0 0 / .07)}
   /* Instant snapping for sliding indicators (rail pill and segmented controls) */
   .rail::before,
   .seg::before {
-    transition: 0s !important;
+    transition: none !important;
   }
 
   /* Ambient, infinite and decorative animations: complete suppression */
@@ -1990,8 +2043,8 @@ button:active, .ic:active, .chip:active, [role="button"]:active { transform: sca
   padding: 16px;
   border-radius: 18px;
   background: rgba(18, 18, 24, 0.94);
-  backdrop-filter: blur(28px) saturate(1.8);
-  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  backdrop-filter: blur(16px) saturate(1.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.8);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18), 0 0 1px rgba(255, 255, 255, 0.2);
   opacity: 0;
@@ -2185,8 +2238,8 @@ button:active, .ic:active, .chip:active, [role="button"]:active { transform: sca
   padding: 18px 20px;
   border-radius: 20px;
   background: rgba(18, 18, 24, 0.95);
-  backdrop-filter: blur(32px) saturate(1.8);
-  -webkit-backdrop-filter: blur(32px) saturate(1.8);
+  backdrop-filter: blur(16px) saturate(1.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.8);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18), 0 0 1px rgba(255, 255, 255, 0.2);
   display: flex;
@@ -2880,8 +2933,8 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
   width: 100%;
   max-width: 440px;
   background: oklch(14% 0.015 278 / .92);
-  -webkit-backdrop-filter: blur(28px);
-  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--line);
   border-radius: var(--md-sys-shape-corner-xl);
   padding: var(--sp-6);
@@ -3840,4 +3893,576 @@ html[data-fullscreen="true"] .fpc[data-zoom="full"] .fpcover-stage {
 }
 
 
+/* ═════════════════════════════════════════════════════════════════════════════
+   MATERIAL YOU 3 (M3) MOBILE SUITE: WAVE, DOCK, DROPDOWN, LYRICS & FABs
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── 2. Search Services Dropdown (M3 Sheet) ─────────────────────────────────── */
+.srv-dropdown-wrap {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .srv {
+    display: none !important;
+  }
+  .srv-dropdown-wrap {
+    display: flex;
+    align-items: center;
+    position: relative;
+    margin-left: 8px;
+    flex-shrink: 0;
+  }
+  .srv-dropdown-btn {
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 21px;
+    background: var(--surf-2, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--line);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .srv-dropdown-btn:active {
+    transform: scale(0.96);
+  }
+  .srv-dd-icon {
+    font-size: 20px;
+    color: var(--accent);
+  }
+  .srv-dd-count {
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 6px;
+    line-height: 1.3;
+    min-width: 16px;
+    text-align: center;
+  }
+  .srv-dd-arrow {
+    font-size: 20px;
+    color: var(--mute);
+    transition: transform 0.24s cubic-bezier(0.2, 0, 0, 1);
+  }
+  .srv-dropdown-btn[aria-expanded="true"] .srv-dd-arrow {
+    transform: rotate(180deg);
+  }
+  .srv-dd-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1500;
+  }
+  .srv-dropdown-sheet {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+    max-height: min(460px, 72dvh);
+    background: var(--surf-1, #1a1a20);
+    border: 1px solid var(--line-2);
+    border-radius: 24px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+    z-index: 1501;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    animation: m3SheetIn 0.28s cubic-bezier(0.2, 0, 0, 1);
+  }
+  .srv-dd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .srv-dd-head-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    color: var(--text);
+  }
+  .srv-dd-head-title span {
+    color: var(--accent);
+  }
+  .srv-dd-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .srv-dd-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .srv-dd-item.on {
+    background: rgba(var(--accent-rgb), 0.1);
+    border-color: rgba(var(--accent-rgb), 0.35);
+  }
+  .srv-dd-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .srv-dd-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .srv-dd-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .srv-dd-info b {
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+  .srv-dd-info small {
+    font-size: 0.72rem;
+    color: var(--mute);
+  }
+}
+
+@keyframes m3SheetIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── 3. Equalizer & Sound M3 Bottom Sheet (#dock) ───────────────────────────── */
+.dock-backdrop {
+  display: none;
+}
+.dock-handle,
+.dock-close,
+.dock-header,
+.dock-sp-card {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .dock-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 2199 !important;
+  }
+  .dock {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 28px 28px 0 0 !important;
+    background: var(--surf-1, #18191f) !important;
+    border: 1px solid var(--line-2) !important;
+    border-bottom: none !important;
+    box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.18) !important;
+    z-index: 2200 !important;
+    padding: 12px 18px calc(env(safe-area-inset-bottom, 0px) + 24px) !important;
+    max-height: 86dvh !important;
+    overflow-y: auto !important;
+    transform: translateY(100%) !important;
+    opacity: 1 !important;
+    pointer-events: none !important;
+    transition: transform 0.36s cubic-bezier(0.2, 0, 0, 1) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+  .dock[data-open="true"] {
+    transform: translateY(0) !important;
+    pointer-events: auto !important;
+  }
+  .dock-handle {
+    order: -5 !important;
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 auto 6px;
+    flex-shrink: 0;
+  }
+  .dock-header {
+    order: -4 !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .dock-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .dock-title span {
+    color: var(--accent);
+  }
+  .dock-close {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .dock-sp-card {
+    order: -3 !important;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    background: var(--surf-2, rgba(255, 255, 255, 0.06));
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+  }
+  .dock .presets {
+    order: -2 !important;
+  }
+  .dock-sp-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+  .dock-sp-head > .material-symbols-rounded {
+    font-size: 26px;
+    color: var(--accent);
+  }
+  .dock-sp-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .dock-sp-text b {
+    font-size: 0.92rem;
+    color: var(--text);
+  }
+  .dock-sp-text small {
+    font-size: 0.74rem;
+    color: var(--mute);
+    margin-top: 2px;
+  }
+  .dock .bands {
+    min-height: 80px;
+    gap: 8px;
+    justify-content: space-around;
+    padding: 8px 0;
+  }
+  .dock .vt {
+    height: 64px;
+    width: 6px;
+    border-radius: 99px;
+  }
+  .dock .vt .kn {
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+  }
+}
+
+/* ── 4. Fullscreen Player M3 Overhaul & Layout Fixes ────────────────────────── */
+@media (max-width: 880px) {
+  .fpc,
+  .fpc[data-mode="lyric"],
+  .fpc[data-mode="stage"] {
+    padding: calc(var(--tb, 0px) + 8px + env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  .fp-actions-top {
+    top: calc(var(--tb, 0px) + 12px + env(safe-area-inset-top, 0px)) !important;
+    right: max(16px, env(safe-area-inset-right, 0px)) !important;
+    gap: 8px !important;
+  }
+  .fp-actions-top .fp-action-btn,
+  .fp-actions-top .fp-settings-btn,
+  .fp-actions-top .fpclose-btn {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+  }
+  .fp-action-btn.active {
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.45) !important;
+  }
+  .fp-action-btn.active span {
+    color: var(--bg) !important;
+  }
+  /* M3 Fullscreen Ambient & Responsive Lyrics */
+  .fp-bg {
+    position: fixed !important;
+    inset: -30px !important;
+    filter: blur(56px) saturate(190%) brightness(0.36) !important;
+    transform: scale(1.18) translateZ(0) !important;
+    opacity: 1 !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+  }
+  .fp-lyric-grid,
+  .fp-stage-content {
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    gap: 12px !important;
+    overflow-x: hidden !important;
+  }
+  .fpc[data-mode="lyric"] {
+    padding: 10px 14px !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+  .fpc[data-mode="lyric"] .fp-lyric-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: space-between !important;
+    gap: 0 !important;
+    overflow-x: hidden !important;
+  }
+  .fpc[data-mode="lyric"] .fp-lyric-left,
+  .fpc[data-mode="lyric"] .fp-meta-lyric {
+    display: contents !important;
+  }
+  .fpc[data-mode="lyric"] .fpcover-lg {
+    display: none !important;
+  }
+  .fpc[data-mode="lyric"] .fp-title-row {
+    order: 1 !important;
+    margin-top: calc(env(safe-area-inset-top, 0px) + 36px) !important;
+    justify-content: center !important;
+    padding: 0 12px !important;
+  }
+  .fpc[data-mode="lyric"] .fp-artist {
+    order: 1 !important;
+    text-align: center !important;
+    margin-top: 2px !important;
+    margin-bottom: 6px !important;
+    padding: 0 12px !important;
+  }
+  .fpc[data-mode="lyric"] .fp-lyric-right {
+    order: 2 !important;
+    flex: 1 1 auto !important;
+    max-height: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 4px 0 !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .fpc[data-mode="lyric"] .lyr-big {
+    padding: 10vh 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+  .fpc[data-mode="lyric"] .fpseek-lyric {
+    order: 3 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: auto !important;
+    padding: 0 4px !important;
+  }
+  .fpc[data-mode="lyric"] .fpctrls-lyric {
+    order: 4 !important;
+    margin-top: 6px !important;
+    margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+  }
+  .fp-lyric-left,
+  .fp-meta-lyric,
+  .fpseek,
+  .fpseek-lyric,
+  .fpseek-stage {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .fpseek-times {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0 4px !important;
+    font-size: 0.78rem !important;
+  }
+  .fpcover-lg {
+    width: min(180px, 24vh) !important;
+    border-radius: 18px !important;
+    margin: 0 auto !important;
+  }
+  .fpcover-stage {
+    width: min(220px, 28vh, 68vw) !important;
+    border-radius: 20px !important;
+    margin: 0 auto !important;
+  }
+  .fp-title {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em !important;
+  }
+  .fp-artist {
+    font-size: 0.85rem !important;
+    margin-top: 2px !important;
+    color: var(--mute) !important;
+  }
+  /* Mobile Lyrics Header & Line Fixes (No Overflow, Proportional) */
+  .lyr-header {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto 10px !important;
+    padding: 0 6px !important;
+    box-sizing: border-box !important;
+  }
+  .lyr-header > div:last-child {
+    margin-left: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 4px !important;
+  }
+  .lyr-offset-ctrl {
+    margin-left: 0 !important;
+    padding: 2px 6px !important;
+    font-size: 0.72rem !important;
+  }
+  .ly-off-btn {
+    padding: 2px 4px !important;
+    font-size: 0.68rem !important;
+  }
+  .ly-off-val {
+    min-width: 36px !important;
+    font-size: 0.72rem !important;
+  }
+  .lyr-badge {
+    font-size: 0.68rem !important;
+    padding: 2px 8px !important;
+  }
+  .lyr-header .btn.sm {
+    padding: 3px 8px !important;
+    font-size: 0.72rem !important;
+  }
+  .lyr-big {
+    padding: 10vh 8px !important;
+    gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+  .lyr-big p {
+    font-size: clamp(15px, 4.4vw, 19px) !important;
+    line-height: 1.48 !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    padding: 0 14px !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+  }
+  /* M3 Proportional Controls */
+  .fpctrls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    margin-top: 10px !important;
+  }
+  .fpctrls .play {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 50% !important;
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+    box-shadow: 0 4px 16px rgba(var(--accent-rgb), 0.35) !important;
+  }
+  .fpctrls .play span {
+    font-size: 28px !important;
+    color: var(--bg) !important;
+  }
+  .fpctrls .ic,
+  .fpctrls .heart {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+  .fpctrls .ic span,
+  .fpctrls .heart span {
+    font-size: 20px !important;
+  }
+  .fpctrls .ic:active,
+  .fpctrls .heart:active {
+    transform: scale(0.9) !important;
+  }
+}
+
+/* ── 5. Circular Material You 3 Player FABs & Buttons ───────────────────────── */
+.barmain .play {
+  border-radius: 50% !important;
+  background: var(--accent) !important;
+  color: var(--bg) !important;
+  box-shadow: 0 3px 12px rgba(var(--accent-rgb), 0.35) !important;
+}
+.barmain .play span {
+  color: var(--bg) !important;
+}
+.barmain .ic {
+  border-radius: 50% !important;
+}
+.barmain .play:active,
+.fpctrls .play:active {
+  transform: scale(0.92) !important;
+}
 

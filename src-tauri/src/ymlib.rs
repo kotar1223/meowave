@@ -18,6 +18,7 @@
 use base64::Engine;
 use rand::Rng;
 use serde::Serialize;
+use std::io::Read;
 
 use crate::stream::host_ok;
 
@@ -40,12 +41,15 @@ pub fn ym_available() -> bool {
 
 #[derive(Serialize)]
 pub struct YmStarted {
-    /// URL to open in the browser.
+    /// The Yandex page to sign in on. Opened in the browser, and also worth
+    /// showing, because the browser may not have opened at all.
     pub url: String,
+    /// The loopback page the token is pasted into. This is the one the user
+    /// has to reach to finish, so the frontend has to be able to link to it —
+    /// it used to be reachable only by guessing the port.
+    pub paste: String,
     /// Loopback port the paste page listens on.
     pub port: u16,
-    /// csrf/state echo so the frontend can match the finish call.
-    pub session: String,
 }
 
 /// Opens the browser and starts the loopback listener. Does not block: the
@@ -86,15 +90,24 @@ pub async fn ym_login_start() -> Result<YmStarted, String> {
     };
     opened.map_err(|e| format!("не удалось открыть браузер: {e}"))?;
 
+    let paste = format!("http://127.0.0.1:{port}/");
+
+    /* The paste page is where the token is actually entered, and the only place
+       the three steps are written down. Opening just the Yandex page left the
+       user with no route to it — the port went back to the frontend and was
+       dropped, so the flow could not be completed at all. Opening it here is
+       best-effort: the frontend links to `paste` as well, for the case where
+       the browser never opened. */
+    {
+        let paste = paste.clone();
+        let _ = tokio::task::spawn_blocking(move || open::that(&paste)).await;
+    }
+
     // Serve the paste page in the background; the process answers GET (the
     // page) and POST (the token) until the token or the deadline arrives.
     std::thread::spawn(move || serve_paste(server, state, port));
 
-    Ok(YmStarted {
-        url,
-        port,
-        session: String::new(),
-    })
+    Ok(YmStarted { url, paste, port })
 }
 
 /// Page served locally: the user pastes either the OAuth access_token (the
@@ -178,7 +191,7 @@ fn serve_paste(server: tiny_http::Server, state: String, port: u16) {
             }
             "/token" => {
                 let mut body = String::new();
-                let _ = req.as_reader().read_to_string(&mut body);
+                let _ = req.as_reader().take(65_536).read_to_string(&mut body);
                 let parsed = serde_json::from_str::<serde_json::Value>(&body).ok();
                 let token = parsed
                     .as_ref()
@@ -193,7 +206,18 @@ fn serve_paste(server: tiny_http::Server, state: String, port: u16) {
                 let state_ok = parsed
                     .as_ref()
                     .and_then(|v| v["state"].as_str())
-                    .is_some_and(|s| s == state);
+                    .is_some_and(|s| {
+                        let sb = s.as_bytes();
+                        let wb = state.as_bytes();
+                        if sb.len() != wb.len() {
+                            return false;
+                        }
+                        let mut diff = 0u8;
+                        for (&a, &b) in sb.iter().zip(wb.iter()) {
+                            diff |= a ^ b;
+                        }
+                        diff == 0
+                    });
                 if !host_ok(&req, port) || !state_ok {
                     respond(req, 403, "{\"error\":\"forbidden\"}", "application/json");
                     continue;
@@ -217,14 +241,6 @@ fn serve_paste(server: tiny_http::Server, state: String, port: u16) {
             }
         }
     }
-}
-
-/// Triggers the frontend refresh: initServices() re-reads the keychain after
-/// the paste page has stored the token. Kept as a command so the flow stays
-/// explicit and awaits nothing from the listener thread.
-#[tauri::command]
-pub fn ym_finish() -> Result<(), String> {
-    Ok(())
 }
 
 #[derive(Serialize)]
@@ -274,13 +290,12 @@ fn ym_row(v: &serde_json::Value) -> Option<serde_json::Value> {
     Some(serde_json::json!({ "i": id, "t": t, "a": a, "al": al, "d": d, "exp": exp }))
 }
 
-fn ym_api(path: &str, token: &str) -> reqwest::RequestBuilder {
+fn ym_api(path: &str, token: &str) -> Result<reqwest::RequestBuilder, String> {
     let clean_token = token.trim().strip_prefix("OAuth ").unwrap_or(token.trim());
-    crate::api::client()
-        .expect("http client")
+    Ok(crate::api::client()?
         .get(format!("{}{}", crate::api::YM_API, path))
         .header("Authorization", format!("OAuth {clean_token}"))
-        .header("X-Yandex-Music-Client", "YandexMusicAndroid/24023621")
+        .header("X-Yandex-Music-Client", "YandexMusicAndroid/24023621"))
 }
 
 async fn ym_token() -> Result<String, String> {
@@ -289,7 +304,7 @@ async fn ym_token() -> Result<String, String> {
 }
 
 async fn ym_uid(token: &str) -> Result<String, String> {
-    let v: serde_json::Value = ym_api("/account/status", token)
+    let v: serde_json::Value = ym_api("/account/status", token)?
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -326,7 +341,7 @@ pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
     // defensively all the same: 60 pages × 50 = far past any honest library.
     for page in 0..60u32 {
         let before_len = full.len();
-        let v: serde_json::Value = ym_api(&format!("/users/{uid}/likes/tracks?page={page}&per-page=50"), &token)
+        let v: serde_json::Value = ym_api(&format!("/users/{uid}/likes/tracks?page={page}&per-page=50"), &token)?
             .send()
             .await
             .map_err(|e| format!("network: {e}"))?
@@ -355,7 +370,12 @@ pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
             }
         }
         // Older responses put the ids only in library.tracks; resolve them in batches of 50.
-        if full.is_empty() {
+        /* Resolve the bare ids when *this page* carried no full objects. The
+           test used to be `full.is_empty()`, which asks about the whole
+           accumulator rather than this page: once any page had resolved
+           something, every later page that returned ids only was skipped, so
+           everything past the first page was silently lost. */
+        if full.len() == before_len {
             let ids: Vec<String> = library_ids
                 .iter()
                 .filter_map(|x| {
@@ -410,7 +430,7 @@ pub async fn ym_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
 pub async fn ym_playlists() -> Result<Vec<YmPlaylist>, String> {
     let token = ym_token().await?;
     let uid = ym_uid(&token).await?;
-    let v: serde_json::Value = ym_api(&format!("/users/{uid}/playlists/list"), &token)
+    let v: serde_json::Value = ym_api(&format!("/users/{uid}/playlists/list"), &token)?
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -458,7 +478,7 @@ pub async fn ym_playlist_tracks(kind: String) -> Result<Vec<serde_json::Value>, 
         let v: serde_json::Value = ym_api(
             &format!("/users/{uid}/playlists/{kind}?page={page}&per-page=100&mix=extra"),
             &token,
-        )
+        )?
         .send()
         .await
         .map_err(|e| format!("network: {e}"))?
@@ -497,7 +517,7 @@ pub async fn ym_playlist_tracks(kind: String) -> Result<Vec<serde_json::Value>, 
             .collect();
         if !ids.is_empty() {
             let batch = ids.join(",");
-            let v2: serde_json::Value = ym_api(&format!("/tracks/{batch}"), &token)
+            let v2: serde_json::Value = ym_api(&format!("/tracks/{batch}"), &token)?
                 .send()
                 .await
                 .map_err(|e| format!("network: {e}"))?

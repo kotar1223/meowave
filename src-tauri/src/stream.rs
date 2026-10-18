@@ -135,14 +135,17 @@ impl<'a> Upstream<'a> {
     fn hls(
         rt: &'a tokio::runtime::Runtime,
         segments: Vec<String>,
+        start_seg: usize,
         upstream_url: String,
         media_ua: Option<String>,
+        initial_offset: u64,
+        expected_total: Option<u64>,
     ) -> Self {
         Self {
             rt,
             kind: UpstreamKind::Hls {
                 segments,
-                seg_idx: 0,
+                seg_idx: start_seg,
                 current_resp: None,
             },
             buf: Vec::new(),
@@ -150,11 +153,26 @@ impl<'a> Upstream<'a> {
             upstream_url,
             media_ua,
             bytes_delivered: 0,
-            expected_total: None,
-            initial_offset: 0,
+            expected_total,
+            initial_offset,
             reconnect_attempts: 0,
         }
     }
+}
+
+/// Segment URLs of a media playlist, in order. `#EXTINF` and the other tags
+/// carry no address, so they are dropped and only the bare lines are resolved
+/// against the playlist they came from. Split out from `handle` because this is
+/// the part with the real failure modes — a tag parsed as a segment, or a
+/// relative one resolved against the master playlist instead of the variant —
+/// and it is worth being able to pin down without a network round-trip.
+fn hls_segments(playlist: &str, base: &str) -> Vec<String> {
+    playlist
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with('#') && !l.is_empty())
+        .map(|l| resolve_hls_url(base, l))
+        .collect()
 }
 
 fn resolve_hls_url(base: &str, target: &str) -> String {
@@ -330,14 +348,16 @@ fn query_param(query: &str, key: &str) -> Option<String> {
     })
 }
 
-/// Length-independent compare, so a wrong token cannot be recovered byte by
-/// byte from response timing.
+/// Constant-time comparison preventing timing attacks and length truncation bypasses.
 fn token_ok(given: &str) -> bool {
     let want = token().as_bytes();
     let got = given.as_bytes();
-    let mut diff = (want.len() ^ got.len()) as u8;
-    for (i, w) in want.iter().enumerate() {
-        diff |= w ^ got.get(i).copied().unwrap_or(0);
+    if want.len() != got.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (&w, &g) in want.iter().zip(got.iter()) {
+        diff |= w ^ g;
     }
     diff == 0
 }
@@ -438,9 +458,11 @@ pub fn spawn() -> Result<u16, String> {
             };
             use std::sync::atomic::Ordering;
             if inflight.load(Ordering::Relaxed) >= MAX_INFLIGHT {
-                let _ = request.respond(
-                    Response::from_string("too many streams").with_status_code(StatusCode(503)),
-                );
+                let mut resp = Response::from_string("too many streams").with_status_code(StatusCode(503));
+                for h in cors(None) {
+                    resp = resp.with_header(h);
+                }
+                let _ = request.respond(resp);
                 continue;
             }
             inflight.fetch_add(1, Ordering::Relaxed);
@@ -633,7 +655,9 @@ fn handle(
                 }
             }
             if let Some(r) = &range {
-                req = req.header("Range", r.clone());
+                if !upstream.contains(".m3u8") {
+                    req = req.header("Range", r.clone());
+                }
             }
             // Only the headers are awaited here; the body is streamed below.
             req.send().await.map_err(|e| e.to_string())
@@ -693,7 +717,7 @@ fn handle(
     };
 
     let is_hls = upstream.contains(".m3u8") || ctype.contains("mpegurl");
-    let (body, final_status, final_clen, final_crange, final_ctype) = if is_hls {
+    let (body, final_status, final_clen, final_crange, final_ctype, advertises_ranges) = if is_hls {
         let m3u8_text = rt.block_on(resp.text()).unwrap_or_default();
         let mut target_m3u8 = m3u8_text.clone();
         let mut final_url = upstream.clone();
@@ -714,25 +738,41 @@ fn handle(
                 }
             }
         }
-        let segments: Vec<String> = target_m3u8
-            .lines()
-            .map(str::trim)
-            .filter(|l| !l.starts_with('#') && !l.is_empty())
-            .map(|l| resolve_hls_url(&final_url, l))
-            .collect();
+        let segments = hls_segments(&target_m3u8, &final_url);
 
         let is_google = service == "ytm" || upstream.contains("googlevideo.com");
         let body = Upstream::hls(
             rt,
             segments,
+            0,
             final_url,
             if is_google {
                 Some(crate::ytm::MEDIA_UA.to_string())
             } else {
                 None
             },
+            0,
+            None,
         );
-        (body, 200u16, None, None, "audio/mpeg".to_string())
+
+        // No Content-Length and no Content-Range, deliberately.
+        //
+        // The body is the live concatenation of the playlist's segments, and
+        // the playlist only ever states their *durations*. Turning seconds into
+        // bytes needs a bitrate, and no bitrate is right: 128 kbps is the
+        // nominal constant, not the truth for any given stream, and MPEG-TS
+        // adds its own overhead on top. A guessed length is not merely
+        // imprecise, it is a lie the media element acts on — WebKitGTK either
+        // waits for bytes that will never arrive (no `ended`, so no auto-advance
+        // to the next track) or cuts the stream at the invented boundary and
+        // drops the rest of the song. No length at all is honest and costs
+        // nothing: the element reads the real duration out of the transport
+        // stream's own PIDs.
+        //
+        // For the same reason `Accept-Ranges: none` goes out below. A seek we
+        // cannot satisfy byte-accurately is better answered by streaming the
+        // whole thing than by a 206 whose offsets are fiction.
+        (body, 200u16, None, None, "audio/mpeg".to_string(), false)
     } else {
         let is_google = service == "ytm" || upstream.contains("googlevideo.com");
         let mut normalized = ctype;
@@ -755,13 +795,16 @@ fn handle(
             clen.map(|l| l as u64),
             initial_offset,
         );
-        (body, client_status, clen, crange, normalized)
+        (body, client_status, clen, crange, normalized, true)
     };
 
     let mut headers = vec![
         try_header("Content-Type", &final_ctype)
             .unwrap_or_else(|| header("Content-Type", "audio/mpeg")),
-        header("Accept-Ranges", "bytes"),
+        header(
+            "Accept-Ranges",
+            if advertises_ranges { "bytes" } else { "none" },
+        ),
         header("Cache-Control", "no-store"),
     ];
     headers.extend(cors(origin.as_deref()));
@@ -1117,6 +1160,12 @@ fn serve_relay(
         Ok(u) => u,
         Err(_) => return fail(request, 400, "bad url"),
     };
+    // `query` is only ever the relay's own access token (`?k=…`), and it was
+    // already checked by the caller. The target's own query string rides inside
+    // the percent-encoded path segment, where `Url::parse` decodes it exactly
+    // once. Re-appending anything from here would percent-encode values that
+    // are already encoded — `%20` becoming `%2520` — and PostgREST-encoded
+    // filters would silently stop matching.
     let host = parsed.host_str().unwrap_or("");
     // Only the project's own Supabase endpoints: REST, auth, storage, functions.
     if !(host.ends_with(".supabase.co")
@@ -1163,7 +1212,7 @@ fn serve_relay(
         // Streamed back to the webview, so the same no-total-deadline client
         // as the audio path (see api::media_client).
         let c = crate::api::media_client()?;
-        let mut req = c.request(method.clone(), &url);
+        let mut req = c.request(method.clone(), parsed);
         for (n, v) in &headers {
             req = req.header(n.as_str(), v.as_str());
         }
@@ -1206,7 +1255,7 @@ fn serve_relay(
 
 #[cfg(test)]
 mod range_tests {
-    use super::{parse_range, RangeSpec};
+    use super::{hls_segments, parse_range, token, token_ok, RangeSpec};
 
     fn bytes(r: &str, total: u64) -> (u64, u64) {
         match parse_range(Some(r), total) {
@@ -1247,5 +1296,66 @@ mod range_tests {
             RangeSpec::None
         ));
         assert!(matches!(parse_range(None, 1000), RangeSpec::None));
+    }
+
+    #[test]
+    fn hls_playlist_yields_segments_in_order() {
+        // The shape SoundCloud hands back for an HLS-only track: a media
+        // playlist, not a master one, with tags carrying no address.
+        let playlist = "#EXTM3U\n\
+                        #EXT-X-VERSION:3\n\
+                        #EXT-X-TARGETDURATION:10\n\
+                        #EXTINF:9.009,\n\
+                        seg0.ts\n\
+                        #EXTINF:9.009,\n\
+                        /media/seg1.ts\n\
+                        #EXTINF:5.5,\n\
+                        https://cdn.example/abs/seg2.ts\n\
+                        #EXT-X-ENDLIST\n";
+        assert_eq!(
+            hls_segments(playlist, "https://cdn.example/hls/track/media.m3u8"),
+            vec![
+                "https://cdn.example/hls/track/seg0.ts",
+                "https://cdn.example/media/seg1.ts",
+                "https://cdn.example/abs/seg2.ts",
+            ]
+        );
+        // A master playlist has no segments of its own; its variant lines are
+        // picked out before this ever runs, so an empty result is correct.
+        assert!(hls_segments("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv.m3u8\n", "https://x/y/m.m3u8").len() == 1);
+        assert!(hls_segments("", "https://x/y/m.m3u8").is_empty());
+    }
+
+    #[test]
+    fn hls_range_spec_bounded_test() {
+        // `parse_range` as the local-file path actually uses it: the total is
+        // the real size on disk, so the clamp points below are real bounds and
+        // not an estimate.
+        let total = 640_000u64;
+        match parse_range(Some("bytes=160000-319999"), total) {
+            RangeSpec::Bytes(start, end) => {
+                assert_eq!(start, 160_000);
+                assert_eq!(end, 319_999);
+                assert_eq!(end - start + 1, 160_000);
+            }
+            _ => panic!("expected RangeSpec::Bytes"),
+        }
+        match parse_range(Some("bytes=-160000"), total) {
+            RangeSpec::Bytes(start, end) => {
+                assert_eq!(start, 480_000);
+                assert_eq!(end, 639_999);
+            }
+            _ => panic!("expected RangeSpec::Bytes for suffix"),
+        }
+    }
+
+    #[test]
+    fn test_token_ok() {
+        let t = token();
+        assert!(token_ok(t));
+        assert!(!token_ok(""));
+        assert!(!token_ok(&format!("{t}1")));
+        assert!(!token_ok(&format!("1{t}")));
+        assert!(!token_ok(&format!("{}{}", t, "a".repeat(256))));
     }
 }

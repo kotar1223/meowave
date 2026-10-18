@@ -8,9 +8,13 @@ dist/
 .env.*
 !.env.example
 
-# Updater signing keys must never be committed
+# Updater & Android signing keys must never be committed
 *.key
 *.key.pub
+*.jks
+*.keystore
+*.p12
+*.pem
 
 # Promo code plaintext must never be committed
 supabase/CODES.txt
@@ -34,9 +38,12 @@ src-tauri/icons/ios/
 .DS_Store
 Thumbs.db
 
-# Editor swap files
+# Editor & IDE files
+.idea/
+.vscode/
 *.kate-swp
 *.swp
+*.swo
 *~
 
 # Local scratch, not part of the project: test downloads and an old archive
@@ -48,10 +55,14 @@ src.rar
 # `tauri.local.json` is inert — kept on disk, kept out of the repository.
 src-tauri/tauri.local.json
 
-# Scratch files, agent progress & mockups
+# Scratch files, agent progress, mockups & local tool config
 AGENT_PROGRESS.md
-/Pasted image*.png
-/smoke-test*.png
+Pasted image*.png
+smoke-test*.png
+tests/verify-*.mjs
+.mcp.json
+bun.lock
+bun.lockb
 
 # Python bytecode
 __pycache__/
@@ -59,5 +70,14 @@ __pycache__/
 
 # Executables & Installers
 *.exe
+# AppImage bundles are ~175 MB and belong in release assets, not in git history
+*.AppImage
+*.apk
+*.aab
+*.ipa
+*.dmg
+*.deb
+*.rpm
 
 .agents/
+

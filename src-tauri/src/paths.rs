@@ -58,7 +58,15 @@ fn cache_root() -> Result<PathBuf, String> {
 
 /// Only these names are writable from the frontend, so a bug (or a hostile
 /// page, if a webview ever loads remote content) can't scribble anywhere else.
-const STORE_FILES: &[&str] = &["account", "settings", "badges", "queue"];
+const STORE_FILES: &[&str] = &[
+    "account",
+    "settings",
+    "badges",
+    "queue",
+    "playlists",
+    "favorites",
+    "history",
+];
 
 fn store_path(name: &str) -> Result<PathBuf, String> {
     if !STORE_FILES.contains(&name) {

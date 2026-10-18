@@ -56,12 +56,24 @@ revoke all on function public.decline_request(bigint) from public;
 grant execute on function public.decline_request(bigint) to authenticated;
 
 -- ── 3. chat members: friendship consent + size cap ──────────
+-- The size cap has to be counted from a definer function. As a bare
+-- `(select count(*) from public.chat_members cm where cm.chat_id =
+-- chat_members.chat_id)` inside the policy, the subquery re-enters the RLS of
+-- the very table being guarded and Postgres refuses the whole policy with
+-- 42P17 "infinite recursion detected in relation chat_members" — so *every*
+-- insert into chat_members failed, and the cap it was written to enforce never
+-- ran. 12 had this right; only in_chat() was routed through a function.
+create or replace function public.chat_member_count(c uuid)
+returns integer language sql stable security definer set search_path=public as $$
+  select count(*)::integer from public.chat_members where chat_id = c
+$$;
+grant execute on function public.chat_member_count(uuid) to authenticated;
+
 drop policy if exists "members add people" on public.chat_members;
 create policy "members add people" on public.chat_members for insert with check (
   public.in_chat(chat_id)
   and public.is_friend(user_id)
-  and (select count(*) from public.chat_members cm
-       where cm.chat_id = chat_members.chat_id) < 100
+  and public.chat_member_count(chat_id) < 100
 );
 
 -- ── 4a. promo code brute-force throttle ─────────────────────

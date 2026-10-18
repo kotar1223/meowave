@@ -60,13 +60,24 @@ create policy "stats of visible profiles are readable"
 --
 -- The server-owned columns are unlocked by a transaction-local flag that only
 -- the definer functions below set. Checking the JWT role is not enough: those
--- functions run with the *caller's* role in `request.jwt.claim.role`, so a plain
+-- functions run with the *caller's* role in `request.jwt.claims`, so a plain
 -- role check would have made set_pinned_badges() block itself.
+create or replace function public.is_service_role()
+returns boolean language sql stable as $$
+  select coalesce(
+           case when coalesce(current_setting('request.jwt.claims', true), '') ~ '^\s*\{'
+                then current_setting('request.jwt.claims', true)::jsonb ->> 'role'
+           end,
+           nullif(current_setting('request.jwt.claim.role', true), ''),
+           ''
+         ) = 'service_role'
+$$;
+
 create or replace function public.profiles_guard()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   -- The service role administers directly and is not subject to this.
-  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' then
+  if public.is_service_role() then
     return new;
   end if;
 
@@ -152,6 +163,13 @@ create trigger favorites_stats_trg
   for each row execute function public.favorites_touch_stats();
 
 -- ── report_listening_v2: the column is week_start ───────────
+-- Night-session dedup needs a marker of its own. `updated_at` cannot serve:
+-- it is rewritten by report_listening() itself and by favorites_stats_trg on
+-- every favourite toggle, so "the row was touched 30 minutes ago" says nothing
+-- about whether a night session was already counted.
+alter table public.user_stats
+  add column if not exists last_night_session_at timestamptz;
+
 create or replace function public.report_listening_v2(
   seconds int default 0,
   new_tracks int default 0,
@@ -167,6 +185,10 @@ declare
   today date := (now() at time zone 'utc')::date;
   prev date;
   cur_streak int;
+  last_night timestamptz;
+  -- Decided once, below, and reused by all three counters. Spelling the same
+  -- predicate out three times is how the three copies drifted apart before.
+  night_new boolean := false;
 begin
   if uid is null then
     raise exception 'not authenticated';
@@ -183,8 +205,27 @@ begin
 
   insert into public.user_stats (user_id) values (uid) on conflict do nothing;
 
-  select last_played_on, daily_streak into prev, cur_streak
+  select last_played_on, daily_streak, last_night_session_at
+    into prev, cur_streak, last_night
     from public.user_stats where user_id = uid;
+
+  -- One night session per continuous run of listening, and only if the run has
+  -- actually got going.
+  --
+  -- The previous guard was `session_minutes <= 1 or updated_at is null or
+  -- updated_at < now() - interval '30 minutes'`, a disjunction whose first arm
+  -- fires on exactly the reports that should not count. The client zeroes
+  -- REPORT.sessionStart after any idle gap over 60 s and re-flushes on a 60 s
+  -- timer, so one buffering pause at 03:00 turned every subsequent flush into
+  -- a fresh "night session" and the achievements ratcheted up all night. The
+  -- `updated_at` arm was dead code on top of that, for the reason above.
+  --
+  -- Now: the marker column is written only when a session is actually counted,
+  -- and a run has to reach two minutes before it counts at all — a session
+  -- abandoned inside the first minute should not be a night session.
+  night_new := local_hour is not null
+    and session_minutes >= 2
+    and (last_night is null or last_night < now() - interval '30 minutes');
 
   -- Streak: same day is a no-op, yesterday extends, any older gap restarts.
   if prev is null or prev < today - 1 then
@@ -205,18 +246,25 @@ begin
       coalesce(unique_tracks, 0) + greatest(new_tracks, 0),
       coalesce(tracks_played, 0) + greatest(new_tracks, 0)),
     spatial_seconds = spatial_seconds + spatial,
-    night_sessions = night_sessions
-      + case when local_hour is not null and local_hour >= 2 and local_hour < 5 then 1 else 0 end,
-    sessions_after_1am = sessions_after_1am
-      + case when local_hour is not null and local_hour >= 1 and local_hour < 5 then 1 else 0 end,
-    sessions_before_7am = sessions_before_7am
-      + case when local_hour is not null and local_hour >= 4 and local_hour < 7 then 1 else 0 end,
+    night_sessions = night_sessions + case when night_new and local_hour >= 2 and local_hour < 5 then 1 else 0 end,
+    sessions_after_1am = sessions_after_1am + case when night_new and local_hour >= 1 and local_hour < 5 then 1 else 0 end,
+    sessions_before_7am = sessions_before_7am + case when night_new and local_hour >= 4 and local_hour < 7 then 1 else 0 end,
     -- Monotonic maxima: a short session must not lower the record.
     longest_session_minutes = greatest(longest_session_minutes, session_minutes),
     distinct_genres = greatest(distinct_genres, genres),
     -- tracks_liked is maintained by favorites_stats_trg from the real table, so
     -- the client's own count is ignored. The parameter stays for compatibility.
-    playlists_created = greatest(playlists_created, playlists),
+    -- playlists_created gets the same treatment: the client sends the length of
+    -- its own local array (app.js:5347), which is exactly as trustworthy as the
+    -- rest of a payload that this function was written to stop believing.
+    -- greatest(playlists_created, playlists) meant one call with
+    -- {playlists: 10000} bought the counter outright, and check_achievements()
+    -- handed over Playlist Creator and Playlist Master on the spot. The real
+    -- number lives in the playlists table, so ask the table.
+    playlists_created = greatest(
+      playlists_created,
+      (select count(*)::int from public.playlists where owner_id = uid)),
+    last_night_session_at = case when night_new then now() else last_night_session_at end,
     daily_streak = cur_streak,
     longest_streak = greatest(longest_streak, cur_streak),
     last_played_on = today,
@@ -234,6 +282,20 @@ end $$;
 
 revoke all on function public.report_listening_v2(int, int, int, int, int, int, int, int) from public;
 grant execute on function public.report_listening_v2(int, int, int, int, int, int, int, int) to authenticated;
+
+-- The v1 RPC from 02 is still installed, still SECURITY DEFINER, and still
+-- granted to `authenticated` — 09 only ever touched v2. Nothing in the app
+-- calls it any more, and leaving it callable means the whole hardening above
+-- is optional: v1 writes user_stats directly with no rate limit and no
+-- dedup, so a loop of `rpc('report_listening',{seconds:3600,new_tracks:200,
+-- is_night:true})` buys the top slot on every leaderboard plus every
+-- achievement that reads listen_seconds, unique_tracks or night_sessions.
+revoke all on function public.report_listening(int, int, int, boolean) from public;
+revoke all on function public.report_listening(int, int, int, boolean) from authenticated;
+revoke all on function public.report_listening(int, int, int, boolean) from anon;
+-- Kept, not dropped: 03_badges.sql and old client builds reference it, and a
+-- hardcoded role still gets "permission denied for function" rather than
+-- "function does not exist".
 
 -- ── playlist_tracks.media_ref ───────────────────────────────
 -- Service-specific handle the client keeps alongside the id (a resolved stream
@@ -362,7 +424,7 @@ create policy "djs update playback state"
 create or replace function public.rooms_guard()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' then
+  if public.is_service_role() then
     return new;
   end if;
   -- Only the owner may rename the room or change its visibility; a DJ writing
@@ -467,7 +529,7 @@ grant execute on function public.set_room_role(uuid, uuid, text) to authenticate
 create or replace function public.grant_badge(target uuid, badge text)
 returns boolean language plpgsql security definer set search_path = public as $$
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
+  if not public.is_service_role() then
     raise exception 'grant_badge requires the service role';
   end if;
   if not exists (select 1 from public.badges where id = badge) then

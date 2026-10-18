@@ -5,6 +5,20 @@
 --
 -- Safe to run on any state; everything is drop-if-exists / if-not-exists.
 
+-- The policies below are all expressed through in_chat(). It is re-declared
+-- here rather than assumed, because this file's own header promises it is safe
+-- to paste into a project where 10 never landed.
+
+-- SECURITY DEFINER is the whole point: a policy expression that reads its own
+-- table re-enters that table's RLS, and Postgres answers 42P17 "infinite
+-- recursion detected in policy" rather than a plain denial. Every membership
+-- test in this file has to go through a function to stay out of that trap.
+create or replace function public.in_chat(c uuid)
+returns boolean language sql stable security definer set search_path=public as $$
+  select exists(select 1 from public.chat_members where chat_id=c and user_id=auth.uid())
+$$;
+grant execute on function public.in_chat(uuid) to authenticated;
+
 -- ── chats: policies, recreated verbatim ────────────────────
 drop policy if exists "members see their chats" on public.chats;
 create policy "members see their chats"
@@ -24,10 +38,12 @@ create policy "owners delete chats"
 
 -- chat_members
 drop policy if exists "members are listed" on public.chat_members;
+-- Was `chat_id in (select chat_id from public.chat_members where user_id =
+-- auth.uid())` — the subquery reads the very table the policy guards, so every
+-- select against chat_members, and every realtime subscription to it, failed
+-- with 42P17. in_chat() is the same question asked from a definer context.
 create policy "members are listed"
-  on public.chat_members for select using (
-    chat_id in (select chat_id from public.chat_members where user_id = auth.uid())
-  );
+  on public.chat_members for select using (public.in_chat(chat_id));
 
 drop policy if exists "members add people" on public.chat_members;
 create policy "members add people"

@@ -43,7 +43,9 @@ async function main() {
   let totalPassed = 0;
   let totalFailed = 0;
   let totalTests = 0;
+  let totalSkipped = 0;
   const allFailures = [];
+  const allSkips = [];
 
   for (const suite of suitesToRun) {
     if (!isJson) {
@@ -54,16 +56,20 @@ async function main() {
     totalPassed += report.passed;
     totalFailed += report.failed;
     totalTests += report.total;
+    totalSkipped += report.skipped || 0;
 
     for (const res of report.results) {
-      if (!res.ok) {
+      if (res.skipped) {
+        allSkips.push({ tier: suite.name, title: res.title });
+      } else if (!res.ok) {
         allFailures.push({ tier: suite.name, title: res.title, error: res.error });
       }
     }
 
     if (!isJson) {
       const passColor = report.passed === report.total ? "\x1b[32m" : "\x1b[33m";
-      console.log(`  └─ Result: ${passColor}${report.passed}/${report.total} passed\x1b[0m (${report.failed} failed)\n`);
+      const skipNote = report.skipped ? `, ${report.skipped} skipped` : "";
+      console.log(`  └─ Result: ${passColor}${report.passed}/${report.total} passed\x1b[0m (${report.failed} failed${skipNote})\n`);
     }
   }
 
@@ -76,9 +82,11 @@ async function main() {
       totalTests,
       totalPassed,
       totalFailed,
+      totalSkipped,
       passRate: ((totalPassed / totalTests) * 100).toFixed(1) + "%",
       tiers: tierReports,
       failures: allFailures,
+      skipped: allSkips,
     };
     console.log(JSON.stringify(jsonOutput, null, 2));
     process.exit(totalFailed === 0 ? 0 : 1);
@@ -96,7 +104,18 @@ async function main() {
   console.log("\x1b[1m\x1b[36m------------------------------------------------------------------------\x1b[0m");
   const overallPct = ((totalPassed / totalTests) * 100).toFixed(1);
   console.log(`\x1b[1mTOTAL: ${totalPassed}/${totalTests} Passed (${overallPct}%) in ${elapsed}s\x1b[0m`);
+  if (totalSkipped > 0) {
+    console.log(`\x1b[90m${totalSkipped} skipped — see the skip reasons below; these are NOT counted as passing.\x1b[0m`);
+  }
   console.log("\x1b[1m\x1b[36m========================================================================\x1b[0m\n");
+
+  if (allSkips.length > 0) {
+    console.log(`\x1b[1m\x1b[90mSkipped (${allSkips.length}):\x1b[0m`);
+    for (const s of allSkips) {
+      console.log(`  \x1b[90m- ${s.tier}: ${s.title}\x1b[0m`);
+    }
+    console.log("");
+  }
 
   if (allFailures.length > 0) {
     console.log(`\x1b[1m\x1b[33mDetected Defects / Pending Implementations (${allFailures.length} total):\x1b[0m`);

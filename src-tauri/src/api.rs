@@ -130,6 +130,18 @@ fn sec(ms: u64) -> u32 {
     (ms / 1000) as u32
 }
 
+/// Whether a YouTube Music hit is close enough in length to stand in for a
+/// SoundCloud track.
+///
+/// A missing length on either side means there is nothing to compare, so the
+/// hit is accepted — `orig_secs` is 0 when SoundCloud reported no duration.
+fn duration_ok(hit_secs: u32, orig_secs: u32, tolerance: i64) -> bool {
+    if orig_secs <= 30 || hit_secs == 0 {
+        return true;
+    }
+    (hit_secs as i64 - orig_secs as i64).abs() <= tolerance
+}
+
 /* ═══════════════════ Yandex Music ═══════════════════
    There is no public API, so we speak the same interface the web client does,
    authenticated with the user's own OAuth token from the keychain.
@@ -558,13 +570,15 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         };
         if let Ok(hits) = ytm_search(&query).await {
             let orig_dur = track.get("duration").and_then(|d| d.as_u64()).map(|ms| (ms / 1000) as u32).unwrap_or(0);
-            let pick = hits.iter().find(|h| {
-                if orig_dur > 30 && h.d > 0 {
-                    (h.d as i64 - orig_dur as i64).abs() <= 15
-                } else {
-                    true
-                }
-            }).or_else(|| hits.first());
+            /* Prefer the hit that is the same recording, then one that is at
+               least the same kind of thing. Falling back to `hits.first()`
+               whenever nothing matched made the length check decorative: a
+               three-minute song could be silently replaced by a forty-minute
+               mix, which is exactly what the check was written to prevent. */
+            let pick = hits
+                .iter()
+                .find(|h| duration_ok(h.d, orig_dur, 15))
+                .or_else(|| hits.iter().find(|h| duration_ok(h.d, orig_dur, 60)));
 
             if let Some(ytm_track) = pick {
                 if let Ok(stream_res) = crate::ytm::stream(&ytm_track.id, true, "best").await {
@@ -880,7 +894,14 @@ pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Tra
                     if title.is_empty() { continue; }
                     let artist = r.get("a").and_then(|a| a.as_str()).unwrap_or("—").trim();
                     let album = r.get("al").and_then(|al| al.as_str()).unwrap_or("").trim();
-                    let dur = r.get("d").and_then(|d| d.as_u64()).unwrap_or(0) as u32;
+                    /* A float number of seconds, which serde_json's as_u64()
+                       answers None for — every imported row silently lost its
+                       duration and showed 0:00. */
+                    let dur = r
+                        .get("d")
+                        .and_then(|d| d.as_f64())
+                        .unwrap_or(0.0)
+                        .round() as u32;
                     let track_id = r.get("id").and_then(|i| i.as_str()).unwrap_or("");
                     let art = r.get("art").and_then(|a| a.as_str()).map(|s| s.to_string());
                     tracks.push(Track {

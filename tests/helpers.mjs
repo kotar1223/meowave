@@ -116,31 +116,69 @@ export function extractAnimationInvocations(css) {
  * @param {string|RegExp} selectorPattern
  * @returns {Array<{ selector: string, body: string, declarations: Map<string, string> }>}
  */
-export function extractRules(css, selectorPattern) {
-  const results = [];
-  const ruleRegex = /([^{}@]+)\{([^}]+)\}/g;
-  let match;
-  while ((match = ruleRegex.exec(css)) !== null) {
-    const selector = match[1].trim();
-    const body = match[2].trim();
-    const matches = typeof selectorPattern === "string" 
-      ? selector.includes(selectorPattern) 
-      : selectorPattern.test(selector);
-
-    if (matches) {
-      const declarations = new Map();
-      body.split(";").forEach(decl => {
-        const colonIdx = decl.indexOf(":");
-        if (colonIdx !== -1) {
-          const prop = decl.slice(0, colonIdx).trim();
-          const val = decl.slice(colonIdx + 1).trim();
-          if (prop && val) declarations.set(prop, val);
-        }
-      });
-      results.push({ selector, body, declarations });
+function stripAtRuleBlocks(css) {
+  // Removes every `@media`/`@supports` block, including its contents, so what
+  // is left is the unconditional stylesheet. Depth-counted because the blocks
+  // nest and contain braces of their own.
+  let out = "";
+  let i = 0;
+  while (i < css.length) {
+    if (css[i] === "@") {
+      const braceAt = css.indexOf("{", i);
+      if (braceAt === -1) { out += css.slice(i); break; }
+      let depth = 1;
+      let j = braceAt + 1;
+      while (j < css.length && depth > 0) {
+        if (css[j] === "{") depth++;
+        else if (css[j] === "}") depth--;
+        j++;
+      }
+      i = j;
+      continue;
     }
+    out += css[i];
+    i++;
   }
-  return results;
+  return out;
+}
+
+export function extractRules(css, selectorPattern) {
+  const collect = (source) => {
+    const results = [];
+    const ruleRegex = /([^{}@]+)\{([^}]+)\}/g;
+    let match;
+    while ((match = ruleRegex.exec(source)) !== null) {
+      const selector = match[1].trim();
+      const body = match[2].trim();
+      const matches = typeof selectorPattern === "string"
+        ? selector.includes(selectorPattern)
+        : selectorPattern.test(selector);
+
+      if (matches) {
+        const declarations = new Map();
+        body.split(";").forEach(decl => {
+          const colonIdx = decl.indexOf(":");
+          if (colonIdx !== -1) {
+            const prop = decl.slice(0, colonIdx).trim();
+            const val = decl.slice(colonIdx + 1).trim();
+            if (prop && val) declarations.set(prop, val);
+          }
+        });
+        results.push({ selector, body, declarations });
+      }
+    }
+    return results;
+  };
+
+  // An unconditional declaration is the real one. The regex has no notion of
+  // at-rule blocks, so `.rail::before` was first seen inside
+  // `@media (max-width:700px)` as `{display:none !important}` — five assertions
+  // about `translate3d(var(--rx…))`, `var(--rw)` and `will-change` then failed
+  // against a stylesheet that declares all three. Prefer the top-level copy and
+  // only fall back to the media-scoped ones when the selector exists nowhere
+  // else, so genuinely responsive assertions still have something to read.
+  const unconditional = collect(stripAtRuleBlocks(css));
+  return unconditional.length ? unconditional : collect(css);
 }
 
 /**
@@ -496,12 +534,29 @@ export class TestSuite {
     this.tests.push({ title, fn });
   }
 
+  // A test whose subject is knowingly absent, kept so the intent stays visible
+  // instead of being quietly deleted. Never counted as a failure — and never as
+  // coverage either, so `total` remains the number of tests that assert
+  // something.
+  skip(title, reason) {
+    this.tests.push({ title, fn: null, skipReason: reason });
+  }
+
   async run(verbose = false) {
     let passed = 0;
     let failed = 0;
+    let skipped = 0;
     const results = [];
 
     for (const t of this.tests) {
+      if (t.fn === null) {
+        skipped++;
+        results.push({ title: t.title, ok: true, skipped: true });
+        if (verbose) {
+          console.log(`    - ${t.title} (skipped: ${t.skipReason})`);
+        }
+        continue;
+      }
       const startTime = performance.now();
       try {
         await t.fn();
@@ -509,19 +564,19 @@ export class TestSuite {
         passed++;
         results.push({ title: t.title, ok: true, duration });
         if (verbose) {
-          console.log(`    \x1b[32m✔\x1b[0m ${t.title} (${duration}ms)`);
+          console.log(`    \x1b[32mOK\x1b[0m ${t.title} (${duration}ms)`);
         }
       } catch (err) {
         const duration = (performance.now() - startTime).toFixed(2);
         failed++;
         results.push({ title: t.title, ok: false, error: err.message, duration });
         if (verbose) {
-          console.log(`    \x1b[31m✖\x1b[0m ${t.title} (${duration}ms)`);
-          console.log(`      \x1b[90m${err.message}\x1b[0m`);
+          console.log(`    \x1b[31mFAIL\x1b[0m ${t.title} (${duration}ms)`);
+          console.log(`      ${err.message}`);
         }
       }
     }
 
-    return { name: this.name, passed, failed, total: this.tests.length, results };
+    return { name: this.name, passed, failed, skipped, total: passed + failed, results };
   }
 }

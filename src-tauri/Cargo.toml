@@ -60,6 +60,16 @@ keyring = { version = "3", features = ["apple-native"] }
 # AppImage bundles it.
 [target.'cfg(target_os = "linux")'.dependencies]
 keyring = { version = "3", features = ["sync-secret-service"] }
+webkit2gtk = { version = "2.0", default-features = false }
+# setrlimit(RLIMIT_CORE) for the process tree: WebKitGTK's web process segfaults
+# inside Mesa's GBM teardown on exit (see run() in lib.rs), and without this every
+# quit produces a core dump and a "process crashed" notification from desktop
+# crash watchers.
+libc = "0.2"
+# MPRIS for the desktop's media controls and the hardware media keys; see
+# mpris.rs. Default features are what the rest of the tree already builds zbus
+# with (tauri-plugin-opener depends on it), so this adds no new build work.
+zbus = "5"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.10.1"

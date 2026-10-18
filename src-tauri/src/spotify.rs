@@ -56,8 +56,39 @@ pub fn configured() -> bool {
     client_id().is_some()
 }
 
-const REDIRECT_URI: &str = "http://localhost:8080/callback";
-const CALLBACK_PORT: u16 = 8080;
+fn get_custom_port() -> Option<u16> {
+    if let Ok(Some(tok)) = crate::tokens::read_token("sp_redirect_port") {
+        if let Ok(p) = tok.trim().parse::<u16>() {
+            if p > 0 {
+                return Some(p);
+            }
+        }
+    }
+    if let Ok(val) = std::env::var("SPOTIFY_REDIRECT_PORT") {
+        if let Ok(p) = val.trim().parse::<u16>() {
+            if p > 0 {
+                return Some(p);
+            }
+        }
+    }
+    None
+}
+
+fn redirect_uri_for(port: u16) -> String {
+    format!("http://localhost:{port}/callback")
+}
+
+#[tauri::command]
+pub fn spotify_set_redirect_port(port: u16) -> Result<(), String> {
+    if port == 0 {
+        let _ = crate::tokens::delete_service_token("sp_redirect_port".into());
+    } else {
+        crate::tokens::set_service_token("sp_redirect_port".into(), port.to_string())?;
+    }
+    Ok(())
+}
+
+const DEFAULT_CALLBACK_PORT: u16 = 8080;
 
 /// Only what the player actually needs. Asking for more turns the consent
 /// screen into a wall of permissions and gets the app rejected on review.
@@ -269,14 +300,14 @@ fn respond_html(req: tiny_http::Request, html: &str) -> Result<(), std::io::Erro
 /// Form-encoded and unauthenticated apart from client_id: PKCE clients have no
 /// secret, so there is no Basic auth header here. Sending one would make
 /// Spotify reject the request.
-async fn exchange(code: &str, verifier: &str) -> Result<Stored, String> {
+async fn exchange(code: &str, verifier: &str, redirect_uri: &str) -> Result<Stored, String> {
     let cid = client_id().ok_or("не задан Client ID Spotify")?;
     let resp = crate::api::client()?
         .post("https://accounts.spotify.com/api/token")
         .form(&[
             ("grant_type", "authorization_code"),
             ("code", code),
-            ("redirect_uri", REDIRECT_URI),
+            ("redirect_uri", redirect_uri),
             ("client_id", cid.as_str()),
             ("code_verifier", verifier),
         ])
@@ -396,17 +427,26 @@ pub async fn spotify_login() -> Result<SpotifyAccount, String> {
     let (verifier, challenge) = pkce();
     let state = state_token();
 
-    // Bind first. If the port is taken — another sign-in already open, or an
-    // unrelated dev server — say so instead of opening a browser that will
-    // redirect into nothing.
-    let server = tiny_http::Server::http(("127.0.0.1", CALLBACK_PORT))
-        .map_err(|_| format!("порт {CALLBACK_PORT} занят — закройте программу, которая его использует"))?;
+    // Bind to the registered redirect port (custom if configured, otherwise DEFAULT_CALLBACK_PORT).
+    let (server, port) = if let Some(cp) = get_custom_port() {
+        let s = tiny_http::Server::http(("127.0.0.1", cp)).map_err(|_| {
+            format!("пользовательский порт Spotify ({cp}) занят — освободите его")
+        })?;
+        (s, cp)
+    } else {
+        let s = tiny_http::Server::http(("127.0.0.1", DEFAULT_CALLBACK_PORT)).map_err(|_| {
+            format!("порт авторизации Spotify ({DEFAULT_CALLBACK_PORT}) занят — освободите его или укажите свой порт в настройках")
+        })?;
+        (s, DEFAULT_CALLBACK_PORT)
+    };
+
+    let redirect_uri = redirect_uri_for(port);
 
     let url = format!(
         "https://accounts.spotify.com/authorize?response_type=code&client_id={}&scope={}&redirect_uri={}&state={}&code_challenge_method=S256&code_challenge={}",
         urlencoding::encode(&cid),
         urlencoding::encode(SCOPES),
-        urlencoding::encode(REDIRECT_URI),
+        urlencoding::encode(&redirect_uri),
         urlencoding::encode(&state),
         urlencoding::encode(&challenge),
     );
@@ -423,7 +463,7 @@ pub async fn spotify_login() -> Result<SpotifyAccount, String> {
         .await
         .map_err(|e| format!("callback thread: {e}"))??;
 
-    let stored = exchange(&code, &verifier).await?;
+    let stored = exchange(&code, &verifier, &redirect_uri).await?;
     save_stored(&stored)?;
 
     me(&stored.access).await
@@ -493,11 +533,27 @@ pub fn spotify_available() -> bool {
    bringing the library over. Tracks arrive as plain names and are matched to
    a playable source by the frontend. */
 
-fn sp_get(path: &str, token: &str) -> reqwest::RequestBuilder {
-    crate::api::client()
-        .expect("http client")
-        .get(format!("https://api.spotify.com{path}"))
-        .bearer_auth(token)
+/// Builds the URL for a Spotify API target, which is either a path (`/v1/…`)
+/// or one of the full URLs a paging object hands back as `next`.
+///
+/// Prefixing the base onto a full URL produced
+/// `https://api.spotify.comhttps://api.spotify.com/…`, which reqwest refused to
+/// parse — and because the error was propagated, a playlist longer than one
+/// page failed to import at all rather than just stopping early. A link to any
+/// host but Spotify's own is not followed.
+fn sp_url(target: &str) -> Option<String> {
+    if let Some(rest) = target.strip_prefix("https://api.spotify.com") {
+        return Some(format!("https://api.spotify.com{rest}"));
+    }
+    target
+        .starts_with('/')
+        .then(|| format!("https://api.spotify.com{target}"))
+}
+
+fn sp_get(target: &str, token: &str) -> Result<reqwest::RequestBuilder, String> {
+    let url =
+        sp_url(target).ok_or_else(|| format!("Spotify returned an unusable link: {target}"))?;
+    Ok(crate::api::client()?.get(url).bearer_auth(token))
 }
 
 /// One row per playlist: enough to list, enough to drill in.
@@ -510,11 +566,13 @@ pub struct SpotifyPlaylist {
 
 #[tauri::command]
 pub async fn spotify_playlists() -> Result<Vec<SpotifyPlaylist>, String> {
+    /// Far past what the picker is for, and it bounds a runaway `next`.
+    const MAX_PAGES: usize = 10;
     let tok = access_token().await?;
     let mut lists = Vec::new();
 
     // Check if user has liked tracks in library
-    if let Ok(resp) = sp_get("/v1/me/tracks?limit=1", &tok).send().await {
+    if let Ok(resp) = sp_get("/v1/me/tracks?limit=1", &tok)?.send().await {
         if resp.status().is_success() {
             if let Ok(v) = resp.json::<serde_json::Value>().await {
                 let total = v["total"].as_u64().unwrap_or(0) as u32;
@@ -529,25 +587,44 @@ pub async fn spotify_playlists() -> Result<Vec<SpotifyPlaylist>, String> {
         }
     }
 
-    let v: serde_json::Value = sp_get("/v1/me/playlists?limit=50", &tok)
-        .send()
-        .await
-        .map_err(|e| format!("network: {e}"))?
-        .error_for_status()
-        .map_err(|e| format!("Spotify: {e}"))?
-        .json()
-        .await
-        .map_err(|e| format!("bad response: {e}"))?;
+    // Paginated for the same reason the tracks are: reading only the first
+    // response meant a user with more than 50 playlists saw the rest of them
+    // simply not exist.
+    let mut path = "/v1/me/playlists?limit=50".to_string();
+    for _ in 0..MAX_PAGES {
+        let v: serde_json::Value = sp_get(&path, &tok)?
+            .send()
+            .await
+            .map_err(|e| format!("network: {e}"))?
+            .error_for_status()
+            .map_err(|e| format!("Spotify: {e}"))?
+            .json()
+            .await
+            .map_err(|e| format!("bad response: {e}"))?;
 
-    if let Some(rows) = v["items"].as_array() {
-        for p in rows {
-            if let Some(id) = p["id"].as_str() {
-                lists.push(SpotifyPlaylist {
-                    id: id.to_string(),
-                    name: p["name"].as_str().unwrap_or("—").to_string(),
-                    total: p["tracks"]["total"].as_u64().unwrap_or(0) as u32,
-                });
+        if let Some(rows) = v["items"].as_array() {
+            for p in rows {
+                if let Some(id) = p["id"].as_str() {
+                    lists.push(SpotifyPlaylist {
+                        id: id.to_string(),
+                        name: p["name"].as_str().unwrap_or("—").to_string(),
+                        total: p["tracks"]["total"].as_u64().unwrap_or(0) as u32,
+                    });
+                }
             }
+        }
+
+        match v
+            .get("next")
+            .and_then(|n| n.as_str())
+            .filter(|s| !s.is_empty())
+        {
+            // `sp_url` refuses anything but Spotify's own host, so a link it
+            // will not follow ends the walk. The pages already read are still
+            // worth returning, and failing the whole listing over the last one
+            // would not be.
+            Some(next) if sp_url(next).is_some() => path = next.to_string(),
+            _ => break,
         }
     }
     Ok(lists)
@@ -573,7 +650,7 @@ pub async fn spotify_playlist_tracks(pid: String) -> Result<Vec<serde_json::Valu
     };
 
     for _ in 0..MAX_PAGES {
-        let v: serde_json::Value = sp_get(&path, &tok)
+        let v: serde_json::Value = sp_get(&path, &tok)?
             .send()
             .await
             .map_err(|e| format!("network: {e}"))?
@@ -592,8 +669,8 @@ pub async fn spotify_playlist_tracks(pid: String) -> Result<Vec<serde_json::Valu
             .and_then(|n| n.as_str())
             .filter(|s| !s.is_empty())
         {
-            Some(next) => path = next.to_string(),
-            None => break,
+            Some(next) if sp_url(next).is_some() => path = next.to_string(),
+            _ => break,
         }
     }
 
@@ -646,7 +723,7 @@ pub async fn spotify_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
 pub async fn spotify_search(query: &str) -> Result<Vec<crate::api::Track>, String> {
     let tok = access_token().await?;
     let path = format!("/v1/search?q={}&type=track&limit=20", urlencoding::encode(query));
-    let resp = sp_get(&path, &tok)
+    let resp = sp_get(&path, &tok)?
         .send()
         .await
         .map_err(|e| format!("Spotify search network: {e}"))?;

@@ -42,6 +42,30 @@ fn id_for(path: &Path) -> String {
     format!("{:x}", md5::compute(path.to_string_lossy().as_bytes()))
 }
 
+/// Finds `needle` in `hay` ASCII case-insensitively and returns the byte range
+/// in `hay`.
+///
+/// `to_lowercase()` is not length-preserving — `İ` (U+0130) folds to `i` plus a
+/// combining dot — so an offset taken from a folded copy points somewhere else
+/// in the original, whether it is counted in bytes or in chars. Only ASCII is
+/// folded here, which is all the tags being stripped need, and an ASCII byte
+/// never occurs inside a multi-byte character, so a byte match always lands on
+/// a character boundary.
+fn find_ci(hay: &str, needle: &str) -> Option<std::ops::Range<usize>> {
+    let n = needle.as_bytes();
+    if n.is_empty() || !needle.is_ascii() || n.len() > hay.len() {
+        return None;
+    }
+    let h = hay.as_bytes();
+    (0..=h.len() - n.len()).find_map(|start| {
+        h[start..start + n.len()]
+            .iter()
+            .zip(n)
+            .all(|(a, b)| a.eq_ignore_ascii_case(b))
+            .then_some(start..start + n.len())
+    })
+}
+
 pub fn path_of(id: &str) -> Option<PathBuf> {
     FILES.lock().ok()?.as_ref()?.get(id).cloned()
 }
@@ -91,39 +115,23 @@ fn parse_name(stem: &str) -> (String, String) {
     ] {
         // Case-insensitive removal without pulling in a regex dependency.
         //
-        // Two bugs lived here. First, the byte offset came from `to_lowercase()`
-        // and was then applied to the original string: for any name containing
-        // non-ASCII characters whose lowercase form has a different UTF-8 length
-        // that offset lands mid-character and `replace_range` panics, taking the
-        // whole scan with it. Matching on a per-iteration lowercase copy of the
-        // *current* string is only safe when the two share a byte layout, so the
-        // match is now located by scanning char boundaries directly.
+        // Three bugs lived here. First, the byte offset came from
+        // `to_lowercase()` and was then applied to the original string: for any
+        // name containing non-ASCII characters whose lowercase form has a
+        // different UTF-8 length that offset lands mid-character and
+        // `replace_range` panics, taking the whole scan with it. Second, the
+        // repair for that counted chars in the folded copy instead, which is
+        // wrong for the same reason one level down — `İ` folds to two
+        // characters, so every offset after it was one too high and the wrong
+        // slice was removed ("İstanbul - (HD) Night" became "İstanbul -
+        // (Night"). Third, bare "HD"/"HQ" matched inside ordinary words —
+        // "Shdow", "HQuartet" — so those tags are only stripped when
+        // bracketed.
         //
-        // Second, bare "HD"/"HQ" matched inside ordinary words — "Shdow",
-        // "HQuartet" — so those tags are only stripped when bracketed.
-        let needle = tag.to_lowercase();
-        loop {
-            let hay = s.to_lowercase();
-            let Some(lower_at) = hay.find(&needle) else {
-                break;
-            };
-            // Map the match back to the original string by counting chars, not
-            // bytes: char counts are stable across case folding for every
-            // alphabet this touches.
-            let char_at = hay[..lower_at].chars().count();
-            let char_len = tag.chars().count();
-            let Some(start) = s.char_indices().nth(char_at).map(|(i, _)| i) else {
-                break;
-            };
-            let end = s
-                .char_indices()
-                .nth(char_at + char_len)
-                .map(|(i, _)| i)
-                .unwrap_or(s.len());
-            if start >= end {
-                break;
-            }
-            s.replace_range(start..end, "");
+        // Every tag is ASCII, so the search folds ASCII only. That is exact,
+        // length-preserving, and leaves no offset to map back.
+        while let Some(hit) = find_ci(&s, tag) {
+            s.replace_range(hit, "");
         }
     }
     // Tidy up what the removals left behind.
@@ -719,9 +727,12 @@ fn ffmpeg_bin() -> Option<std::path::PathBuf> {
 
 fn locate_ffmpeg() -> Option<std::path::PathBuf> {
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    return None;
-
-    // The bundled copy first. `externalBin` in tauri.conf.json installs it right
+    {
+        None
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        // The bundled copy first. `externalBin` in tauri.conf.json installs it right
     // next to our own executable with the target-triple suffix stripped, so the
     // installed layout is meowave.exe + ffmpeg.exe in one directory.
     //
@@ -748,11 +759,19 @@ fn locate_ffmpeg() -> Option<std::path::PathBuf> {
                 }
                 let candidate = root.join("ffmpeg").join(if cfg!(windows) {
                     "ffmpeg-x86_64-pc-windows-msvc.exe"
+                } else if cfg!(target_arch = "x86_64") {
+                    "ffmpeg-x86_64-unknown-linux-gnu"
+                } else if cfg!(target_arch = "aarch64") {
+                    "ffmpeg-aarch64-unknown-linux-gnu"
                 } else {
                     "ffmpeg"
                 });
                 if candidate.is_file() {
                     return Some(candidate);
+                }
+                let fallback = root.join("ffmpeg").join("ffmpeg");
+                if fallback.is_file() {
+                    return Some(fallback);
                 }
             }
         }
@@ -790,6 +809,7 @@ fn locate_ffmpeg() -> Option<std::path::PathBuf> {
         None
     } else {
         Some(std::path::PathBuf::from(first))
+    }
     }
 }
 

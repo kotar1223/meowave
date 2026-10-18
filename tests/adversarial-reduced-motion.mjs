@@ -74,8 +74,8 @@ async function main() {
     console.log(`    [Observation] Does 'tr.startsWith("none")' match? ${tr.startsWith("none")}`);
     
     // Notice that tier1-features.mjs line 208 is:
-    // assert.ok(tr === "none" || tr === "0s" || tr === "0ms" || tr.includes("0s"))
-    const e2eConditionPassed = (tr === "none" || tr === "0s" || tr === "0ms" || tr.includes("0s"));
+    // assert.ok(tr === "none" || tr === "0s" || tr === "0ms" || tr.includes("0s") || tr.startsWith("none"))
+    const e2eConditionPassed = (tr === "none" || tr === "0s" || tr === "0ms" || tr.includes("0s") || tr.startsWith("none"));
     console.log(`    [Observation] Result of tier1-features.mjs line 208 condition: ${e2eConditionPassed}`);
     assert.ok(tr.startsWith("none"), "Expected transition to begin with 'none'");
   });
@@ -89,13 +89,26 @@ async function main() {
   });
 
   await runTest("Challenge 3.2: Particle canvas loop behavior and audio clock integrity simulation", () => {
-    // Simulate the exact code from src/app.js lines 1162-1185
+    // Simulate the actual code from src/app.js lines 1345-1360
+    const budgetMatch = js.match(/const effectiveBudget\s*=\s*([^;]+);/);
+    const dtMatch = js.match(/const dt\s*=\s*Math\.min\(([^,]+),\s*\((?:now\s*-\s*last)\)\s*\/\s*1000\);/);
+    const maxDt = dtMatch ? parseFloat(dtMatch[1]) : 0.25;
+    const getEffectiveBudget = (isReduced) => {
+      if (budgetMatch) {
+        const expr = budgetMatch[1]
+          .replace(/\bisReduce\b/g, String(isReduced))
+          .replace(/S\.lite/g, "false");
+        try { return eval(expr); } catch (_) {}
+      }
+      return 0;
+    };
+
     function simulatePlayback(isReduced, durationMs = 5000, frameStepMs = 16.66) {
       let now = 0;
       let last = 0;
       let lastFrame = 0;
       let pos = 0;
-      const effectiveBudget = isReduced ? 100 : 0;
+      const effectiveBudget = getEffectiveBudget(isReduced);
       let frameCalls = 0;
       let advanceClockCalls = 0;
 
@@ -108,7 +121,7 @@ async function main() {
           continue;
         }
         lastFrame = now;
-        const dt = Math.min(0.05, (now - last) / 1000);
+        const dt = Math.min(maxDt, (now - last) / 1000);
         last = now;
         // non-local advanceClock
         pos += dt;

@@ -273,11 +273,29 @@ pub fn clean_html_lyrics(chunk: &str) -> String {
     filtered_lines.join("\n")
 }
 
+/// Rounds a byte offset down to the nearest character boundary.
+///
+/// Slicing a `&str` at an offset inside a multi-byte character panics, and
+/// these offsets are arithmetic on byte positions in remote HTML — a 12 000
+/// byte cap lands wherever it lands, and a Cyrillic or accented lyric puts a
+/// character right across it. `str::floor_char_boundary` is still unstable.
+fn char_floor(s: &str, mut i: usize) -> usize {
+    if i >= s.len() {
+        return s.len();
+    }
+    while !s.is_char_boundary(i) {
+        i -= 1;
+    }
+    i
+}
+
 fn find_matching_div_end(html: &str, start: usize, max_end: usize) -> usize {
     let mut depth = 1;
     let mut i = start;
     let bytes = html.as_bytes();
-    let limit = max_end.min(bytes.len());
+    /* Everything this returns is either an ASCII `</div>` match or the limit,
+       and only the limit can be off a character boundary. */
+    let limit = char_floor(html, max_end.min(bytes.len()));
 
     while i < limit && depth > 0 {
         if bytes[i..limit].starts_with(b"<div") {
@@ -599,6 +617,25 @@ mod tests {
         assert!(extracted.contains("Line 3\nLine 4"));
         assert!(!extracted.contains("advertisement"));
         assert!(!extracted.contains("footer"));
+    }
+
+    #[test]
+    fn a_multibyte_character_across_the_size_cap_does_not_panic() {
+        /* The scraper caps an unclosed container at 12 000 bytes past the tag,
+           and a Cyrillic or CJK lyric puts a character boundary only every two
+           or three bytes — so the cap can land inside a character and slicing
+           there panics. That is a crash, not a missing lyric. */
+        let head = "<div data-lyrics-container=\"true\">";
+        let body = format!("x{}", "あ".repeat(7_000));
+        let html = format!("{head}{body}");
+        let cap = head.len() + 12_000;
+        assert!(
+            !html.is_char_boundary(cap),
+            "the fixture has to put the cap mid-character or it tests nothing"
+        );
+
+        let extracted = extract_genius_lyrics(&html);
+        assert!(extracted.contains('あ'));
     }
 
     #[test]

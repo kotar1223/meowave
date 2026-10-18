@@ -85,3 +85,10 @@ jobs:
         run: |
           node supabase/build_sql.mjs
           git diff --exit-code -- supabase/FULL_SCHEMA.sql
+
+      # The 290-test tier suite reads src/app.js, src/app.css and src/index.html
+      # as text. It ran only when someone remembered to, which is how 18
+      # failures accumulated unnoticed — and five of those turned out to be the
+      # suite's own bugs, so a silent suite is worse than a broken one.
+      - name: E2E tier suite
+        run: node tests/run-e2e.mjs

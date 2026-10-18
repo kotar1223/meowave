@@ -62,10 +62,14 @@ create policy "owners delete chats"
   on public.chats for delete using (auth.uid() = created_by);
 
 drop policy if exists "members are listed" on public.chat_members;
+-- Was `chat_id in (select chat_id from public.chat_members where user_id =
+-- auth.uid())`. A policy that reads its own table re-enters that table's RLS,
+-- so Postgres rejected every select on chat_members with 42P17 "infinite
+-- recursion detected in policy" — which is the whole reason 11 and 12 exist.
+-- in_chat() (defined above) asks the identical question from a definer
+-- context, which is exempt from the table's own policies.
 create policy "members are listed"
-  on public.chat_members for select using (
-    chat_id in (select chat_id from public.chat_members where user_id = auth.uid())
-  );
+  on public.chat_members for select using (public.in_chat(chat_id));
 
 drop policy if exists "members add people" on public.chat_members;
 create policy "members add people"

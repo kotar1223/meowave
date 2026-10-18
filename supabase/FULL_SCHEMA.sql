@@ -781,9 +781,15 @@ create policy "public rooms and joined rooms are visible"
   on public.rooms for select
   using (not is_private or public.in_room(id) or owner_id = auth.uid());
 
+-- No insert policy, deliberately. create_room() is the only supported way to
+-- make a room, and it is SECURITY DEFINER, so it does not need one. The
+-- policy this replaces (`with check (auth.uid() = owner_id)`) allowed a client
+-- to insert the row itself, which meant a client-chosen join_code — squatting a
+-- specific code, or capturing an invite before the owner sees it — and no
+-- matching row in room_members, which leaves the room a ghost: room_cleanup()
+-- and leave_room() both key off membership. rooms_guard() is a BEFORE UPDATE
+-- trigger, so an INSERT skipped every check in it too.
 drop policy if exists "users create own rooms" on public.rooms;
-create policy "users create own rooms"
-  on public.rooms for insert with check (auth.uid() = owner_id);
 
 -- DJs update playback state; the owner also renames and locks the room.
 drop policy if exists "djs update room playback" on public.rooms;
@@ -845,6 +851,13 @@ begin
   insert into public.room_members (room_id, user_id, role)
   values (row.id, uid, 'owner');
 
+  -- The stats row may not exist yet: it is only created by the first
+  -- report_listening() call, and an account that goes straight to hosting a
+  -- room has none. The bare UPDATE then matched zero rows and the room went
+  -- uncounted until the user happened to listen to something. Seed the row
+  -- first — same pattern 09 applies to create_playlist() and playlist_sync().
+  insert into public.user_stats (user_id) values (uid)
+    on conflict (user_id) do nothing;
   update public.user_stats set rooms_hosted = rooms_hosted + 1 where user_id = uid;
   perform public.check_achievements();
 
@@ -1652,13 +1665,24 @@ create policy "stats of visible profiles are readable"
 --
 -- The server-owned columns are unlocked by a transaction-local flag that only
 -- the definer functions below set. Checking the JWT role is not enough: those
--- functions run with the *caller's* role in `request.jwt.claim.role`, so a plain
+-- functions run with the *caller's* role in `request.jwt.claims`, so a plain
 -- role check would have made set_pinned_badges() block itself.
+create or replace function public.is_service_role()
+returns boolean language sql stable as $$
+  select coalesce(
+           case when coalesce(current_setting('request.jwt.claims', true), '') ~ '^\s*\{'
+                then current_setting('request.jwt.claims', true)::jsonb ->> 'role'
+           end,
+           nullif(current_setting('request.jwt.claim.role', true), ''),
+           ''
+         ) = 'service_role'
+$$;
+
 create or replace function public.profiles_guard()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   -- The service role administers directly and is not subject to this.
-  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' then
+  if public.is_service_role() then
     return new;
   end if;
 
@@ -1744,6 +1768,13 @@ create trigger favorites_stats_trg
   for each row execute function public.favorites_touch_stats();
 
 -- ── report_listening_v2: the column is week_start ───────────
+-- Night-session dedup needs a marker of its own. `updated_at` cannot serve:
+-- it is rewritten by report_listening() itself and by favorites_stats_trg on
+-- every favourite toggle, so "the row was touched 30 minutes ago" says nothing
+-- about whether a night session was already counted.
+alter table public.user_stats
+  add column if not exists last_night_session_at timestamptz;
+
 create or replace function public.report_listening_v2(
   seconds int default 0,
   new_tracks int default 0,
@@ -1759,6 +1790,10 @@ declare
   today date := (now() at time zone 'utc')::date;
   prev date;
   cur_streak int;
+  last_night timestamptz;
+  -- Decided once, below, and reused by all three counters. Spelling the same
+  -- predicate out three times is how the three copies drifted apart before.
+  night_new boolean := false;
 begin
   if uid is null then
     raise exception 'not authenticated';
@@ -1775,8 +1810,27 @@ begin
 
   insert into public.user_stats (user_id) values (uid) on conflict do nothing;
 
-  select last_played_on, daily_streak into prev, cur_streak
+  select last_played_on, daily_streak, last_night_session_at
+    into prev, cur_streak, last_night
     from public.user_stats where user_id = uid;
+
+  -- One night session per continuous run of listening, and only if the run has
+  -- actually got going.
+  --
+  -- The previous guard was `session_minutes <= 1 or updated_at is null or
+  -- updated_at < now() - interval '30 minutes'`, a disjunction whose first arm
+  -- fires on exactly the reports that should not count. The client zeroes
+  -- REPORT.sessionStart after any idle gap over 60 s and re-flushes on a 60 s
+  -- timer, so one buffering pause at 03:00 turned every subsequent flush into
+  -- a fresh "night session" and the achievements ratcheted up all night. The
+  -- `updated_at` arm was dead code on top of that, for the reason above.
+  --
+  -- Now: the marker column is written only when a session is actually counted,
+  -- and a run has to reach two minutes before it counts at all — a session
+  -- abandoned inside the first minute should not be a night session.
+  night_new := local_hour is not null
+    and session_minutes >= 2
+    and (last_night is null or last_night < now() - interval '30 minutes');
 
   -- Streak: same day is a no-op, yesterday extends, any older gap restarts.
   if prev is null or prev < today - 1 then
@@ -1797,18 +1851,25 @@ begin
       coalesce(unique_tracks, 0) + greatest(new_tracks, 0),
       coalesce(tracks_played, 0) + greatest(new_tracks, 0)),
     spatial_seconds = spatial_seconds + spatial,
-    night_sessions = night_sessions
-      + case when local_hour is not null and local_hour >= 2 and local_hour < 5 then 1 else 0 end,
-    sessions_after_1am = sessions_after_1am
-      + case when local_hour is not null and local_hour >= 1 and local_hour < 5 then 1 else 0 end,
-    sessions_before_7am = sessions_before_7am
-      + case when local_hour is not null and local_hour >= 4 and local_hour < 7 then 1 else 0 end,
+    night_sessions = night_sessions + case when night_new and local_hour >= 2 and local_hour < 5 then 1 else 0 end,
+    sessions_after_1am = sessions_after_1am + case when night_new and local_hour >= 1 and local_hour < 5 then 1 else 0 end,
+    sessions_before_7am = sessions_before_7am + case when night_new and local_hour >= 4 and local_hour < 7 then 1 else 0 end,
     -- Monotonic maxima: a short session must not lower the record.
     longest_session_minutes = greatest(longest_session_minutes, session_minutes),
     distinct_genres = greatest(distinct_genres, genres),
     -- tracks_liked is maintained by favorites_stats_trg from the real table, so
     -- the client's own count is ignored. The parameter stays for compatibility.
-    playlists_created = greatest(playlists_created, playlists),
+    -- playlists_created gets the same treatment: the client sends the length of
+    -- its own local array (app.js:5347), which is exactly as trustworthy as the
+    -- rest of a payload that this function was written to stop believing.
+    -- greatest(playlists_created, playlists) meant one call with
+    -- {playlists: 10000} bought the counter outright, and check_achievements()
+    -- handed over Playlist Creator and Playlist Master on the spot. The real
+    -- number lives in the playlists table, so ask the table.
+    playlists_created = greatest(
+      playlists_created,
+      (select count(*)::int from public.playlists where owner_id = uid)),
+    last_night_session_at = case when night_new then now() else last_night_session_at end,
     daily_streak = cur_streak,
     longest_streak = greatest(longest_streak, cur_streak),
     last_played_on = today,
@@ -1826,6 +1887,20 @@ end $$;
 
 revoke all on function public.report_listening_v2(int, int, int, int, int, int, int, int) from public;
 grant execute on function public.report_listening_v2(int, int, int, int, int, int, int, int) to authenticated;
+
+-- The v1 RPC from 02 is still installed, still SECURITY DEFINER, and still
+-- granted to `authenticated` — 09 only ever touched v2. Nothing in the app
+-- calls it any more, and leaving it callable means the whole hardening above
+-- is optional: v1 writes user_stats directly with no rate limit and no
+-- dedup, so a loop of `rpc('report_listening',{seconds:3600,new_tracks:200,
+-- is_night:true})` buys the top slot on every leaderboard plus every
+-- achievement that reads listen_seconds, unique_tracks or night_sessions.
+revoke all on function public.report_listening(int, int, int, boolean) from public;
+revoke all on function public.report_listening(int, int, int, boolean) from authenticated;
+revoke all on function public.report_listening(int, int, int, boolean) from anon;
+-- Kept, not dropped: 03_badges.sql and old client builds reference it, and a
+-- hardcoded role still gets "permission denied for function" rather than
+-- "function does not exist".
 
 -- ── playlist_tracks.media_ref ───────────────────────────────
 -- Service-specific handle the client keeps alongside the id (a resolved stream
@@ -1954,7 +2029,7 @@ create policy "djs update playback state"
 create or replace function public.rooms_guard()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role' then
+  if public.is_service_role() then
     return new;
   end if;
   -- Only the owner may rename the room or change its visibility; a DJ writing
@@ -2059,7 +2134,7 @@ grant execute on function public.set_room_role(uuid, uuid, text) to authenticate
 create or replace function public.grant_badge(target uuid, badge text)
 returns boolean language plpgsql security definer set search_path = public as $$
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
+  if not public.is_service_role() then
     raise exception 'grant_badge requires the service role';
   end if;
   if not exists (select 1 from public.badges where id = badge) then
@@ -2167,10 +2242,14 @@ create policy "owners delete chats"
   on public.chats for delete using (auth.uid() = created_by);
 
 drop policy if exists "members are listed" on public.chat_members;
+-- Was `chat_id in (select chat_id from public.chat_members where user_id =
+-- auth.uid())`. A policy that reads its own table re-enters that table's RLS,
+-- so Postgres rejected every select on chat_members with 42P17 "infinite
+-- recursion detected in policy" — which is the whole reason 11 and 12 exist.
+-- in_chat() (defined above) asks the identical question from a definer
+-- context, which is exempt from the table's own policies.
 create policy "members are listed"
-  on public.chat_members for select using (
-    chat_id in (select chat_id from public.chat_members where user_id = auth.uid())
-  );
+  on public.chat_members for select using (public.in_chat(chat_id));
 
 drop policy if exists "members add people" on public.chat_members;
 create policy "members add people"
@@ -2368,6 +2447,20 @@ end $$;
 --
 -- Safe to run on any state; everything is drop-if-exists / if-not-exists.
 
+-- The policies below are all expressed through in_chat(). It is re-declared
+-- here rather than assumed, because this file's own header promises it is safe
+-- to paste into a project where 10 never landed.
+
+-- SECURITY DEFINER is the whole point: a policy expression that reads its own
+-- table re-enters that table's RLS, and Postgres answers 42P17 "infinite
+-- recursion detected in policy" rather than a plain denial. Every membership
+-- test in this file has to go through a function to stay out of that trap.
+create or replace function public.in_chat(c uuid)
+returns boolean language sql stable security definer set search_path=public as $$
+  select exists(select 1 from public.chat_members where chat_id=c and user_id=auth.uid())
+$$;
+grant execute on function public.in_chat(uuid) to authenticated;
+
 -- ── chats: policies, recreated verbatim ────────────────────
 drop policy if exists "members see their chats" on public.chats;
 create policy "members see their chats"
@@ -2387,10 +2480,12 @@ create policy "owners delete chats"
 
 -- chat_members
 drop policy if exists "members are listed" on public.chat_members;
+-- Was `chat_id in (select chat_id from public.chat_members where user_id =
+-- auth.uid())` — the subquery reads the very table the policy guards, so every
+-- select against chat_members, and every realtime subscription to it, failed
+-- with 42P17. in_chat() is the same question asked from a definer context.
 create policy "members are listed"
-  on public.chat_members for select using (
-    chat_id in (select chat_id from public.chat_members where user_id = auth.uid())
-  );
+  on public.chat_members for select using (public.in_chat(chat_id));
 
 drop policy if exists "members add people" on public.chat_members;
 create policy "members add people"
@@ -2560,6 +2655,31 @@ alter table public.room_requests enable row level security;
 alter table public.messages add column if not exists chat_id uuid references public.chats(id) on delete cascade;
 alter table public.messages add column if not exists image text;
 
+-- one_target / messages_body_check, repeated from 10 on purpose.
+--
+-- This file adds messages.chat_id and then recreates the messages policies, so
+-- it only ever ran against a schema whose constraint set already knew about
+-- chat_id — i.e. one where 10 had landed. Its header claims otherwise ("can be
+-- pasted into an existing Supabase project safely"), and for a project sitting
+-- at migration 09 that claim was false in the most damaging way: chat_id
+-- exists, the policies understand it, and 04's two-armed one_target still says
+-- a row with chat_id set and room_id/recipient null is invalid. Every message
+-- posted to a group chat failed with 23514 check constraint "one_target",
+-- while the chat itself was perfectly creatable. Same for an image-only
+-- message: 04's body check demands 1..2000 characters, so `body = ''` with an
+-- image was rejected outright.
+alter table public.messages drop constraint if exists one_target;
+alter table public.messages add constraint one_target check (
+  (room_id   is not null and recipient is null and chat_id is null)
+  or (room_id is null and recipient is not null and chat_id is null)
+  or (room_id is null and recipient is null and chat_id is not null)
+);
+
+alter table public.messages drop constraint if exists messages_body_check;
+alter table public.messages add constraint messages_body_check check (
+  image is not null or length(btrim(body)) between 1 and 2000
+);
+
 create index if not exists chat_members_user_idx on public.chat_members(user_id);
 create index if not exists room_queue_room_idx on public.room_queue(room_id,position);
 create index if not exists room_requests_room_idx on public.room_requests(room_id,status,id desc);
@@ -2649,8 +2769,9 @@ drop policy if exists "public rooms and joined rooms are visible" on public.room
 create policy "public rooms and joined rooms are visible" on public.rooms for select using (
   not is_private or public.in_room(id) or owner_id=auth.uid()
 );
+-- Dropped, not recreated: see 04_social.sql for why a client-side insert into
+-- rooms is not allowed. create_room() is SECURITY DEFINER and covers creation.
 drop policy if exists "users create own rooms" on public.rooms;
-create policy "users create own rooms" on public.rooms for insert with check (auth.uid()=owner_id);
 drop policy if exists "djs update playback state" on public.rooms;
 drop policy if exists "djs update room playback" on public.rooms;
 create policy "djs update playback state" on public.rooms for update
@@ -2734,12 +2855,24 @@ revoke all on function public.decline_request(bigint) from public;
 grant execute on function public.decline_request(bigint) to authenticated;
 
 -- ── 3. chat members: friendship consent + size cap ──────────
+-- The size cap has to be counted from a definer function. As a bare
+-- `(select count(*) from public.chat_members cm where cm.chat_id =
+-- chat_members.chat_id)` inside the policy, the subquery re-enters the RLS of
+-- the very table being guarded and Postgres refuses the whole policy with
+-- 42P17 "infinite recursion detected in relation chat_members" — so *every*
+-- insert into chat_members failed, and the cap it was written to enforce never
+-- ran. 12 had this right; only in_chat() was routed through a function.
+create or replace function public.chat_member_count(c uuid)
+returns integer language sql stable security definer set search_path=public as $$
+  select count(*)::integer from public.chat_members where chat_id = c
+$$;
+grant execute on function public.chat_member_count(uuid) to authenticated;
+
 drop policy if exists "members add people" on public.chat_members;
 create policy "members add people" on public.chat_members for insert with check (
   public.in_chat(chat_id)
   and public.is_friend(user_id)
-  and (select count(*) from public.chat_members cm
-       where cm.chat_id = chat_members.chat_id) < 100
+  and public.chat_member_count(chat_id) < 100
 );
 
 -- ── 4a. promo code brute-force throttle ─────────────────────
@@ -2853,3 +2986,144 @@ create trigger rooms_touch_updated_at
   before update on public.rooms
   for each row execute function public.touch_rooms_updated_at();
 
+
+-- ======================================================
+-- migrations/14_privacy_and_equipped_badge.sql
+-- ======================================================
+-- Privacy knobs the schema declared but never read, plus the one column the app
+-- has been writing for months against a schema that does not have it.
+--
+-- Safe to run repeatedly: every statement is if-not-exists / drop-if-exists /
+-- create-or-replace.
+
+-- ── 1. equipped badge ────────────────────────────────────────
+-- app.js has written `profiles.equipped_badge` since the badge UI landed
+-- (`update({equipped_badge: id})`) and read it back in two places, one of them
+-- as an embedded resource:
+--
+--   select("user_id, listen_seconds,
+--           profiles(id, username, avatar_url, privacy, equipped_badge))")
+--
+-- No migration ever created the column, only `pinned_badge` (02) and
+-- `pinned_badges` (06). PostgREST resolves embedded column lists server-side,
+-- so the unknown name failed the whole request with PGRST200 — the write was
+-- swallowed by `.then(()=>{},()=>{})` and the leaderboard fallback died in its
+-- `catch`, leaving the table empty. The badge survived only in localStorage.
+--
+-- Plain text, no foreign key: the ids the client sends (`cat_dj`,
+-- `audiophile`, …) are catalogue entries, and a decorative selection should not
+-- start failing to save because one of them is missing from `badges`.
+alter table public.profiles
+  add column if not exists equipped_badge text;
+
+-- The column lives on `profiles`, so the existing select policy already covers
+-- reading it. profiles_guard() reverts only the server-owned columns
+-- (pinned_badge / pinned_badges), so an owner writing this one is not undone.
+
+-- ── 2. privacy: the `hours` knob, actually enforced ──────────
+-- `privacy` is a jsonb blob documented in 10 as Telegram-style knobs:
+--
+--   profile:  "all" | "friends" | "none"   who opens the profile page
+--   hours:    "all" | "friends" | "me"     who sees listening time
+--   board:    true | false                 appear in the leaderboard
+--   avatar:   "all" | "friends" | "me"
+--   username: "all" | "friends" | "me"
+--   email:    ...
+--
+-- Only `board` was ever read, and only by the leaderboard() RPC. `hours` had no
+-- reader anywhere in the schema: the user_stats and weekly_stats policies tested
+-- `p.is_public` and nothing else. The client's own default for `hours` is "me",
+-- so the UI offered a setting that had no effect — set it to "me" and
+-- `select listen_seconds from user_stats` still returned every number to every
+-- authenticated caller, for as long as the profile was public.
+--
+-- SECURITY DEFINER for the same reason as in_chat(): a policy that reads its
+-- own table re-enters that table's RLS, and Postgres answers 42P17 rather than
+-- a denial. friends and profiles both get read here, so this cannot be an
+-- inlined subquery.
+create or replace function public.privacy_allows(target_id uuid, knob text)
+returns boolean language sql stable security definer set search_path=public as $$
+  select case coalesce(
+           (select p.privacy ->> knob from public.profiles p where p.id = target_id),
+           -- Absent key falls back to the client-side default for that knob
+           (case when knob = 'hours' then 'me' else 'all' end)
+         )
+    when 'none'    then target_id = auth.uid()
+    when 'me'      then target_id = auth.uid()
+    when 'friends' then target_id = auth.uid() or exists (
+                      select 1 from public.friendships f
+                      where f.status = 'accepted'
+                        and ((f.requester = auth.uid() and f.addressee = target_id)
+                          or (f.addressee = auth.uid() and f.requester = target_id))
+                    )
+    else true
+  end
+$$;
+grant execute on function public.privacy_allows(uuid, text) to authenticated;
+
+-- `hours` gates the numbers. `is_public` stays in the condition because it is
+-- what "profile: none" writes, and a hidden profile should not leak its stats
+-- through this table even when `hours` was left at its default.
+--
+-- The fallback inside privacy_allows() is 'me' for `hours`, matching
+-- paintPrivacy()'s `set("pv-hours", pv.hours || "me")`. Defaulting the server
+-- to 'all' instead would have reproduced the original bug from the other side:
+-- the UI would show "only me" while the numbers stayed public.
+drop policy if exists "stats of visible profiles are readable" on public.user_stats;
+-- Parenthesised on purpose. `and` binds tighter than `or`, so the unparenthesised
+-- form is correct too — but it reads as though it were not, and that ambiguity
+-- is what let a privacy check get bolted on in the wrong place later.
+create policy "stats of visible profiles are readable"
+  on public.user_stats for select using (
+    user_id = auth.uid()
+    or (
+      exists (select 1 from public.profiles p
+              where p.id = user_id and p.is_public)
+      and public.privacy_allows(user_id, 'hours')
+    )
+  );
+
+drop policy if exists "weekly stats of visible profiles are readable" on public.weekly_stats;
+create policy "weekly stats of visible profiles are readable"
+  on public.weekly_stats for select using (
+    user_id = auth.uid()
+    or (
+      exists (select 1 from public.profiles p
+              where p.id = user_id and p.is_public)
+      and public.privacy_allows(user_id, 'hours')
+    )
+  );
+
+-- ── 3. what RLS cannot reach ─────────────────────────────────
+-- `avatar` and `username` are columns, and RLS is row-granular: allowing a row
+-- means all of it. Masking two fields out of a row is not something a policy
+-- can express, so those two knobs stay client-side — maskProf() in app.js
+-- already blanks them for a non-friend viewer. Recorded here because "no
+-- policy references privacy.avatar" reads like an oversight otherwise; it is a
+-- platform limit, and the honest fix would be a masking view over profiles,
+-- which is a frontend-wide change rather than a migration.
+
+-- The leaderboard RPC is ours, so it can honour the knobs per returned field
+-- even where a policy cannot. `board` was already honoured; RLS cannot mask a
+-- column, so username/avatar are nulled here instead. Every original predicate
+-- is kept: the function is SECURITY DEFINER, so it does not pass through the
+-- user_stats policy and has to do the filtering itself.
+create or replace function public.leaderboard(limit_ int default 50)
+returns table (user_id uuid, username text, avatar_url text, seconds bigint, privacy jsonb)
+language sql stable security definer set search_path=public as $$
+  select u.user_id,
+         case when public.privacy_allows(u.user_id, 'username')
+              then p.username else null end,
+         case when public.privacy_allows(u.user_id, 'avatar')
+              then p.avatar_url else null end,
+         u.listen_seconds,
+         p.privacy
+    from public.user_stats u
+    join public.profiles p on p.id = u.user_id
+   where u.listen_seconds > 0
+     and coalesce(p.privacy ->> 'board', 'true') <> 'false'
+     and p.is_public
+   order by u.listen_seconds desc
+   limit greatest(coalesce(limit_, 50), 1)
+$$;
+grant execute on function public.leaderboard(int) to authenticated;

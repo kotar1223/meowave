@@ -133,9 +133,15 @@ create policy "public rooms and joined rooms are visible"
   on public.rooms for select
   using (not is_private or public.in_room(id) or owner_id = auth.uid());
 
+-- No insert policy, deliberately. create_room() is the only supported way to
+-- make a room, and it is SECURITY DEFINER, so it does not need one. The
+-- policy this replaces (`with check (auth.uid() = owner_id)`) allowed a client
+-- to insert the row itself, which meant a client-chosen join_code — squatting a
+-- specific code, or capturing an invite before the owner sees it — and no
+-- matching row in room_members, which leaves the room a ghost: room_cleanup()
+-- and leave_room() both key off membership. rooms_guard() is a BEFORE UPDATE
+-- trigger, so an INSERT skipped every check in it too.
 drop policy if exists "users create own rooms" on public.rooms;
-create policy "users create own rooms"
-  on public.rooms for insert with check (auth.uid() = owner_id);
 
 -- DJs update playback state; the owner also renames and locks the room.
 drop policy if exists "djs update room playback" on public.rooms;
@@ -197,6 +203,13 @@ begin
   insert into public.room_members (room_id, user_id, role)
   values (row.id, uid, 'owner');
 
+  -- The stats row may not exist yet: it is only created by the first
+  -- report_listening() call, and an account that goes straight to hosting a
+  -- room has none. The bare UPDATE then matched zero rows and the room went
+  -- uncounted until the user happened to listen to something. Seed the row
+  -- first — same pattern 09 applies to create_playlist() and playlist_sync().
+  insert into public.user_stats (user_id) values (uid)
+    on conflict (user_id) do nothing;
   update public.user_stats set rooms_hosted = rooms_hosted + 1 where user_id = uid;
   perform public.check_achievements();
 

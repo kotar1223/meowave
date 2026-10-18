@@ -57,6 +57,9 @@
 \echo '== 13_security_fix: audit fixes (badge privacy, requests, chats, promo throttle) =='
 \ir migrations/13_security_fix.sql
 
+\echo '== 14_privacy_and_equipped_badge: enforce privacy.hours, add profiles.equipped_badge =='
+\ir migrations/14_privacy_and_equipped_badge.sql
+
 \echo ''
 \echo 'Schema applied. Next:'
 \echo '  SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed_badges.mjs'
