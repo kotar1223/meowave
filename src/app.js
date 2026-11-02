@@ -7,7 +7,7 @@
   try{
    const txt=`${kind}: ${msg||"unknown"}`+(src?` (${String(src).split("/").pop()}:${line||"?"})`:"");
    console.error("[meowave]",txt);
-   document.title="⚠ "+txt.slice(0,140);
+   document.title="Meowave: "+txt.slice(0,140);
    const sp=document.getElementById("splash");
    if(!sp)return;
    let box=document.getElementById("booterr");
@@ -40,7 +40,7 @@ function bootFinish(){
 }
 /* i18n */
 const I18N={
-ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа","nav.settings":"Настройки","nav.more":"Ещё","nav.back":"Назад","srv.title":"Сервисы поиска","srv.btn":"Сервисы","srv.active":"Сервисы","eq.title":"Эквалайзер и Звук","set.sp.t":"3D Пространственный звук","import.ph":"Spotify, YouTube Music, music.yandex.ru/users/.../playlists/... или SoundCloud",
+ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа","nav.settings":"Настройки","nav.more":"Ещё","nav.back":"Назад","srv.title":"Сервисы поиска","srv.btn":"Сервисы","srv.active":"Сервисы","eq.title":"Эквалайзер и Звук","set.sp.t":"3D Пространственный звук","import.ph":"Spotify, YouTube Music, music.yandex.ru/users/.../playlists/... или SoundCloud","import.name":"Название плейлиста",
 "top.ph":"Поиск по всем сервисам",
 "home.t":"Тишина. Поле ждёт.","home.s":"Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.","home.start":"Запустить волну",
 "lib.pl":"Плейлисты","lib.fav":"Избранное","lib.rec":"Недавнее",
@@ -138,9 +138,9 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "ym.open":"Открыть Яндекс Музыку","ym.docs":"Документация",
 "ym.acc.desc":"Вход по аккаунту: откроется страница Яндекса, войдите — и библиотека подключится. Токен хранится в системном keychain.",
 "ym.acc.login":"Войти через аккаунт Яндекса","ym.acc.browser":"Открываю браузер для входа…","ym.acc.wait":"После входа на странице-помощнике вернитесь в Meowave — библиотека подтянется сама", "ym.acc.library":"Синхронизировать библиотеку (лайки и плейлисты)","ym.acc.open":"Открыть страницу вставки токена:",
- "dc.t":"Discord Rich Presence","dc.s":"Что слушаешь — видно в профиле Discord. Нужен запущенный Discord и DISCORD_CLIENT_ID в .env.",
+ "dc.t":"Discord Rich Presence","dc.s":"Показывает в профиле Discord, что сейчас играет: обложку, название и время. Нужен запущенный Discord (приложение, не браузер).","dc.cid":"Application ID","dc.cid.s":"Создайте приложение на discord.com/developers/applications — его название Discord покажет как «Слушает …». Скопируйте Application ID сюда.","dc.noid":"Укажите Application ID","dc.live":"Подключено — статус транслируется","dc.desktop":"Работает только в настольном приложении","dc.prev":"Так это увидят друзья","dc.listen":"Слушает",
  "dc.on":"Показывать в Discord","dc.on.ok":"Discord найден","dc.on.no":"Discord не запущен (обновится, когда появится)",
- "dc.tmpl":"Шаблон статуса","dc.tmpl.s":"Подстановки: {title} {artist} {album} {service} {status} {elapsed} {remaining}",
+ "dc.tmpl":"Шаблон статуса","dc.tmpl.s":"Первая строка статуса. Подстановки: {title} {artist} {album} {service} {status}. Вторая строка — исполнитель.",
  "dc.save":"Сохранить","dc.test":"Проверить","dc.saved":"Шаблон сохранён","dc.sent":"Отправлено в Discord","dc.fail":"Discord не отвечает — проверь, что он запущен",
  "fp.mode":"Переключить вид плеера","ly.custom.t":"Крупная лирика","ly.custom.s":"Размер и вес строк влияют на режим большой лирики","ly.size":"Размер строк","ly.weight":"Жирность","ly.glow":"Свечение активной строки","ly.cov":"Обложка (режим лирики)","ly.gap":"Междустрочный зазор","ly.font":"Шрифт",
 "loc.t":"Локальные треки","loc.s":"Файлы не копируются и никуда не отправляются — читаются с диска напрямую. Теги берутся из имени файла.",
@@ -153,7 +153,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "data.reset":"Сбросить избранное и историю","data.reset.s":"Настройки и токены останутся","data.reset.btn":"Сбросить","data.done":"Избранное и история очищены",
 "about.ver":"Версия","about.s":"Кросс-сервисный плеер с собственным звуковым трактом: эквалайзер, HRTF-орбита и визуализатор работают на всех сервисах, потому что звук идёт через нас, а не через чужой плеер.",
 "import.t":"Импорт плейлиста","import.s":"Вставьте ссылку на плейлист из Spotify, YouTube Music или SoundCloud","import.btn":"Импорт","import.check":"Проверить","import.dest_pl":"Создать новый плейлист","import.dest_fav":"Добавить в Избранное","import.submit":"Импортировать","import.enter_url":"Введите ссылку на плейлист",
-"fp.set.t":"Настройки плеера","fp.set.bg":"Фон плеера","fp.bg.dynamic":"Альбом","fp.bg.ambient":"Эмбиент","fp.bg.black":"OLED","fp.set.glow":"Подсветка","fp.set.blur":"Размытие фона","fp.set.font":"Шрифт текста","fp.set.fill":"Режим караоке","fp.fill.smooth":"Плавное","fp.fill.line":"Построчно","fp.set.wobble":"Раскачка обложки","fp.set.wobble_sub":"Анимация бита и парения",
+"fp.set.t":"Настройки плеера","fp.set.bg":"Фон плеера","fp.bg.dynamic":"Альбом","fp.bg.ambient":"Эмбиент","fp.bg.black":"OLED","fp.bg.wall":"Обои","fp.wall.t":"Обои: картинка, GIF или видео","fp.wall.pick":"Выбрать","fp.wall.clear":"Убрать","fp.wall.dim":"Затемнение","fp.wall.blur":"Размытие обоев","fp.wall.app":"Обои на фоне всего приложения","fp.wall.app_sub":"Не только в полноэкранном плеере","fp.set.glow":"Подсветка","fp.set.blur":"Размытие фона","fp.set.font":"Шрифт текста","fp.set.fill":"Режим караоке","fp.fill.smooth":"Плавное","fp.fill.line":"Построчно","fp.set.wobble":"Раскачка обложки","fp.set.wobble_sub":"Анимация бита и парения",
 "chat.share_np":"Поделиться текущим треком","wave.moods":"Настроения и жанры","wave.artists":"Рекомендованные артисты",
 "cancel":"Отмена","close":"Закрыть","fp.fill.off":"Без заливки","np.play":"Воспроизвести","np.pause":"Пауза","np.prev":"Предыдущий","np.next":"Следующий","np.shuffle":"Перемешать","np.repeat":"Повтор","act.fav":"В избранное","nav.quests":"Квесты и Значки","upd.up_to_date":"Установлена последняя версия","pr.auth.guest.desc":"Локальный профиль Meowave","fp.set.zoom":"Масштаб обложки (YouTube Music)","fp.zoom.normal":"Обычный","fp.zoom.large":"Крупный","fp.zoom.full":"На весь экран","fp.set.drift":"Плавный дрейф и парение","fp.set.drift_sub":"Анимация движения обложки на весь экран",
 "pr.err.email":"Введите email","pr.err.pass":"Введите пароль","pr.welcome":"Добро пожаловать!","people.profile":"Профиль",
@@ -167,7 +167,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "ly.edit.reset_ok":"Сброшено на оригинальный текст","ly.edit.saved":"Текст песни сохранён",
 "tb.fs":"Полноэкранный режим (F11)","tb.max":"Развернуть","search.clear":"Очистить",
 "nologin":"Без входа","ready":"Готов"},
-en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings":"Settings","nav.more":"More","nav.back":"Back","srv.title":"Search Services","srv.btn":"Services","srv.active":"Services","eq.title":"Equalizer & Sound","set.sp.t":"3D Spatial Audio","import.ph":"Spotify, YouTube Music, music.yandex.ru or SoundCloud playlist link",
+en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings":"Settings","nav.more":"More","nav.back":"Back","srv.title":"Search Services","srv.btn":"Services","srv.active":"Services","eq.title":"Equalizer & Sound","set.sp.t":"3D Spatial Audio","import.ph":"Spotify, YouTube Music, music.yandex.ru or SoundCloud playlist link","import.name":"Playlist name",
 "top.ph":"Search across services",
 "home.t":"Silence. The field waits.","home.s":"Start the wave: the stream builds from your artists, cover and queue open fullscreen.","home.start":"Start the wave",
 "lib.pl":"Playlists","lib.fav":"Favorites","lib.rec":"Recent",
@@ -265,7 +265,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "ym.open":"Open Yandex Music","ym.docs":"Documentation",
 "ym.acc.desc":"Sign in with your Yandex account: a Yandex page opens, you sign in, and the library connects. The token lives in the OS keychain.",
 "ym.acc.login":"Sign in with your Yandex account","ym.acc.browser":"Opening the browser for sign-in…","ym.acc.wait":"Once signed in on the helper page, come back to Meowave — the library will sync automatically", "ym.acc.library":"Sync library (likes and playlists)","ym.acc.open":"Open the token paste page:",
- "dc.t":"Discord Rich Presence","dc.s":"Shows what you are listening to on your Discord profile. Needs Discord running and DISCORD_CLIENT_ID in .env.",
+ "dc.t":"Discord Rich Presence","dc.s":"Shows what is playing on your Discord profile: cover, title and time. Needs the Discord desktop app running.","dc.cid":"Application ID","dc.cid.s":"Create an application at discord.com/developers/applications — Discord shows its name as “Listening to …”. Paste its Application ID here.","dc.noid":"Set the Application ID","dc.live":"Connected — presence is live","dc.desktop":"Works in the desktop app only","dc.prev":"How friends will see it","dc.listen":"Listening to",
  "dc.on":"Show in Discord","dc.on.ok":"Discord detected","dc.on.no":"Discord is not running (updates will resume when it starts)",
  "dc.tmpl":"Status template","dc.tmpl.s":"Placeholders: {title} {artist} {album} {service} {status} {elapsed} {remaining}",
  "dc.save":"Save","dc.test":"Test","dc.saved":"Template saved","dc.sent":"Sent to Discord","dc.fail":"Discord is not responding — check that it is running",
@@ -280,7 +280,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "data.reset":"Reset favorites and history","data.reset.s":"Settings and tokens are kept","data.reset.btn":"Reset","data.done":"Favorites and history cleared",
 "about.ver":"Version","about.s":"A cross-service player with its own audio path: the EQ, HRTF orbit and visualiser work on every service because the sound flows through us, not somebody else's player.",
 "import.t":"Import Playlist","import.s":"Paste a playlist link from Spotify, YouTube Music or SoundCloud","import.btn":"Import","import.check":"Check","import.dest_pl":"Create new playlist","import.dest_fav":"Add to Favorites","import.submit":"Import","import.enter_url":"Enter a playlist URL",
-"fp.set.t":"Player Settings","fp.set.bg":"Player Background","fp.bg.dynamic":"Album","fp.bg.ambient":"Ambient","fp.bg.black":"OLED","fp.set.glow":"Backlight Glow","fp.set.blur":"Background Blur","fp.set.font":"Lyrics Font","fp.set.fill":"Karaoke Mode","fp.fill.smooth":"Smooth","fp.fill.line":"Per-line","fp.set.wobble":"Cover Wobble & Float","fp.set.wobble_sub":"Beat bounce & floating animation",
+"fp.set.t":"Player Settings","fp.set.bg":"Player Background","fp.bg.dynamic":"Album","fp.bg.ambient":"Ambient","fp.bg.black":"OLED","fp.bg.wall":"Wallpaper","fp.wall.t":"Wallpaper: image, GIF or video","fp.wall.pick":"Choose","fp.wall.clear":"Remove","fp.wall.dim":"Dim","fp.wall.blur":"Wallpaper blur","fp.wall.app":"Wallpaper behind the whole app","fp.wall.app_sub":"Not only in the full player","fp.set.glow":"Backlight Glow","fp.set.blur":"Background Blur","fp.set.font":"Lyrics Font","fp.set.fill":"Karaoke Mode","fp.fill.smooth":"Smooth","fp.fill.line":"Per-line","fp.set.wobble":"Cover Wobble & Float","fp.set.wobble_sub":"Beat bounce & floating animation",
 "chat.share_np":"Share current track","wave.moods":"Moods & Genres","wave.artists":"Recommended Artists",
 "cancel":"Cancel","close":"Close","fp.fill.off":"Off","np.play":"Play","np.pause":"Pause","np.prev":"Previous","np.next":"Next","np.shuffle":"Shuffle","np.repeat":"Repeat","act.fav":"Add to favorites","nav.quests":"Quests & Badges","upd.up_to_date":"You are on the latest version","pr.auth.guest.desc":"Local Meowave profile","fp.set.zoom":"Artwork scale (YouTube Music)","fp.zoom.normal":"Normal","fp.zoom.large":"Large","fp.zoom.full":"Fullscreen","fp.set.drift":"Smooth drift and float","fp.set.drift_sub":"Fullscreen cover floating animation",
 "pr.err.email":"Enter your email","pr.err.pass":"Enter your password","pr.welcome":"Welcome!","people.profile":"Profile",
@@ -473,7 +473,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
  svcOn:null,
  /* Discord Rich Presence: on/off + the user's status template. Sent to Rust
     on change; discord_update fires from track events and the minute timer. */
- discord:{on:false,tmpl:"{artist} — {title} · {service}"},
+ discord:{on:false,tmpl:"{title}",cid:""},
  /* Fullscreen player layout: "stage" (centered cover, mockup 1) or "lyric"
     (cover left, oversized lyrics right, mockup 2). */
  fpMode:"stage",
@@ -645,8 +645,19 @@ function ensureAudioEl(){
   au.addEventListener("waiting",()=>{
     if(S.playing&&!au.ended){
       if(au.paused)au.play().catch(()=>{});
+      /* A stream that keeps "waiting" for 12 s mid-track is dead (expired
+         signed URL, dropped connection): reconnect at the same position
+         instead of sitting in silence. */
+      clearTimeout(A.stallTimer);
+      const pos0=au.currentTime,src0=au.currentSrc;
+      A.stallTimer=setTimeout(()=>{
+       if(!S.playing||au.ended||au.currentSrc!==src0)return;
+       if(au.readyState<3&&Math.abs(au.currentTime-pos0)<0.5&&S.current)tryResumeStream(S.current,au.currentTime,true);
+      },12000);
     }
   });
+  au.addEventListener("playing",()=>clearTimeout(A.stallTimer));
+  au.addEventListener("timeupdate",()=>{if(A.stallTimer&&au.readyState>=3){clearTimeout(A.stallTimer);A.stallTimer=0}});
  au.addEventListener("pause",()=>{if(!au.ended&&!A.transitioning){S.playing=false;sync()}});
  if(A.ctx&&!A.media){
   try{
@@ -938,7 +949,11 @@ function load(tr,auto,resumePos=0){
    if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
    console.error("audio load failed",au.error?.code,au.error?.message||"",url);
    const wasPlaying = S.playing || auto || A.started;
-   explainFailure(url,tr,wasPlaying,au.currentTime||0)};
+   /* Mid-track network/decode drop: the proxy re-resolves a fresh URL on a
+      new request, so reconnecting at the same second usually just works. */
+   const pos=au.currentTime||0;
+   if(au.error?.code!==4&&pos>1&&tryResumeStream(tr,pos,wasPlaying))return;
+   explainFailure(url,tr,wasPlaying,pos)};
   au.load();
   applyRate();
   if(auto){
@@ -1288,59 +1303,73 @@ function drawVis(){
 const FINE = (typeof matchMedia === "function") && matchMedia("(pointer:fine)").matches;
 const RM = (typeof matchMedia === "function") && matchMedia("(prefers-reduced-motion:reduce)").matches;
 
-/* Android 14 / Material You 3 living wavy progress seekbar */
-let seekWavePhase = 0;
-let seekWaveAmp = 0;
+/* Material 3 Expressive wavy progress.
+   The played part is a travelling sine wave, the rest is a flat track, and the
+   two are split by a vertical pill handle with a gap on each side, ending in a
+   stop dot. Geometry is in real pixels (the viewBox follows the element size),
+   so the wave keeps its wavelength and the strokes are not stretched on a wide
+   bar. The wave grows in while playing and settles flat on pause, as the spec
+   describes. Nothing is rewritten when nothing moved. */
+const M3W={amp:0,phase:0,seekFrac:null,tracks:new Map()};
+function m3WaveTrack(track){
+ let st=M3W.tracks.get(track);
+ if(st&&st.svg.isConnected)return st;
+ track.querySelectorAll(".m3-wave-svg").forEach(n=>n.remove());
+ track.insertAdjacentHTML("afterbegin",`<svg class="m3-wave-svg" aria-hidden="true"><path class="m3-track-rest"/><path class="m3-track-wave"/><circle class="m3-track-stop" r="2"/><rect class="m3-track-thumb" rx="2"/></svg>`);
+ const svg=track.querySelector(".m3-wave-svg");
+ st={svg,wave:svg.querySelector(".m3-track-wave"),rest:svg.querySelector(".m3-track-rest"),
+  stop:svg.querySelector(".m3-track-stop"),thumb:svg.querySelector(".m3-track-thumb"),
+  w:0,h:0,hover:0,hoverT:0,key:"",big:track.id==="fptrack"};
+ const measure=()=>{const r=track.getBoundingClientRect();st.w=r.width;st.h=r.height;
+  svg.setAttribute("viewBox",`0 0 ${Math.max(1,r.width).toFixed(1)} ${Math.max(1,r.height).toFixed(1)}`);st.key=""};
+ measure();
+ if(typeof ResizeObserver==="function"){st.ro=new ResizeObserver(measure);st.ro.observe(track)}
+ track.addEventListener("pointerenter",()=>{st.hoverT=1});
+ track.addEventListener("pointerleave",()=>{if(!seeking)st.hoverT=0});
+ M3W.tracks.set(track,st);
+ return st}
+function m3WaveDraw(st,p,amp,phase,dt){
+ st.hover+=((seeking&&M3W.seekFrac!=null?1:st.hoverT)-st.hover)*Math.min(1,dt*14);
+ const w=st.w,h=st.h;if(w<8||h<4)return;
+ const stroke=st.big?5:4,cy=h/2,pad=stroke/2;
+ const ampPx=(st.big?3.4:3)*amp,wl=st.big?38:34;
+ const thumbW=4,thumbH=Math.min(h,(st.big?18:16)+st.hover*4),gap=4+thumbW/2;
+ const x=pad+p*(w-2*pad);
+ const key=`${x.toFixed(1)}|${ampPx.toFixed(2)}|${(phase%(Math.PI*2)).toFixed(2)}|${thumbH.toFixed(1)}|${w}|${h}`;
+ if(key===st.key)return;st.key=key;
+ const waveEnd=x-gap;
+ let d="";
+ if(waveEnd>pad){
+  const k=2*Math.PI/wl;
+  d=`M${pad.toFixed(1)} ${cy.toFixed(2)}`;
+  for(let xx=pad+2;xx<waveEnd;xx+=2){
+   /* The first half-wavelength ramps in so the line starts on the baseline. */
+   const ramp=Math.min(1,(xx-pad)/(wl*.5));
+   d+=`L${xx.toFixed(1)} ${(cy+Math.sin(xx*k-phase)*ampPx*ramp).toFixed(2)}`}
+  const ramp=Math.min(1,(waveEnd-pad)/(wl*.5));
+  d+=`L${waveEnd.toFixed(1)} ${(cy+Math.sin(waveEnd*k-phase)*ampPx*ramp).toFixed(2)}`}
+ st.wave.setAttribute("d",d);
+ const restStart=x+gap,restEnd=w-pad;
+ st.rest.setAttribute("d",restStart<restEnd?`M${restStart.toFixed(1)} ${cy}L${restEnd.toFixed(1)} ${cy}`:"");
+ st.rest.style.strokeWidth=stroke+"px";st.wave.style.strokeWidth=stroke+"px";
+ st.stop.setAttribute("cx",(w-pad).toFixed(1));st.stop.setAttribute("cy",cy);
+ st.stop.style.opacity=restEnd-restStart>stroke*2?"1":"0";
+ st.thumb.setAttribute("x",(x-thumbW/2).toFixed(1));st.thumb.setAttribute("width",thumbW);
+ st.thumb.setAttribute("y",(cy-thumbH/2).toFixed(1));st.thumb.setAttribute("height",thumbH.toFixed(1))}
 function updateWavyProgress(dt, curPos, dur) {
-  if (RM) return;
-  const isPlaying = !!S.playing;
-  const targetAmp = isPlaying ? 3.5 : 0;
-  seekWaveAmp += (targetAmp - seekWaveAmp) * Math.min(1, dt * 9);
-  if (isPlaying) {
-    seekWavePhase += 3.4 * dt;
-  }
-  const effectiveDur = dur > 0 ? dur : 1;
-  const p = Math.max(0, Math.min(1, curPos / effectiveDur));
-  const targetX = p * 1000;
-
-  let d = 'M 0 12';
-  const wavelength = 32;
-  const step = 5;
-  for (let x = 0; x <= targetX; x += step) {
-    const y = 12 + seekWaveAmp * Math.sin((x / wavelength) * 2 * Math.PI - seekWavePhase);
-    d += ` L ${x.toFixed(1)} ${y.toFixed(2)}`;
-  }
-  const endY = 12 + seekWaveAmp * Math.sin((targetX / wavelength) * 2 * Math.PI - seekWavePhase);
-  d += ` L ${targetX.toFixed(1)} ${endY.toFixed(2)}`;
-
-  const trackEls = [document.getElementById("btrack"), document.getElementById("fptrack")];
-  for (let i = 0; i < trackEls.length; i++) {
-    const track = trackEls[i];
-    if (!track) continue;
-    let svg = track.querySelector(".m3-wave-svg");
-    if (!svg) {
-      track.insertAdjacentHTML("afterbegin", `
-        <svg class="m3-wave-svg" viewBox="0 0 1000 24" preserveAspectRatio="none">
-          <line class="m3-track-flat" x1="0" y1="12" x2="1000" y2="12" />
-          <path class="m3-track-wave" d="M 0 12 L 0 12" />
-          <circle class="m3-track-thumb" cx="0" cy="12" r="5.5" />
-        </svg>
-      `);
-      svg = track.querySelector(".m3-wave-svg");
-    }
-    const wavePath = svg.querySelector(".m3-track-wave");
-    const flatLine = svg.querySelector(".m3-track-flat");
-    const thumb = svg.querySelector(".m3-track-thumb");
-    if (wavePath) wavePath.setAttribute("d", d);
-    if (flatLine) {
-      flatLine.setAttribute("x1", targetX.toFixed(1));
-      flatLine.setAttribute("x2", "1000");
-    }
-    if (thumb) {
-      thumb.setAttribute("cx", targetX.toFixed(1));
-      thumb.setAttribute("cy", endY.toFixed(2));
-    }
-  }
+ const playing=!!S.playing&&!RM;
+ M3W.amp+=((playing?1:0)-M3W.amp)*Math.min(1,dt*5);
+ if(Math.abs(M3W.amp)<.002)M3W.amp=0;
+ if(playing)M3W.phase=(M3W.phase+dt*4.2)%(Math.PI*2000);
+ const effectiveDur=dur>0?dur:0;
+ let p=effectiveDur?Math.max(0,Math.min(1,curPos/effectiveDur)):0;
+ /* While a drag is in progress the handle follows the pointer, not the
+    media element, or it would snap back to the old time between moves. */
+ if(seeking&&effectiveDur)p=Math.max(0,Math.min(1,S.pos/effectiveDur));
+ for(const id of ["btrack","fptrack"]){
+  const track=document.getElementById(id);
+  if(!track||!track.offsetParent&&id==="fptrack")continue;
+  m3WaveDraw(m3WaveTrack(track),p,M3W.amp,M3W.phase,dt)}
 }
 
 /* headline proximity weight */
@@ -1432,7 +1461,8 @@ function frame(now){
  const isSeeking = A.pendingSeek !== null && Date.now() < A.seekingUntil;
  const curPos=(A.audio&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
  if(S.playing && !isSeeking)syncKaraokeFrame(curPos);
- if(!isSeeking)updateWavyProgress(dt, curPos, S.dur || 1);
+ {const ed=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(S.current?.d?+S.current.d:((A.audio?.duration>0&&Number.isFinite(A.audio.duration))?A.audio.duration:0));
+  updateWavyProgress(dt, isSeeking?A.pendingSeek:curPos, ed)}
 
  raf=requestAnimationFrame(frame)
 }
@@ -1978,7 +2008,7 @@ function renderLib(){
    ?`<div class="plgrid">`+arts.map(a=>`
      <button class="plc" data-artist="${esc(a.name)}">
       <span class="sq" ${coverStyle(a.art,"54%","22%")}></span>
-      <b>${esc(a.name)}</b><span>${a.list.length} ${t("tracks")}${a.fav?" · ♥":""}</span></button>`).join("")+`</div>`
+      <b>${esc(a.name)}</b><span>${a.list.length} ${t("tracks")}${a.fav?` · <span class="material-symbols-rounded" style="font-size:13px">favorite</span>`:""}</span></button>`).join("")+`</div>`
    :empty("user",t("art.none.t"),t("art.none.s"))}
  else b.innerHTML=HISTORY.length
   ?`<div class="rows" data-listctx="rec">`+HISTORY.map(h=>row(h.tr,ago(h.at))).join("")+`</div>`
@@ -1990,7 +2020,7 @@ function openPl(i){
  const g=PL_GROUPS[i];if(!g)return;
  const b=document.getElementById("libbody");
  b.innerHTML=`<div class="plhead">
-   <button class="btn" id="plback">← ${esc(g.a)}</button>
+   <button class="btn" id="plback"><span class="material-symbols-rounded" style="font-size:16px">arrow_back</span> ${esc(g.a)}</button>
    <b>${esc(g.a)}</b><span>${g.list.length} ${t("tracks")}</span>
    <button class="btn" id="grpplay">${t("pl.playall")}</button></div>
   <div class="rows" data-listctx="grp:${i}">`+g.list.map(x=>row(x)).join("")+`</div>`;
@@ -2196,6 +2226,11 @@ function renderFP(){
  if(fpbg){
   if(u){fpbg.style.backgroundImage=`url('${u}')`;fpbg.style.display=""}
   else{fpbg.style.backgroundImage="";fpbg.style.display="none"}}
+ window.MWFX?.flow.setCover(u||"");
+ /* Where the cover was before this rebuild, so a layout change (stage <->
+    lyrics) can move it there physically instead of jumping. */
+ const fpOpen=fp.dataset.open==="true";
+ const prevMode=fpc.dataset.mode,prevCover=fpOpen&&!swapped?window.MWFX?.cover.rect():null;
  const expBadge=isExplicit(tr)?`<span class="fp-badge-exp" title="Explicit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="11.5" r="1" fill="currentColor"/><path d="M8 4.2v4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>`:"";
  fpc.innerHTML=lyricMode?`
   <div class="fp-actions-top">
@@ -2297,6 +2332,8 @@ function renderFP(){
   openDockSheet(true);
  });
  wireSeek("fptrack");
+ if(fpOpen&&swapped)window.MWFX?.cover.land();
+ else if(prevCover&&prevMode&&prevMode!==desiredMode)window.MWFX?.cover.flyFrom(prevCover,{k:210,c:20});
  const c=document.getElementById("fpc");
  if(swapped){
   c.removeAttribute("data-swap");
@@ -3014,7 +3051,7 @@ function paintBand(i){
  const vt=document.querySelector(`.vt[data-b="${i}"]`);if(!vt)return;
  const H=vt.clientHeight||44,mid=H/2,y=Math.max(0,Math.min(H,mid-(S.eq[i]/12)*mid)),f=vt.querySelector(".f"),kn=vt.querySelector(".kn");
  if(f){f.style.top=Math.min(mid,y)+"px";f.style.height=Math.abs(mid-y)+"px"}
- if(kn){kn.style.top=Math.max(-5,Math.min(H-6,y-5.5))+"px"}
+ if(kn){const r=(kn.offsetHeight||11)/2;kn.style.top=Math.max(-r,Math.min(H-r,y-r))+"px"}
  vt.setAttribute("aria-valuenow",S.eq[i].toFixed(1));
  const ev=document.getElementById("ev"+i);if(ev)ev.textContent=(S.eq[i]>0?"+":"")+S.eq[i].toFixed(1)}
 const allP=()=>[...PRESETS,...S.custom];
@@ -4296,6 +4333,7 @@ function applyFPSettings(){
  if(!fpEl)return;
  const bg=S.fpBgMode||"dynamic";
  fpEl.dataset.bgMode=bg;
+ window.MWFX?.flow.kick();window.MWFX?.wall.render();
  fpEl.dataset.wobble=String(S.fpWobble!==false);
  fpEl.style.setProperty("--fp-glow",((S.fpGlow??100)/100).toString());
  fpEl.style.setProperty("--fp-blur",`${S.fpBlur??75}px`);
@@ -4368,7 +4406,24 @@ function initFPSettings(){
   if(!btn)return;
   S.fpBgMode=btn.dataset.bg;
   applyFPSettings();syncFPSettingsUI();save();
+  if(S.fpBgMode==="wallpaper"&&window.MWFX&&!MWFX.wall.has())MWFX.wall.pick();
  });
+ const W=window.MWFX?.wall;
+ const wallUI=()=>{if(!W)return;const st=W.settings;
+  const d=document.getElementById("fp-wall-dim"),b=document.getElementById("fp-wall-blur"),a=document.getElementById("fp-wall-app");
+  if(d){d.value=st.wallDim;document.getElementById("fp-wall-dim-val").textContent=st.wallDim+"%"}
+  if(b){b.value=st.wallBlur;document.getElementById("fp-wall-blur-val").textContent=st.wallBlur+"px"}
+  if(a){a.classList.toggle("on",!!st.wallApp);a.setAttribute("aria-pressed",String(!!st.wallApp))}
+  W.render()};
+ if(W){
+  document.getElementById("fp-wall-pick")?.addEventListener("click",async()=>{
+   if(await W.pick()&&S.fpBgMode!=="wallpaper"){S.fpBgMode="wallpaper";applyFPSettings();syncFPSettingsUI();save()}});
+  document.getElementById("fp-wall-clear")?.addEventListener("click",async()=>{
+   await W.clear();if(S.fpBgMode==="wallpaper"){S.fpBgMode="dynamic";applyFPSettings();syncFPSettingsUI();save()}});
+  document.getElementById("fp-wall-dim")?.addEventListener("input",e=>{W.settings.wallDim=+e.target.value;W.save();wallUI()});
+  document.getElementById("fp-wall-blur")?.addEventListener("input",e=>{W.settings.wallBlur=+e.target.value;W.save();wallUI()});
+  document.getElementById("fp-wall-app")?.addEventListener("click",()=>{W.settings.wallApp=!W.settings.wallApp;W.save();wallUI()});
+  wallUI();W.load()}
  document.getElementById("fp-glow-range")?.addEventListener("input",e=>{
   S.fpGlow=parseInt(e.target.value,10);
   applyFPSettings();
@@ -4432,9 +4487,21 @@ function initFPSettings(){
   }
  });
 }
-function openFP(){if(S.current)adaptAccent(S.current);applyFPSettings();fp.dataset.open="true";renderFP();fpWake()}
+function npArtRect(){const a=document.querySelector("#np .art");const r=a&&!a.hidden?a.getBoundingClientRect():null;return r&&r.width?r:null}
+let fpCloseTimer=0;
+function openFP(){
+ if(S.current)adaptAccent(S.current);
+ const from=fp.dataset.open==="true"?null:npArtRect();
+ clearTimeout(fpCloseTimer);window.MWFX?.cover.reset();
+ applyFPSettings();fp.dataset.open="true";renderFP();fpWake();
+ window.MWFX?.flow.kick();window.MWFX?.wall.render();
+ if(from)window.MWFX?.cover.flyFrom(from,{k:200,c:19})}
 function closeFP(){
+ const to=npArtRect();
+ if(to&&fp.dataset.open==="true")window.MWFX?.cover.flyTo(to);
+ clearTimeout(fpCloseTimer);fpCloseTimer=setTimeout(()=>window.MWFX?.cover.reset(),420);
  fp.dataset.open="false";
+ window.MWFX?.wall.render();
  clearTimeout(fpIdleTimer);
  const pop=document.getElementById("fp-settings-popover");
  if(pop)pop.hidden=true;
@@ -4619,7 +4686,7 @@ function save(){
   lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,pspeed:S.pspeed,
   svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
    ?Object.fromEntries(SERVICES.filter(s=>!s.local).map(s=>[s.id,s.on])):null,
-  discord:{on:S.discord.on,tmpl:S.discord.tmpl},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,profileTrack:S.profileTrack||null,
+  discord:{on:S.discord.on,tmpl:S.discord.tmpl,cid:S.discord.cid||""},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,profileTrack:S.profileTrack||null,
   avatar:S.avatar||null,banner:S.banner||null,username:S.username||null,
   lite:S.lite,litePrev,quality:S.quality,vol:S.vol,eq:S.eq,preset:S.preset,custom:S.custom,
   sp:{on:S.sp.on,speed:S.sp.speed,rad:S.sp.rad,elev:S.sp.elev},ob:obDone,listen:Math.round(S.listen),
@@ -4730,7 +4797,9 @@ function restore(){try{
  if(d.svcOn&&typeof d.svcOn==="object")S.svcOn=d.svcOn;
  if(d.discord&&typeof d.discord==="object"){
   S.discord.on=!!d.discord.on;
-  if(typeof d.discord.tmpl==="string"&&d.discord.tmpl)S.discord.tmpl=d.discord.tmpl}
+  if(typeof d.discord.tmpl==="string"&&d.discord.tmpl)S.discord.tmpl=d.discord.tmpl;
+  if(S.discord.tmpl==="{artist} — {title} · {service}")S.discord.tmpl="{title}";
+  if(typeof d.discord.cid==="string")S.discord.cid=d.discord.cid}
  if(d.fpMode)S.fpMode=d.fpMode==="lyric"?"lyric":"stage";
  /* Typo-proof: unknown values fall back to the centered stage. */
  if(d.ly&&typeof d.ly==="object")Object.assign(S.ly,d.ly);
@@ -5127,6 +5196,19 @@ async function fallbackResolveTrack(tr, auto, resumePos=0){
  return false;
 }
 
+/* At most two reconnects per track per minute, so a genuinely broken stream
+   still falls through to explainFailure and the fallback resolver. */
+let streamResume={key:"",n:0,at:0};
+function tryResumeStream(tr,pos,wasPlaying){
+ if(!tr||tr.mode==="empty"||tr.s==="mock")return false;
+ const key=trackKey(tr),now=Date.now();
+ if(streamResume.key!==key||now-streamResume.at>60000)streamResume={key,n:0,at:now};
+ if(streamResume.n>=2)return false;
+ streamResume.n++;streamResume.at=now;
+ console.warn(`[meowave] stream dropped at ${pos.toFixed(1)}s; reconnecting (${streamResume.n}/2)`);
+ load(tr,wasPlaying,pos);
+ return true;
+}
 async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  if(!url){S.playing=false;sync();toast(t("load.err"));return}
  const key=trackKey(tr);
@@ -6029,7 +6111,7 @@ function renderDislikes(){
    const id=rest.join(":");
    const tr=TRACKS.find(x=>x.s===s&&String(x.id)===id);
    const label=tr?`${tr.a||"—"} — ${tr.t||id}`:`${svc(s).name}: ${id}`;
-   return `<button data-undis="${esc(k)}" title="${esc(t("dis.off"))}">${esc(label)} ✕</button>`
+   return `<button data-undis="${esc(k)}" title="${esc(t("dis.off"))}">${esc(label)} <span class="material-symbols-rounded" style="font-size:14px">close</span></button>`
   }).join("")+`</div>`
   +`<button class="btn" id="disclr" style="margin-top:10px">${esc(t("dis.clr"))}</button>`;
  box.querySelectorAll("[data-undis]").forEach(b=>b.onclick=()=>{
@@ -7282,19 +7364,31 @@ function socialFail(e){
 const socErrBox=(msg)=>`<div class="panel pane"><p class="ph" style="margin:0;color:oklch(72% .17 25)">${esc(msg)}</p></div>`;
 
 /* Profile bubble: the picture when there is one, the first letter or person icon when not, with optional status badge. */
+/* Avatar: the initial is always there underneath and the picture is an <img>
+   on top of it. A background-image that failed to load used to leave an empty
+   circle (only the status dot was visible). Relayed URLs that the proxy
+   refuses (hosts outside its allow-list) retry the direct URL once, then give
+   up and leave the initial. See the capture-phase "error" listener below. */
 const avat=(p,size=34,status=null)=>{
- const u=p?.avatar_url?cssUrl(p.avatar_url):"";
+ const raw=String(p?.avatar_url||"").trim();
+ const u=raw?cssUrlRaw(raw):"";
+ const direct=/^https?:\/\//i.test(raw)?raw:"";
  const un=(p?.username||"").trim();
- const letter=(un&&un!=="…"&&un!=="..."&&!/^\.+$/.test(un))?un[0].toUpperCase():"";
- const ghostInner=letter?esc(letter):`<span class="material-symbols-rounded" style="font-size:${Math.round(size*0.58)}px">person</span>`;
- const base=u
-  ?`<span class="avat" style="width:${size}px;height:${size}px;background-image:url('${u}')"></span>`
-  :`<span class="avat ghost" style="width:${size}px;height:${size}px">${ghostInner}</span>`;
+ const letter=(un&&un!=="…"&&un!=="..."&&!/^\.+$/.test(un))?[...un][0].toUpperCase():"";
+ const ghostInner=letter?`<span class="avat-l">${esc(letter)}</span>`:`<span class="material-symbols-rounded" style="font-size:${Math.round(size*0.58)}px">person</span>`;
+ const img=u?`<img class="avat-img" src="${esc(u)}"${direct&&direct!==u?` data-direct="${esc(direct)}"`:""} alt="" loading="lazy" decoding="async" draggable="false">`:"";
+ const base=`<span class="avat ghost${u?" has-img":""}" style="width:${size}px;height:${size}px;font-size:${Math.max(11,Math.round(size*.42))}px">${ghostInner}${img}</span>`;
  if(!status)return base;
  const dotCls=status==="listening"?"listening":(status==="online"?"online":"offline");
  const dotTitle=status==="listening"?(LANG==="ru"?"Слушает музыку":"Listening to music"):(status==="online"?(LANG==="ru"?"В сети":"Online"):(LANG==="ru"?"Не в сети":"Offline"));
- return `<div class="avat-wrap" style="width:${size}px;height:${size}px">${base}<span class="status-indicator ${dotCls}" title="${dotTitle}"></span></div>`;
+ return `<div class="avat-wrap" style="width:${size}px;height:${size}px;--dot:${Math.max(9,Math.round(size*.26))}px">${base}<span class="status-indicator ${dotCls}" title="${dotTitle}"></span></div>`;
 };
+document.addEventListener("error",e=>{
+ const im=e.target;
+ if(!(im instanceof HTMLImageElement)||!im.classList.contains("avat-img"))return;
+ const d=im.dataset.direct;
+ if(d&&im.src!==d){im.removeAttribute("data-direct");im.src=d;return}
+ im.parentElement?.classList.remove("has-img");im.remove()},true);
 
 /* ── Social Mock Store & Community Directory ─────────────────────────
    Allows guest and offline users to explore profiles, interact with friends,
@@ -7322,7 +7416,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "MarcusVibe",
     avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80",
-    bio: "Vinyl collector, jazz enthusiast, coffee addict ☕",
+    bio: "Vinyl collector, jazz enthusiast, coffee addict",
     status: "online",
     listening: null,
     listen_seconds: 219200,
@@ -7336,7 +7430,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "Elena_Synth",
     avatar_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",
-    bio: "Retro electro & cyberpunk beats 🌃 Neon nights.",
+    bio: "Retro electro & cyberpunk beats. Neon nights.",
     status: "listening",
     listening: { t: "After Dark", a: "Mr.Kitty" },
     listen_seconds: 312000,
@@ -7364,7 +7458,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "YukiSound",
     avatar_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80",
-    bio: "J-Rock, anime OSTs & Math Rock explorer 🎸",
+    bio: "J-Rock, anime OSTs & Math Rock explorer",
     status: "listening",
     listening: { t: "KICK BACK", a: "Kenshi Yonezu" },
     listen_seconds: 195000,
@@ -7392,7 +7486,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "Kai_Ambient",
     avatar_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80",
-    bio: "Deep ambient, drone & meditative modular synth patches 🌌",
+    bio: "Deep ambient, drone & meditative modular synth patches",
     status: "listening",
     listening: { t: "Stone in Focus", a: "Aphex Twin" },
     listen_seconds: 172000,
@@ -7406,7 +7500,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "Sofia_Indie",
     avatar_url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&auto=format&fit=crop&q=80",
-    bio: "Indie pop, bedroom acoustic & warm autumn playlists 🍂",
+    bio: "Indie pop, bedroom acoustic & warm autumn playlists",
     status: "online",
     listening: null,
     listen_seconds: 134000,
@@ -7420,7 +7514,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "Artem_Phonk",
     avatar_url: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80",
-    bio: "Drift phonk, memphis rap & nighttime bass heavy tracks 🏎️",
+    bio: "Drift phonk, memphis rap & nighttime bass heavy tracks",
     status: "listening",
     listening: { t: "Metamorphosis", a: "INTERWORLD" },
     listen_seconds: 289000,
@@ -7434,7 +7528,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "Maya_Piano",
     avatar_url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop&q=80",
-    bio: "Neoclassical composer, piano keys & cinema soundtracks 🎹",
+    bio: "Neoclassical composer, piano keys & cinema soundtracks",
     status: "offline",
     listening: null,
     listen_seconds: 161000,
@@ -7448,7 +7542,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "Hana_Retro",
     avatar_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80",
-    bio: "80s City Pop, Japanese disco & nostalgic summer memories 🌆",
+    bio: "80s City Pop, Japanese disco & nostalgic summer memories",
     status: "listening",
     listening: { t: "Plastic Love", a: "Mariya Takeuchi" },
     listen_seconds: 224000,
@@ -7462,7 +7556,7 @@ const MOCK_COMMUNITY_USERS = [
     username: "Roman_Metal",
     avatar_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=160&auto=format&fit=crop&q=80",
     banner_url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",
-    bio: "Prog metal, djent riffs, blast beats & guitar solos ⚡",
+    bio: "Prog metal, djent riffs, blast beats & guitar solos",
     status: "online",
     listening: null,
     listen_seconds: 198000,
@@ -7697,7 +7791,7 @@ async function renderPeopleProfile(id){
     <div class="banner">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
     <div style="padding:var(--sp-6)">
       <div class="profhead">
-        <span class="avatar">${avat(view, 54, p.status||(friend?"online":null))}</span>
+        <span class="avatar-holder"><span class="avatar">${avat(view, 104)}</span>${(()=>{const st=p.status||(friend?"online":null);if(!st)return "";const c=st==="listening"?"listening":st==="online"?"online":"offline";return `<span class="status-indicator ${c}"></span>`})()}</span>
         <div style="min-width:0;flex:1">
           <div class="uname"><b class="unview">${esc(view.username||t("chat.anon"))}</b></div>
           <div class="pinrow" style="margin-top:4px">${pinHtml}</div>
@@ -7715,11 +7809,11 @@ async function renderPeopleProfile(id){
       </div>
       <div class="stats" style="margin-top:16px">
         <div class="stat"><b>${showHours?fmtListen(secs):"—"}</b><span>${t("pr.hours")}</span></div>
-        <div class="stat"><b>${pins.length||1}</b><span>${t("pr.badges")}</span></div>
+        <div class="stat"><b>${pins.length}</b><span>${t("pr.badges")}</span></div>
         <div class="stat"><b>${friend?t("people.friend"):t("people.notfriend")}</b><span>${t("fr.t")}</span></div>
       </div>
       <div class="public-actions" id="people-actions" style="margin-top:16px"></div>
-      <div style="margin-top:16px"><button class="btn" id="people-back">← ${t("nav.people")}</button></div>
+      <div style="margin-top:16px"><button class="btn" id="people-back"><span class="material-symbols-rounded" style="font-size:16px">arrow_back</span> ${t("nav.people")}</button></div>
     </div>
   </div>`;
 
@@ -8135,7 +8229,7 @@ async function renderPeopleFriends(box){
         </div>
         <div class="people-filters-row">
           <button class="people-filter-chip ${PEOPLE_FILTER==="all"?"active":""}" data-frtab="all">${LANG==="ru"?"Все":"All"} (${accepted.length})</button>
-          <button class="people-filter-chip ${PEOPLE_FILTER==="listening"?"active":""}" data-frtab="listening">🎵 ${LANG==="ru"?"Слушают":"Listening"} (${listeningFriends.length})</button>
+          <button class="people-filter-chip ${PEOPLE_FILTER==="listening"?"active":""}" data-frtab="listening"><span class="material-symbols-rounded" style="font-size:15px">graphic_eq</span> ${LANG==="ru"?"Слушают":"Listening"} (${listeningFriends.length})</button>
           <button class="people-filter-chip ${PEOPLE_FILTER==="online"?"active":""}" data-frtab="online">${LANG==="ru"?"В сети":"Online"} (${onlineFriends.length})</button>
           ${pendingIn.length?`<button class="people-filter-chip ${PEOPLE_FILTER==="requests"?"active":""}" data-frtab="requests">${t("fr.reqs")} (${pendingIn.length})</button>`:""}
         </div>
@@ -8508,10 +8602,55 @@ function msgClock(ts){
  return d.toLocaleTimeString(LANG==="ru"?"ru-RU":"en-GB",{hour:"2-digit",minute:"2-digit"});
 }
 
+/* Polling, realtime and the user's own sends all repaint the chat. Overlapping
+   repaints used to race: a slow older response could land last and roll the
+   log back. Only the newest request is allowed to paint; one in flight plus
+   one queued is the most that ever runs. */
+let chatPaintBusy=false,chatPaintAgain=false;
 async function paintChat(){
   const box=document.getElementById("chatbody");if(!box||!SOC.chat)return;
+  if(chatPaintBusy){chatPaintAgain=true;return}
+  chatPaintBusy=true;
   try{await paintChatInner(box)}
   catch(e){console.warn("paintChat:",e?.message||e)}
+  finally{chatPaintBusy=false}
+  if(chatPaintAgain){chatPaintAgain=false;return paintChat()}
+}
+/* Brings the log in line with `items` node by node: unchanged messages keep
+   their DOM (no image reload, no lost selection or hover), edited ones are
+   swapped in place, new ones are appended. The old code compared innerHTML
+   against freshly built markup — the browser normalises innerHTML, so the two
+   never matched and the whole log was rebuilt on every 5 s poll. */
+function chatLogSync(log,items,initial=false){
+  if(!log)return;
+  const stick=initial||log.scrollHeight-log.scrollTop-log.clientHeight<80;
+  if(!items.length){
+    if(!log.querySelector(".ph"))log.innerHTML=`<p class="ph">${t("chat.nomsgs")}</p>`;
+    return}
+  log.querySelector(":scope > .ph")?.remove();
+  const have=new Map();
+  log.querySelectorAll(":scope > .msg").forEach(n=>have.set(n.dataset.msgId,n));
+  const keep=new Set(items.map(i=>i.id));
+  have.forEach((n,id)=>{if(!keep.has(id))n.remove()});
+  const tpl=document.createElement("template");
+  const fresh=[];
+  let prev=null;
+  for(const it of items){
+    let node=have.get(it.id);
+    if(!node||node.dataset.sig!==it.sig){
+      tpl.innerHTML=it.html.trim();
+      const nn=tpl.content.firstElementChild;nn.dataset.sig=it.sig;
+      if(!initial&&!node)nn.classList.add("msg-new");
+      if(node)node.replaceWith(nn);
+      node=nn;fresh.push(nn)}
+    const want=prev?prev.nextElementSibling:log.firstElementChild;
+    if(want!==node)log.insertBefore(node,want);
+    prev=node}
+  for(const n of fresh){
+    wireChatTracks(n);wireChatActions(n);
+    n.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join))}
+  if(fresh.length)icons();
+  if(stick)log.scrollTop=log.scrollHeight;
 }
 
 let editingChatMsgId=null;
@@ -8541,14 +8680,15 @@ async function paintChatInner(box){
   const theirLast=dm?msgs.filter(m=>m.sender===dm).slice(-1)[0]:null;
   const seenUpTo=theirLast?theirLast.id:0;
 
-  const list=msgs.map(m=>{
+  const items=msgs.map(m=>{
     const mine=m.sender===meId||m.sender==="me";
     const who=SOC.chat.dm?null:(SOC.chat.membersCache||[]).find(x=>x.user_id===m.sender);
     const read=mine&&dm&&(isMock||m.id<seenUpTo);
-    const tick=mine&&dm?`<i class="tick ${read?"read":""}" title="${read?t("chat.read"):t("chat.sent")}">${read?"✓✓":"✓"}</i>`:"";
+    const tick=mine&&dm?`<i class="tick ${read?"read":""}" title="${read?t("chat.read"):t("chat.sent")}"><span class="material-symbols-rounded" style="font-size:14px">${read?"done_all":"check"}</span></i>`:"";
     const badgeHtml=who?.profile?.equipped_badge?userBadgeTag(who.profile.equipped_badge):(mine?userBadgeTag(S.equippedBadge):"");
     const editedHtml=m.edited_at?`<span class="msg-edited">(${LANG==='ru'?'ред.':'edited'})</span>`:"";
-    return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
+    const sig=[m.id,m.edited_at||"",m.body||"",m.image?1:0,read?1:0,who?.profile?.username||"",LANG].join("\u0001");
+    return {id:String(m.id),sig,html:`<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
      <div class="msg-actions">
       <button class="msg-act-btn" data-act="copy" title="${LANG==='ru'?'Копировать':'Copy'}"><span class="material-symbols-rounded" style="font-size:16px">content_copy</span></button>
       <button class="msg-act-btn" data-act="reply" title="${LANG==='ru'?'Ответить':'Reply'}"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button>
@@ -8558,8 +8698,7 @@ async function paintChatInner(box){
       `:""}
      </div>
      ${!mine&&SOC.chat.chat?`<span class="who">${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
-     ${chatBodyHtml(m)}
-     <time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}).join("");
+     <div class="msg-body">${chatBodyHtml(m)}</div><time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}});
 
   const hdr=SOC.chat.dm
     ?`<div class="chat-dm-user" style="display:inline-flex;align-items:center;gap:10px;cursor:pointer" title="${t("people.profile")||"Профиль"}">${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,SOC.chat.targetCache?.status||"online")}<b>${esc(SOC.chat.name)}</b></div>`
@@ -8568,26 +8707,12 @@ async function paintChatInner(box){
 
   const memberList=SOC.chat.chat&&SOC.chat.showMembers
     ?`<div class="memstrip">${(SOC.chat.membersCache||[]).map(m=>
-        `${avat(m.profile,24)}<span>${esc(m.profile?.username||"")}</span>${m.role==="owner"?"👑":""}`).join("")}
+        `${avat(m.profile,24)}<span>${esc(m.profile?.username||"")}</span>${m.role==="owner"?`<span class="material-symbols-rounded" style="font-size:14px">crown</span>`:""}`).join("")}
         <button class="btn sm" id="addmem"><span class="material-symbols-rounded" style="font-size:16px">person_add</span></button></div>`:"";
 
   const existingPane=box.querySelector(".chatpane");
   if(existingPane&&SOC.chat._painted){
-    const log=existingPane.querySelector(".chatlog");
-    if(log){
-      const stick=log.scrollHeight-log.scrollTop-log.clientHeight<80;
-      const newHtml=list||`<p class="ph">${t("chat.nomsgs")}</p>`;
-      if(log.innerHTML!==newHtml){
-        log.innerHTML=newHtml;
-        if(stick)log.scrollTop=log.scrollHeight;
-        wireChatTracks(existingPane);
-        wireChatActions(existingPane);
-        existingPane.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
-        icons();
-      }
-    }
-    wireChatTracks(existingPane);
-    wireChatActions(existingPane);
+    chatLogSync(existingPane.querySelector(".chatlog"),items);
     wireChatMembers(existingPane);
     return;
   }
@@ -8601,7 +8726,7 @@ async function paintChatInner(box){
     ${SOC.chat.chat&&SOC.chat.isOwner?`<button class="ic" id="chat-cfg" title="${t("chat.custom")}"><span class="material-symbols-rounded" style="font-size:18px">edit</span></button>`:""}
    </div>
    ${memberList}
-   <div class="chatlog${firstPaint?" first":""}">${list||`<p class="ph">${t("chat.nomsgs")}</p>`}</div>
+   <div class="chatlog${firstPaint?" first":""}"></div>
    <div id="chat-edit-wrap"></div>
    <div class="chatrow-input">
     <button class="ic" id="chat-img" title="${t("chat.photo")}"><span class="material-symbols-rounded" style="font-size:18px">image</span></button>
@@ -8612,7 +8737,7 @@ async function paintChatInner(box){
    </div></div>`;
 
   const log=box.querySelector(".chatlog");
-  if(log)log.scrollTop=log.scrollHeight;
+  chatLogSync(log,items,true);
   box.querySelector("[data-back]").onclick=()=>{SOC.chat=null;socClear("chat");box.classList.remove("chat-open");renderChats()};
   box.querySelector(".chat-dm-user")?.addEventListener("click",()=>{
     if(SOC.chat?.dm){
@@ -8664,15 +8789,15 @@ async function paintChatInner(box){
           setTimeout(()=>{
             if(SOC.chat&&SOC.chat.key===newMsg.chat_key){
               const repliesRu=[
-                "Отличный трек! Добавил к себе в плейлист 🎧",
-                "Звучит очень круто, спасибо за рекомендацию ✨",
-                "Вайб супер, слушаю прямо сейчас 🐱",
+                "Отличный трек! Добавил к себе в плейлист",
+                "Звучит очень круто, спасибо за рекомендацию",
+                "Вайб супер, слушаю прямо сейчас",
                 "Класс! Очень нравится такая музыка!"
               ];
               const repliesEn=[
-                "Awesome track! Added to my playlist 🎧",
-                "Sounds amazing, thanks for sharing ✨",
-                "Great vibes, listening right now 🐱",
+                "Awesome track! Added to my playlist",
+                "Sounds amazing, thanks for sharing",
+                "Great vibes, listening right now",
                 "Love this style, right up my alley!"
               ];
               const text=(LANG==="ru"?repliesRu:repliesEn)[Math.floor(Math.random()*4)];
@@ -8752,8 +8877,8 @@ async function paintChatInner(box){
   document.getElementById("chat-invite").onclick=async()=>{
     if(!SOC.room)return toast(t("chat.noroom"));
     const {error}=await sb.from("messages").insert(dm
-      ?{recipient:dm,sender:meId,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`}
-      :{chat_id:chat,sender:meId,body:`🎧 ${SOC.room.name} — ${SOC.room.join_code}`});
+      ?{recipient:dm,sender:meId,body:`${SOC.room.name} — ${SOC.room.join_code}`}
+      :{chat_id:chat,sender:meId,body:`${SOC.room.name} — ${SOC.room.join_code}`});
     toast(error?error.message:t("chat.invited"));if(!error)paintChat();
   };
 
@@ -8955,7 +9080,7 @@ async function renderRooms(){
    <button class="btn" id="joinbtn">${t("room.join")}</button>
   </div>
   ${list.map(r=>`<button class="chatrow" data-roomid="${r.id}">
-    <span class="avat ghost">🎧</span>
+    <span class="avat ghost"><span class="material-symbols-rounded" style="font-size:18px">headphones</span></span>
     <span class="meta"><b>${esc(r.name)}</b><span>${r.playing?esc(r.track?.t||""):t("room.silent")} · ${(r.room_members||[]).length}</span></span>
     <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`).join("")
    ||`<p class="ph">${t("room.none")}</p>`}
@@ -9165,7 +9290,7 @@ function paintRoomShell(){
   return `
   <span class="memchip" data-uid="${m.user_id}" title="${esc(name)}">
    ${avat(profForAvat,22)}
-   <i>${esc(name.slice(0,12))}${m.role==="owner"?" 👑":""}</i>
+   <i>${esc(name.slice(0,12))}${m.role==="owner"?` <span class="material-symbols-rounded" style="font-size:12px">crown</span>`:""}</i>
    ${isOwner&&m.user_id!==me?`<button class="qrm" data-kick="${m.user_id}" title="${t("room.kick")}"><span class="material-symbols-rounded" style="font-size:14px">close</span></button>`:""}
   </span>`}).join("");
 
@@ -9182,7 +9307,7 @@ function paintRoomShell(){
     const who=members.find(x=>x.user_id===m.sender)?.profile;
     return `<div class="msg ${mine?"mine":""}">
      ${!mine?`<span class="who">${esc(who?.username||"…")}</span>`:""}
-     ${chatBodyHtml(m)}<time>${esc(ago(m.sent_at))}</time></div>`;
+     <div class="msg-body">${chatBodyHtml(m)}</div><time>${esc(ago(m.sent_at))}</time></div>`;
    }).join("");
    if(log.innerHTML!==newChatHtml){
     log.innerHTML=newChatHtml;
@@ -9198,7 +9323,7 @@ function paintRoomShell(){
   <div class="chathdr">
    <button class="ic" id="leaveroom" title="${t("room.leave")}"><span class="material-symbols-rounded" style="font-size:18px">logout</span></button>
    <b>${esc(r.name)}</b>
-   <button class="codechip" id="copycode" title="${t("room.copycode")}">${esc(r.join_code)}${r.is_private?" · 🔒":""}</button>
+   <button class="codechip" id="copycode" title="${t("room.copycode")}">${esc(r.join_code)}${r.is_private?` · <span class="material-symbols-rounded" style="font-size:13px">lock</span>`:""}</button>
    <span class="grow"></span>
    ${isOwner?`<button class="btn sm danger" id="delroom">${t("room.del")}</button>`:""}
   </div>
@@ -9232,7 +9357,7 @@ function paintRoomShell(){
        `:""}
       </div>
       ${!mine?`<span class="who">${esc(who?.username||"…")}${badgeHtml}</span>`:""}
-      ${chatBodyHtml(m)}<time>${editedHtml}${esc(ago(m.sent_at))}</time></div>`}).join("")}</div>
+      <div class="msg-body">${chatBodyHtml(m)}</div><time>${editedHtml}${esc(ago(m.sent_at))}</time></div>`}).join("")}</div>
     <div id="room-edit-wrap"></div>
     <div class="chatrow-input">
      <input id="room-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
@@ -9424,8 +9549,8 @@ function paintRoomLists(){
    const who=(SOC.roomMembers||[]).find(x=>x.user_id===q.user_id)?.profile;
    return `<div class="reqrow">
     ${avat(who,24)}<span class="meta"><b>${esc(who?.username||"")}</b><span>${esc(q.track?.t||"")} — ${esc(q.track?.a||"")}</span></span>
-    <button class="primary sm" data-ok="${q.id}">✓</button>
-    <button class="btn sm danger" data-no="${q.id}">✗</button></div>`}).join("")
+    <button class="primary sm" data-ok="${q.id}"><span class="material-symbols-rounded" style="font-size:18px">check</span></button>
+    <button class="btn sm danger" data-no="${q.id}"><span class="material-symbols-rounded" style="font-size:18px">close</span></button></div>`}).join("")
    ||`<p class="ph">${t("room.noreqs")}</p>`;
   rq.querySelectorAll("[data-ok]").forEach(b=>b.onclick=async()=>{
    const {error}=await sb.rpc("approve_request",{req:+b.dataset.ok});
@@ -9522,9 +9647,9 @@ async function renderTop(){
 
   const top3=processedRows.slice(0,3);
   const podiumOrder=[
-    top3[1]?{...top3[1],rank:2,medal:"🥈",cls:"second"}:null,
-    top3[0]?{...top3[0],rank:1,medal:"🥇",cls:"first"}:null,
-    top3[2]?{...top3[2],rank:3,medal:"🥉",cls:"third"}:null
+    top3[1]?{...top3[1],rank:2,medal:"2",cls:"second"}:null,
+    top3[0]?{...top3[0],rank:1,medal:"1",cls:"first"}:null,
+    top3[2]?{...top3[2],rank:3,medal:"3",cls:"third"}:null
   ].filter(Boolean);
 
   box.innerHTML=`<div class="panel pane">
@@ -9562,7 +9687,7 @@ async function renderTop(){
    <div class="top-list">
     ${processedRows.map((r,i)=>`
      <div class="chatrow asrow ${r.user_id===me?"me":""}" >
-      <b class="rank">${i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</b>
+      <b class="rank">#${i+1}</b>
       ${avat(r,34)}
       <span class="meta" style="display:flex;align-items:center;gap:6px">
        <b>${esc(r.username||t("chat.anon"))}</b>
@@ -9619,8 +9744,8 @@ async function renderFriendsBox(){
   ${pendingIn.length?`<p class="eyebrow">${t("fr.reqs")}</p>`+pendingIn.map(r=>`
    <div class="reqrow">${avat(prof(otherId(r)),28)}
     <span class="meta"><b>${esc(prof(otherId(r)).username)}</b></span>
-     <button class="primary sm" data-acc="${r.requester}|${r.addressee}">✓</button>
-     <button class="btn sm danger" data-dec="${r.requester}|${r.addressee}">✗</button></div>`).join(""):""}
+     <button class="primary sm" data-acc="${r.requester}|${r.addressee}"><span class="material-symbols-rounded" style="font-size:18px">check</span></button>
+     <button class="btn sm danger" data-dec="${r.requester}|${r.addressee}"><span class="material-symbols-rounded" style="font-size:18px">close</span></button></div>`).join(""):""}
   ${pendingOut.length?`<p class="eyebrow">${t("fr.sent")}</p>`+pendingOut.map(r=>`
    <div class="chatrow asrow" style="grid-template-columns:auto 1fr auto">${avat(prof(otherId(r)),28)}
     <span class="meta"><b>${esc(prof(otherId(r)).username)}</b></span><span class="mut">${t("fr.wait")}</span></div>`).join(""):""}
@@ -10050,42 +10175,83 @@ function dcVars(tr){
   /* Raw unix times for Discord's timestamps block. */
   _start:Math.floor(Date.now()/1000-now),_end:Math.floor(Date.now()/1000+rem)};
 }
-function dcPush(){
- if(!TAURI||!S.discord.on)return;
+function dcData(){
  const v=dcVars(S.current);
- const d={...v,
+ return {...v,
   start:S.playing?v._start:undefined,
   end:S.playing&&S.dur>0?v._end:undefined,
   art:S.current?.art||null};
- inv("discord_update",{data:d}).catch(()=>{})}
+}
+function dcCfg(on){return {enabled:on??S.discord.on,template:S.discord.tmpl,clientId:S.discord.cid||""}}
+function dcPush(){
+ if(!TAURI||!S.discord.on||!S.current||S.current.mode==="empty")return;
+ inv("discord_update",{data:dcData()}).catch(()=>{})}
+/* Play/pause and seeks change the timer Discord shows — push on those too,
+   not only on track start (Rust de-duplicates and rate-limits). */
+let dcLastPlaying=null;
+setInterval(()=>{if(S.playing!==dcLastPlaying){dcLastPlaying=S.playing;if(S.discord.on)dcPush()}},1200);
+document.addEventListener("seeked",e=>{if(e.target===A?.audio&&S.discord.on)dcPush()},true);
 async function paintDiscord(){
  const sw=document.getElementById("dc-on"),inp=document.getElementById("dc-template"),
-  st=document.getElementById("dc-state");
+  st=document.getElementById("dc-state"),cid=document.getElementById("dc-client"),dot=document.getElementById("dc-dot");
  if(!sw)return;
  inp.value=S.discord.tmpl;
+ if(cid&&document.activeElement!==cid)cid.value=S.discord.cid||"";
  sw.setAttribute("aria-pressed",S.discord.on);
+ const prev=document.getElementById("dc-prev");
+ if(prev){
+  const cur=S.current&&S.current.mode!=="empty"&&S.current.t?S.current:{t:"Haiiro no sora",a:"DJ UNIVXRSEL",al:"Haiiro",s:"ytm"};
+  const v=dcVars(cur);
+  const tpl=(S.discord.tmpl||"").replace(/\{(\w+)\}/g,(m,k)=>v[k]!=null?String(v[k]):m).replace(/\s{2,}/g," ").trim();
+  prev.querySelector(".dc-prev-l1").textContent=tpl||cur.t;
+  prev.querySelector(".dc-prev-l2").textContent=cur.a||"";
+  const img=prev.querySelector(".dc-prev-art");
+  if(img)img.style.backgroundImage=cur.art?`url("${String(cur.art).replace(/"/g,"%22")}")`:"";
+ }
+ let state="off",text="—";
  if(TAURI){
-  const ok=await inv("discord_available").catch(()=>false);
-  st.textContent=ok?t("dc.on.ok"):t("dc.on.no")}
- else st.textContent="—"}
+  const r=await inv("discord_status").catch(()=>null);
+  if(r){
+   if(!r.hasId){state="warn";text=t("dc.noid")}
+   else if(!r.running){state="warn";text=t("dc.on.no")}
+   else if(r.error){state="err";text=r.error}
+   else{state="ok";text=r.connected?t("dc.live"):t("dc.on.ok")}
+  }else{
+   const ok=await inv("discord_available").catch(()=>false);
+   state=ok?"ok":"warn";text=ok?t("dc.on.ok"):t("dc.on.no")}
+ }else text=t("dc.desktop");
+ st.textContent=text;if(dot)dot.dataset.s=state}
 document.getElementById("dc-on")?.addEventListener("click",async()=>{
  S.discord.on=!S.discord.on;save();
  const sw=document.getElementById("dc-on");sw.setAttribute("aria-pressed",S.discord.on);
- try{await inv("discord_configure",{enabled:S.discord.on,template:S.discord.tmpl})}catch(e){}
- if(S.discord.on)dcPush();else inv("discord_clear").catch(()=>{})});
+ try{await inv("discord_configure",dcCfg())}catch(e){}
+ if(S.discord.on)dcPush();else inv("discord_clear").catch(()=>{});
+ setTimeout(paintDiscord,600)});
 document.getElementById("dc-save")?.addEventListener("click",async()=>{
  S.discord.tmpl=document.getElementById("dc-template").value.trim()||S.discord.tmpl;
+ const cid=document.getElementById("dc-client");
+ if(cid)S.discord.cid=cid.value.replace(/\D/g,"");
  save();toast(t("dc.saved"));
- try{await inv("discord_configure",{enabled:S.discord.on,template:S.discord.tmpl})}catch(e){}
- if(S.discord.on)dcPush()});
+ try{await inv("discord_configure",dcCfg())}catch(e){}
+ if(S.discord.on)dcPush();
+ paintDiscord()});
+document.getElementById("dc-template")?.addEventListener("input",()=>{
+ const tm=S.discord.tmpl;S.discord.tmpl=document.getElementById("dc-template").value;paintDiscord();S.discord.tmpl=tm});
 document.getElementById("dc-test")?.addEventListener("click",async()=>{
- const tmpl0=S.discord.tmpl;
- S.discord.tmpl=document.getElementById("dc-template").value.trim()||tmpl0;
- try{await inv("discord_configure",{enabled:true,template:S.discord.tmpl});
-  S.discord.on=true;save();dcPush();toast(t("dc.sent"))}
- catch(e){toast(t("dc.fail"))}});
+ if(!TAURI)return toast(t("dc.desktop"));
+ S.discord.tmpl=document.getElementById("dc-template").value.trim()||S.discord.tmpl;
+ const cid=document.getElementById("dc-client");
+ if(cid)S.discord.cid=cid.value.replace(/\D/g,"");
+ if(!S.discord.cid&&!(await inv("discord_status").catch(()=>({hasId:false}))).hasId){toast(t("dc.noid"),5000);paintDiscord();return}
+ try{
+  await inv("discord_configure",dcCfg(true));
+  S.discord.on=true;save();
+  await inv("discord_test",{data:S.current?dcData():{title:"Meowave",artist:"Meowave",status:t("np.paused")}});
+  toast(t("dc.sent"))}
+ catch(e){toast(String(e?.message||e||t("dc.fail")),6000)}
+ paintDiscord()});
 if(TAURI)setTimeout(()=>{
- inv("discord_configure",{enabled:S.discord.on,template:S.discord.tmpl}).catch(()=>{});
+ inv("discord_configure",dcCfg()).catch(()=>{});
  paintDiscord()},2500);
 function paintPrivacy(){
  if(!sbUser){document.getElementById("pv-profile")&&(document.querySelector('[data-stab="priv"]').style.opacity=.5);return}
@@ -10203,7 +10369,7 @@ async function renderYmAcc(){
    const box=document.getElementById("ymlists");
    if(box)box.innerHTML=(pls||[]).map(p=>
     `<div class="chatrow asrow" style="grid-template-columns:auto 1fr auto">
-     <span class="avat ghost">♫</span>
+     <span class="avat ghost"><span class="material-symbols-rounded" style="font-size:18px">music_note</span></span>
      <span class="meta"><b>${esc(p.name)}</b><span>${p.total} ${t("tracks")}</span></span>
      <button class="btn sm" data-ymimp="${esc(p.id)}" data-ymname="${esc(p.name)}">${t("sp.import")}</button></div>`).join("")
     ||`<p class="ph">${t("sp.nolists")}</p>`;
@@ -10332,7 +10498,7 @@ async function renderSpotify(){
   if(!SP.lists){list.innerHTML=`<p class="ph">${t("sp.nolists")}</p>`;return}
   list.innerHTML=(SP.lists||[]).map(p=>
    `<div class="chatrow asrow" style="grid-template-columns:auto 1fr auto">
-    <span class="avat ghost">♫</span>
+    <span class="avat ghost"><span class="material-symbols-rounded" style="font-size:18px">music_note</span></span>
     <span class="meta"><b>${esc(p.name)}</b><span>${p.total} ${t("tracks")}</span></span>
     <button class="btn sm" data-spimp="${esc(p.id)}" data-spname="${esc(p.name)}">${t("sp.import")}</button></div>`).join("")
    ||`<p class="ph">${t("sp.nolists")}</p>`;
@@ -10460,105 +10626,118 @@ async function importSpotifyPlaylist(pid,name){
 let importedStagingTracks=[];
 let detectedImportSvc=null;
 
+const IMPORT_SVC=[
+ {id:"sp",name:"Spotify",re:/spotify\.com|^spotify:/i,cmd:"spotify_public_playlist_tracks"},
+ {id:"ym",name:"Yandex Music",re:/music\.yandex\.|yandex\.[a-z]+\/music/i,cmd:"ym_public_playlist_tracks"},
+ {id:"ytm",name:"YouTube Music",re:/music\.youtube\.com|youtube\.com|youtu\.be|^(PL|OLAK5uy_|RD|VL)[A-Za-z0-9_-]{10,}$/i,cmd:"ytm_playlist_tracks"},
+ {id:"sc",name:"SoundCloud",re:/soundcloud\.com|on\.soundcloud\.com/i,cmd:"sc_playlist_tracks"}];
+function importDetect(url){return IMPORT_SVC.find(s=>s.re.test(url))||null}
+function importEl(id){return document.getElementById(id)}
+function importSetState(st,err){
+ const box=document.querySelector("#import-modal .importbox");if(box)box.dataset.state=st;
+ const e=importEl("import-err");if(e){e.hidden=!err;e.textContent=err||""}
+ const fb=importEl("import-fetch-btn");if(fb)fb.disabled=st==="loading";
+}
+function importMarkSvc(){
+ const svc=importDetect(importEl("import-url")?.value?.trim()||"");
+ document.querySelectorAll("#import-svcs [data-svc]").forEach(x=>x.dataset.on=String(!!svc&&x.dataset.svc===svc.id));
+ return svc;
+}
 function openImportModal(){
- const modal=document.getElementById("import-modal");
+ const modal=importEl("import-modal");
  if(!modal)return;
  modal.hidden=false;
  modal.dataset.open="true";
  importedStagingTracks=[];
  detectedImportSvc=null;
- const inp=document.getElementById("import-url");
- if(inp){inp.value="";inp.focus()}
- const det=document.getElementById("import-detected");
+ const inp=importEl("import-url");
+ if(inp){inp.value="";setTimeout(()=>inp.focus(),30)}
+ const det=importEl("import-detected");
  if(det)det.hidden=true;
- const runBtn=document.getElementById("import-run-btn");
+ const runBtn=importEl("import-run-btn");
  if(runBtn)runBtn.disabled=true;
+ importSetState("idle");importMarkSvc();
  icons();
 }
 
 function closeImportModal(){
- const modal=document.getElementById("import-modal");
+ const modal=importEl("import-modal");
  if(!modal)return;
  modal.hidden=true;
  modal.dataset.open="false";
 }
 
+let importReq=0;
 async function fetchImportTracks(){
- const inp=document.getElementById("import-url");
+ const inp=importEl("import-url");
  const url=inp?.value?.trim()||"";
- if(!url)return toast(t("import.enter_url")||"Введите ссылку");
- const fetchBtn=document.getElementById("import-fetch-btn");
- const det=document.getElementById("import-detected");
- const badge=document.getElementById("import-svc-badge");
- const meta=document.getElementById("import-preview-meta");
- const runBtn=document.getElementById("import-run-btn");
-
- fetchBtn.disabled=true;
- fetchBtn.textContent="...";
+ const det=importEl("import-detected"),badge=importEl("import-svc-badge"),meta=importEl("import-preview-meta"),runBtn=importEl("import-run-btn");
+ if(!url){importSetState("error",t("import.enter_url")||"Введите ссылку");inp?.focus();return}
+ const svc=importMarkSvc();
+ if(!svc){importSetState("error",LANG==="ru"?"Ссылка не распознана. Поддерживаются Spotify, YouTube Music, Яндекс Музыка и SoundCloud.":"Link not recognised. Supported: Spotify, YouTube Music, Yandex Music and SoundCloud.");return}
+ const req=++importReq;
+ importSetState("loading");
+ if(runBtn)runBtn.disabled=true;
  try{
-  let tracks=[];
-  let svcName="";
-  let svcId="";
-
-  if(/spotify\.com/i.test(url)){
-   svcName="Spotify";
-   svcId="sp";
-   tracks=await inv("spotify_public_playlist_tracks",{urlOrId:url});
-  }else if(/music\.yandex\.ru|yandex\.ru\/music/i.test(url)){
-   svcName="Yandex Music";
-   svcId="ym";
-   tracks=await inv("ym_public_playlist_tracks",{urlOrId:url});
-  }else if(/music\.youtube\.com|youtube\.com|youtu\.be/i.test(url)||/^[A-Za-z0-9_-]{18,}$/.test(url)){
-   svcName="YouTube Music";
-   svcId="ytm";
-   tracks=await inv("ytm_playlist_tracks",{urlOrId:url});
-  }else if(/soundcloud\.com/i.test(url)){
-   svcName="SoundCloud";
-   svcId="sc";
-   tracks=await inv("sc_playlist_tracks",{urlOrId:url});
-  }else{
-   throw new Error("Неподдерживаемый сервис. Поддерживаются: Spotify, YouTube Music, Yandex Music, SoundCloud");
-  }
-
-  if(!tracks||!tracks.length){
-   throw new Error("В плейлисте не найдено треков");
-  }
-
+  const tracks=await inv(svc.cmd,{urlOrId:url});
+  if(req!==importReq)return;
+  if(!tracks||!tracks.length)throw new Error(LANG==="ru"?"В плейлисте не найдено треков (возможно, он приватный)":"No tracks found (the playlist may be private)");
   importedStagingTracks=tracks;
-  detectedImportSvc=svcId;
-
+  detectedImportSvc=svc.id;
   if(det){
    det.hidden=false;
-   if(badge)badge.innerHTML=`${SVC_ICONS[svcId]||""} ${svcName}`;
+   if(badge)badge.innerHTML=`${SVC_ICONS[svc.id]||""}<span>${esc(svc.name)}</span>`;
    if(meta)meta.textContent=`${LANG==="ru"?"Найдено треков":"Tracks found"}: ${tracks.length}`;
+   const pv=importEl("import-preview");
+   if(pv)pv.innerHTML=tracks.slice(0,4).map(r=>`<li>${r.art?`<img src="${esc(r.art)}" alt="" loading="lazy" onerror="this.remove()">`:`<span class="material-symbols-rounded">music_note</span>`}<div><b>${esc(r.t||"—")}</b><small>${esc(r.a||"")}</small></div></li>`).join("")+(tracks.length>4?`<li class="more">+${tracks.length-4}</li>`:"");
+   const nm=importEl("import-name");
+   if(nm&&!nm.dataset.touched)nm.value=`${svc.name} Import`;
   }
+  importSetState("ready");
   if(runBtn)runBtn.disabled=false;
   icons();
  }catch(e){
+  if(req!==importReq)return;
   console.warn("fetchImportTracks error:",e);
-  toast(String(e.message||e));
+  importSetState("error",String(e?.message||e));
   if(det)det.hidden=true;
   if(runBtn)runBtn.disabled=true;
- }finally{
-  fetchBtn.disabled=false;
-  fetchBtn.textContent=LANG==="ru"?"Проверить":"Check";
  }
 }
 
 function initImportModal(){
- document.getElementById("import-close")?.addEventListener("click",closeImportModal);
- document.getElementById("import-cancel")?.addEventListener("click",closeImportModal);
- document.getElementById("import-fetch-btn")?.addEventListener("click",fetchImportTracks);
- document.getElementById("import-url")?.addEventListener("keydown",e=>{
-  if(e.key==="Enter"){e.preventDefault();fetchImportTracks()}
+ importEl("import-close")?.addEventListener("click",closeImportModal);
+ importEl("import-cancel")?.addEventListener("click",closeImportModal);
+ importEl("import-fetch-btn")?.addEventListener("click",fetchImportTracks);
+ importEl("import-modal")?.addEventListener("click",e=>{if(e.target.id==="import-modal")closeImportModal()});
+ importEl("import-modal")?.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();closeImportModal()}});
+ const inp=importEl("import-url");
+ let deb=0;
+ inp?.addEventListener("input",()=>{
+  importMarkSvc();
+  const det=importEl("import-detected");if(det)det.hidden=true;
+  importedStagingTracks=[];const rb=importEl("import-run-btn");if(rb)rb.disabled=true;
+  importSetState("idle");
+  clearTimeout(deb);
+  /* A pasted, recognised link is checked straight away — no extra click. */
+  deb=setTimeout(()=>{const v=inp.value.trim();if(/^https?:\/\//i.test(v)&&importDetect(v))fetchImportTracks()},650);
  });
- document.getElementById("import-run-btn")?.addEventListener("click",()=>{
+ inp?.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){e.preventDefault();clearTimeout(deb);fetchImportTracks()}
+ });
+ importEl("import-paste")?.addEventListener("click",async()=>{
+  try{const v=(await navigator.clipboard.readText()).trim();if(v&&inp){inp.value=v;inp.dispatchEvent(new Event("input"))}}catch{inp?.focus()}
+ });
+ importEl("import-name")?.addEventListener("input",e=>{e.target.dataset.touched="1"});
+ importEl("import-run-btn")?.addEventListener("click",()=>{
   if(!importedStagingTracks.length)return;
   const dest=document.querySelector('input[name="import-dest"]:checked')?.value||"pl";
   const asFav=dest==="fav";
   closeImportModal();
   const names = {sp: "Spotify Import", ytm: "YouTube Music Import", ym: "Yandex Music Import", sc: "SoundCloud Import"};
-  const plTitle = names[detectedImportSvc] || "Playlist Import";
+  const nm=importEl("import-name");
+  const plTitle = (nm?.value||"").trim() || names[detectedImportSvc] || "Playlist Import";
+  if(nm)delete nm.dataset.touched;
   importRows(importedStagingTracks,detectedImportSvc,plTitle,asFav);
  });
 }

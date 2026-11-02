@@ -544,6 +544,8 @@ pub fn run() {
             discord::discord_configure,
             discord::discord_update,
             discord::discord_clear,
+            discord::discord_test,
+            discord::discord_status,
             stream_info,
             taskbar::taskbar_set_playing,
             mpris::mpris_update,

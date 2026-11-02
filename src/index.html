@@ -551,18 +551,29 @@
               </div>
             </div>
           </div>
-          <div class="panel pane">
+          <div class="panel pane dc-panel">
             <h3 data-i18n="dc.t">Discord Rich Presence</h3>
-            <p class="ph" data-i18n="dc.s">Что слушаешь — видно в профиле Discord. Нужен запущенный Discord и DISCORD_CLIENT_ID в .env.</p>
+            <p class="ph" data-i18n="dc.s">Показывает в профиле Discord, что сейчас играет: обложку, название и время. Нужен запущенный Discord (приложение, не браузер).</p>
             <div class="field">
-              <div><label data-i18n="dc.on">Показывать в Discord</label><small id="dc-state">—</small></div>
+              <div><label data-i18n="dc.on">Показывать в Discord</label><small class="dc-status"><i id="dc-dot" data-s="off"></i><span id="dc-state">—</span></small></div>
               <button class="sw" id="dc-on" aria-pressed="false" aria-label="discord"></button>
             </div>
             <div class="field" style="align-items:flex-start;flex-direction:column">
-              <div><label data-i18n="dc.tmpl">Шаблон статуса</label><small data-i18n="dc.tmpl.s">Подстановки: {title} {artist} {album} {service} {status} {elapsed} {remaining}</small></div>
-              <input id="dc-template" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="{artist} — {title} · {service}">
+              <div><label for="dc-client" data-i18n="dc.cid">Application ID</label><small data-i18n="dc.cid.s">Создайте приложение на discord.com/developers/applications — его название Discord покажет как «Слушает …». Скопируйте Application ID сюда.</small></div>
+              <input id="dc-client" inputmode="numeric" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="1234567890123456789">
             </div>
-            <div class="grow" style="margin-top:8px">
+            <div class="field" style="align-items:flex-start;flex-direction:column">
+              <div><label for="dc-template" data-i18n="dc.tmpl">Шаблон статуса</label><small data-i18n="dc.tmpl.s">Первая строка статуса. Подстановки: {title} {artist} {album} {service} {status}. Вторая строка — исполнитель.</small></div>
+              <input id="dc-template" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="{title}">
+            </div>
+            <div class="dc-prev-wrap">
+              <small data-i18n="dc.prev">Так это увидят друзья</small>
+              <div class="dc-prev" id="dc-prev">
+                <div class="dc-prev-art"><span class="material-symbols-rounded">music_note</span></div>
+                <div class="dc-prev-txt"><small data-i18n="dc.listen">Слушает</small><b class="dc-prev-l1">—</b><span class="dc-prev-l2">—</span><i class="dc-prev-bar"></i></div>
+              </div>
+            </div>
+            <div class="grow" style="margin-top:12px">
               <button class="btn" id="dc-save" data-i18n="dc.save">Сохранить</button>
               <button class="btn" id="dc-test" data-i18n="dc.test">Проверить</button>
             </div>
@@ -664,7 +675,36 @@
         <div class="seg-group" id="fp-bg-mode-group">
           <button class="seg-btn active" data-bg="dynamic" data-i18n="fp.bg.dynamic">Альбом</button>
           <button class="seg-btn" data-bg="ambient" data-i18n="fp.bg.ambient">Эмбиент</button>
+          <button class="seg-btn" data-bg="wallpaper" data-i18n="fp.bg.wall">Обои</button>
           <button class="seg-btn" data-bg="black" data-i18n="fp.bg.black">OLED</button>
+        </div>
+      </div>
+      <div class="fpset-row fpset-wall" id="fp-wall-box">
+        <div class="fpset-label-row">
+          <label data-i18n="fp.wall.t">Обои: картинка, GIF или видео</label>
+        </div>
+        <div class="fpwall-file">
+          <span class="material-symbols-rounded">wallpaper</span>
+          <span class="fpwall-name" id="fp-wall-name">Не выбраны</span>
+          <button class="btn sm" id="fp-wall-pick" data-i18n="fp.wall.pick">Выбрать</button>
+          <button class="btn sm text" id="fp-wall-clear" data-i18n="fp.wall.clear">Убрать</button>
+        </div>
+        <div class="fpset-label-row">
+          <label data-i18n="fp.wall.dim">Затемнение</label>
+          <span class="fpset-val" id="fp-wall-dim-val">35%</span>
+        </div>
+        <input type="range" id="fp-wall-dim" min="0" max="85" value="35">
+        <div class="fpset-label-row">
+          <label data-i18n="fp.wall.blur">Размытие обоев</label>
+          <span class="fpset-val" id="fp-wall-blur-val">0px</span>
+        </div>
+        <input type="range" id="fp-wall-blur" min="0" max="40" value="0">
+        <div class="fpset-switch-row fpwall-app">
+          <div>
+            <label data-i18n="fp.wall.app">Обои на фоне всего приложения</label>
+            <small data-i18n="fp.wall.app_sub">Не только в полноэкранном плеере</small>
+          </div>
+          <button class="sw" id="fp-wall-app" aria-pressed="false"></button>
         </div>
       </div>
       <div class="fpset-row">
@@ -813,28 +853,38 @@
 </div>
 <!-- Hidden input used by the playlist cover picker. -->
 <input type="file" id="plc-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
-<div class="modalwrap" id="import-modal" hidden data-open="false" role="dialog" aria-modal="true">
-  <div class="modalbox pane importbox" role="document">
+<div class="modalwrap" id="import-modal" hidden data-open="false" role="dialog" aria-modal="true" aria-labelledby="import-title">
+  <div class="modalbox pane importbox" role="document" data-state="idle">
     <div class="modal-head">
-      <div class="import-head-icon"><span class="material-symbols-rounded" style="font-size:26px">cloud_download</span></div>
+      <div class="import-head-icon"><span class="material-symbols-rounded" style="font-size:24px">playlist_add</span></div>
       <div>
         <h3 id="import-title" data-i18n="import.t">Импорт плейлиста</h3>
         <p class="ph" data-i18n="import.s" style="margin:2px 0 0">Вставьте ссылку на плейлист или альбом из Spotify, YouTube Music, Яндекс Музыки или SoundCloud</p>
       </div>
-      <button class="ic close modalclose" id="import-close"><span class="material-symbols-rounded">close</span></button>
+      <button class="ic close modalclose" id="import-close" aria-label="close"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="import-body">
+      <div class="import-svcs" id="import-svcs" aria-hidden="true">
+        <span data-svc="sp">Spotify</span><span data-svc="ytm">YouTube Music</span><span data-svc="ym">Яндекс Музыка</span><span data-svc="sc">SoundCloud</span>
+      </div>
       <div class="import-input-wrap">
-        <input type="text" id="import-url" data-i18n-ph="import.ph" placeholder="Spotify, YouTube Music, music.yandex.ru/users/.../playlists/... или SoundCloud" autocomplete="off">
-        <button class="btn" id="import-fetch-btn" data-i18n="import.check">Проверить</button>
+        <span class="material-symbols-rounded import-link-ic">link</span>
+        <input type="text" id="import-url" data-i18n-ph="import.ph" placeholder="Spotify, YouTube Music, music.yandex.ru/users/.../playlists/... или SoundCloud" autocomplete="off" spellcheck="false">
+        <button class="ic sm" id="import-paste" aria-label="paste"><span class="material-symbols-rounded">content_paste</span></button>
+        <button class="btn" id="import-fetch-btn"><span class="import-spin" aria-hidden="true"></span><span class="import-fetch-l" data-i18n="import.check">Проверить</span></button>
       </div>
+      <p class="import-err" id="import-err" hidden></p>
       <div class="import-detected" id="import-detected" hidden>
-        <span class="import-svc-badge" id="import-svc-badge"></span>
-        <span class="import-preview-meta" id="import-preview-meta"></span>
+        <div class="import-detected-top">
+          <span class="import-svc-badge" id="import-svc-badge"></span>
+          <span class="import-preview-meta" id="import-preview-meta"></span>
+        </div>
+        <ol class="import-preview" id="import-preview"></ol>
+        <label class="import-name"><span data-i18n="import.name">Название плейлиста</span><input type="text" id="import-name" maxlength="60" autocomplete="off"></label>
       </div>
-      <div class="import-target-selector">
-        <label><input type="radio" name="import-dest" value="pl" checked> <span data-i18n="import.dest_pl">Создать новый плейлист</span></label>
-        <label><input type="radio" name="import-dest" value="fav"> <span data-i18n="import.dest_fav">Добавить в Избранное</span></label>
+      <div class="import-target-selector" role="radiogroup">
+        <label><input type="radio" name="import-dest" value="pl" checked><span class="material-symbols-rounded">queue_music</span><span data-i18n="import.dest_pl">Создать новый плейлист</span></label>
+        <label><input type="radio" name="import-dest" value="fav"><span class="material-symbols-rounded">favorite</span><span data-i18n="import.dest_fav">Добавить в Избранное</span></label>
       </div>
       <div class="import-actions">
         <button class="ghost" id="import-cancel" data-i18n="cancel">Отмена</button>
@@ -883,6 +933,7 @@
   </div>
 </div>
 
+<script src="./fx.js" defer></script>
 <script src="./app.js" defer></script>
 </body>
 </html>
