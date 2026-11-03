@@ -47,7 +47,6 @@ async function radioOn(src,id){
 /* ═════════════════════════ My Wave 2.0 ═════════════════════════ */
 const WV={src:"",session:null,batch:null,seeds:[],cur:null,seen:new Set(),skipA:new Map(),liked:[],played:[],
  busy:false,ext:null,gen:0,retuneT:0};
-const MOODS=[["active","bolt"],["fun","sentiment_very_satisfied"],["calm","spa"],["sad","rainy"]];
 function waveCfg(){
  if(!S.x.wave||typeof S.x.wave!=="object")S.x.wave={};
  const w=S.x.wave;
@@ -281,68 +280,168 @@ function waveRetune(){
   if(fp.dataset.open==="true")renderFPBody();
   paintWaveUI();toast(t("wv.restart"))},650)}
 
-/* ── wave UI on the home screen ── */
-function waveHint(){
- const el=$("wavehint");if(!el)return;
+/* ── wave UI on the home screen ──
+   The hero says what is actually happening: the brand line while nothing
+   plays, the track and "now on your wave" while the wave plays, and "now
+   playing" for anything else — the old screen kept saying "Silence. The field
+   waits." over a playing track. Tuning lives in an MD3 side sheet with plain
+   radio lists instead of a popover of pills and a row of mood buttons. */
+const WV_DEF={src:"auto",div:"default",mood:"all",lang:"any"};
+const WV_ROWS={
+ div:[["default","balance"],["favorite","favorite"],["discover","explore"],["popular","trending_up"]],
+ mood:[["all","all_inclusive"],["active","bolt"],["fun","sentiment_very_satisfied"],["calm","spa"],["sad","rainy"]],
+ lang:[["any","translate"],["russian","record_voice_over"],["not-russian","language"],["without-words","piano"]]};
+const optName=(k,v)=>k==="src"?(v==="auto"?t("wv.src.auto"):svc(v).name)
+ :k==="div"?(v==="default"?t("wv.any"):t("wv.div."+v))
+ :k==="mood"?(v==="all"?t("wv.any"):t("wv.mood."+v))
+ :(v==="any"?t("wv.lang.any"):t("wv.lang."+v));
+const optSub=(k,v)=>k==="src"?t(v==="auto"?"wv.src.auto.s":v==="ym"?"wv.src.ym.s":"wv.src.mix.s")
+ :k==="lang"?"":t(`wv.${k}.${v}.s`);
+/* Non-default settings in words, for the kicker and the sheet header. */
+function waveTags(){
+ const w=waveCfg(),out=[];
+ for(const k of ["mood","div","lang"])if(w[k]!==WV_DEF[k])out.push(optName(k,w[k]));
+ return out}
+const waveCustom=()=>{const w=waveCfg();return Object.keys(WV_DEF).some(k=>w[k]!==WV_DEF[k])};
+function waveLine(){
  const src=waveLive()&&WV.src?WV.src:waveSource();
- el.dataset.ready=String(!!src);
- if(!src){el.textContent=t("wv.none");return}
+ if(!src)return {src:"",txt:t("wv.none")};
  const name=svc(src).name;
- const txt=src==="ym"?fill("wv.from",{s:name}):(pickSeeds(1).length?fill("wv.mix",{s:name}):`${t("wv.cap")} · ${name}`);
- el.innerHTML=`<span class="wv-src">${SVC_ICONS[src]||""}</span><span>${esc(txt)}</span>`}
-function paintWaveUI(){
- const w=waveCfg();
- const box=$("wv-moods");
- if(box){
-  if(!box.dataset.built){
-   box.dataset.built="1";
-   box.innerHTML=MOODS.map(([m,ic])=>`<button class="wv-mood" data-mood="${m}" aria-pressed="false">${ICON(ic,18)}<span data-i18n="wv.mood.${m}">${esc(t("wv.mood."+m))}</span></button>`).join("")}
-  box.querySelectorAll("[data-mood]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.mood===w.mood)))}
- const pop=$("wv-pop");if(pop&&!pop.hidden)pop.innerHTML=popHTML();
- const st=$("start");if(st)st.dataset.wave=waveLive()&&S.playing?"on":"off";
- waveHint()}
-function popHTML(){
+ return {src,txt:src==="ym"?fill("wv.from",{s:name}):(pickSeeds(1).length?fill("wv.mix",{s:name}):`${t("wv.cap")} · ${name}`)}}
+function waveHint(){paintHero()}
+const EQ_BARS=`<span class="hero-eq" aria-hidden="true"><b></b><b></b><b></b><b></b></span>`;
+function paintHero(){
+ const hero=$("hero");if(!hero)return;
+ const tr=S.current,has=!!tr&&tr.mode!=="empty",live=has&&waveLive();
+ const state=has?(live?"wave":"track"):"idle";
+ hero.dataset.state=state;hero.dataset.playing=String(!!S.playing);
+ const h=$("hero-t"),p=$("hero-s"),k=$("wavehint"),nx=$("hero-next");
+ const key=`${state}|${has?trackKey(tr):""}|${LANG}`;
+ if(h&&p&&hero.dataset.key!==key){
+  const first=!hero.dataset.key;
+  hero.dataset.key=key;
+  if(state==="idle"){h.textContent=t("home.t");p.textContent=t("home.s")}
+  else{h.textContent=tr.t||"—";p.textContent=tr.a||"—"}
+  h.title=state==="idle"?"":h.textContent;
+  if(!first){hero.classList.remove("swap");void hero.offsetWidth;hero.classList.add("swap")}}
+ if(k){
+  const tags=waveTags(),tagHTML=tags.length?`<span class="hero-tags">${esc(tags.join(" · "))}</span>`:"";
+  let html,ready=true;
+  if(state==="wave")html=`${EQ_BARS}<span>${esc(t("wv.live"))} · ${esc(svc(WV.src||tr.s).name)}</span>${tagHTML}`;
+  else if(state==="track"){const s=tr._resolvedSvc||tr.s;html=`<span class="wv-src">${SVC_ICONS[s]||""}</span><span>${esc(t("wv.now"))} · ${esc(svc(s).name||"")}</span>`}
+  else{const l=waveLine();ready=!!l.src;html=`<span class="wv-src">${SVC_ICONS[l.src]||""}</span><span>${esc(l.txt)}</span>${l.src?tagHTML:""}`}
+  if(k.dataset.html!==html){k.dataset.html=html;k.innerHTML=html}
+  k.dataset.ready=String(ready)}
+ if(nx){
+  const up=state==="wave"?(typeof queue!=="undefined"&&queue.find(x=>x&&!sameTrack(x,tr))):null;
+  const txt=up?`${t("wv.next")}: ${up.a?up.a+" — ":""}${up.t||""}`:"";
+  if(nx.textContent!==txt)nx.textContent=txt;
+  nx.hidden=!txt}
+ const st=$("start");
+ if(st){
+  const [ic,lab]=state==="wave"?(S.playing?["pause",t("np.pause")]:["play_arrow",t("wv.resume")]):["graphic_eq",t("home.start")];
+  const sig=ic+"|"+lab;
+  if(st.dataset.sig!==sig){st.dataset.sig=sig;st.innerHTML=`${ICON(ic,20)}<span>${esc(lab)}</span>`}
+  st.dataset.wave=live&&S.playing?"on":"off"}
+ const sk=$("hero-skip");if(sk)sk.hidden=state!=="wave";
+ const tb=$("wv-tune");if(tb)tb.dataset.custom=String(waveCustom())}
+function paintWaveUI(){paintHero();tunePaint()}
+
+/* ── «Регулировка волны»: MD3 side sheet (bottom sheet on a phone) ── */
+const TUNE={open:false,layer:null,back:null,t:0};
+function tuneBuild(){
+ let el=$("wvs");if(el)return el;
+ el=document.createElement("div");
+ el.id="wvs";el.className="wvs-wrap";el.hidden=true;el.dataset.open="false";
+ el.innerHTML=`<div class="wvs-scrim" data-wvs-close></div>
+  <aside class="wvs" role="dialog" aria-modal="true" aria-labelledby="wvs-t" tabindex="-1">
+   <i class="wvs-handle" aria-hidden="true"></i>
+   <header class="wvs-head">
+    <div class="wvs-htxt"><h2 id="wvs-t"></h2><p class="wvs-sub" id="wvs-sub"></p></div>
+    <button class="m3i" data-wvs-close id="wvs-x">${ICON("close",22)}</button>
+   </header>
+   <div class="wvs-body" id="wvs-body"></div>
+   <footer class="wvs-foot">
+    <button class="m3b m3b-outlined" id="wvs-reset">${ICON("restart_alt",18)}<span></span></button>
+    <button class="m3b m3b-filled" id="wvs-go"><span></span></button>
+   </footer>
+  </aside>`;
+ document.body.appendChild(el);
+ el.addEventListener("click",e=>{
+  if(e.target.closest("[data-wvs-close]")){tuneSet(false);return}
+  const o=e.target.closest("[data-wvk]");if(o){setWaveOpt(o.dataset.wvk,o.dataset.wvv);return}
+  if(e.target.closest("#wvs-reset")){waveReset();return}
+  if(e.target.closest("#wvs-go")){const live=waveLive();tuneSet(false);if(!live)wave2Start()}});
+ el.addEventListener("keydown",e=>{
+  if(e.key!=="ArrowDown"&&e.key!=="ArrowUp")return;
+  const li=e.target.closest?.(".wt-li");if(!li)return;
+  const all=[...el.querySelectorAll(".wt-li")],i=all.indexOf(li)+(e.key==="ArrowDown"?1:-1);
+  if(all[i]){e.preventDefault();all[i].focus()}});
+ /* Bottom-sheet drag on a phone: pull the handle down to close. */
+ const sheet=el.querySelector(".wvs");let drag=null;
+ sheet.addEventListener("pointerdown",e=>{
+  if(!matchMedia("(max-width:700px)").matches||!e.target.closest(".wvs-handle,.wvs-head")||e.target.closest("button"))return;
+  drag={y0:e.clientY,id:e.pointerId,dy:0};try{sheet.setPointerCapture(e.pointerId)}catch(_){}});
+ sheet.addEventListener("pointermove",e=>{if(!drag||drag.id!==e.pointerId)return;drag.dy=Math.max(0,e.clientY-drag.y0);sheet.style.transform=`translate3d(0,${drag.dy}px,0)`;sheet.style.transition="none"});
+ const end=()=>{if(!drag)return;const dy=drag.dy;drag=null;sheet.style.transition="";sheet.style.transform="";if(dy>90)tuneSet(false)};
+ sheet.addEventListener("pointerup",end);sheet.addEventListener("pointercancel",end);
+ return el}
+function tuneRows(){
  const w=waveCfg();
  const srcs=["auto","ym","ytm","sc","dz"].filter(id=>id==="auto"||srvOk(id));
- const grp=(key,label,vals,lab)=>`<div class="wv-grp"><b>${esc(t(label))}</b><div class="wv-opts" role="group">${vals.map(v=>
-  `<button class="wv-opt" data-wvk="${key}" data-wvv="${v}" aria-pressed="${w[key]===v}">${lab(v)}</button>`).join("")}</div></div>`;
- return grp("src","wv.src",srcs,v=>v==="auto"?esc(t("wv.src.auto")):`${SVC_ICONS[v]||""}<span>${esc(svc(v).name)}</span>`)
-  +grp("div","wv.div",["default","favorite","discover","popular"],v=>esc(v==="default"?t("wv.any"):t("wv.div."+v)))
-  +grp("lang","wv.lang",["any","russian","not-russian","without-words"],v=>esc(v==="any"?t("wv.lang.any"):t("wv.lang."+v)))}
-function togglePop(open){
- const pop=$("wv-pop"),btn=$("wv-tune");if(!pop)return;
- open=open??pop.hidden;
- if(open){pop.innerHTML=popHTML();pop.hidden=false;placePop();requestAnimationFrame(()=>{pop.dataset.open="true"})}
- else{pop.dataset.open="false";pop.hidden=true}
- btn?.setAttribute("aria-expanded",String(!!open))}
-/* There is rarely room above the hero, so the panel opens beside the tune
-   button and grows upwards; only a narrow window puts it above the button,
-   scrolling inside whatever height is left. */
-function placePop(){
- const pop=$("wv-pop"),btn=$("wv-tune"),hero=$("hero"),home=$("v-home");
- if(!pop||pop.hidden||!btn||!hero||!home)return;
- pop.style.left=pop.style.bottom=pop.style.maxHeight="";
- if(matchMedia("(max-width:700px)").matches)return;
- const b=btn.getBoundingClientRect(),h=hero.getBoundingClientRect(),v=home.getBoundingClientRect();
- const pw=pop.offsetWidth,ph=pop.offsetHeight,gap=12;
- if(v.right-b.right-gap-16>=pw){
-  pop.style.left=Math.round(b.right-h.left+gap)+"px";
-  pop.style.bottom=Math.round(Math.max(0,h.bottom-b.bottom))+"px";
-  const room=b.bottom-v.top-12;if(ph>room)pop.style.maxHeight=Math.round(room)+"px"}
+ const row=(k,v,lead)=>{
+  const sub=optSub(k,v);
+  return `<button class="wt-li" role="radio" aria-checked="${w[k]===v}" data-wvk="${k}" data-wvv="${v}"${k==="mood"?` data-mood="${v}"`:""}>
+   <span class="wt-lead">${lead}</span>
+   <span class="wt-txt"><b>${esc(optName(k,v))}</b>${sub?`<small>${esc(sub)}</small>`:""}</span>
+   <span class="wt-radio" aria-hidden="true"></span></button>`};
+ const sec=(k,label,rows)=>`<section class="wt-sec"><h3 class="wt-h" id="wt-h-${k}">${esc(t(label))}</h3><div class="wt-list" role="radiogroup" aria-labelledby="wt-h-${k}">${rows}</div></section>`;
+ return sec("src","wv.src",srcs.map(v=>row("src",v,v==="auto"?ICON("auto_awesome",22):`<span class="wt-svc">${SVC_ICONS[v]||ICON("music_note",18)}</span>`)).join(""))
+  +sec("mood","wv.mood",WV_ROWS.mood.map(([v,ic])=>row("mood",v,ICON(ic,22))).join(""))
+  +sec("div","wv.div",WV_ROWS.div.map(([v,ic])=>row("div",v,ICON(ic,22))).join(""))
+  +sec("lang","wv.lang",WV_ROWS.lang.map(([v,ic])=>row("lang",v,ICON(ic,22))).join(""))}
+function tuneNow(){
+ const live=waveLive(),l=waveLine(),tags=waveTags();
+ const src=live&&WV.src?WV.src:l.src;
+ return `<div class="wt-now" data-live="${live&&!!S.playing}">
+  <span class="wt-now-ic">${live?EQ_BARS:(src?`<span class="wt-svc">${SVC_ICONS[src]||""}</span>`:ICON("graphic_eq",22))}</span>
+  <span class="wt-txt"><b>${esc(live?`${t("wv.live")} · ${svc(src).name}`:l.txt)}</b><small>${esc(tags.length?tags.join(" · "):t("wv.sheet.def"))}</small></span></div>`}
+function tunePaint(){
+ const el=$("wvs");if(!el||el.hidden)return;
+ const body=$("wvs-body"),st=body.scrollTop;
+ const f=document.activeElement?.closest?.("[data-wvk]");
+ const fk=f?`[data-wvk="${f.dataset.wvk}"][data-wvv="${f.dataset.wvv}"]`:"";
+ body.innerHTML=tuneNow()+tuneRows();body.scrollTop=st;
+ if(fk)body.querySelector(fk)?.focus({preventScroll:true});
+ $("wvs-t").textContent=t("wv.sheet");
+ $("wvs-sub").textContent=t("wv.sheet.s");
+ $("wvs-x").setAttribute("aria-label",t("snk.close"));$("wvs-x").title=t("snk.close");
+ const rs=$("wvs-reset");rs.querySelector("span:last-child").textContent=t("wv.reset");rs.disabled=!waveCustom();
+ $("wvs-go").querySelector("span").textContent=waveLive()?t("wv.done"):t("home.start")}
+function tuneSet(open){
+ const el=tuneBuild();open=!!open;
+ if(open===TUNE.open)return;
+ TUNE.open=open;clearTimeout(TUNE.t);
+ $("wv-tune")?.setAttribute("aria-expanded",String(open));
+ if(open){
+  TUNE.back=document.activeElement;
+  el.hidden=false;tunePaint();void el.offsetWidth;el.dataset.open="true";
+  TUNE.layer={close:()=>tuneSet(false)};window.MW3?.layer.push(TUNE.layer);
+  document.documentElement.dataset.wvs="open";
+  requestAnimationFrame(()=>el.querySelector(".wvs")?.focus({preventScroll:true}))}
  else{
-  pop.style.left=Math.round(Math.max(0,Math.min(b.left-h.left,v.right-h.left-pw-12)))+"px";
-  pop.style.bottom=Math.round(h.bottom-b.top+gap)+"px";
-  const room=b.top-v.top-gap-12;if(ph>room)pop.style.maxHeight=Math.round(Math.max(180,room))+"px"}}
-addEventListener("resize",()=>{if(!$("wv-pop")?.hidden)placePop()});
+  el.dataset.open="false";window.MW3?.layer.drop(TUNE.layer);TUNE.layer=null;
+  delete document.documentElement.dataset.wvs;
+  TUNE.t=setTimeout(()=>{if(!TUNE.open)el.hidden=true},360);
+  const b=TUNE.back;TUNE.back=null;if(b&&b.isConnected)try{b.focus({preventScroll:true})}catch(_){}}}
 function setWaveOpt(k,v){
  const w=waveCfg();if(w[k]===v)return;
  w[k]=v;save();paintWaveUI();
  if(waveLive())waveRetune()}
-function onMood(m){
- const w=waveCfg();
- w.mood=w.mood===m?"all":m;save();paintWaveUI();
- /* As in Yandex Music: picking a mood starts the wave with it. */
- if(waveLive())waveRetune();else wave2Start()}
+function waveReset(){
+ if(!waveCustom())return;
+ Object.assign(waveCfg(),WV_DEF);save();paintWaveUI();
+ if(waveLive())waveRetune()}
 
 /* ═════════════════════ collections sheet ═════════════════════ */
 const HS={svc:"",cache:new Map(),open:false,drag:null,wheel:0};
@@ -438,10 +537,10 @@ function playShelf(k){
 function hsSet(open){
  const sh=$("hsheet");if(!sh)return;
  HS.open=!!open;HS.wheel=0;
- sh.dataset.open=String(HS.open);sh.style.transform="";
+ sh.dataset.open=String(HS.open);sh.style.removeProperty("--hs-y");
  $("hs-grip")?.setAttribute("aria-expanded",String(HS.open));
  if(HS.open)document.documentElement.dataset.hs="open";else delete document.documentElement.dataset.hs;
- if(HS.open){togglePop(false);hsTabs();const b=$("hs-body");if(b&&b.dataset.svc!==HS.svc)hsLoad(HS.svc)}}
+ if(HS.open){tuneSet(false);hsTabs();const b=$("hs-body");if(b&&b.dataset.svc!==HS.svc)hsLoad(HS.svc)}}
 function hsTab(id){
  if(!id)return;
  HS.svc=id;hsTabs();
@@ -458,7 +557,7 @@ function hsInit(){
   const d=HS.drag;if(!d||d.id!==e.pointerId)return;
   const dy=e.clientY-d.y0;if(!d.moved&&Math.abs(dy)<6)return;
   d.moved=true;d.y=Math.max(0,Math.min(d.max,d.base+dy));
-  sh.dataset.drag="1";sh.style.transform=`translate3d(0,${d.y.toFixed(1)}px,0)`});
+  sh.dataset.drag="1";sh.style.setProperty("--hs-y",d.y.toFixed(1)+"px")});
  const end=e=>{
   const d=HS.drag;HS.drag=null;if(!d)return;
   delete sh.dataset.drag;
@@ -472,7 +571,7 @@ function hsInit(){
   if(e.key==="Enter"||e.key===" "){e.preventDefault();hsSet(!HS.open)}});
  home?.addEventListener("wheel",e=>{
   if(e.ctrlKey||S.view!=="home")return;
-  if(!HS.open){if(e.deltaY>8&&!e.target.closest("#wv-pop"))hsSet(true);return}
+  if(!HS.open){if(e.deltaY>8)hsSet(true);return}
   const body=$("hs-body");
   if(e.target.closest("#hs-body")){
    if(body.scrollTop<=0&&e.deltaY<0){HS.wheel+=e.deltaY;if(HS.wheel<-120)hsSet(false)}else HS.wheel=0;
@@ -798,13 +897,11 @@ document.addEventListener("click",e=>{
  const bio=tg.closest("[data-dcbio]");
  if(bio){const p=bio.parentElement?.querySelector(".dc-bio");if(p){const open=p.dataset.clamp==="1";p.dataset.clamp=open?"0":"1";bio.textContent=open?"–":t("dv.more")}return}
  const ap=tg.closest("[data-artpage]");if(ap){openArtistPage(ap.dataset.artpage);return}
- const mood=tg.closest("[data-mood]");if(mood){onMood(mood.dataset.mood);return}
- const opt=tg.closest("[data-wvk]");if(opt){setWaveOpt(opt.dataset.wvk,opt.dataset.wvv);return}
- if(tg.closest("#wv-tune")){togglePop();return}
- if(!tg.closest("#wv-pop")&&!$("wv-pop")?.hidden)togglePop(false)});
+ if(tg.closest("#wv-tune")){tuneSet(!TUNE.open);return}
+ if(tg.closest("#hero-skip")){next(true);return}});
 document.addEventListener("keydown",e=>{
  if(e.key!=="Escape"||e.defaultPrevented)return;
- if(!$("wv-pop")?.hidden){togglePop(false);return}
+ if(TUNE.open){tuneSet(false);return}
  if(HS.open&&S.view==="home"&&fp.dataset.open!=="true"&&!(typeof settingsIsOpen==="function"&&settingsIsOpen()))hsSet(false)});
 
 /* Services connect late (the keychain answers after boot) and the language
@@ -818,7 +915,7 @@ const legacyI18n=window.applyI18n;
 if(typeof legacyI18n==="function")window.applyI18n=function(){
  const r=legacyI18n.apply(this,arguments);
  try{
-  const box=$("wv-moods");if(box)box.dataset.built="";
+  const hero=$("hero");if(hero)hero.dataset.key="";
   HS.cache.clear();const b=$("hs-body");if(b)b.dataset.svc="";
   refreshAll();
   if(S.view==="discover")dcRender();
@@ -827,12 +924,15 @@ if(typeof legacyI18n==="function")window.applyI18n=function(){
 
 function init(){
  waveCfg();paintWaveUI();hsTabs();hsInit();wallInit();dndInit();
- window.renderWaveHint=waveHint;
+ window.renderWaveHint=waveHint;window.paintHero=paintHero;
+ /* While the wave plays, the hero's main button pauses it rather than
+    building a new one from scratch. */
+ const st=$("start");if(st)st.onclick=()=>{if(waveLive())toggle();else startWave()};
  /* Ready before the user pulls the sheet up. */
  setTimeout(refreshAll,1600);
  setTimeout(()=>{refreshAll();if(TAURI&&HS.svc&&!HS.cache.has(HS.svc))hsShelves(HS.svc).catch(()=>{})},4200)}
 
-Object.assign(window,{wave2Start,wave2Extend,waveNoteStart,waveNoteEnd,openArtistPage,openCollection,openLink,
+Object.assign(window,{tuneSet,wave2Start,wave2Extend,waveNoteStart,waveNoteEnd,openArtistPage,openCollection,openLink,
  MWDISC:{WV,HS,DC,waveCfg,waveSource,hsLoad,hsSet,dcRender,shelvesHTML,mixBatch,waveFilter}});
 init();
 })();

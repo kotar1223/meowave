@@ -19,6 +19,7 @@ Obsidian-хранилище с памяткой о проекте: как уст
 - [[Features/Drag and drop|Drag & drop ссылок]]
 - [[Features/Deezer]]
 - [[Features/Full-screen player|Полноэкранный плеер]]
+- [[Features/Mini player|Мини-плеер]]
 - [[Features/Lyrics|Текст песни]]
 - [[Features/Wave progress|Волна прогресса (M3 Expressive)]]
 - [[Features/Backgrounds and wallpapers|Фоны и обои]]

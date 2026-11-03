@@ -113,6 +113,28 @@ struct Upstream<'a> {
     expected_total: Option<u64>,
     initial_offset: u64,
     reconnect_attempts: u8,
+    /// YouTube only: how to continue the same file through another client
+    /// when googlevideo stops serving this URL mid-track.
+    failover: Option<Failover>,
+}
+
+/// Everything needed to resume a googlevideo stream elsewhere: the same itag
+/// from another client is the same file, so the new URL is simply asked for
+/// the byte where the old one stopped.
+struct Failover {
+    video_id: String,
+    itag: u64,
+    client: String,
+    tried: Vec<String>,
+    cache_key: String,
+    left: u8,
+}
+
+/// How one read from the upstream body went.
+enum Step {
+    Data(Vec<u8>),
+    End,
+    Broken,
 }
 
 impl<'a> Upstream<'a> {
@@ -136,6 +158,7 @@ impl<'a> Upstream<'a> {
             expected_total,
             initial_offset,
             reconnect_attempts: 0,
+            failover: None,
         }
     }
 
@@ -164,6 +187,7 @@ impl<'a> Upstream<'a> {
             expected_total,
             initial_offset,
             reconnect_attempts: 0,
+            failover: None,
         }
     }
 }
@@ -182,6 +206,126 @@ impl<'a> Upstream<'a> {
         }
         self
     }
+
+    fn with_failover(mut self, f: Option<Failover>) -> Self {
+        self.failover = f;
+        self
+    }
+
+    /// A ranged GET from `offset`. At offset 0 a 200 is as good as a 206; past
+    /// it only a 206 is, since a 200 would restart the file mid-stream.
+    fn fetch_from(&self, url: &str, ua: Option<&str>, offset: u64) -> Result<reqwest::Response, u16> {
+        self.rt.block_on(async {
+            let c = crate::api::media_client().map_err(|_| 0u16)?;
+            let mut req = c.get(url).header("Range", format!("bytes={offset}-"));
+            if let Some(ua) = ua {
+                req = req.header("User-Agent", ua);
+            }
+            match tokio::time::timeout(std::time::Duration::from_secs(20), req.send()).await {
+                Ok(Ok(r)) => {
+                    let code = r.status().as_u16();
+                    if code == 206 || (code == 200 && offset == 0) {
+                        Ok(r)
+                    } else {
+                        Err(code)
+                    }
+                }
+                _ => Err(0),
+            }
+        })
+    }
+
+    /// Picks the stream up again at the byte where it stopped: the same URL
+    /// first (a dropped connection), then — for YouTube — the same file
+    /// through another client (a URL that stopped being served).
+    fn reconnect(&mut self) -> bool {
+        if self.upstream_url.is_empty() {
+            return false;
+        }
+        let offset = self.initial_offset + self.bytes_delivered;
+        while self.reconnect_attempts < 3 {
+            self.reconnect_attempts += 1;
+            let url = self.upstream_url.clone();
+            match self.fetch_from(&url, self.media_ua.as_deref(), offset) {
+                Ok(r) => {
+                    self.kind = UpstreamKind::Direct(Some(r));
+                    return true;
+                }
+                // Refused: the same URL will not recover, only another one can.
+                Err(401) | Err(403) | Err(410) => break,
+                Err(_) => {
+                    let wait = 300 * self.reconnect_attempts as u64;
+                    self.rt.block_on(tokio::time::sleep(std::time::Duration::from_millis(wait)));
+                }
+            }
+        }
+        let Some(mut f) = self.failover.take() else { return false };
+        let mut resumed = false;
+        while f.left > 0 && !resumed {
+            f.left -= 1;
+            crate::ytm::note_media_failure(&f.client, &format!("stopped at byte {offset}"));
+            f.tried.push(f.client.clone());
+            let pick = self.rt.block_on(crate::ytm::stream_same_itag(&f.video_id, f.itag, &f.tried));
+            let Ok(pick) = pick else { break };
+            let ua = crate::ytm::media_ua_for(&pick.client);
+            if let Ok(r) = self.fetch_from(&pick.url, Some(ua), offset) {
+                cache_put(f.cache_key.clone(), format!("{}#mwua={}", pick.url, pick.client));
+                self.upstream_url = pick.url.clone();
+                self.media_ua = Some(ua.to_string());
+                self.kind = UpstreamKind::Direct(Some(r));
+                self.reconnect_attempts = 0;
+                f.client = pick.client;
+                resumed = true;
+            } else {
+                f.client = pick.client;
+            }
+        }
+        if !resumed {
+            note_err(&format!("ytm/{}", f.video_id), format!("the stream stopped at {} and no other client could continue it", human_bytes(offset)));
+        }
+        self.failover = Some(f);
+        resumed
+    }
+}
+
+fn human_bytes(n: u64) -> String {
+    if n >= 1_048_576 {
+        format!("{:.1} MB", n as f64 / 1_048_576.0)
+    } else {
+        format!("{} KB", n / 1024)
+    }
+}
+
+/// The last thing that went wrong per `service/id`, for `stream_diag`.
+static LAST_ERR: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
+
+fn note_err(key: &str, msg: String) {
+    if let Ok(mut g) = LAST_ERR.lock() {
+        let m = g.get_or_insert_with(HashMap::new);
+        if m.len() > 128 {
+            m.clear();
+        }
+        m.insert(key.to_string(), msg);
+    }
+}
+
+/// What is known about why a track did not play: the proxy's last error and,
+/// for YouTube, every client's answer. Shown under "Details" when playback
+/// fails, so a report says more than "Playback failed".
+#[tauri::command]
+pub fn stream_diag(service: String, id: String) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    if service == "ytm" {
+        lines.extend(crate::ytm::diag_for(&id));
+    }
+    if let Some(e) = LAST_ERR
+        .lock()
+        .ok()
+        .and_then(|g| g.as_ref().and_then(|m| m.get(&format!("{service}/{id}")).cloned()))
+    {
+        lines.push(format!("proxy: {e}"));
+    }
+    lines.join("\n")
 }
 
 /// Segment URLs of a media playlist, in order. `#EXTINF` and the other tags
@@ -224,12 +368,17 @@ impl<'a> std::io::Read for Upstream<'a> {
                     let Some(resp) = resp_slot.as_mut() else {
                         return Ok(0);
                     };
-                    let chunk_res = self.rt.block_on(async {
+                    let step = match self.rt.block_on(async {
                         tokio::time::timeout(std::time::Duration::from_secs(45), resp.chunk()).await
-                    });
-                    match chunk_res {
-                        Ok(Ok(Some(chunk))) => {
-                            self.buf = chunk.to_vec();
+                    }) {
+                        Ok(Ok(Some(chunk))) => Step::Data(chunk.to_vec()),
+                        Ok(Ok(None)) => Step::End,
+                        // Timeout or network drop
+                        _ => Step::Broken,
+                    };
+                    match step {
+                        Step::Data(buf) => {
+                            self.buf = buf;
                             if let Some(c) = self.cipher.as_mut() {
                                 use aes::cipher::StreamCipher;
                                 c.apply_keystream(&mut self.buf);
@@ -237,56 +386,23 @@ impl<'a> std::io::Read for Upstream<'a> {
                             self.pos = 0;
                             self.reconnect_attempts = 0;
                         }
-                        Ok(Ok(None)) => {
+                        Step::End => {
                             // Check if stream ended prematurely
                             let premature = match self.expected_total {
                                 Some(total) => self.bytes_delivered < total,
                                 None => self.bytes_delivered == 0,
                             };
-                            if premature && !self.upstream_url.is_empty() && self.reconnect_attempts < 3 {
-                                self.reconnect_attempts += 1;
-                                let current_offset = self.initial_offset + self.bytes_delivered;
-                                let res = self.rt.block_on(async {
-                                    let c = crate::api::media_client().ok()?;
-                                    let mut req = c.get(&self.upstream_url);
-                                    if let Some(ua) = &self.media_ua {
-                                        req = req.header("User-Agent", ua);
-                                    }
-                                    req = req.header("Range", format!("bytes={current_offset}-"));
-                                    req.send().await.ok()
-                                });
-                                if let Some(new_resp) = res {
-                                    if new_resp.status().is_success() {
-                                        *resp_slot = Some(new_resp);
-                                        continue;
-                                    }
-                                }
+                            if premature && self.reconnect() {
+                                continue;
                             }
-                            *resp_slot = None;
+                            self.kind = UpstreamKind::Direct(None);
                             return Ok(0);
                         }
-                        _ => {
-                            // Timeout or network drop
-                            if !self.upstream_url.is_empty() && self.reconnect_attempts < 3 {
-                                self.reconnect_attempts += 1;
-                                let current_offset = self.initial_offset + self.bytes_delivered;
-                                let res = self.rt.block_on(async {
-                                    let c = crate::api::media_client().ok()?;
-                                    let mut req = c.get(&self.upstream_url);
-                                    if let Some(ua) = &self.media_ua {
-                                        req = req.header("User-Agent", ua);
-                                    }
-                                    req = req.header("Range", format!("bytes={current_offset}-"));
-                                    req.send().await.ok()
-                                });
-                                if let Some(new_resp) = res {
-                                    if new_resp.status().is_success() {
-                                        *resp_slot = Some(new_resp);
-                                        continue;
-                                    }
-                                }
+                        Step::Broken => {
+                            if self.reconnect() {
+                                continue;
                             }
-                            *resp_slot = None;
+                            self.kind = UpstreamKind::Direct(None);
                             return Ok(0);
                         }
                     }
@@ -650,6 +766,9 @@ fn handle(
     // <audio>, which is exactly the intermittent "playback failed" on a track
     // that played fine a few minutes earlier. On a bad status the cache entry is
     // dropped and the URL resolved again from scratch.
+    // YouTube gets a third: after a refusal its resolve asks a different
+    // client, and that is a genuinely new chance rather than a repeat.
+    let max_attempts: u8 = if service == "ytm" { 3 } else { 2 };
     let mut attempt = 0u8;
     let (status, ctype, crange, clen, resp, secret) = loop {
         attempt += 1;
@@ -662,6 +781,7 @@ fn handle(
                     u
                 }
                 Err(e) => {
+                    note_err(&format!("{service}/{id}"), format!("resolve failed: {e}"));
                     let mut resp = Response::from_string(format!("resolve failed: {e}"))
                         .with_status_code(StatusCode(502));
                     for h in cors(origin.as_deref()) {
@@ -703,9 +823,18 @@ fn handle(
                 let status = resp.status().as_u16();
                 if status >= 400 {
                     cache_drop(&cache_key);
-                    if attempt == 1 {
+                    // A refused googlevideo URL says something about the client
+                    // that signed it: remember that, so the next resolve asks
+                    // another client first instead of minting the same dud.
+                    if service == "ytm" {
+                        if let Some(c) = &secret.client {
+                            crate::ytm::note_media_failure(c, &format!("HTTP {status}"));
+                        }
+                    }
+                    if attempt < max_attempts {
                         continue;
                     }
+                    note_err(&format!("{service}/{id}"), format!("the media host refused the stream with HTTP {status}"));
                     let mut resp = Response::from_string(format!("upstream rejected stream with HTTP {status}"))
                         .with_status_code(StatusCode(502));
                     for h in cors(origin.as_deref()) {
@@ -731,10 +860,11 @@ fn handle(
                 break (status, ctype, crange, clen, resp, secret);
             }
             Err(e) => {
-                if attempt == 1 {
+                if attempt < max_attempts {
                     cache_drop(&cache_key);
                     continue;
                 }
+                note_err(&format!("{service}/{id}"), format!("the media host did not answer: {e}"));
                 let mut resp = Response::from_string(format!("upstream failed: {e}"))
                     .with_status_code(StatusCode(502));
                 for h in cors(origin.as_deref()) {
@@ -845,6 +975,19 @@ fn handle(
         );
         if let Some(k) = &secret.key {
             body = body.with_key(k, body_start);
+        }
+        if service == "ytm" {
+            let itag = crate::ytm::url_param(&upstream, "itag").and_then(|v| v.parse::<u64>().ok());
+            if let (Some(itag), Some(client)) = (itag, secret.client.clone()) {
+                body = body.with_failover(Some(Failover {
+                    video_id: id.clone(),
+                    itag,
+                    tried: vec![client.clone()],
+                    client,
+                    cache_key: cache_key.clone(),
+                    left: 2,
+                }));
+            }
         }
         (body, client_status, clen, crange, normalized, true)
     };

@@ -553,6 +553,8 @@ pub fn run() {
             discord::discord_status,
             stream_info,
             stream::stream_prefetch,
+            stream::stream_diag,
+            ytm::ytm_selftest,
             feeds::feeds_home,
             feeds::feeds_open,
             feeds::wave_ym_start,

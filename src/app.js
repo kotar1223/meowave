@@ -42,11 +42,11 @@ function bootFinish(){
 const I18N={
 ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа","nav.settings":"Настройки","nav.more":"Ещё","nav.back":"Назад","srv.title":"Сервисы поиска","srv.btn":"Сервисы","srv.active":"Сервисы","eq.title":"Эквалайзер и Звук","set.sp.t":"3D Пространственный звук","import.ph":"Spotify, YouTube Music, music.yandex.ru/users/.../playlists/... или SoundCloud","import.name":"Название плейлиста",
 "top.ph":"Поиск по всем сервисам",
-"wv.tune":"Настроить","wv.src":"Откуда волна","wv.src.auto":"Авто","wv.div":"Характер","wv.div.favorite":"Любимое","wv.div.discover":"Незнакомое","wv.div.popular":"Популярное","wv.mood":"Настроение","wv.mood.active":"Бодрое","wv.mood.fun":"Весёлое","wv.mood.calm":"Спокойное","wv.mood.sad":"Грустное","wv.lang":"Язык","wv.lang.russian":"Русский","wv.lang.not-russian":"Иностранный","wv.lang.without-words":"Без слов","wv.restart":"Волна перестроена","wv.ym.fail":"Моя волна Яндекса не ответила — собираем волну из ваших треков","wv.none":"Подключите сервис, чтобы запустить волну","wv.from":"Моя волна · {s}",
+"wv.tune":"Регулировка","wv.src":"Откуда волна","wv.src.auto":"Авто","wv.div":"Характер","wv.div.favorite":"Любимое","wv.div.discover":"Незнакомое","wv.div.popular":"Популярное","wv.mood":"Настроение","wv.mood.active":"Бодрое","wv.mood.fun":"Весёлое","wv.mood.calm":"Спокойное","wv.mood.sad":"Грустное","wv.lang":"Язык","wv.lang.russian":"Русский","wv.lang.not-russian":"Иностранный","wv.lang.without-words":"Без слов","wv.restart":"Волна перестроена","wv.ym.fail":"Моя волна Яндекса не ответила — собираем волну из ваших треков","wv.none":"Подключите сервис, чтобы запустить волну","wv.from":"Моя волна · {s}",
 "hs.t":"Подборки","hs.load":"Загружаем подборки…","hs.err":"Не удалось загрузить подборки","hs.retry":"Повторить","hs.empty":"Здесь пока пусто","hs.ymtok":"Для подборок Яндекса нужен токен (Настройки → Аккаунты)",
 "dv.back":"Назад","dv.play":"Слушать","dv.shuffle":"Перемешать","dv.save":"В медиатеку","dv.saved":"Сохранено в плейлисты","dv.load":"Открываем…","dv.err":"Не удалось открыть","dv.tracks":"Треки","dv.top":"Популярные треки","dv.albums":"Альбомы","dv.singles":"Синглы и EP","dv.related":"Похожие артисты","dv.about":"Об артисте","dv.monthly":"{n} слушателей в месяц","dv.followers":"{n} подписчиков","dv.cities":"Где слушают","dv.follow":"Отслеживать","dv.following":"Вы отслеживаете","dv.lib":"В вашей медиатеке","dv.radio":"Радио артиста","dv.plays":"{n} прослушиваний","dv.src":"Данные: {s}",
 "fps.align.r":"Справа","set.wall":"Обои приложения","set.wall.s":"Картинка, GIF или видео за всем интерфейсом","wall.none":"Не выбраны","wall.file":"Файл","wall.url":"По ссылке","wall.clear":"Убрать","wall.dim":"Затемнение","wall.blur":"Размытие","wall.url.ask":"Ссылка на картинку, GIF или видео (https://…)","wall.url.bad":"Нужна ссылка https:// на картинку или видео",
-"wv.any":"Любое","wv.lang.any":"Любой","wv.cap":"Волна","wv.mix":"Из ваших треков · {s}","dv.verified":"Подтверждённый артист","dv.rank":"#{n} в мире","dv.gallery":"Галерея","dv.popular":"Популярные релизы","dv.more":"Ещё","wall.set":"Обои установлены","drop.files":"Добавлено файлов: {n}",
+"snk.close":"Закрыть","fail.more":"Подробнее","fail.other":"Другой источник","fail.t":"Почему трек не играет","fail.s":"Всё, что приложение знает о сбое. Если повторяется — скопируйте и пришлите разработчику.","fail.copy":"Копировать","fail.copied":"Скопировано","fail.src":"Источник","fail.probe":"Проверка потока","fail.none":"Подробностей нет: сервис ответил, но файл не воспроизвёлся.","src.t":"Другой источник","src.s":"Тот же трек на других сервисах — выберите, откуда играть.","src.load":"Ищем копии трека…","src.none":"Других источников не нашлось","src.exact":"Точно","src.close":"Похоже","src.maybe":"Другая версия?","src.now":"Играет из: {s}","ytc.t":"Проверка YouTube Music","ytc.s":"Спрашивает каждый клиент YouTube, отдаёт ли он звук на ваше подключение, и проверяет начало и середину файла. Если YouTube Music не играет — пришлите результат.","ytc.run":"Проверить YouTube Music","ytc.btn":"Проверить","ytc.busy":"Проверяем клиенты YouTube… это займёт до минуты","ytc.ok":"Работает","ytc.part":"Только начало","ytc.bad":"Не отдаёт","ytc.sum.ok":"Звук целиком отдают клиенты: {n} из {m} — YouTube Music должен играть","ytc.sum.bad":"Ни один клиент не отдаёт звук целиком. Обычно виноват VPN или общий IP — смените сервер или выключите VPN","ytc.desk":"Проверка работает только в приложении","ytc.copy":"Копировать отчёт","ytc.formats":"форматов: {n}","ytc.start":"начало","ytc.deep":"середина","wv.sheet":"Регулировка волны","wv.sheet.s":"Меняется сразу — играющая волна перестроится на ходу","wv.sheet.def":"Настройки по умолчанию","wv.reset":"Сбросить","wv.done":"Готово","wv.live":"Моя волна","wv.now":"Сейчас играет","wv.next":"Дальше","wv.resume":"Продолжить","wv.src.auto.s":"Яндекс, если подключён, иначе другие сервисы","wv.src.ym.s":"Моя волна Яндекса — знает ваши вкусы","wv.src.mix.s":"Из ваших треков и похожих на них","wv.div.default.s":"Любимое и новое вперемешку","wv.div.favorite.s":"Чаще то, что вы уже любите","wv.div.discover.s":"Больше незнакомых артистов","wv.div.popular.s":"Хиты и то, что слушают все","wv.mood.all.s":"Волна подстроится сама","wv.mood.active.s":"Энергично и в ритм","wv.mood.fun.s":"Легко и солнечно","wv.mood.calm.s":"Чтобы выдохнуть","wv.mood.sad.s":"Для дождливого вечера","mini.t":"Мини-плеер","mini.on":"Мини-плеер поверх окон (Ctrl+M)","mini.exit":"Развернуть (Ctrl+M)","mini.pin":"Поверх всех окон","mini.pin.on":"Мини-плеер поверх всех окон","mini.pin.off":"Мини-плеер как обычное окно","mini.idle":"Ничего не играет","mini.idle.s":"Запустите волну или трек","mini.seek":"Позиция","mini.dis":"Не нравится","mini.err":"Не удалось переключить мини-плеер","wv.any":"Любое","wv.lang.any":"Любой","wv.cap":"Волна","wv.mix":"Из ваших треков · {s}","dv.verified":"Подтверждённый артист","dv.rank":"#{n} в мире","dv.gallery":"Галерея","dv.popular":"Популярные релизы","dv.more":"Ещё","wall.set":"Обои установлены","drop.files":"Добавлено файлов: {n}",
 "set.covf":"Обложка следует за курсором","set.covf.s":"Лёгкий наклон обложки в полноэкранном плеере",
 "drop.t":"Отпустите, чтобы включить","drop.s":"Ссылка на трек, альбом или плейлист: YouTube Music, Spotify, Яндекс Музыка, SoundCloud, Deezer","drop.busy":"Открываем ссылку…","drop.bad":"Эту ссылку не получилось открыть","drop.list":"«{n}»: {c} треков в очереди","drop.one":"Играет: {n}",
 "home.t":"Тишина. Поле ждёт.","home.s":"Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.","home.start":"Запустить волну",
@@ -180,7 +180,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "hs.t":"Collections","hs.load":"Loading collections…","hs.err":"Could not load collections","hs.retry":"Retry","hs.empty":"Nothing here yet","hs.ymtok":"Yandex collections need a token (Settings → Accounts)",
 "dv.back":"Back","dv.play":"Play","dv.shuffle":"Shuffle","dv.save":"Add to library","dv.saved":"Saved to playlists","dv.load":"Opening…","dv.err":"Could not open","dv.tracks":"Tracks","dv.top":"Popular tracks","dv.albums":"Albums","dv.singles":"Singles & EPs","dv.related":"Fans also like","dv.about":"About","dv.monthly":"{n} monthly listeners","dv.followers":"{n} followers","dv.cities":"Where people listen","dv.follow":"Follow","dv.following":"Following","dv.lib":"In your library","dv.radio":"Artist radio","dv.plays":"{n} plays","dv.src":"Data: {s}",
 "fps.align.r":"Right","set.wall":"App wallpaper","set.wall.s":"An image, GIF or video behind the whole interface","wall.none":"None","wall.file":"File","wall.url":"From link","wall.clear":"Remove","wall.dim":"Dim","wall.blur":"Blur","wall.url.ask":"Link to an image, GIF or video (https://…)","wall.url.bad":"Needs an https:// link to an image or video",
-"wv.any":"Any","wv.lang.any":"Any","wv.cap":"Wave","wv.mix":"From your tracks · {s}","dv.verified":"Verified artist","dv.rank":"#{n} in the world","dv.gallery":"Gallery","dv.popular":"Popular releases","dv.more":"More","wall.set":"Wallpaper set","drop.files":"Files added: {n}",
+"snk.close":"Dismiss","fail.more":"Details","fail.other":"Other source","fail.t":"Why the track did not play","fail.s":"Everything the app knows about the failure. If it keeps happening, copy it and send it to the developer.","fail.copy":"Copy","fail.copied":"Copied","fail.src":"Source","fail.probe":"Stream check","fail.none":"No details: the service answered, but the file did not play.","src.t":"Other source","src.s":"The same track on other services — pick where to play it from.","src.load":"Looking for copies of the track…","src.none":"No other source found","src.exact":"Exact","src.close":"Close","src.maybe":"Other version?","src.now":"Playing from {s}","ytc.t":"YouTube Music check","ytc.s":"Asks every YouTube client whether it serves audio to your connection and checks the start and the middle of the file. If YouTube Music does not play, send the result.","ytc.run":"Check YouTube Music","ytc.btn":"Run check","ytc.busy":"Checking YouTube clients… this can take up to a minute","ytc.ok":"Works","ytc.part":"Start only","ytc.bad":"Refused","ytc.sum.ok":"{n} of {m} clients serve the whole file — YouTube Music should play","ytc.sum.bad":"No client serves the whole file. Usually a VPN or a shared IP — switch the server or turn the VPN off","ytc.desk":"The check only works in the desktop app","ytc.copy":"Copy report","ytc.formats":"formats: {n}","ytc.start":"start","ytc.deep":"middle","wv.sheet":"Tune your wave","wv.sheet.s":"Applies instantly — a playing wave rebuilds on the fly","wv.sheet.def":"Default settings","wv.reset":"Reset","wv.done":"Done","wv.live":"My Wave","wv.now":"Now playing","wv.next":"Up next","wv.resume":"Resume","wv.src.auto.s":"Yandex if connected, otherwise the other services","wv.src.ym.s":"Yandex My Wave — knows your taste","wv.src.mix.s":"From your tracks and ones like them","wv.div.default.s":"Favourites and new music mixed","wv.div.favorite.s":"More of what you already love","wv.div.discover.s":"More artists you have not heard","wv.div.popular.s":"Hits and what everyone plays","wv.mood.all.s":"The wave adapts on its own","wv.mood.active.s":"Energetic, on the beat","wv.mood.fun.s":"Light and sunny","wv.mood.calm.s":"To breathe out","wv.mood.sad.s":"For a rainy evening","mini.t":"Mini player","mini.on":"Mini player on top (Ctrl+M)","mini.exit":"Expand (Ctrl+M)","mini.pin":"Always on top","mini.pin.on":"Mini player stays on top","mini.pin.off":"Mini player as a normal window","mini.idle":"Nothing playing","mini.idle.s":"Start the wave or a track","mini.seek":"Position","mini.dis":"Dislike","mini.err":"Could not switch the mini player","wv.any":"Any","wv.lang.any":"Any","wv.cap":"Wave","wv.mix":"From your tracks · {s}","dv.verified":"Verified artist","dv.rank":"#{n} in the world","dv.gallery":"Gallery","dv.popular":"Popular releases","dv.more":"More","wall.set":"Wallpaper set","drop.files":"Files added: {n}",
 "set.covf":"Cover follows the cursor","set.covf.s":"A slight tilt of the cover in the fullscreen player",
 "drop.t":"Drop to play","drop.s":"A track, album or playlist link: YouTube Music, Spotify, Yandex Music, SoundCloud, Deezer","drop.busy":"Opening the link…","drop.bad":"Could not open this link","drop.list":"“{n}”: {c} tracks queued","drop.one":"Playing: {n}",
 "home.t":"Silence. The field waits.","home.s":"Start the wave: the stream builds from your artists, cover and queue open fullscreen.","home.start":"Start the wave",
@@ -647,21 +647,43 @@ document.addEventListener("keydown",e=>{
 
 let lastToastText = "";
 let lastToastAt = 0;
-function toast(msg,ms=3200){
- const box=document.getElementById("toasts");if(!box||!msg)return;
+/* MD3 snackbar. `opt.actions` ([{label,run}]) turns a notice into one the
+   user can act on — "Playback failed" alone was a dead end. Actions keep the
+   snackbar up while the pointer is over it, and it returns a handle so a
+   caller can dismiss it early. */
+function toast(msg,ms=3200,opt){
+ const box=document.getElementById("toasts");if(!box||!msg)return null;
+ const acts=Array.isArray(opt?.actions)?opt.actions.filter(a=>a&&a.label):[];
  const now=Date.now();
- if(msg===lastToastText && now-lastToastAt<3000)return;
+ if(!acts.length&&msg===lastToastText&&now-lastToastAt<3000)return null;
  while(box.children.length>=3){
   box.removeChild(box.firstChild);
  }
  lastToastText=msg;
  lastToastAt=now;
  const el=document.createElement("div");el.className="toast";
- const iconName=/ошибк|не удалось|fail|error|запрещ/i.test(msg)?"error":(/сохран|готов|успеш|done|copied|скопир/i.test(msg)?"check_circle":"info");
- el.innerHTML=`<span class="material-symbols-rounded toast-icon" aria-hidden="true">${iconName}</span><span>${esc(msg)}</span>`;
+ el.setAttribute("role",acts.length?"alert":"status");
+ const iconName=opt?.icon||(/ошибк|не удалось|fail|error|запрещ/i.test(msg)?"error":(/сохран|готов|успеш|done|copied|скопир/i.test(msg)?"check_circle":"info"));
+ el.innerHTML=`<span class="material-symbols-rounded toast-icon" aria-hidden="true">${esc(iconName)}</span><span class="toast-msg">${esc(msg)}</span>`;
  if(iconName==="error")el.classList.add("err");
+ let tm=0;
+ const dismiss=()=>{clearTimeout(tm);if(el.classList.contains("out"))return;el.classList.add("out");setTimeout(()=>el.remove(),320)};
+ const arm=()=>{clearTimeout(tm);tm=setTimeout(dismiss,ms)};
+ if(acts.length){
+  el.classList.add("has-acts");
+  const row=document.createElement("span");row.className="toast-acts";
+  for(const a of acts){
+   const b=document.createElement("button");b.type="button";b.className="toast-act";b.textContent=a.label;
+   b.addEventListener("click",()=>{dismiss();try{a.run?.()}catch(e){console.warn("snackbar action:",e)}});
+   row.appendChild(b)}
+  const x=document.createElement("button");x.type="button";x.className="toast-x";x.setAttribute("aria-label",t("snk.close"));
+  x.innerHTML='<span class="material-symbols-rounded" aria-hidden="true">close</span>';x.addEventListener("click",dismiss);
+  row.appendChild(x);el.appendChild(row);
+  el.addEventListener("pointerenter",()=>clearTimeout(tm));
+  el.addEventListener("pointerleave",arm)}
  box.appendChild(el);
- setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),320)},ms)}
+ arm();
+ return {el,dismiss}}
 const icons=()=>(window.m3Icons?.createIcons?window.m3Icons.createIcons():(window.lucide&&lucide.createIcons()));
 /* The font-picker families load from Google Fonts asynchronously: media=print
    keeps the CDN stylesheet out of the render-blocking set, and this flip to
@@ -4295,7 +4317,7 @@ function sync(){
   clearTimeout(sync.pt);sync.pt=setTimeout(()=>{if(typeof presBeat==="function")presBeat(false)},2500);
   const name=S.playing?"pause":"play";
   setPlayIcon(document.getElementById("play"),name,18);
-  document.getElementById("hero").classList.toggle("fade",S.playing);
+  if(typeof window.paintHero==="function")window.paintHero();
   F.mode=BOOT.done?(S.playing?"flow":"cloud"):"gather";
   const fpc=document.getElementById("fpc");
   if(fpc)fpc.dataset.playing=S.playing?"true":"false";
@@ -4927,6 +4949,7 @@ function openDockSheet(open){
 window.openDockSheet=openDockSheet;
 /* The topmost dismissible layer, for Escape. */
 function closeTopLayer(){
+ if(typeof window.mwCloseLayer==="function"&&window.mwCloseLayer())return true;
  const pop=document.querySelector("#sleep-pop,#src-pop");
  if(pop){pop.remove();return true}
  if(srvDdSheet&&!srvDdSheet.hidden){toggleSrvDropdown(false);srvDdBtn?.focus();return true}
@@ -6082,6 +6105,8 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  if(!sameTrack(tr,S.current))return;
  const why=await probeStream(url);
  S.playing=false;sync();
+ /* m3.js turns this into a snackbar with "Details" and "Other source". */
+ if(typeof window.mwFailSnack==="function"){try{window.mwFailSnack(tr,url,why);return}catch(e){console.warn(e)}}
  toast(why.ok?t("load.err"):`${t("load.err")} — ${humanStreamError(why.why)}`,6500);
 }
 /* The proxy answers with the upstream's own words; these are the ones a user
@@ -6094,6 +6119,8 @@ function humanStreamError(why){
  if(/UNPLAYABLE|not available|unavailable|region|country|geo/i.test(w))return ru?"Трек недоступен в вашем регионе":"This track is not available in your region";
  if(/timeout|timed out/i.test(w))return ru?"Сервис не ответил вовремя":"The service did not answer in time";
  if(/no token|token/i.test(w))return ru?"Нужен вход в сервис (Настройки → Аккаунты)":"Sign-in to the service is required (Settings → Accounts)";
+ if(/HTTP 40[13]|refused the stream/i.test(w))return ru?"Сервер отказался отдавать файл":"The media server refused the file";
+ if(/Failed to fetch|NetworkError|Load failed|did not answer/i.test(w))return ru?"Нет связи с сервисом":"Could not reach the service";
  return w}
 /* Pure fetch: no debounce and no "is this still the newest query" check. Those
    belong to the search box, and keeping them here broke startWave(), which
@@ -10690,7 +10717,9 @@ function initSearchReveal(){
  const clearBtn=document.getElementById("search-clear");
  if(!flow||!q)return;
 
- const phrases = (LANG === "en") ? [
+ /* Read per use, not once at boot: switching the language left the search
+    box cycling Russian hints until the app restarted. */
+ const PHRASES_EN=[
   "Search across all services, tracks, artists…",
   "Daft Punk — Get Lucky",
   "The Weeknd — Blinding Lights",
@@ -10700,7 +10729,8 @@ function initSearchReveal(){
   "Radiohead — Creep",
   "Nirvana — Smells Like Teen Spirit",
   "Coldplay — Viva La Vida"
- ] : [
+ ];
+ const PHRASES_RU=[
   "Поиск по всем сервисам, трекам, артистам…",
   "Кино — Звезда по имени Солнце",
   "Daft Punk — Get Lucky",
@@ -10713,6 +10743,7 @@ function initSearchReveal(){
   "Нервы — Батареи",
   "Miyagi & Эндшпиль — I Got Love"
  ];
+ const phrasesNow=()=>LANG==="en"?PHRASES_EN:PHRASES_RU;
 
  let phraseIdx=0;
  let progress=0; // 0.0 to 1.0
@@ -10731,7 +10762,7 @@ function initSearchReveal(){
    cancelAnimationFrame(rafId);
    rafId=0;
   }
-  setFlowContent(phrases[0], 100);
+  setFlowContent(phrasesNow()[0], 100);
   flow.style.opacity="1";
   flow.style.visibility="visible";
  }
@@ -10759,7 +10790,7 @@ function initSearchReveal(){
   flow.style.opacity="1";
   flow.style.visibility="visible";
 
-  const phrase=phrases[phraseIdx%phrases.length];
+  const phrases=phrasesNow();const phrase=phrases[phraseIdx%phrases.length];
 
   if(state==="filling"){
    // Continuous fluid velocity without stepped timeouts:
@@ -10782,10 +10813,10 @@ function initSearchReveal(){
    }
   }else if(state==="fading"){
    if(now-stateStart>300){
-    phraseIdx=(phraseIdx+1)%phrases.length;
+    phraseIdx=(phraseIdx+1)%phrasesNow().length;
     progress=0;
     state="filling";
-    setFlowContent(phrases[phraseIdx%phrases.length], 0);
+    setFlowContent(phrasesNow()[phraseIdx%phrasesNow().length], 0);
     flow.style.opacity="1";
    }
   }
@@ -10823,7 +10854,7 @@ function initSearchReveal(){
  if(BOOT.reduce){
   stopFlowAnimation();
  } else {
-  setFlowContent(phrases[0], 0);
+  setFlowContent(phrasesNow()[0], 0);
   rafId=requestAnimationFrame(frame);
  }
 }

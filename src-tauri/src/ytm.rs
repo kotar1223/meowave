@@ -35,7 +35,13 @@ pub const VR_UA: &str =
 /// audio formats and every one of them a plain `url` (verified against a batch
 /// of ids — both mp4 and webm containers, ranged GET returns 206).
 const ANDROID_UA: &str = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip";
-pub const IOS_UA: &str = "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)";
+/// 19.29.1 is refused outright now: HTTP 400 "Precondition check failed"
+/// for every id, checked against the live endpoint. 20.10.4 is accepted.
+pub const IOS_UA: &str = "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)";
+/// The Android app without `androidSdkVersion` in its context. YouTube holds
+/// that variant to the older rules: its URLs are plain and, unlike the full
+/// Android client's, are not cut off for lack of a PO token.
+pub const SDKLESS_UA: &str = "com.google.android.youtube/20.10.38 (Linux; U; Android 11) gzip";
 pub const WEB_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36";
 
 /// UA for the media fetch itself: googlevideo only serves a stream to a client
@@ -46,27 +52,186 @@ pub const MEDIA_UA: &str = ANDROID_UA;
 #[allow(dead_code)]
 pub const TV_UA: &str = "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/2.2 Chrome/69.0.3497.106 TV Safari/537.36";
 
-/// Clients tried against the player endpoint, first that answers OK wins.
+/// Clients tried against the player endpoint, in this order until one answers
+/// OK *and* its URL survives the deep-range probe (see `probe_deep`).
 ///
-/// Re-measured for this round: ANDROID, ANDROID_VR 1.61.48 and IOS answer with
-/// plain URLs from a residential connection. ANDROID_VR 1.65.10 answers too,
-/// but its URLs 403 past the first megabytes without a PO token — the song
-/// started and then died, which looked like a network fault. ANDROID_MUSIC has
-/// answered LOGIN_REQUIRED for every id for months and the TV embedded client
-/// only says "page needs to be reloaded", so they cost two round trips each
-/// before anything useful happened and are gone from the list.
+/// Which guest clients still work changes every few weeks, and the failure is
+/// rarely a clean refusal: a client can answer OK with plain URLs that serve
+/// the first megabyte or two and then 403 — no PO token — so the song starts
+/// and dies. That is the "Playback failed" a few seconds in. So the order
+/// below is only the starting point: `order()` puts the client that last
+/// worked first and the ones that recently failed last, for the session.
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
-    ("ANDROID", ANDROID_UA),
     ("ANDROID_VR", VR_UA),
+    ("ANDROID_SDKLESS", SDKLESS_UA),
     ("IOS", IOS_UA),
+    ("ANDROID", ANDROID_UA),
     ("ANDROID_TESTSUITE", "Google-Test-Suite"),
 ];
+
+/// What the session has learned about each client: when it last produced a
+/// working URL and when it last failed (refusal, deep-range 403, or a stream
+/// that died mid-track).
+#[derive(Default, Clone, Copy)]
+struct Health {
+    ok_at: Option<std::time::Instant>,
+    fail_at: Option<std::time::Instant>,
+    fails: u32,
+}
+
+static HEALTH: std::sync::Mutex<Option<std::collections::HashMap<&'static str, Health>>> = std::sync::Mutex::new(None);
+/// A failure older than this no longer counts against a client.
+const FAIL_MEMORY: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+
+fn health_of(client: &str) -> Health {
+    HEALTH
+        .lock()
+        .ok()
+        .and_then(|g| g.as_ref().and_then(|m| m.get(client).copied()))
+        .unwrap_or_default()
+}
+
+fn health_set(client: &str, ok: bool) {
+    let Some(name) = PLAYER_CLIENTS.iter().map(|(n, _)| *n).find(|n| *n == client) else {
+        return;
+    };
+    if let Ok(mut g) = HEALTH.lock() {
+        let h = g.get_or_insert_with(Default::default).entry(name).or_default();
+        let now = std::time::Instant::now();
+        if ok {
+            h.ok_at = Some(now);
+            h.fails = 0;
+        } else {
+            h.fail_at = Some(now);
+            h.fails = h.fails.saturating_add(1);
+        }
+    }
+}
+
+/// Called by the stream proxy when googlevideo refuses a URL this client
+/// minted, so the next resolve starts with a different one.
+pub fn note_media_failure(client: &str, why: &str) {
+    health_set(client, false);
+    eprintln!("[meowave] ytm client {client} failed at the media host: {why}");
+}
+
+/// `PLAYER_CLIENTS` in the order worth trying now.
+fn order() -> Vec<(&'static str, &'static str)> {
+    let mut list: Vec<(usize, (&'static str, &'static str))> = PLAYER_CLIENTS.iter().copied().enumerate().collect();
+    list.sort_by_key(|(i, (name, _))| {
+        let h = health_of(name);
+        let failed = h.fail_at.map(|t| t.elapsed() < FAIL_MEMORY).unwrap_or(false)
+            && h.ok_at.map(|ok| h.fail_at.is_some_and(|f| f > ok)).unwrap_or(true);
+        let fresh_ok = h.ok_at.map(|t| t.elapsed() < FAIL_MEMORY).unwrap_or(false) && !failed;
+        (failed as u8, !fresh_ok as u8, *i)
+    });
+    list.into_iter().map(|(_, c)| c).collect()
+}
+
+/// The last attempts per video, newest last: what the settings self-test and
+/// the "Details" button under a failed track show.
+static DIAG: std::sync::Mutex<Option<std::collections::HashMap<String, Vec<String>>>> = std::sync::Mutex::new(None);
+
+pub fn diag_note(video_id: &str, line: String) {
+    if let Ok(mut g) = DIAG.lock() {
+        let m = g.get_or_insert_with(Default::default);
+        if m.len() > 64 && !m.contains_key(video_id) {
+            m.clear();
+        }
+        let v = m.entry(video_id.to_string()).or_default();
+        v.push(line);
+        let n = v.len();
+        if n > 16 {
+            v.drain(..n - 16);
+        }
+    }
+}
+
+pub fn diag_for(video_id: &str) -> Vec<String> {
+    DIAG.lock()
+        .ok()
+        .and_then(|g| g.as_ref().and_then(|m| m.get(video_id).cloned()))
+        .unwrap_or_default()
+}
+
+/// Outcome of fetching a few bytes from deep inside a stream.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Probe {
+    /// 206/200: the URL serves the whole file.
+    Ok,
+    /// 401/403/410: the URL only serves the start (or nothing).
+    Denied(u16),
+    /// Timeout, network error or an odd status: no verdict.
+    Unknown,
+}
+
+/// The byte offset to probe: three quarters into the file, where a URL that
+/// only serves the beginning has long stopped answering.
+fn deep_offset(clen: Option<u64>) -> u64 {
+    match clen {
+        Some(n) if n > 8192 => n / 4 * 3,
+        Some(_) => 0,
+        None => 1_500_000,
+    }
+}
+
+/// `contentLength` of a format, or the `clen` parameter of its URL.
+pub fn clen_of(url: &str, format: Option<&Value>) -> Option<u64> {
+    if let Some(n) = format
+        .and_then(|f| f.get("contentLength"))
+        .and_then(|v| v.as_str().and_then(|s| s.parse().ok()).or_else(|| v.as_u64()))
+    {
+        return Some(n);
+    }
+    url_param(url, "clen").and_then(|v| v.parse().ok())
+}
+
+pub fn url_param(url: &str, key: &str) -> Option<String> {
+    let query = url.split_once('?')?.1;
+    let query = query.split('#').next().unwrap_or(query);
+    query.split('&').find_map(|kv| {
+        let (k, v) = kv.split_once('=')?;
+        (k == key).then(|| v.to_string())
+    })
+}
+
+pub async fn probe_deep(url: &str, ua: &str, clen: Option<u64>) -> (Probe, u16) {
+    let start = deep_offset(clen);
+    let Ok(c) = crate::api::media_client() else {
+        return (Probe::Unknown, 0);
+    };
+    let req = c
+        .get(url)
+        .header("User-Agent", ua)
+        .header("Range", format!("bytes={start}-{}", start + 2047));
+    let resp = match tokio::time::timeout(std::time::Duration::from_secs(8), req.send()).await {
+        Ok(Ok(r)) => r,
+        _ => return (Probe::Unknown, 0),
+    };
+    let code = resp.status().as_u16();
+    let verdict = match code {
+        200 | 206 => {
+            // A refusal can also arrive as an empty 200; a real range has bytes.
+            match tokio::time::timeout(std::time::Duration::from_secs(8), resp.bytes()).await {
+                Ok(Ok(b)) if !b.is_empty() => Probe::Ok,
+                Ok(Ok(_)) => Probe::Denied(code),
+                _ => Probe::Unknown,
+            }
+        }
+        // Past the end of a short file: nothing to learn, not a refusal.
+        416 => Probe::Ok,
+        401 | 403 | 410 => Probe::Denied(code),
+        _ => Probe::Unknown,
+    };
+    (verdict, code)
+}
 
 /// The UA a URL must be fetched with: googlevideo checks that the media
 /// request comes from the same kind of client the URL was minted for.
 pub fn media_ua_for(client: &str) -> &'static str {
     match client {
         "ANDROID_VR" => VR_UA,
+        "ANDROID_SDKLESS" => SDKLESS_UA,
         "IOS" => IOS_UA,
         "ANDROID_TESTSUITE" => "Google-Test-Suite",
         _ => ANDROID_UA,
@@ -137,11 +302,20 @@ fn player_ctx(name: &str, visitor: Option<&str>) -> Value {
         }),
         "IOS" => json!({
             "clientName": "IOS",
-            "clientVersion": "19.29.1",
+            "clientVersion": "20.10.4",
             "deviceMake": "Apple",
             "deviceModel": "iPhone16,2",
-            "osName": "iOS",
-            "osVersion": "17.5.1.21F90",
+            "osName": "iPhone",
+            "osVersion": "18.3.2.22D82",
+            "hl": "en",
+            "gl": "US"
+        }),
+        // Same app as ANDROID, minus androidSdkVersion: see SDKLESS_UA.
+        "ANDROID_SDKLESS" => json!({
+            "clientName": "ANDROID",
+            "clientVersion": "20.10.38",
+            "osName": "Android",
+            "osVersion": "11",
             "hl": "en",
             "gl": "US"
         }),
@@ -837,6 +1011,9 @@ pub struct StreamPick {
     pub bitrate: u64,
     /// Player client that answered; the media fetch must use its UA.
     pub client: String,
+    /// Format id: the same itag from another client is the same file, byte
+    /// for byte, which is what lets the proxy resume a dead stream elsewhere.
+    pub itag: u64,
 }
 
 async fn player_response(
@@ -867,135 +1044,85 @@ fn status_of(r: &Value) -> String {
         .to_string()
 }
 
-/// Best audio-only stream for a video id.
-pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, String> {
-    // Refusals are handled in two steps:
-    //
-    //   1. A visitor id that has already answered for another video very often
-    //      starts returning UNPLAYABLE / LOGIN_REQUIRED for tracks that play
-    //      perfectly well on a fresh one. Observed reliably: search a query,
-    //      resolve the first hit, then resolve the second one and it "does not
-    //      exist". So mint a new guest and retry the same client once — each
-    //      attempt is a new guest, which is what the real app does after a
-    //      session expires.
-    //
-    //   2. If the client itself has fallen out of favour, no amount of new
-    //      visitors helps: that is the current state of ANDROID_VR, which
-    //      answers LOGIN_REQUIRED for every video. Then the next client in
-    //      PLAYER_CLIENTS is tried.
-    //
-    // The mint itself is best-effort (see `visitor_data`): if it fails we still
-    // ask the player, because an anonymous answer beats no answer at all.
-    let mut visitor = visitor_data().await;
-    let mut resp: Option<Value> = None;
-    let mut ok = false;
-    let mut answered = "ANDROID";
-
-    'clients: for (client, ua) in PLAYER_CLIENTS {
-        for attempt in 0..2u8 {
-            let r = match player_response(video_id, visitor.as_deref(), client, ua).await {
-                Ok(res) => res,
-                Err(_) => continue,
-            };
-            remember_visitor(&r);
-            let has_playable_audio = r
-                .pointer("/streamingData/adaptiveFormats")
-                .and_then(|f| f.as_array())
-                .map(|formats| {
-                    formats.iter().any(|f| {
-                        f.get("mimeType")
-                            .and_then(|m| m.as_str())
-                            .map(|m| m.starts_with("audio/"))
-                            .unwrap_or(false)
-                            && f.get("url").and_then(|u| u.as_str()).is_some()
-                    })
+/// Audio formats with a plain `url`: adaptive audio first, muxed formats
+/// with an audio track only when there is nothing else.
+fn audio_formats(resp: &Value) -> Vec<&Value> {
+    let with_url = |f: &&Value| f.get("url").and_then(|u| u.as_str()).is_some();
+    let mime = |f: &Value| f.get("mimeType").and_then(|m| m.as_str()).unwrap_or("").to_string();
+    let adaptive: Vec<&Value> = resp
+        .pointer("/streamingData/adaptiveFormats")
+        .and_then(|f| f.as_array())
+        .map(|a| a.iter().filter(|f| mime(f).starts_with("audio/")).filter(with_url).collect())
+        .unwrap_or_default();
+    if !adaptive.is_empty() {
+        return adaptive;
+    }
+    resp.pointer("/streamingData/formats")
+        .and_then(|f| f.as_array())
+        .map(|a| {
+            a.iter()
+                .filter(|f| {
+                    let m = mime(f);
+                    m.contains("audio") || m.contains("mp4a") || m.contains("opus")
                 })
-                .unwrap_or(false)
-                || r.pointer("/streamingData/formats")
-                    .and_then(|f| f.as_array())
-                    .map(|formats| {
-                        formats.iter().any(|f| {
-                            f.get("mimeType")
-                                .and_then(|m| m.as_str())
-                                .map(|m| m.contains("audio") || m.contains("mp4a") || m.contains("opus"))
-                                .unwrap_or(false)
-                                && f.get("url").and_then(|u| u.as_str()).is_some()
-                        })
-                    })
-                    .unwrap_or(false);
+                .filter(with_url)
+                .collect()
+        })
+        .unwrap_or_default()
+}
 
-            let good = status_of(&r) == "OK" && has_playable_audio;
-            resp = Some(r);
-            if good {
-                ok = true;
-                answered = *client;
-                break 'clients;
-            }
-            if attempt == 0 {
-                if let Ok(mut g) = VISITOR.lock() {
-                    *g = None;
+fn reason_of(r: &Value) -> String {
+    let status = status_of(r);
+    r.pointer("/playabilityStatus/reason")
+        .and_then(|v| v.as_str())
+        .map(|s| format!("{status} — {s}"))
+        .unwrap_or(status)
+}
+
+/// One client's answer for a video, after the visitor-id retry: the response
+/// when it is playable, the refusal text when not.
+async fn ask_client(video_id: &str, client: &str, ua: &str) -> Result<Value, String> {
+    // A visitor id that has already answered for another video very often
+    // starts returning UNPLAYABLE / LOGIN_REQUIRED for tracks that play fine
+    // on a fresh one, so a refusal is retried once with a new guest — what
+    // the real app does after a session expires. The mint itself is
+    // best-effort: an anonymous answer beats no answer at all.
+    let mut visitor = visitor_data().await;
+    let mut last = String::from("no answer");
+    for attempt in 0..2u8 {
+        match player_response(video_id, visitor.as_deref(), client, ua).await {
+            Ok(r) => {
+                remember_visitor(&r);
+                if status_of(&r) == "OK" && !audio_formats(&r).is_empty() {
+                    return Ok(r);
                 }
-                let fresh = visitor_data().await;
-                // Nothing to vary: the mint itself is unreachable, so a second
-                // identical anonymous call can only fail the same way.
-                if fresh.is_none() && visitor.is_none() {
-                    break;
-                }
-                visitor = fresh;
+                last = if status_of(&r) == "OK" {
+                    "OK, but no plain audio URL".to_string()
+                } else {
+                    reason_of(&r)
+                };
             }
+            Err(e) => last = e,
+        }
+        if attempt == 0 {
+            if let Ok(mut g) = VISITOR.lock() {
+                *g = None;
+            }
+            let fresh = visitor_data().await;
+            // Nothing to vary: a second identical anonymous call fails the same way.
+            if fresh.is_none() && visitor.is_none() {
+                break;
+            }
+            visitor = fresh;
         }
     }
+    Err(last)
+}
 
-    let resp = resp.ok_or("no answer from YouTube")?;
-    if !ok {
-        let status = status_of(&resp);
-        let reason = resp
-            .pointer("/playabilityStatus/reason")
-            .and_then(|r| r.as_str())
-            .unwrap_or(&status);
-        return Err(format!("YouTube will not play this track: {reason}"));
-    }
-
-    let mut audio: Vec<&Value> = Vec::new();
-
-    if let Some(formats) = resp.pointer("/streamingData/adaptiveFormats").and_then(|f| f.as_array()) {
-        for f in formats {
-            let is_audio = f.get("mimeType")
-                .and_then(|m| m.as_str())
-                .map(|m| m.starts_with("audio/"))
-                .unwrap_or(false);
-            if is_audio && f.get("url").is_some() {
-                audio.push(f);
-            }
-        }
-    }
-
-    // Fall back to combined formats containing audio if adaptive pure audio is missing
-    if audio.is_empty() {
-        if let Some(formats) = resp.pointer("/streamingData/formats").and_then(|f| f.as_array()) {
-            for f in formats {
-                let has_audio = f.get("mimeType")
-                    .and_then(|m| m.as_str())
-                    .map(|m| m.contains("audio") || m.contains("mp4a") || m.contains("opus"))
-                    .unwrap_or(false);
-                if has_audio && f.get("url").is_some() {
-                    audio.push(f);
-                }
-            }
-        }
-    }
-
-    if audio.is_empty() {
-        return Err("no plain audio stream available".into());
-    }
-
-    // Which container the webview can decode, then the quality flag — see
-    // pick_format.
-    let pick = pick_format(&audio, hq, fmt).ok_or("no audio stream")?;
-
-    Ok(StreamPick {
-        url: pick.get("url").and_then(|u| u.as_str()).ok_or("format has no url")?.to_string(),
-        mime: pick
+fn pick_of(f: &Value, client: &str) -> Option<StreamPick> {
+    Some(StreamPick {
+        url: f.get("url")?.as_str()?.to_string(),
+        mime: f
             .get("mimeType")
             .and_then(|m| m.as_str())
             .unwrap_or("audio/mp4")
@@ -1003,9 +1130,157 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
             .next()
             .unwrap_or("audio/mp4")
             .to_string(),
-        bitrate: bitrate(pick),
-        client: answered.to_string(),
+        bitrate: bitrate(f),
+        client: client.to_string(),
+        itag: f.get("itag").and_then(|i| i.as_u64()).unwrap_or(0),
     })
+}
+
+/// Best audio-only stream for a video id.
+///
+/// Every client in `order()` is asked in turn; the first whose URL also
+/// passes `probe_deep` wins. A client that answers OK but whose URL is cut
+/// off past the start is remembered as a last resort rather than used —
+/// that is the song that plays a few seconds and dies.
+pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, String> {
+    let mut refusals: Vec<String> = Vec::new();
+    let mut last_resort: Option<StreamPick> = None;
+    for (client, ua) in order() {
+        let resp = match ask_client(video_id, client, ua).await {
+            Ok(r) => r,
+            Err(why) => {
+                diag_note(video_id, format!("{client}: {why}"));
+                refusals.push(format!("{client}: {why}"));
+                if why.contains("LOGIN_REQUIRED") || why.contains("UNPLAYABLE") || why.contains("no plain audio") {
+                    health_set(client, false);
+                }
+                continue;
+            }
+        };
+        let audio = audio_formats(&resp);
+        let Some(f) = pick_format(&audio, hq, fmt) else { continue };
+        let Some(pick) = pick_of(f, client) else { continue };
+        let (probe, code) = probe_deep(&pick.url, media_ua_for(client), clen_of(&pick.url, Some(f))).await;
+        match probe {
+            Probe::Denied(_) => {
+                diag_note(video_id, format!("{client}: OK, but the URL is refused past the start (HTTP {code}, no PO token)"));
+                health_set(client, false);
+                if last_resort.is_none() {
+                    last_resort = Some(pick);
+                }
+            }
+            Probe::Ok | Probe::Unknown => {
+                let note = if probe == Probe::Ok { "OK, whole file reachable" } else { "OK (deep probe inconclusive)" };
+                diag_note(video_id, format!("{client}: {note}, itag {}", pick.itag));
+                if probe == Probe::Ok {
+                    health_set(client, true);
+                }
+                return Ok(pick);
+            }
+        }
+    }
+    // Better a stream that may die than none: the proxy then tries to resume
+    // it through another client (`stream_same_itag`).
+    if let Some(p) = last_resort {
+        return Ok(p);
+    }
+    let all = refusals.join("; ");
+    Err(if all.is_empty() {
+        "YouTube will not play this track: no client answered".to_string()
+    } else {
+        format!("YouTube will not play this track: {all}")
+    })
+}
+
+/// The same format from a client not yet tried, for resuming a stream that
+/// one client's URL stopped serving. Same itag means the same bytes, so the
+/// proxy continues at the very offset where the old URL failed.
+pub async fn stream_same_itag(video_id: &str, itag: u64, tried: &[String]) -> Result<StreamPick, String> {
+    for (client, ua) in order() {
+        if tried.iter().any(|t| t == client) {
+            continue;
+        }
+        let Ok(resp) = ask_client(video_id, client, ua).await else { continue };
+        let audio = audio_formats(&resp);
+        let found = audio
+            .iter()
+            .find(|f| f.get("itag").and_then(|i| i.as_u64()) == Some(itag))
+            .and_then(|f| pick_of(f, client));
+        if let Some(p) = found {
+            diag_note(video_id, format!("{client}: resumed the stream with itag {itag}"));
+            return Ok(p);
+        }
+    }
+    Err(format!("no other client serves itag {itag}"))
+}
+
+/// One row of the settings self-test.
+#[derive(Serialize)]
+pub struct SelfTest {
+    pub client: String,
+    pub status: String,
+    pub reason: String,
+    pub formats: usize,
+    /// HTTP status of the first bytes, 0 if not reached.
+    pub start: u16,
+    /// HTTP status of a range three quarters in, 0 if not reached.
+    pub deep: u16,
+    pub ms: u64,
+}
+
+/// Asks every client for one video and fetches the start and a deep range of
+/// its best audio format. Shows the user — and whoever reads their report —
+/// exactly which clients still work from their connection.
+#[tauri::command]
+pub async fn ytm_selftest(video_id: Option<String>) -> Result<Vec<SelfTest>, String> {
+    let id = video_id.filter(|v| !v.trim().is_empty()).unwrap_or_else(|| "dQw4w9WgXcQ".to_string());
+    let mut out = Vec::new();
+    for (client, ua) in PLAYER_CLIENTS.iter().copied() {
+        let t0 = std::time::Instant::now();
+        let mut row = SelfTest {
+            client: client.to_string(),
+            status: String::new(),
+            reason: String::new(),
+            formats: 0,
+            start: 0,
+            deep: 0,
+            ms: 0,
+        };
+        match player_response(&id, visitor_data().await.as_deref(), client, ua).await {
+            Ok(r) => {
+                row.status = status_of(&r);
+                row.reason = r
+                    .pointer("/playabilityStatus/reason")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let audio = audio_formats(&r);
+                row.formats = audio.len();
+                if let Some(f) = pick_format(&audio, true, "best") {
+                    if let Some(url) = f.get("url").and_then(|u| u.as_str()) {
+                        if let Ok(c) = crate::api::media_client() {
+                            let first = c
+                                .get(url)
+                                .header("User-Agent", media_ua_for(client))
+                                .header("Range", "bytes=0-2047")
+                                .send();
+                            if let Ok(Ok(resp)) = tokio::time::timeout(std::time::Duration::from_secs(8), first).await {
+                                row.start = resp.status().as_u16();
+                            }
+                        }
+                        row.deep = probe_deep(url, media_ua_for(client), clen_of(url, Some(f))).await.1;
+                    }
+                }
+            }
+            Err(e) => {
+                row.status = "ERROR".into();
+                row.reason = e;
+            }
+        }
+        row.ms = t0.elapsed().as_millis() as u64;
+        out.push(row);
+    }
+    Ok(out)
 }
 
 fn bitrate(f: &Value) -> u64 {
@@ -1134,8 +1409,55 @@ pub async fn lyrics_text(browse_id: &str) -> Result<Option<String>, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{continuation_token, pick_format};
+    use super::{clen_of, continuation_token, deep_offset, health_set, media_ua_for, order, pick_format, url_param, PLAYER_CLIENTS};
     use serde_json::json;
+
+    /// The failover reads the itag and the length straight off the signed
+    /// URL; a fragment the proxy appends must not leak into the value.
+    #[test]
+    fn reads_parameters_off_a_googlevideo_url() {
+        let u = "https://rr1.googlevideo.com/videoplayback?expire=1&itag=251&clen=4096000&mime=audio%2Fwebm#mwua=IOS";
+        assert_eq!(url_param(u, "itag").as_deref(), Some("251"));
+        assert_eq!(url_param(u, "mime").as_deref(), Some("audio%2Fwebm"));
+        assert_eq!(url_param(u, "nope"), None);
+        assert_eq!(url_param("https://x/no-query", "itag"), None);
+        assert_eq!(clen_of(u, None), Some(4_096_000));
+        // The format's own contentLength wins over the URL's.
+        assert_eq!(clen_of(u, Some(&json!({"contentLength": "123456"}))), Some(123_456));
+    }
+
+    /// The deep probe asks for a range three quarters in — where a URL that
+    /// only serves the first megabytes stops answering.
+    #[test]
+    fn deep_probe_lands_three_quarters_in() {
+        assert_eq!(deep_offset(Some(4_000_000)), 3_000_000);
+        assert_eq!(deep_offset(Some(1000)), 0);
+        assert_eq!(deep_offset(None), 1_500_000);
+    }
+
+    /// A client whose URLs were refused moves to the back of the line and
+    /// comes back once it works again.
+    #[test]
+    fn a_failed_client_is_asked_last_until_it_recovers() {
+        let first = PLAYER_CLIENTS[0].0;
+        health_set(first, false);
+        let now: Vec<&str> = order().into_iter().map(|(c, _)| c).collect();
+        assert_eq!(now.last().copied(), Some(first));
+        assert_eq!(now.len(), PLAYER_CLIENTS.len());
+        health_set(first, true);
+        let back: Vec<&str> = order().into_iter().map(|(c, _)| c).collect();
+        assert_eq!(back.first().copied(), Some(first));
+    }
+
+    /// Every client has a media user agent of its own: googlevideo checks it.
+    #[test]
+    fn every_client_has_its_own_media_user_agent() {
+        for (c, ua) in PLAYER_CLIENTS.iter().copied() {
+            assert!(!media_ua_for(c).is_empty(), "{c}");
+            assert!(!ua.is_empty(), "{c}");
+        }
+        assert_ne!(media_ua_for("IOS"), media_ua_for("ANDROID_VR"));
+    }
 
     /// A playlist longer than one response is only reachable through this
     /// token, and it is nested under a different name in each shelf shape.

@@ -149,23 +149,23 @@
 
     <div class="views">
       <div class="view" id="v-home" data-active="true">
-        <div class="hero" id="hero">
-          <h1 data-i18n="home.t">Тишина. Поле ждёт.</h1>
-          <p data-i18n="home.s">Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.</p>
+        <div class="hero" id="hero" data-state="idle">
+          <div class="hero-k" id="wavehint" aria-live="polite"></div>
+          <h1 id="hero-t">Тишина. Поле ждёт.</h1>
+          <p id="hero-s">Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.</p>
+          <small class="hero-next" id="hero-next" hidden></small>
           <div class="row2">
-            <button class="primary" id="start"><span class="material-symbols-rounded" style="font-size:18px">play_arrow</span><span data-i18n="home.start">Запустить волну</span></button>
-            <button class="btn wv-tune" id="wv-tune" aria-expanded="false" data-i18n-title="wv.tune" title="Настроить волну"><span class="material-symbols-rounded" style="font-size:18px">tune</span><span data-i18n="wv.tune">Настроить</span></button>
-            <span class="wavehint" id="wavehint"></span>
+            <button class="primary hero-go" id="start"><span class="material-symbols-rounded" style="font-size:20px">graphic_eq</span><span>Запустить волну</span></button>
+            <button class="m3b m3b-tonal wv-tune" id="wv-tune" aria-expanded="false" aria-haspopup="dialog" data-i18n-title="wv.sheet" title="Регулировка волны"><span class="material-symbols-rounded" style="font-size:20px">tune</span><span data-i18n="wv.tune">Регулировка</span></button>
+            <button class="m3i m3i-tonal" id="hero-skip" hidden data-i18n-title="np.next" title="Следующий" aria-label="next"><span class="material-symbols-rounded" style="font-size:22px">skip_next</span></button>
           </div>
-          <div class="wv-moods" id="wv-moods" role="group" aria-label="Настроение"></div>
-          <div class="wv-pop" id="wv-pop" hidden></div>
         </div>
         <section class="hsheet" id="hsheet" data-open="false" aria-label="Подборки">
           <div class="hs-grip" id="hs-grip" role="button" tabindex="0" aria-expanded="false">
             <i class="hs-bar" aria-hidden="true"></i>
             <span class="hs-title"><span class="material-symbols-rounded" style="font-size:18px">auto_awesome_motion</span><span data-i18n="hs.t">Подборки</span></span>
             <div class="hs-tabs" id="hs-tabs" role="tablist"></div>
-            <span class="material-symbols-rounded hs-chev" aria-hidden="true">expand_less</span>
+            <span class="hs-chev" aria-hidden="true"><span class="material-symbols-rounded">expand_less</span></span>
           </div>
           <div class="hs-body" id="hs-body"></div>
         </section>
@@ -620,6 +620,15 @@
               </div>
             </div>
           </div>
+          <div class="panel pane ytc-panel" id="ytc-panel">
+            <h3 data-i18n="ytc.t">Проверка YouTube Music</h3>
+            <p class="ph" data-i18n="ytc.s">Спрашивает каждый клиент YouTube, отдаёт ли он звук на ваше подключение, и проверяет начало и середину файла. Если YouTube Music не играет — пришлите результат.</p>
+            <div class="grow ytc-acts">
+              <button class="btn" id="ytc-run"><span class="material-symbols-rounded" style="font-size:18px">network_check</span> <span data-i18n="ytc.btn">Проверить</span></button>
+              <button class="btn" id="ytc-copy" hidden><span class="material-symbols-rounded" style="font-size:18px">content_copy</span> <span data-i18n="ytc.copy">Копировать отчёт</span></button>
+            </div>
+            <div class="m3-list ytc-out" id="ytc-out" role="list"></div>
+          </div>
           <div class="panel pane dc-panel">
             <h3 data-i18n="dc.t">Discord Rich Presence</h3>
             <p class="ph" data-i18n="dc.s">Показывает в профиле Discord, что сейчас играет: обложку, название и время. Нужен запущенный Discord (приложение, не браузер).</p>
@@ -1048,6 +1057,7 @@
 
 <script src="./fx.js" defer></script>
 <script src="./app.js" defer></script>
+<script src="./m3.js" defer></script>
 <script src="./discover.js" defer></script>
 </body>
 </html>
