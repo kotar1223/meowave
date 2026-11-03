@@ -19,7 +19,7 @@ Whenever the user gives a command or request, dynamically select and apply the c
 | **E2E Тестирование, браузерная автоматизация** | `playwright-cli`, `playwright-stealth-verify`, `agent-browser` | `~/.agents/skills/playwright-cli`, `~/.agents/skills/agent-browser`<br>• Запуск и расширение 4-уровневого комплекса `tests/run-e2e.mjs`. |
 | **Параллельная работа агентов, мультиагентные подзадачи** | `dispatching-parallel-agents` | `~/.agents/skills/dispatching-parallel-agents`<br>• Делегирование независимых подзадач подконтрольным воркерам. |
 | **Маркетинг, тексты для пользователей, воронки, лендинги** | `copywriting`, `marketing-mindset`, `post-purchase-upsell-flow` | `~/.agents/skills/copywriting`, `~/.agents/skills/marketing-mindset` |
-| **Документация, ТЗ, обучение, структурирование заметок** | `teach`, `writing-for-agents`, `writing-fragments`, `to-spec` | `~/.agents/skills/teach`, `~/.agents/skills/to-spec`<br>• Синхронизация с Obsidian Second Brain (`/home/kotyar/Documents/meowave`). |
+| **Документация, ТЗ, обучение, структурирование заметок** | `teach`, `writing-for-agents`, `writing-fragments`, `to-spec` | `~/.agents/skills/teach`, `~/.agents/skills/to-spec`<br>• Вести Obsidian Second Brain в репозитории: `brain/` (см. `brain/Home.md`). |
 
 ---
 
@@ -28,4 +28,4 @@ Whenever the user gives a command or request, dynamically select and apply the c
 1. **Frontend No-build:** `src/app.js` и `src/app.css` исполняются напрямую без сборщиков Webpack/Vite.
 2. **Аудио DSP:** Аудиопоток всегда проходит через Web Audio граф (`src/app.js:1230-1450`). Для предотвращения tainting контекста внешние потоки обязаны запрашиваться через локальный прокси `127.0.0.1:port/stream/?k=...`.
 3. **Хранилище:** `STORE_FILES` в `src-tauri/src/paths.rs` определяет белый список файлов для сохранения на диск. Не превышать лимит 5 МБ в `localStorage`.
-4. **Второй Мозг (Obsidian):** Все архитектурные изменения, реестры багов и гайды разработчика синхронизируются с вольтом в `/home/kotyar/Documents/meowave/`.
+4. **Второй Мозг (Obsidian):** Все архитектурные изменения, реестры багов и гайды разработчика ведутся в Obsidian-вольте `brain/` в корне репозитория: каждый запрос — в `brain/Log/Requests.md`, каждое действие — в `brain/Log/Worklog.md`, решения — в `brain/Decisions.md`. Секреты туда не пишем.

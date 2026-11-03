@@ -59,8 +59,9 @@ to a third-party client.
 
 ```
 meowave/
+├── brain/                # Project brain (Obsidian vault): architecture, how to run, request log, worklog
 ├── docs/                 # GitHub Pages landing page (+ a copy of the badge art)
-├── scripts/              # Helper scripts (ffmpeg fetch, badge sync)
+├── scripts/              # Helper scripts (ffmpeg fetch, badge sync, round-icons.py)
 ├── src/                  # Frontend: index.html, app.css, app.js, assets/
 ├── src-tauri/            # Rust backend and Tauri config
 │   └── ffmpeg/           # Bundled sidecar, fetched not committed
