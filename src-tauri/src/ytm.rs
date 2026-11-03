@@ -77,11 +77,18 @@ struct Health {
     ok_at: Option<std::time::Instant>,
     fail_at: Option<std::time::Instant>,
     fails: u32,
+    /// The last time googlevideo refused a URL this client minted. Kept apart
+    /// from `fail_at`: a passing probe of the next URL must not wipe it, or
+    /// the same client is picked, refused and picked again — the loop of
+    /// "failed at the media host" lines in the console.
+    media_fail_at: Option<std::time::Instant>,
 }
 
 static HEALTH: std::sync::Mutex<Option<std::collections::HashMap<&'static str, Health>>> = std::sync::Mutex::new(None);
 /// A failure older than this no longer counts against a client.
 const FAIL_MEMORY: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+/// How long a refusal at the media host sends a client to the back.
+const MEDIA_FAIL_MEMORY: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 
 fn health_of(client: &str) -> Health {
     HEALTH
@@ -138,6 +145,11 @@ pub fn is_bot_check(why: &str) -> bool {
 /// minted, so the next resolve starts with a different one.
 pub fn note_media_failure(client: &str, why: &str) {
     health_set(client, false);
+    if let Some(name) = PLAYER_CLIENTS.iter().map(|(n, _)| *n).find(|n| *n == client) {
+        if let Ok(mut g) = HEALTH.lock() {
+            g.get_or_insert_with(Default::default).entry(name).or_default().media_fail_at = Some(std::time::Instant::now());
+        }
+    }
     eprintln!("[meowave] ytm client {client} failed at the media host: {why}");
 }
 
@@ -149,7 +161,8 @@ fn order() -> Vec<(&'static str, &'static str)> {
         let failed = h.fail_at.map(|t| t.elapsed() < FAIL_MEMORY).unwrap_or(false)
             && h.ok_at.map(|ok| h.fail_at.is_some_and(|f| f > ok)).unwrap_or(true);
         let fresh_ok = h.ok_at.map(|t| t.elapsed() < FAIL_MEMORY).unwrap_or(false) && !failed;
-        (failed as u8, !fresh_ok as u8, *i)
+        let media_bad = h.media_fail_at.is_some_and(|t| t.elapsed() < MEDIA_FAIL_MEMORY);
+        (media_bad as u8, failed as u8, !fresh_ok as u8, *i)
     });
     list.into_iter().map(|(_, c)| c).collect()
 }
@@ -1386,6 +1399,12 @@ pub struct SelfTest {
     pub start: u16,
     /// HTTP status of a range three quarters in, 0 if not reached.
     pub deep: u16,
+    /// HTTP status of an open-ended `bytes=0-` request — what the proxy used
+    /// to send, and what googlevideo refuses for several clients.
+    pub open: u16,
+    /// Kilobytes of a 1 MiB window actually received — how the proxy reads
+    /// now; 1024 when it came through whole.
+    pub window_kb: u64,
     pub ms: u64,
 }
 
@@ -1405,6 +1424,8 @@ pub async fn ytm_selftest(video_id: Option<String>) -> Result<Vec<SelfTest>, Str
             formats: 0,
             start: 0,
             deep: 0,
+            open: 0,
+            window_kb: 0,
             ms: 0,
         };
         match player_response(&id, visitor_data().await.as_deref(), client, ua).await {
@@ -1430,6 +1451,24 @@ pub async fn ytm_selftest(video_id: Option<String>) -> Result<Vec<SelfTest>, Str
                             }
                         }
                         row.deep = probe_deep(url, media_ua_for(client), clen_of(url, Some(f))).await.1;
+                        if let Ok(c) = crate::api::media_client() {
+                            let open = c.get(url).header("User-Agent", media_ua_for(client)).header("Range", "bytes=0-").send();
+                            if let Ok(Ok(resp)) = tokio::time::timeout(std::time::Duration::from_secs(8), open).await {
+                                row.open = resp.status().as_u16();
+                            }
+                            let win = c
+                                .get(url)
+                                .header("User-Agent", media_ua_for(client))
+                                .header("Range", "bytes=0-1048575")
+                                .send();
+                            if let Ok(Ok(resp)) = tokio::time::timeout(std::time::Duration::from_secs(8), win).await {
+                                if resp.status().is_success() {
+                                    if let Ok(Ok(b)) = tokio::time::timeout(std::time::Duration::from_secs(20), resp.bytes()).await {
+                                        row.window_kb = (b.len() / 1024) as u64;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

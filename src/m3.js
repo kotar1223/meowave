@@ -57,8 +57,18 @@ function dialog({icon,title,body,actions=[],cls=""}){
  setActions(actions);
  wrap.addEventListener("pointerdown",e=>{if(e.target===wrap)close()});
  document.body.appendChild(wrap);layer.push(me);
+ /* Focus lands on the dialog itself, not on its first button: a programmatic
+    focus after a key press would otherwise draw the focus ring round a
+    button at the foot of every dialog that opens on its own (playback
+    failure). Enter still runs the main action and Tab reaches the buttons. */
+ const box=wrap.querySelector(".mdd");box.tabIndex=-1;
+ box.addEventListener("keydown",e=>{
+  if(e.key!=="Enter"||e.target!==box||e.isComposing)return;
+  const b=actEl.querySelector(".m3b-filled")||(actEl.children.length===1?actEl.firstElementChild:null);
+  if(b&&!b.disabled){e.preventDefault();b.click()}});
  requestAnimationFrame(()=>{wrap.dataset.open="true";
-  (actEl.querySelector(".m3b-filled")||actEl.querySelector("button"))?.focus({preventScroll:true})});
+  const f=bodyEl.querySelector("input:not([type=hidden]):not([disabled]),textarea:not([disabled])");
+  (f||box).focus({preventScroll:true})});
  return api}
 
 async function copyText(text){
@@ -158,8 +168,11 @@ function useSource(tr,h){
 /* ── YouTube Music check ── */
 const CLIENT_N={ANDROID_VR:"Android VR",ANDROID_SDKLESS:"Android · SDK-less",IOS:"iOS",ANDROID:"Android",ANDROID_TESTSUITE:"Android Test Suite",WEB_REMIX:"Web"};
 const okCode=c=>c===200||c===206;
+/* `window_kb`: how much of a 1 MiB window came through — the way the proxy
+   reads googlevideo now (bounded windows, never an open `bytes=0-`). */
+const winOk=r=>r.window_kb==null||r.window_kb>=1000;
 function ytcVerdict(r){
- if(r.status==="OK"&&okCode(r.start)&&okCode(r.deep))return "ok";
+ if(r.status==="OK"&&okCode(r.start)&&okCode(r.deep)&&winOk(r))return "ok";
  if(r.status==="OK"&&okCode(r.start))return "part";
  return "bad"}
 function ytcRowsHTML(rows){
@@ -170,7 +183,9 @@ function ytcRowsHTML(rows){
   if(r.status==="OK"){
    bits.push(tf("ytc.formats",{n:r.formats}));
    bits.push(`${t("ytc.start")} ${r.start||"—"}`);
-   bits.push(`${t("ytc.deep")} ${r.deep||"—"}`)}
+   bits.push(`${t("ytc.deep")} ${r.deep||"—"}`);
+   if(r.window_kb!=null)bits.push(`${t("ytc.win")} ${r.window_kb} ${LANG==="ru"?"КБ":"KB"}`);
+   if(r.open)bits.push(`${t("ytc.open")} ${r.open}`)}
   else bits.push([r.status,r.reason].filter(Boolean).join(" — "));
   bits.push(`${r.ms} ${LANG==="ru"?"мс":"ms"}`);
   return `<div class="m3-li is-static" role="listitem" data-v="${v}">
@@ -179,7 +194,7 @@ function ytcRowsHTML(rows){
    <span class="m3-li-tag" data-q="${v==="ok"?"hi":v==="part"?"mid":"low"}">${esc(t("ytc."+v))}</span></div>`}).join("")}
 function ytcReport(rows){
  return ["Meowave · YouTube Music check · "+new Date().toISOString(),
-  ...rows.map(r=>`${r.client}: ${r.status}${r.reason?` (${r.reason})`:""} formats=${r.formats} start=${r.start} deep=${r.deep} ${r.ms}ms`)].join("\n")}
+  ...rows.map(r=>`${r.client}: ${r.status}${r.reason?` (${r.reason})`:""} formats=${r.formats} start=${r.start} deep=${r.deep} open=${r.open??"?"} win=${r.window_kb??"?"}KB ${r.ms}ms`)].join("\n")}
 async function ytcRun(videoId){
  if(!TAURI)throw new Error(t("ytc.desk"));
  const rows=await inv("ytm_selftest",{videoId:videoId||null});
@@ -244,7 +259,7 @@ function altSwitchInit(){
    the current line of synced lyrics, transport and like. Window geometry is
    saved on the way in and restored on the way out; the mini card's own size
    and position are remembered between uses. */
-const MINI={on:false,busy:false,saved:null,timer:0,key:"",lyKey:"",lyAsked:"",lyIdx:-2,el:null};
+const MINI={on:false,busy:false,saved:null,timer:0,key:"",lyKey:"",lyAsked:"",lyIdx:-2,el:null,guard:0,yielded:false};
 const MINI_W=420,MINI_H=196;
 const curWin=()=>{const w=window.__TAURI__?.window;return w?.getCurrentWindow?.()||w?.getCurrent?.()||null};
 const DPI=()=>window.__TAURI__?.dpi||window.__TAURI__?.window||{};
@@ -299,8 +314,8 @@ function miniBuild(){
  /* The card is the window: dragging anywhere that is not a control moves it.
     Not data-tauri-drag-region, whose double-click maximises the window —
     exactly what a mini player must not do. */
- el.addEventListener("pointerdown",e=>{
-  if(e.button!==0||e.target.closest("button,[data-mini],input"))return;
+ el.addEventListener("mousedown",e=>{
+  if(!miniDragFrom(e))return;
   const w=TAURI&&curWin();if(!w)return;
   e.preventDefault();miniDrag(w,e)});
  const seek=el.querySelector(".mini-seek");
@@ -318,36 +333,50 @@ function miniLabels(){
  const L={pin:t("mini.pin"),exit:t("mini.exit"),dis:t("mini.dis"),prev:t("np.prev"),next:t("np.next"),fav:t("act.fav"),play:t("np.play"),seek:t("mini.seek")};
  el.querySelectorAll("[data-mini]").forEach(b=>{const v=L[b.dataset.mini];if(v){b.title=v;b.setAttribute("aria-label",v)}})}
 
-/* Round 5: "the mini player cannot be moved". The native move loop
-   (startDragging) is asked first — it is the smoothest where it works. When
-   it does not take over (the page keeps receiving pointer moves well after
-   the request, i.e. the OS never grabbed the mouse), the window is moved by
-   hand: pointer capture plus setPosition, one IPC call per frame. That
+/* Round 6, "the mini player still does not move": the press was tested with
+   closest("button,[data-mini],input") — and <html> carries data-mini="on"
+   while the mini player is open, so every press counted as a press on a
+   control and no drag ever started. Controls are looked up inside the card
+   only. Double presses are ignored (no maximise, no second move loop). */
+function miniDragFrom(e){
+ const el=MINI.el;
+ if(!el||e.button!==0||e.detail>1||!el.contains(e.target))return false;
+ const hit=e.target.closest?.("button,input,a,[data-mini]");
+ return !(hit&&el.contains(hit))}
+
+/* The native move loop (startDragging) is asked straight from the mousedown,
+   as Tauri's own drag regions do, with no pointer capture in its way. When
+   the OS does not take the mouse — the page keeps receiving moves with the
+   button held well after the request — the window is moved by hand:
+   setPosition from the screen-space delta, one IPC call per frame. That
    fallback is remembered for the rest of the session. */
-async function miniDrag(w,e){
+function miniDrag(w,e){
  const D=DPI(),host=MINI.el;if(!host)return;
- const st={x:e.screenX,y:e.screenY,id:e.pointerId,t0:performance.now(),manual:MINI.manualDrag===true,pos:null,sf:1,raf:0,last:null,done:false};
+ const st={x:e.screenX,y:e.screenY,t0:performance.now(),manual:MINI.manualDrag===true,pos:null,sf:1,raf:0,last:null,done:false,asked:false};
  host.dataset.drag="1";
- if(!st.manual&&w.startDragging)w.startDragging().catch(()=>{st.manual=true;MINI.manualDrag=true});
- else st.manual=true;
- try{host.setPointerCapture(e.pointerId)}catch(_){}
+ const flush=()=>{
+  if(st.done||!st.pos||!st.last||st.raf||!D.PhysicalPosition)return;
+  st.raf=requestAnimationFrame(()=>{st.raf=0;if(st.done||!st.last)return;
+   const [ax,ay]=st.last;
+   w.setPosition(new D.PhysicalPosition(Math.round(st.pos.x+ax*st.sf),Math.round(st.pos.y+ay*st.sf))).catch(()=>{})})};
+ const byHand=()=>{
+  st.manual=true;MINI.manualDrag=true;
+  if(st.asked)return;st.asked=true;
+  Promise.all([tryA(()=>w.scaleFactor(),devicePixelRatio||1),tryA(()=>w.outerPosition(),null)])
+   .then(([sf,pos])=>{st.sf=sf||1;st.pos=pos;flush()})};
  const up=()=>{if(st.done)return;st.done=true;delete host.dataset.drag;
-  host.removeEventListener("pointermove",mv);host.removeEventListener("pointerup",up);host.removeEventListener("pointercancel",up);
-  try{host.releasePointerCapture(st.id)}catch(_){}};
+  if(st.raf)cancelAnimationFrame(st.raf);
+  removeEventListener("mousemove",mv,true);removeEventListener("mouseup",up,true);removeEventListener("blur",up)};
  const mv=ev=>{
   if(!(ev.buttons&1)){up();return}
   const dx=ev.screenX-st.x,dy=ev.screenY-st.y;
   if(!st.manual){
-   if(performance.now()-st.t0<220||Math.hypot(dx,dy)<8)return;
-   st.manual=true;MINI.manualDrag=true}
-  if(!st.pos||!D.PhysicalPosition)return;
-  st.last=[dx,dy];
-  if(!st.raf)st.raf=requestAnimationFrame(()=>{st.raf=0;if(!st.last)return;
-   const [ax,ay]=st.last;
-   w.setPosition(new D.PhysicalPosition(Math.round(st.pos.x+ax*st.sf),Math.round(st.pos.y+ay*st.sf))).catch(()=>{})})};
- host.addEventListener("pointermove",mv);host.addEventListener("pointerup",up);host.addEventListener("pointercancel",up);
- st.sf=await tryA(()=>w.scaleFactor(),devicePixelRatio||1)||1;
- st.pos=await tryA(()=>w.outerPosition(),null)}
+   if(performance.now()-st.t0<250||Math.hypot(dx,dy)<10)return;
+   byHand()}
+  st.last=[dx,dy];flush()};
+ addEventListener("mousemove",mv,true);addEventListener("mouseup",up,true);addEventListener("blur",up);
+ if(st.manual||!w.startDragging)byHand();
+ else w.startDragging().catch(byHand)}
 
 function miniLyric(tr){
  const el=MINI.el.querySelector(".mini-ly");
@@ -405,9 +434,37 @@ function miniPaint(){
 async function miniPin(on){
  const c=miniCfg();c.pin=!!on;save();
  const w=TAURI&&curWin();
- if(w&&MINI.on)await tryA(()=>w.setAlwaysOnTop(!!on));
+ MINI.yielded=false;
+ if(w&&MINI.on){await tryA(()=>w.setAlwaysOnTop(!!on));miniGuard(!!on)}
  miniPaint();
  toast(on?t("mini.pin.on"):t("mini.pin.off"),1800,{icon:on?"keep":"keep_off"})}
+
+/* Round 6: "it broke full screen everywhere" — a window that stays above
+   all others also stays above a full-screen game or video. While pinned, the
+   mini player asks the backend (fsguard.rs) every 1.5 s whether another app
+   is full screen on its monitor, and steps back for as long as it is. */
+function miniGuard(on){
+ clearInterval(MINI.guard);MINI.guard=0;
+ const w=TAURI&&curWin();
+ if(!on||!w)return;
+ let busy=false;
+ MINI.guard=setInterval(async()=>{
+  if(busy||!MINI.on)return;busy=true;
+  try{
+   const full=await inv("other_fullscreen");
+   if(!MINI.on||miniCfg().pin===false)return;
+   if(full&&!MINI.yielded){MINI.yielded=true;await tryA(()=>w.setAlwaysOnTop(false))}
+   else if(!full&&MINI.yielded){MINI.yielded=false;await tryA(()=>w.setAlwaysOnTop(true))}}
+  catch(_){clearInterval(MINI.guard);MINI.guard=0}
+  finally{busy=false}},1500)}
+
+/* setFullscreen(false) returns before the window has left full screen; the
+   size read right after it was the full-screen one. */
+async function miniLeaveFs(w){
+ await tryA(()=>w.setFullscreen(false));
+ document.documentElement.dataset.fullscreen="false";
+ for(let i=0;i<12&&await tryA(()=>w.isFullscreen(),false);i++)await new Promise(r=>setTimeout(r,50));
+ await new Promise(r=>setTimeout(r,80))}
 
 async function miniEnter(){
  const el=miniBuild();
@@ -416,8 +473,9 @@ async function miniEnter(){
  const w=TAURI&&curWin(),D=DPI(),c=miniCfg();
  if(w&&D.LogicalSize){
   const sf=await tryA(()=>w.scaleFactor(),1)||1;
-  const saved={max:await tryA(()=>w.isMaximized(),false),fs:await tryA(()=>w.isFullscreen(),false)};
-  if(saved.fs){await tryA(()=>w.setFullscreen(false));document.documentElement.dataset.fullscreen="false"}
+  const saved={fs:await tryA(()=>w.isFullscreen(),false)};
+  if(saved.fs)await miniLeaveFs(w);
+  saved.max=await tryA(()=>w.isMaximized(),false);
   if(saved.max)await tryA(()=>w.unmaximize());
   const sz=await tryA(()=>w.innerSize(),null),pos=await tryA(()=>w.outerPosition(),null);
   if(sz){saved.w=Math.round(sz.width/sf);saved.h=Math.round(sz.height/sf)}
@@ -435,8 +493,10 @@ async function miniEnter(){
    const ok=Number.isFinite(x)&&Number.isFinite(y)&&x>=ax-pw/2&&y>=ay&&x<=ax+aw-pw/2&&y<=ay+ah-ph/2;
    if(!ok){x=ax+aw-pw-Math.round(24*msf);y=ay+ah-ph-Math.round((mon.workArea?24:72)*msf)}}
   if(Number.isFinite(x)&&Number.isFinite(y)&&D.PhysicalPosition)await tryA(()=>w.setPosition(new D.PhysicalPosition(Math.round(x),Math.round(y))));
+  MINI.yielded=false;
   if(c.pin!==false)await tryA(()=>w.setAlwaysOnTop(true))}
  MINI.on=true;MINI.key="";MINI.lyIdx=-2;
+ miniGuard(c.pin!==false);
  el.hidden=false;
  document.documentElement.dataset.mini="on";
  /* the full-screen player's moving cover, lent to the mini card */
@@ -447,7 +507,7 @@ async function miniEnter(){
 
 async function miniExit(){
  const w=TAURI&&curWin(),D=DPI(),c=miniCfg(),saved=MINI.saved||{};
- clearInterval(MINI.timer);MINI.timer=0;
+ clearInterval(MINI.timer);MINI.timer=0;miniGuard(false);MINI.yielded=false;
  if(w&&D.LogicalSize){
   const sf=await tryA(()=>w.scaleFactor(),1)||1;
   const sz=await tryA(()=>w.innerSize(),null),pos=await tryA(()=>w.outerPosition(),null);
@@ -458,7 +518,9 @@ async function miniExit(){
   await tryA(()=>w.setSize(new D.LogicalSize(Math.max(360,saved.w||1280),Math.max(520,saved.h||800))));
   await tryA(()=>w.setMinSize(new D.LogicalSize(360,520)));
   if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)&&D.PhysicalPosition)await tryA(()=>w.setPosition(new D.PhysicalPosition(saved.x,saved.y)));
-  if(saved.max)await tryA(()=>w.maximize())}
+  if(saved.max)await tryA(()=>w.maximize());
+  /* back to full screen if that is where the mini player was opened from */
+  if(saved.fs){await tryA(()=>w.setFullscreen(true));document.documentElement.dataset.fullscreen="true"}}
  MINI.on=false;MINI.saved=null;
  if(MINI.el){MINI.el.dataset.open="false";MINI.el.hidden=true}
  delete document.documentElement.dataset.mini;
@@ -501,8 +563,10 @@ if(typeof prevI18n==="function")window.applyI18n=function(){
    drives the running window's icon (taskbar / Alt-Tab) through setIcon and
    every logo inside the app. «Без фона · авто» follows the system theme for
    the window (that is what the taskbar wears) and the app theme inside. */
-const APP_ICONS=["clear-neon","clear-auto","clear-light","clear-dark","classic","midnight","neon","ocean","mint","sunset","sakura","lavender","gold","paper"];
-const ICON_DEFAULT="clear-neon";
+const APP_ICONS=["classic","clear-auto","clear-light","clear-dark","midnight","ocean","mint","sunset","sakura","lavender","gold","paper"];
+/* Round 6: the neon variants are gone (no neon anywhere); «Классика» is the
+   default and what the exe ships with, so a fresh start needs no setIcon. */
+const ICON_DEFAULT="classic";
 const iconId=()=>APP_ICONS.includes(S.x?.appIcon)?S.x.appIcon:ICON_DEFAULT;
 function iconFile(id,forWindow){
  if(id!=="clear-auto")return id;

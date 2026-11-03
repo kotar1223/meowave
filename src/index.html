@@ -370,7 +370,7 @@
             <button class="sw on" id="cbg" aria-pressed="true" aria-label="cover background"></button>
           </div>
           <div class="field field-wall" id="cbg-box">
-            <div class="wallsl"><label data-i18n="set.cbg.k">Насыщенность</label><input type="range" id="cbg-k" min="10" max="100" value="55"><span id="cbg-k-v">55%</span></div>
+            <div class="wallsl"><label data-i18n="set.cbg.k">Насыщенность</label><input type="range" id="cbg-k" min="10" max="100" value="35"><span id="cbg-k-v">35%</span></div>
           </div>
           <div class="field">
             <div><label data-i18n="set.cfade">Смена цвета</label><small data-i18n="set.cfade.s">Как быстро акцент и фон переходят к новой обложке</small></div>
@@ -395,7 +395,7 @@
             </div>
           </div>
           <div class="field">
-            <div><label data-i18n="set.glow">Свечение</label></div>
+            <div><label data-i18n="set.glow">Свечение волны</label></div>
             <div class="seg" id="glow" role="group">
               <button data-v="0" data-i18n="off">Выкл</button><button data-v="1" aria-pressed="true" data-i18n="s.mid">Средне</button>
               <button data-v="1.8" data-i18n="s.strong">Сильно</button>
@@ -442,7 +442,7 @@
               <div><label data-i18n="ly.weight">Жирность</label><small><span id="ly-weight-v">640</span></small></div>
               <input type="range" id="ly-weight" min="300" max="800" step="20" value="640">
             </div>
-            <div class="field">
+            <div class="field" hidden>
               <div><label data-i18n="ly.glow">Свечение активной строки</label><small><span id="ly-glow-v">100%</span></small></div>
               <input type="range" id="ly-glow" min="0" max="200" value="100">
             </div>
@@ -1058,7 +1058,7 @@
 </div>
 
 <div class="modalwrap" id="modal" hidden data-open="false" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-sub">
-  <div class="modalbox dlg" role="document">
+  <div class="modalbox dlg" role="document" tabindex="-1">
     <div class="dlg-head">
       <span class="dlg-ic" id="modal-ic" aria-hidden="true"><span class="material-symbols-rounded">edit</span></span>
       <div class="dlg-tt">

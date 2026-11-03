@@ -10,9 +10,11 @@
 //! it: all three services stream without an account, so a session that
 //! expires costs the import and the personal shelves, nothing else.
 //!
-//! Where a service refuses the embedded sign-in (Google sometimes declines
-//! embedded browsers) the same credential can be pasted by hand, see
-//! `acc_paste`.
+//! Round 6: the sign-in opens in the user's own browser first
+//! (`acc_login_browser`, see browser.rs); the app window is the fallback for
+//! a machine without a Chromium-family browser. Where a service refuses both
+//! (Google sometimes declines embedded browsers) the same credential can be
+//! pasted by hand, see `acc_paste`.
 
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -319,6 +321,104 @@ async fn watch(app: AppHandle, sp: &'static Spec, label: String) {
     let _ = app.emit("acc-changed", json!({ "service": sp.id, "ok": false, "error": "timeout" }));
 }
 
+/* ─────────────────── sign-in in the user's browser ─────────────────── */
+
+/// Services whose browser sign-in is under way.
+static IN_BROWSER: Mutex<Vec<&'static str>> = Mutex::new(Vec::new());
+
+fn browser_dir(id: &str) -> Result<std::path::PathBuf, String> {
+    Ok(crate::paths::root()?.join("accounts").join(format!("{id}-browser")))
+}
+
+/// Round 6: the sign-in page opens in the user's own browser (a Chromium:
+/// the default one, else Chrome or Edge — see browser.rs) instead of an app
+/// window. Answers the browser's name, or an empty string when that sign-in
+/// is already open. Fails with "no-browser" when there is no Chromium on the
+/// machine, so the frontend falls back to `acc_login`.
+#[tauri::command]
+pub async fn acc_login_browser(app: AppHandle, service: String) -> Result<String, String> {
+    let sp = spec(&service)?;
+    if IN_BROWSER.lock().map(|g| g.contains(&sp.id)).unwrap_or(false) {
+        return Ok(String::new());
+    }
+    let b = crate::browser::find().ok_or("no-browser")?;
+    let dir = browser_dir(sp.id)?;
+    let name = b.name.to_string();
+    let session = tauri::async_runtime::spawn_blocking(move || crate::browser::launch(&b, &dir, sp.login))
+        .await
+        .map_err(|e| e.to_string())??;
+    if let Ok(mut g) = IN_BROWSER.lock() {
+        g.push(sp.id);
+    }
+    std::thread::spawn(move || watch_browser(app, sp, session));
+    Ok(name)
+}
+
+/// Reads the browser's cookie jar until the service confirms a session,
+/// keeps the credential and closes the browser; gives up when the user
+/// closes it or after ten minutes.
+fn watch_browser(app: AppHandle, sp: &'static Spec, mut s: crate::browser::Session) {
+    let host = sp
+        .jar
+        .parse::<tauri::Url>()
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_string))
+        .unwrap_or_default();
+    let t0 = Instant::now();
+    let (mut tried, mut n, mut empty) = (String::new(), 0u32, 0u32);
+    let outcome = loop {
+        std::thread::sleep(Duration::from_millis(1500));
+        n += 1;
+        if t0.elapsed() > Duration::from_secs(600) {
+            break json!({ "service": sp.id, "ok": false, "error": "timeout" });
+        }
+        // Every window closed (or the browser itself): the user gave up.
+        match s.has_pages() {
+            Ok(true) => empty = 0,
+            Ok(false) if empty < 1 => {
+                empty += 1;
+                continue;
+            }
+            _ => break json!({ "service": sp.id, "ok": false, "closed": true }),
+        }
+        let Ok(jar) = s.cookies() else {
+            break json!({ "service": sp.id, "ok": false, "closed": true });
+        };
+        let pairs: Vec<(String, String)> = jar
+            .into_iter()
+            .filter(|(_, _, d)| crate::browser::domain_matches(d, &host))
+            .map(|(k, v, _)| (k, v))
+            .collect();
+        let Some(cred) = extract(sp.id, &pairs) else { continue };
+        // A refused session is asked about again only now and then: the
+        // page may still be finishing the sign-in.
+        if cred == tried && n % 6 != 0 {
+            continue;
+        }
+        match tauri::async_runtime::block_on(profile(sp.id, &cred)) {
+            Ok((user, avatar)) => {
+                if let Err(e) = crate::tokens::set_service_token(sp.key.into(), cred) {
+                    break json!({ "service": sp.id, "ok": false, "error": e });
+                }
+                remember(AccState { service: sp.id.into(), connected: true, user: Some(user.clone()), avatar, error: None });
+                break json!({ "service": sp.id, "ok": true, "user": user });
+            }
+            Err(_) => tried = cred,
+        }
+    };
+    s.close();
+    if let Ok(mut g) = IN_BROWSER.lock() {
+        g.retain(|x| *x != sp.id);
+    }
+    let ok = outcome.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+    let _ = app.emit("acc-changed", outcome);
+    if ok {
+        if let Some(main) = app.get_webview_window("main") {
+            let _ = main.set_focus();
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn acc_paste(service: String, value: String) -> Result<AccState, String> {
     let sp = spec(&service)?;
@@ -347,15 +447,16 @@ pub async fn acc_logout(app: AppHandle, service: String) -> Result<(), String> {
     // lets the next sign-in pick another account. Best effort: the browser
     // process can hold its files a moment after the window closes.
     if let Ok(root) = crate::paths::root() {
-        let dir = root.join("accounts").join(sp.id);
-        tauri::async_runtime::spawn(async move {
-            for _ in 0..6 {
-                if !dir.exists() || std::fs::remove_dir_all(&dir).is_ok() {
-                    break;
+        for dir in [root.join("accounts").join(sp.id), root.join("accounts").join(format!("{}-browser", sp.id))] {
+            tauri::async_runtime::spawn(async move {
+                for _ in 0..6 {
+                    if !dir.exists() || std::fs::remove_dir_all(&dir).is_ok() {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_secs(2)).await;
                 }
-                tokio::time::sleep(Duration::from_secs(2)).await;
-            }
-        });
+            });
+        }
     }
     Ok(())
 }

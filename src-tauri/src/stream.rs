@@ -83,11 +83,34 @@ fn cache_drop(key: &str) {
 /// chunk by chunk means the first bytes leave the proxy as soon as they arrive.
 enum UpstreamKind {
     Direct(Option<reqwest::Response>),
-    Hls {
-        segments: Vec<String>,
-        seg_idx: usize,
-        current_resp: Option<reqwest::Response>,
+    /// An HLS rendition read as one file (see `HlsFile`): part `idx`, from
+    /// byte `at` of that part.
+    Parts {
+        file: std::sync::Arc<HlsFile>,
+        idx: usize,
+        at: u64,
+        resp: Option<reqwest::Response>,
+        /// Leading bytes still to drop from `resp`: a host that answered a
+        /// ranged request with the whole part.
+        skip: u64,
     },
+}
+
+/// googlevideo serves bounded byte ranges and refuses open-ended ones for
+/// several guest clients: `Range: bytes=0-` comes back 403 while a 2 KB probe
+/// of the very same URL — the self-test's — is a 206. That was the
+/// "failed at the media host: HTTP 403" loop: every client passed the probe,
+/// every real stream was refused. So a YouTube stream is pulled the way
+/// YouTube's own players pull it, one bounded window after another.
+const GV_FIRST_WINDOW: u64 = 512 * 1024;
+const GV_WINDOW: u64 = 2 * 1024 * 1024;
+
+/// A body pulled in bounded windows: the last byte the caller wants and how
+/// much to ask for per request.
+#[derive(Clone, Copy)]
+struct Window {
+    end: u64,
+    size: u64,
 }
 
 /// Pipes an upstream response body straight to the client.
@@ -116,6 +139,10 @@ struct Upstream<'a> {
     /// YouTube only: how to continue the same file through another client
     /// when googlevideo stops serving this URL mid-track.
     failover: Option<Failover>,
+    /// Bounded windows instead of one open-ended request (googlevideo).
+    window: Option<Window>,
+    /// Last byte of the window currently being read.
+    cur_end: u64,
 }
 
 /// Everything needed to resume a googlevideo stream elsewhere: the same itag
@@ -159,35 +186,30 @@ impl<'a> Upstream<'a> {
             initial_offset,
             reconnect_attempts: 0,
             failover: None,
+            window: None,
+            cur_end: 0,
         }
     }
 
-    fn hls(
-        rt: &'a tokio::runtime::Runtime,
-        segments: Vec<String>,
-        start_seg: usize,
-        upstream_url: String,
-        media_ua: Option<String>,
-        initial_offset: u64,
-        expected_total: Option<u64>,
-    ) -> Self {
+    /// An HLS file from part `idx`, byte `at` of it; `limit` bytes in all
+    /// (`None`: to the end, sizes unknown).
+    fn parts(rt: &'a tokio::runtime::Runtime, file: std::sync::Arc<HlsFile>, idx: usize, at: u64, limit: Option<u64>) -> Self {
+        let media_ua = file.ua.clone();
         Self {
             rt,
             cipher: None,
-            kind: UpstreamKind::Hls {
-                segments,
-                seg_idx: start_seg,
-                current_resp: None,
-            },
+            kind: UpstreamKind::Parts { file, idx, at, resp: None, skip: 0 },
             buf: Vec::new(),
             pos: 0,
-            upstream_url,
+            upstream_url: String::new(),
             media_ua,
             bytes_delivered: 0,
-            expected_total,
-            initial_offset,
+            expected_total: limit,
+            initial_offset: 0,
             reconnect_attempts: 0,
             failover: None,
+            window: None,
+            cur_end: 0,
         }
     }
 }
@@ -212,12 +234,34 @@ impl<'a> Upstream<'a> {
         self
     }
 
+    /// Reads in bounded windows up to `end` (inclusive); `first_end` is where
+    /// the response already in hand stops.
+    fn with_window(mut self, w: Option<Window>, first_end: u64) -> Self {
+        self.window = w;
+        self.cur_end = first_end;
+        self
+    }
+
+    /// The Range header for a request from `offset`: open-ended, or the next
+    /// window when the body is read in windows.
+    fn range_from(&mut self, offset: u64) -> String {
+        match self.window {
+            Some(w) => {
+                let last = offset.saturating_add(w.size - 1).min(w.end);
+                self.cur_end = last;
+                format!("bytes={offset}-{last}")
+            }
+            None => format!("bytes={offset}-"),
+        }
+    }
+
     /// A ranged GET from `offset`. At offset 0 a 200 is as good as a 206; past
     /// it only a 206 is, since a 200 would restart the file mid-stream.
-    fn fetch_from(&self, url: &str, ua: Option<&str>, offset: u64) -> Result<reqwest::Response, u16> {
+    fn fetch_from(&mut self, url: &str, ua: Option<&str>, offset: u64) -> Result<reqwest::Response, u16> {
+        let range = self.range_from(offset);
         self.rt.block_on(async {
             let c = crate::api::media_client().map_err(|_| 0u16)?;
-            let mut req = c.get(url).header("Range", format!("bytes={offset}-"));
+            let mut req = c.get(url).header("Range", range);
             if let Some(ua) = ua {
                 req = req.header("User-Agent", ua);
             }
@@ -246,7 +290,8 @@ impl<'a> Upstream<'a> {
         while self.reconnect_attempts < 3 {
             self.reconnect_attempts += 1;
             let url = self.upstream_url.clone();
-            match self.fetch_from(&url, self.media_ua.as_deref(), offset) {
+            let ua = self.media_ua.clone();
+            match self.fetch_from(&url, ua.as_deref(), offset) {
                 Ok(r) => {
                     self.kind = UpstreamKind::Direct(Some(r));
                     return true;
@@ -328,19 +373,403 @@ pub fn stream_diag(service: String, id: String) -> String {
     lines.join("\n")
 }
 
-/// Segment URLs of a media playlist, in order. `#EXTINF` and the other tags
-/// carry no address, so they are dropped and only the bare lines are resolved
-/// against the playlist they came from. Split out from `handle` because this is
-/// the part with the real failure modes — a tag parsed as a segment, or a
-/// relative one resolved against the master playlist instead of the variant —
-/// and it is worth being able to pin down without a network round-trip.
-fn hls_segments(playlist: &str, base: &str) -> Vec<String> {
-    playlist
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.starts_with('#') && !l.is_empty())
-        .map(|l| resolve_hls_url(base, l))
-        .collect()
+/// One piece of an HLS rendition: the init section or a segment, with the
+/// byte window inside its URL when the playlist addresses sub-ranges
+/// (`#EXT-X-BYTERANGE`) and its size once known.
+#[derive(Clone, Debug, PartialEq)]
+struct HlsPart {
+    url: String,
+    sub: Option<(u64, u64)>,
+    len: Option<u64>,
+}
+
+/// An HLS rendition laid out as one file: init section first, then every
+/// segment, back to back.
+///
+/// SoundCloud now serves many tracks as AAC in fragmented MP4 (CMAF) only:
+/// `#EXT-X-MAP` names an `init.mp4` and the segments are `.m4s` fragments
+/// that mean nothing without it. The old proxy dropped the map and served the
+/// fragments with no length and `Accept-Ranges: none`, so those tracks never
+/// started ("the service answered, but the file did not play"), and the ones
+/// that did could not seek. Init + fragments *is* a valid fragmented MP4, and
+/// with every part's size known (a HEAD each, in parallel) the proxy can give
+/// the media element what it gives for a plain file: an exact
+/// Content-Length, real 206 ranges, a true duration and seeking.
+struct HlsFile {
+    parts: Vec<HlsPart>,
+    /// Sum of the part sizes; `None` when some size could not be learnt.
+    total: Option<u64>,
+    ctype: &'static str,
+    ua: Option<String>,
+}
+
+impl HlsFile {
+    /// The part holding byte `pos` of the whole file, and the offset in it.
+    fn locate(&self, pos: u64) -> (usize, u64) {
+        let mut start = 0u64;
+        for (i, p) in self.parts.iter().enumerate() {
+            let len = p.len.unwrap_or(0);
+            if pos < start + len {
+                return (i, pos - start);
+            }
+            start += len;
+        }
+        (self.parts.len(), 0)
+    }
+}
+
+/// `KEY=value` / `KEY="value"` out of an HLS attribute list.
+fn hls_attr(list: &str, key: &str) -> Option<String> {
+    let mut rest = list;
+    loop {
+        let item = rest.trim_start_matches([',', ' ']);
+        let (k, after) = item.split_once('=')?;
+        let (v, next) = match after.strip_prefix('"') {
+            Some(q) => {
+                let end = q.find('"')?;
+                (&q[..end], &q[end + 1..])
+            }
+            None => match after.find(',') {
+                Some(i) => (&after[..i], &after[i..]),
+                None => (after, ""),
+            },
+        };
+        if k.trim().eq_ignore_ascii_case(key) {
+            return Some(v.trim().to_string());
+        }
+        if next.is_empty() {
+            return None;
+        }
+        rest = next;
+    }
+}
+
+/// `<length>[@<offset>]`.
+fn hls_byterange(v: &str) -> Option<(u64, Option<u64>)> {
+    let v = v.trim().trim_matches('"');
+    match v.split_once('@') {
+        Some((n, o)) => Some((n.trim().parse().ok()?, Some(o.trim().parse().ok()?))),
+        None => Some((v.parse().ok()?, None)),
+    }
+}
+
+/// Parts of a media playlist, in playback order: the init section (once),
+/// then the segments. Encrypted renditions are refused — decrypting them is
+/// not this proxy's business.
+fn hls_parts(playlist: &str, base: &str) -> Result<Vec<HlsPart>, String> {
+    let mut parts: Vec<HlsPart> = Vec::new();
+    let mut maps: Vec<String> = Vec::new();
+    let mut pending: Option<(u64, Option<u64>)> = None;
+    // A sub-range without an offset starts where the previous one of the
+    // same resource ended.
+    let mut next_off: HashMap<String, u64> = HashMap::new();
+    let mut place = |url: &str, r: Option<(u64, Option<u64>)>| -> Option<(u64, u64)> {
+        let (len, off) = r?;
+        let off = off.unwrap_or_else(|| next_off.get(url).copied().unwrap_or(0));
+        next_off.insert(url.to_string(), off + len);
+        Some((off, len))
+    };
+    for line in playlist.lines().map(str::trim) {
+        if line.is_empty() {
+            continue;
+        }
+        if let Some(a) = line.strip_prefix("#EXT-X-KEY:") {
+            let method = hls_attr(a, "METHOD").unwrap_or_default();
+            if !method.eq_ignore_ascii_case("NONE") {
+                return Err(format!("encrypted HLS ({method})"));
+            }
+        } else if let Some(a) = line.strip_prefix("#EXT-X-MAP:") {
+            let Some(uri) = hls_attr(a, "URI") else { continue };
+            let url = resolve_hls_url(base, &uri);
+            let r = hls_attr(a, "BYTERANGE").and_then(|v| hls_byterange(&v));
+            let key = format!("{url} {r:?}");
+            if maps.contains(&key) {
+                continue;
+            }
+            maps.push(key);
+            let sub = place(&url, r);
+            parts.push(HlsPart { len: sub.map(|s| s.1), url, sub });
+        } else if let Some(v) = line.strip_prefix("#EXT-X-BYTERANGE:") {
+            pending = hls_byterange(v);
+        } else if !line.starts_with('#') {
+            let url = resolve_hls_url(base, line);
+            let sub = place(&url, pending.take());
+            parts.push(HlsPart { len: sub.map(|s| s.1), url, sub });
+        }
+    }
+    Ok(parts)
+}
+
+/// The variant of a master playlist to play: the highest bandwidth, or the
+/// lowest in data-saver mode.
+fn hls_variant(master: &str, base: &str, low: bool) -> Option<String> {
+    let mut best: Option<(u64, String)> = None;
+    let mut lines = master.lines().map(str::trim);
+    while let Some(l) = lines.next() {
+        let Some(a) = l.strip_prefix("#EXT-X-STREAM-INF:") else { continue };
+        let bw: u64 = hls_attr(a, "BANDWIDTH").and_then(|v| v.parse().ok()).unwrap_or(0);
+        let Some(uri) = lines.by_ref().find(|x| !x.is_empty() && !x.starts_with('#')) else { break };
+        let better = match &best {
+            None => true,
+            Some((b, _)) => (low && bw < *b) || (!low && bw > *b),
+        };
+        if better {
+            best = Some((bw, resolve_hls_url(base, uri)));
+        }
+    }
+    best.map(|b| b.1)
+}
+
+/// What the joined parts are, by the segments' extension.
+fn hls_ctype(parts: &[HlsPart], has_map: bool) -> &'static str {
+    let ext = parts
+        .last()
+        .map(|p| {
+            let path = p.url.split(['?', '#']).next().unwrap_or("");
+            let name = path.rsplit('/').next().unwrap_or("");
+            name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default()
+        })
+        .unwrap_or_default();
+    match ext.as_str() {
+        "mp3" => "audio/mpeg",
+        "aac" => "audio/aac",
+        "opus" | "ogg" | "oga" => "audio/ogg",
+        "ts" => "video/mp2t",
+        "m4s" | "mp4" | "m4a" | "cmfa" | "m4f" => "audio/mp4",
+        _ if has_map => "audio/mp4",
+        _ => "audio/mpeg",
+    }
+}
+
+/// Size of one part: a one-byte range, whose Content-Range carries it, or a
+/// HEAD for a host without ranges.
+async fn part_size(c: &reqwest::Client, url: &str, ua: Option<&str>) -> Option<u64> {
+    let wait = std::time::Duration::from_secs(5);
+    for _ in 0..2 {
+        let mut req = c.get(url).header("Range", "bytes=0-0").header("Accept-Encoding", "identity");
+        if let Some(ua) = ua {
+            req = req.header("User-Agent", ua);
+        }
+        if let Ok(Ok(r)) = tokio::time::timeout(wait, req.send()).await {
+            let header = |k: &str| r.headers().get(k).and_then(|v| v.to_str().ok()).map(str::to_string);
+            match r.status().as_u16() {
+                206 => {
+                    if let Some(n) = header("content-range").as_deref().and_then(content_range_total) {
+                        return Some(n);
+                    }
+                }
+                // No ranges here: the whole part came back, and its length with it.
+                200 => {
+                    if let Some(n) = header("content-length").and_then(|v| v.trim().parse::<u64>().ok()).filter(|n| *n > 0) {
+                        return Some(n);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let mut req = c.head(url).header("Accept-Encoding", "identity");
+        if let Some(ua) = ua {
+            req = req.header("User-Agent", ua);
+        }
+        if let Ok(Ok(r)) = tokio::time::timeout(wait, req.send()).await {
+            if r.status().is_success() {
+                let n = r
+                    .headers()
+                    .get("content-length")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.trim().parse::<u64>().ok());
+                if let Some(n) = n.filter(|n| *n > 0) {
+                    return Some(n);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Fills in every unknown part size, twelve at a time. True when all are known.
+async fn hls_sizes(parts: &mut [HlsPart], ua: Option<&str>) -> bool {
+    let Ok(c) = crate::api::media_client() else { return false };
+    let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(12));
+    let mut set = tokio::task::JoinSet::new();
+    for (i, p) in parts.iter().enumerate().filter(|(_, p)| p.len.is_none()) {
+        let (c, url, ua, sem) = (c.clone(), p.url.clone(), ua.map(str::to_string), sem.clone());
+        set.spawn(async move {
+            let _permit = sem.acquire_owned().await.ok();
+            (i, part_size(&c, &url, ua.as_deref()).await)
+        });
+    }
+    while let Some(res) = set.join_next().await {
+        if let Ok((i, Some(n))) = res {
+            parts[i].len = Some(n);
+        }
+    }
+    parts.iter().all(|p| p.len.is_some())
+}
+
+/// The total out of `bytes a-b/N`.
+fn content_range_total(cr: &str) -> Option<u64> {
+    cr.trim().rsplit_once('/')?.1.trim().parse().ok()
+}
+
+/// Reads a playlist (a master one is narrowed to one variant first) into an
+/// `HlsFile`, measuring every part.
+async fn hls_open(text: String, url: &str, ua: Option<&str>, low: bool) -> Result<HlsFile, String> {
+    let (mut text, mut base) = (text, url.to_string());
+    if text.contains("#EXT-X-STREAM-INF") {
+        let v = hls_variant(&text, &base, low).ok_or("master playlist without variants")?;
+        let c = crate::api::client()?;
+        let mut req = c.get(&v);
+        if let Some(ua) = ua {
+            req = req.header("User-Agent", ua);
+        }
+        let r = req.send().await.map_err(|e| e.to_string())?;
+        if !r.status().is_success() {
+            return Err(format!("variant playlist: HTTP {}", r.status().as_u16()));
+        }
+        text = r.text().await.map_err(|e| e.to_string())?;
+        base = v;
+    }
+    let mut parts = hls_parts(&text, &base)?;
+    if parts.is_empty() {
+        return Err("empty playlist".into());
+    }
+    let ctype = hls_ctype(&parts, text.contains("#EXT-X-MAP"));
+    let sized = hls_sizes(&mut parts, ua).await;
+    let total = sized.then(|| parts.iter().map(|p| p.len.unwrap_or(0)).sum::<u64>()).filter(|t| *t > 0);
+    Ok(HlsFile { parts, total, ctype, ua: ua.map(str::to_string) })
+}
+
+/// Measured HLS files by stream cache key, so a seek or the next request
+/// needs no resolve, no playlist and no HEADs.
+type HlsCache = HashMap<String, (std::sync::Arc<HlsFile>, std::time::Instant)>;
+static HLS_FILES: Mutex<Option<HlsCache>> = Mutex::new(None);
+const HLS_TTL: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+
+fn hls_get(key: &str) -> Option<std::sync::Arc<HlsFile>> {
+    let mut g = HLS_FILES.lock().ok()?;
+    let m = g.get_or_insert_with(HashMap::new);
+    let (file, at) = m.get(key)?;
+    // Signed part URLs carry their own deadline (`expires=<unix seconds>`).
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let expires = file
+        .parts
+        .first()
+        .and_then(|p| crate::ytm::url_param(&p.url, "expires").or_else(|| crate::ytm::url_param(&p.url, "Expires")))
+        .and_then(|v| v.parse::<u64>().ok());
+    if at.elapsed() < HLS_TTL && expires.is_none_or(|e| e > now + 60) {
+        return Some(file.clone());
+    }
+    m.remove(key);
+    None
+}
+
+fn hls_put(key: &str, file: std::sync::Arc<HlsFile>) {
+    if let Ok(mut g) = HLS_FILES.lock() {
+        let m = g.get_or_insert_with(HashMap::new);
+        if m.len() > 32 {
+            m.retain(|_, (_, at)| at.elapsed() < HLS_TTL);
+            if m.len() > 32 {
+                m.clear();
+            }
+        }
+        m.insert(key.to_string(), (file, std::time::Instant::now()));
+    }
+}
+
+/// Answers a request for a measured HLS file like one for a plain file:
+/// exact length, 206 for a range, 416 past the end.
+fn serve_hls(
+    rt: &tokio::runtime::Runtime,
+    file: std::sync::Arc<HlsFile>,
+    range: Option<&str>,
+    head_only: bool,
+    origin: Option<&str>,
+    request: tiny_http::Request,
+) -> Result<(), String> {
+    let mut headers = vec![header("Content-Type", file.ctype), header("Cache-Control", "no-store")];
+    headers.extend(cors(origin));
+    let Some(total) = file.total else {
+        // Some size could not be learnt: the parts back to back with no
+        // length, as before — it plays, it just cannot seek.
+        headers.push(header("Accept-Ranges", "none"));
+        if head_only {
+            return request
+                .respond(Response::new(StatusCode(200), headers, std::io::empty(), None, None))
+                .map_err(|e| e.to_string());
+        }
+        let body = Upstream::parts(rt, file, 0, 0, None);
+        return request
+            .respond(Response::new(StatusCode(200), headers, body, None, None))
+            .map_err(|e| e.to_string());
+    };
+    headers.push(header("Accept-Ranges", "bytes"));
+    let (start, end, partial) = match parse_range(range, total) {
+        RangeSpec::None => (0, total - 1, false),
+        RangeSpec::Bytes(s, e) => (s, e, true),
+        RangeSpec::Unsatisfiable => {
+            let mut resp = Response::from_string("range not satisfiable").with_status_code(StatusCode(416));
+            for h in cors(origin) {
+                resp = resp.with_header(h);
+            }
+            if let Some(h) = try_header("Content-Range", &format!("bytes */{total}")) {
+                resp = resp.with_header(h);
+            }
+            return request.respond(resp).map_err(|e| e.to_string());
+        }
+    };
+    if partial {
+        if let Some(h) = try_header("Content-Range", &format!("bytes {start}-{end}/{total}")) {
+            headers.push(h);
+        }
+    }
+    let len = end - start + 1;
+    let status = StatusCode(if partial { 206 } else { 200 });
+    if head_only {
+        return request
+            .respond(Response::new(status, headers, std::io::empty(), Some(len as usize), None))
+            .map_err(|e| e.to_string());
+    }
+    let (idx, at) = file.locate(start);
+    let body = Upstream::parts(rt, file, idx, at, Some(len));
+    request
+        .respond(with_length(Response::new(status, headers, body, Some(len as usize), None), partial))
+        .map_err(|e| e.to_string())
+}
+
+/// tiny_http sends any body over 32 KB chunked, without Content-Length. For
+/// a 206 that is right: Content-Range carries the size, and a stream that
+/// ends early still ends cleanly, so the element asks again from there. A 200
+/// has nothing else to say how long the file is — WebKitGTK's player, which
+/// does not always send a Range, then cannot seek — so it gets the real length.
+fn with_length<R: std::io::Read>(resp: Response<R>, partial: bool) -> Response<R> {
+    if partial {
+        resp
+    } else {
+        resp.with_chunked_threshold(usize::MAX)
+    }
+}
+
+/// Measures an HLS stream ahead of time (the prefetch of the next track), so
+/// its first request is answered straight from `HLS_FILES`.
+async fn hls_prepare(key: &str, url: &str) {
+    if hls_get(key).is_some() {
+        return;
+    }
+    let Ok(c) = crate::api::client() else { return };
+    let Ok(r) = c.get(url).send().await else { return };
+    if !r.status().is_success() {
+        return;
+    }
+    let Ok(text) = r.text().await else { return };
+    if let Ok(f) = hls_open(text, url, None, false).await {
+        if f.total.is_some() {
+            hls_put(key, std::sync::Arc::new(f));
+        }
+    }
 }
 
 fn resolve_hls_url(base: &str, target: &str) -> String {
@@ -362,6 +791,13 @@ fn resolve_hls_url(base: &str, target: &str) -> String {
 
 impl<'a> std::io::Read for Upstream<'a> {
     fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
+        // Never more than the length the response declared: a host that
+        // ignores a range must not push the body past its Content-Length.
+        let left = match self.expected_total {
+            Some(total) if self.bytes_delivered >= total => return Ok(0),
+            Some(total) => total - self.bytes_delivered,
+            None => u64::MAX,
+        };
         while self.pos >= self.buf.len() {
             match &mut self.kind {
                 UpstreamKind::Direct(resp_slot) => {
@@ -386,6 +822,42 @@ impl<'a> std::io::Read for Upstream<'a> {
                             self.pos = 0;
                             self.reconnect_attempts = 0;
                         }
+                        Step::End if self.window.is_some() => {
+                            let w = self.window.unwrap_or(Window { end: 0, size: 1 });
+                            let at = self.initial_offset + self.bytes_delivered;
+                            if at > w.end {
+                                self.kind = UpstreamKind::Direct(None);
+                                return Ok(0);
+                            }
+                            if at > self.cur_end {
+                                // This window is done: the next one.
+                                let url = self.upstream_url.clone();
+                                let ua = self.media_ua.clone();
+                                match self.fetch_from(&url, ua.as_deref(), at) {
+                                    Ok(r) => {
+                                        self.kind = UpstreamKind::Direct(Some(r));
+                                        continue;
+                                    }
+                                    // Past the end of a file of unknown size.
+                                    Err(416) => {
+                                        self.kind = UpstreamKind::Direct(None);
+                                        return Ok(0);
+                                    }
+                                    Err(_) => {}
+                                }
+                            } else if w.end == u64::MAX {
+                                // A short window and no known size: the file is over.
+                                self.kind = UpstreamKind::Direct(None);
+                                return Ok(0);
+                            }
+                            // Cut short, or the next window was refused: the
+                            // same URL again, then another client.
+                            if self.reconnect() {
+                                continue;
+                            }
+                            self.kind = UpstreamKind::Direct(None);
+                            return Ok(0);
+                        }
                         Step::End => {
                             // Check if stream ended prematurely
                             let premature = match self.expected_total {
@@ -407,58 +879,117 @@ impl<'a> std::io::Read for Upstream<'a> {
                         }
                     }
                 }
-                UpstreamKind::Hls { segments, seg_idx, current_resp } => {
-                    if *seg_idx >= segments.len() {
+                UpstreamKind::Parts { file, idx, at, resp, skip } => {
+                    let Some(part) = file.parts.get(*idx) else {
                         return Ok(0);
-                    }
-                    if current_resp.is_none() {
-                        let seg_url = segments[*seg_idx].clone();
-                        let res = self.rt.block_on(async {
-                            let c = crate::api::media_client().ok()?;
-                            let mut req = c.get(&seg_url);
-                            if let Some(ua) = &self.media_ua {
-                                req = req.header("User-Agent", ua);
+                    };
+                    let plen = part.len;
+                    if resp.is_none() {
+                        match fetch_part(self.rt, part, *at, self.media_ua.as_deref()) {
+                            Ok((r, s)) => {
+                                *resp = Some(r);
+                                *skip = s;
                             }
-                            req.send().await.ok()
-                        });
-                        match res {
-                            Some(r) if r.status().is_success() => {
-                                *current_resp = Some(r);
-                            }
-                            _ => {
-                                // Skip failing segment and try next
-                                *seg_idx += 1;
+                            // A refusal will not change on a retry; anything
+                            // else (timeout, 5xx) gets three.
+                            Err(code) if !matches!(code, 401 | 403 | 404 | 410) && self.reconnect_attempts < 3 => {
+                                self.reconnect_attempts += 1;
+                                let wait = 300 * self.reconnect_attempts as u64;
+                                self.rt.block_on(tokio::time::sleep(std::time::Duration::from_millis(wait)));
                                 continue;
                             }
+                            Err(code) => {
+                                eprintln!("[meowave] hls: part {} of {} failed (HTTP {code})", *idx + 1, file.parts.len());
+                                return Ok(0);
+                            }
                         }
                     }
-                    let Some(resp) = current_resp.as_mut() else {
-                        *seg_idx += 1;
-                        continue;
+                    let Some(r) = resp.as_mut() else { continue };
+                    let step = match self.rt.block_on(async {
+                        tokio::time::timeout(std::time::Duration::from_secs(30), r.chunk()).await
+                    }) {
+                        Ok(Ok(Some(chunk))) => Step::Data(chunk.to_vec()),
+                        Ok(Ok(None)) => Step::End,
+                        _ => Step::Broken,
                     };
-                    let chunk_res = self.rt.block_on(async {
-                        tokio::time::timeout(std::time::Duration::from_secs(10), resp.chunk()).await
-                    });
-                    match chunk_res {
-                        Ok(Ok(Some(chunk))) => {
-                            self.buf = chunk.to_vec();
+                    let broken = matches!(step, Step::Broken);
+                    match step {
+                        Step::Data(mut b) => {
+                            if *skip > 0 {
+                                let d = (*skip).min(b.len() as u64) as usize;
+                                b.drain(..d);
+                                *skip -= d as u64;
+                            }
+                            if let Some(len) = plen {
+                                let room = len.saturating_sub(*at);
+                                if (b.len() as u64) > room {
+                                    b.truncate(room as usize);
+                                }
+                            }
+                            if b.is_empty() {
+                                continue;
+                            }
+                            *at += b.len() as u64;
+                            self.buf = b;
                             self.pos = 0;
+                            self.reconnect_attempts = 0;
                         }
-                        _ => {
-                            // Segment finished or stalled: advance to next segment
-                            *current_resp = None;
-                            *seg_idx += 1;
+                        Step::End | Step::Broken => {
+                            *resp = None;
+                            if broken || plen.is_some_and(|l| *at < l) {
+                                // Cut off mid-part: pick it up where it stopped.
+                                if self.reconnect_attempts < 3 {
+                                    self.reconnect_attempts += 1;
+                                    continue;
+                                }
+                                eprintln!("[meowave] hls: part {} of {} kept breaking off", *idx + 1, file.parts.len());
+                                return Ok(0);
+                            }
+                            *idx += 1;
+                            *at = 0;
                         }
                     }
                 }
             }
         }
-        let n = out.len().min(self.buf.len() - self.pos);
+        let n = out.len().min(self.buf.len() - self.pos).min(left.min(usize::MAX as u64) as usize);
         out[..n].copy_from_slice(&self.buf[self.pos..self.pos + n]);
         self.pos += n;
         self.bytes_delivered += n as u64;
         Ok(n)
     }
+}
+
+/// GET of one HLS part from byte `at` of it. Also returns how many leading
+/// bytes to drop: a host that answers a ranged request with the whole part.
+fn fetch_part(rt: &tokio::runtime::Runtime, part: &HlsPart, at: u64, ua: Option<&str>) -> Result<(reqwest::Response, u64), u16> {
+    rt.block_on(async {
+        let c = crate::api::media_client().map_err(|_| 0u16)?;
+        // Identity: the sizes were measured on the raw bytes.
+        let mut req = c.get(&part.url).header("Accept-Encoding", "identity");
+        if let Some(ua) = ua {
+            req = req.header("User-Agent", ua);
+        }
+        let from = match part.sub {
+            Some((off, len)) => {
+                req = req.header("Range", format!("bytes={}-{}", off + at, off + len.max(1) - 1));
+                Some(off + at)
+            }
+            None if at > 0 => {
+                req = req.header("Range", format!("bytes={at}-"));
+                Some(at)
+            }
+            None => None,
+        };
+        match tokio::time::timeout(std::time::Duration::from_secs(20), req.send()).await {
+            Ok(Ok(r)) => match r.status().as_u16() {
+                206 => Ok((r, 0)),
+                200 => Ok((r, from.unwrap_or(0))),
+                code => Err(code),
+            },
+            _ => Err(0),
+        }
+    })
 }
 
 /// Builds a header, or nothing when the value cannot be one.
@@ -769,16 +1300,28 @@ fn handle(
 
     let cache_key = cache_key_of(&service, &id, hq, &fmt);
 
+    // An HLS rendition measured earlier (the first request, a seek, the
+    // prefetch): no resolve, no playlist, no HEADs.
+    if let Some(file) = hls_get(&cache_key) {
+        return serve_hls(rt, file, range.as_deref(), head_only, origin.as_deref(), request);
+    }
+    // The caller's range as numbers; `None` inside for the suffix and
+    // multi-range forms, which are forwarded as they came.
+    let want = range.as_deref().map(plain_range);
+
     // Two attempts. A cached stream URL is signed and short-lived: once it
     // expires the service answers 403, and the old code passed that straight to
     // <audio>, which is exactly the intermittent "playback failed" on a track
     // that played fine a few minutes earlier. On a bad status the cache entry is
     // dropped and the URL resolved again from scratch.
     // YouTube gets a third: after a refusal its resolve asks a different
-    // client, and that is a genuinely new chance rather than a repeat.
-    let max_attempts: u8 = if service == "ytm" { 3 } else { 2 };
+    // client, and that is a genuinely new chance rather than a repeat — and,
+    // when every client is refused at the media host, one more from another
+    // service (`ytm_alternative`).
+    let mut max_attempts: u8 = if service == "ytm" { 3 } else { 2 };
+    let mut alt_tried = false;
     let mut attempt = 0u8;
-    let (status, ctype, crange, clen, resp, secret) = loop {
+    let (status, ctype, crange, clen, resp, secret, win) = loop {
         attempt += 1;
 
         let upstream = match cache_get(&cache_key) {
@@ -819,25 +1362,29 @@ fn handle(
 
         let secret = Secret::of(&upstream);
         let fetch_url = secret.url.clone();
+        let is_hls_url = fetch_url.contains(".m3u8");
+        // googlevideo only serves a media stream to a client that looks like
+        // one of Google's own players, and only in bounded ranges.
+        let is_google = (service == "ytm" && secret.alt.is_none()) || fetch_url.contains("googlevideo.com");
+        // (start, caller's end, end of the first window)
+        let win: Option<(u64, Option<u64>, u64)> = match (&want, is_google && !is_hls_url) {
+            (None, true) => Some((0, None, GV_FIRST_WINDOW - 1)),
+            (Some(Some((s, e))), true) => Some((*s, *e, (s + GV_FIRST_WINDOW - 1).min(e.unwrap_or(u64::MAX)))),
+            _ => None,
+        };
         let sent = rt.block_on(async {
             // media_client, not client: this body is read for as long as the
             // media element keeps reading it, and client()'s total deadline
             // would sever it mid-track.
             let c = crate::api::media_client()?;
             let mut req = c.get(&fetch_url);
-            // googlevideo only serves a media stream to a client that looks like
-            // one of Google's own players and always asks for a byte range.
-            let is_google = (service == "ytm" && secret.alt.is_none()) || fetch_url.contains("googlevideo.com");
             if is_google {
                 req = req.header("User-Agent", secret.ua());
-                if range.is_none() {
-                    req = req.header("Range", "bytes=0-");
-                }
             }
-            if let Some(r) = &range {
-                if !fetch_url.contains(".m3u8") {
-                    req = req.header("Range", r.clone());
-                }
+            match (win, &range) {
+                (Some((s, _, last)), _) => req = req.header("Range", format!("bytes={s}-{last}")),
+                (None, Some(r)) if !is_hls_url => req = req.header("Range", r.clone()),
+                _ => {}
             }
             // Only the headers are awaited here; the body is streamed below.
             req.send().await.map_err(|e| e.to_string())
@@ -846,18 +1393,46 @@ fn handle(
         match sent {
             Ok(resp) => {
                 let status = resp.status().as_u16();
+                // Past the end of the file: an answer, not a refusal — passed
+                // on as is, without blaming the client or resolving again.
+                if status == 416 {
+                    let total = resp
+                        .headers()
+                        .get("content-range")
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(content_range_total)
+                        .or_else(|| crate::ytm::url_param(&fetch_url, "clen").and_then(|v| v.parse::<u64>().ok()));
+                    let mut out = Response::from_string("range not satisfiable").with_status_code(StatusCode(416));
+                    for h in cors(origin.as_deref()) {
+                        out = out.with_header(h);
+                    }
+                    if let Some(h) = total.and_then(|n| try_header("Content-Range", &format!("bytes */{n}"))) {
+                        out = out.with_header(h);
+                    }
+                    return request.respond(out).map_err(|e| e.to_string());
+                }
                 if status >= 400 {
                     cache_drop(&cache_key);
                     // A refused googlevideo URL says something about the client
                     // that signed it: remember that, so the next resolve asks
                     // another client first instead of minting the same dud.
-                    if service == "ytm" {
-                        if let Some(c) = &secret.client {
-                            crate::ytm::note_media_failure(c, &format!("HTTP {status}"));
-                        }
+                    if let Some(c) = secret.client.as_deref().filter(|_| is_google) {
+                        crate::ytm::note_media_failure(c, &format!("HTTP {status}"));
                     }
                     if attempt < max_attempts {
                         continue;
+                    }
+                    // Every YouTube client refused at the media host: the same
+                    // recording from another service beats silence.
+                    if service == "ytm" && alt_ok && !alt_tried && secret.alt.is_none() {
+                        if let Some(h) = &hint {
+                            alt_tried = true;
+                            if let Ok(u) = rt.block_on(ytm_alternative(&id, h, hq)) {
+                                cache_put(cache_key.clone(), u);
+                                max_attempts += 1;
+                                continue;
+                            }
+                        }
                     }
                     note_err(&format!("{service}/{id}"), format!("the media host refused the stream with HTTP {status}"));
                     let mut resp = Response::from_string(format!("upstream rejected stream with HTTP {status}"))
@@ -882,7 +1457,7 @@ fn handle(
                 // instead of chunked encoding, which is what makes <audio>
                 // show a duration and allow seeking immediately.
                 let clen = resp.content_length().map(|v| v as usize);
-                break (status, ctype, crange, clen, resp, secret);
+                break (status, ctype, crange, clen, resp, secret, win);
             }
             Err(e) => {
                 if attempt < max_attempts {
@@ -908,131 +1483,125 @@ fn handle(
 
     let upstream = secret.url.clone();
     let is_hls = upstream.contains(".m3u8") || ctype.contains("mpegurl");
-    let (body, final_status, final_clen, final_crange, final_ctype, advertises_ranges) = if is_hls {
-        let m3u8_text = rt.block_on(resp.text()).unwrap_or_default();
-        let mut target_m3u8 = m3u8_text.clone();
-        let mut final_url = upstream.clone();
-        if m3u8_text.contains("#EXT-X-STREAM-INF") {
-            // Master playlist: resolve variant playlist
-            if let Some(sub) = m3u8_text
-                .lines()
-                .map(str::trim)
-                .find(|l| !l.starts_with('#') && !l.is_empty())
-            {
-                let sub_url = resolve_hls_url(&upstream, sub);
-                final_url = sub_url.clone();
-                if let Some(text) = rt.block_on(async {
-                    let c = crate::api::media_client().ok()?;
-                    c.get(&sub_url).send().await.ok()?.text().await.ok()
-                }) {
-                    target_m3u8 = text;
+    if is_hls {
+        let text = rt.block_on(resp.text()).unwrap_or_default();
+        let is_google = service == "ytm" || upstream.contains("googlevideo.com");
+        let ua = is_google.then(|| secret.ua().to_string());
+        match rt.block_on(hls_open(text, &upstream, ua.as_deref(), hq == 0)) {
+            Ok(file) => {
+                let file = std::sync::Arc::new(file);
+                if file.total.is_some() {
+                    hls_put(&cache_key, file.clone());
+                }
+                return serve_hls(rt, file, range.as_deref(), head_only, origin.as_deref(), request);
+            }
+            Err(e) => {
+                cache_drop(&cache_key);
+                note_err(&format!("{service}/{id}"), format!("HLS: {e}"));
+                let mut resp = Response::from_string(format!("hls: {e}")).with_status_code(StatusCode(502));
+                for h in cors(origin.as_deref()) {
+                    resp = resp.with_header(h);
+                }
+                return request.respond(resp).map_err(|e| e.to_string());
+            }
+        }
+    }
+
+    let is_google = (service == "ytm" && secret.alt.is_none()) || upstream.contains("googlevideo.com");
+    let mut normalized = ctype;
+    if let Some(c) = secret.ctype() {
+        // An encrypted file is served as octet-stream; the codec from the
+        // file info is the truth.
+        normalized = c.to_string();
+    } else if normalized == "application/octet-stream" || normalized == "text/plain" || normalized == "binary/octet-stream" {
+        if is_google {
+            normalized = if fmt == "mp4" || upstream.contains("mime=audio%2Fmp4") { "audio/mp4" } else { "audio/webm" }.to_string();
+        } else {
+            normalized = "audio/mpeg".to_string();
+        }
+    }
+    let ua = is_google.then(|| secret.ua().to_string());
+    let (body, final_status, final_clen, final_crange) = match win {
+        // googlevideo, read in windows: the answer to the caller is built from
+        // the file's real size, not from the first window's headers.
+        Some((s, e, first_end)) => {
+            let total = crange
+                .as_deref()
+                .and_then(content_range_total)
+                .or_else(|| crate::ytm::url_param(&upstream, "clen").and_then(|v| v.parse::<u64>().ok()))
+                .or_else(|| if status == 200 { clen.map(|c| c as u64) } else { None });
+            match total {
+                Some(n) if s >= n => {
+                    let mut resp = Response::from_string("range not satisfiable").with_status_code(StatusCode(416));
+                    for h in cors(origin.as_deref()) {
+                        resp = resp.with_header(h);
+                    }
+                    if let Some(h) = try_header("Content-Range", &format!("bytes */{n}")) {
+                        resp = resp.with_header(h);
+                    }
+                    return request.respond(resp).map_err(|e| e.to_string());
+                }
+                Some(n) => {
+                    let end = e.unwrap_or(n - 1).min(n - 1);
+                    let len = end - s + 1;
+                    // A host that ignored the range sent the whole file in one go.
+                    let w = (status == 206).then_some(Window { end, size: GV_WINDOW });
+                    let body = Upstream::new(rt, Some(resp), upstream.clone(), ua.clone(), Some(len), s).with_window(w, first_end);
+                    let crange = range.is_some().then(|| format!("bytes {s}-{end}/{n}"));
+                    (body, if range.is_some() { 206 } else { 200 }, Some(len as usize), crange)
+                }
+                None => {
+                    // No size anywhere: windows until the host says the file is over.
+                    let w = (status == 206).then_some(Window { end: u64::MAX, size: GV_WINDOW });
+                    let body = Upstream::new(rt, Some(resp), upstream.clone(), ua.clone(), None, s).with_window(w, first_end);
+                    (body, 200, None, None)
                 }
             }
         }
-        let segments = hls_segments(&target_m3u8, &final_url);
-
-        let is_google = service == "ytm" || upstream.contains("googlevideo.com");
-        let body = Upstream::hls(
-            rt,
-            segments,
-            0,
-            final_url,
-            if is_google {
-                Some(secret.ua().to_string())
-            } else {
-                None
-            },
-            0,
-            None,
-        );
-
-        // No Content-Length and no Content-Range, deliberately.
-        //
-        // The body is the live concatenation of the playlist's segments, and
-        // the playlist only ever states their *durations*. Turning seconds into
-        // bytes needs a bitrate, and no bitrate is right: 128 kbps is the
-        // nominal constant, not the truth for any given stream, and MPEG-TS
-        // adds its own overhead on top. A guessed length is not merely
-        // imprecise, it is a lie the media element acts on — WebKitGTK either
-        // waits for bytes that will never arrive (no `ended`, so no auto-advance
-        // to the next track) or cuts the stream at the invented boundary and
-        // drops the rest of the song. No length at all is honest and costs
-        // nothing: the element reads the real duration out of the transport
-        // stream's own PIDs.
-        //
-        // For the same reason `Accept-Ranges: none` goes out below. A seek we
-        // cannot satisfy byte-accurately is better answered by streaming the
-        // whole thing than by a 206 whose offsets are fiction.
-        (body, 200u16, None, None, "audio/mpeg".to_string(), false)
-    } else {
-        let is_google = service == "ytm" || upstream.contains("googlevideo.com");
-        let mut normalized = ctype;
-        if let Some(c) = secret.ctype() {
-            // An encrypted file is served as octet-stream; the codec from the
-            // file info is the truth.
-            normalized = c.to_string();
-        } else if normalized == "application/octet-stream" || normalized == "text/plain" || normalized == "binary/octet-stream" {
-            if is_google {
-                normalized = if fmt == "mp4" { "audio/mp4" } else { "audio/webm" }.to_string();
-            } else {
-                normalized = "audio/mpeg".to_string();
+        None => {
+            // Where the upstream body starts in the file: the keystream has to be
+            // seeked to exactly that byte.
+            let body_start = crange
+                .as_deref()
+                .and_then(|r| r.trim().strip_prefix("bytes "))
+                .and_then(|r| r.split('-').next())
+                .and_then(|n| n.trim().parse::<u64>().ok())
+                .unwrap_or(if status == 206 { initial_offset } else { 0 });
+            let mut body = Upstream::new(rt, Some(resp), upstream.clone(), ua.clone(), clen.map(|l| l as u64), body_start);
+            if let Some(k) = &secret.key {
+                body = body.with_key(k, body_start);
             }
+            let crange = if range.is_some() { crange } else { None };
+            (body, client_status, clen, crange)
         }
-        // Where the upstream body starts in the file: the keystream has to be
-        // seeked to exactly that byte.
-        let body_start = crange
-            .as_deref()
-            .and_then(|r| r.trim().strip_prefix("bytes "))
-            .and_then(|r| r.split('-').next())
-            .and_then(|n| n.trim().parse::<u64>().ok())
-            .unwrap_or(if status == 206 { initial_offset } else { 0 });
-        let mut body = Upstream::new(
-            rt,
-            Some(resp),
-            upstream.clone(),
-            if is_google {
-                Some(secret.ua().to_string())
-            } else {
-                None
-            },
-            clen.map(|l| l as u64),
-            body_start,
-        );
-        if let Some(k) = &secret.key {
-            body = body.with_key(k, body_start);
-        }
-        if service == "ytm" {
-            let itag = crate::ytm::url_param(&upstream, "itag").and_then(|v| v.parse::<u64>().ok());
-            if let (Some(itag), Some(client)) = (itag, secret.client.clone()) {
-                body = body.with_failover(Some(Failover {
-                    video_id: id.clone(),
-                    itag,
-                    tried: vec![client.clone()],
-                    client,
-                    cache_key: cache_key.clone(),
-                    left: 2,
-                }));
-            }
-        }
-        (body, client_status, clen, crange, normalized, true)
     };
+    // YouTube: how to continue the same file through another client when this
+    // URL stops being served mid-track.
+    let video_id = if service == "ytm" && secret.alt.is_none() { Some(id.clone()) } else { secret.vid.clone() };
+    let mut body = body;
+    if is_google {
+        let itag = crate::ytm::url_param(&upstream, "itag").and_then(|v| v.parse::<u64>().ok());
+        if let (Some(itag), Some(client), Some(video_id)) = (itag, secret.client.clone(), video_id) {
+            body = body.with_failover(Some(Failover {
+                video_id,
+                itag,
+                tried: vec![client.clone()],
+                client,
+                cache_key: cache_key.clone(),
+                left: 2,
+            }));
+        }
+    }
 
     let mut headers = vec![
-        try_header("Content-Type", &final_ctype)
-            .unwrap_or_else(|| header("Content-Type", "audio/mpeg")),
-        header(
-            "Accept-Ranges",
-            if advertises_ranges { "bytes" } else { "none" },
-        ),
+        try_header("Content-Type", &normalized).unwrap_or_else(|| header("Content-Type", "audio/mpeg")),
+        header("Accept-Ranges", if final_clen.is_some() || !is_google { "bytes" } else { "none" }),
         header("Cache-Control", "no-store"),
     ];
     headers.extend(cors(origin.as_deref()));
-    // Only send Content-Range if the client specifically issued a range request
-    if range.is_some() {
-        if let Some(cr) = &final_crange {
-            if let Some(h) = try_header("Content-Range", cr) {
-                headers.push(h);
-            }
+    if let Some(cr) = &final_crange {
+        if let Some(h) = try_header("Content-Range", cr) {
+            headers.push(h);
         }
     }
 
@@ -1042,7 +1611,28 @@ fn handle(
     }
 
     let response = Response::new(StatusCode(final_status), headers, body, final_clen, None);
+    // The windowed YouTube body knows its exact length (it is cut at it).
+    let response = if win.is_some() { with_length(response, final_status == 206) } else { response };
     request.respond(response).map_err(|e| e.to_string())
+}
+
+/// `bytes=S-` / `bytes=S-E` as numbers; the suffix and multi-range forms are
+/// `None`.
+fn plain_range(r: &str) -> Option<(u64, Option<u64>)> {
+    let spec = r.trim().strip_prefix("bytes=")?.trim();
+    if spec.contains(',') {
+        return None;
+    }
+    let (a, b) = spec.split_once('-')?;
+    let s = a.trim().parse::<u64>().ok()?;
+    let e = match b.trim() {
+        "" => None,
+        v => Some(v.parse::<u64>().ok()?),
+    };
+    if e.is_some_and(|e| e < s) {
+        return None;
+    }
+    Some((s, e))
 }
 
 /// Serves a byte range of a local file. Seeking in a two-hour FLAC has to work
@@ -1219,6 +1809,9 @@ struct Secret {
     client: Option<String>,
     /// Set when a YouTube track is served from another service (`ym`, `sc`).
     alt: Option<String>,
+    /// The YouTube video behind a googlevideo URL that another service's
+    /// resolve found (Deezer, a SoundCloud preview): what failover asks for.
+    vid: Option<String>,
 }
 
 impl Secret {
@@ -1227,13 +1820,14 @@ impl Secret {
             Some((u, f)) if f.starts_with("mw") => (u.to_string(), f),
             _ => (raw.to_string(), ""),
         };
-        let mut s = Secret { url, key: None, codec: None, client: None, alt: None };
+        let mut s = Secret { url, key: None, codec: None, client: None, alt: None, vid: None };
         for kv in frag.split('&') {
             match kv.split_once('=') {
                 Some(("mwk", v)) if !v.is_empty() => s.key = Some(v.to_string()),
                 Some(("mwc", v)) if !v.is_empty() => s.codec = Some(v.to_string()),
                 Some(("mwua", v)) if !v.is_empty() => s.client = Some(v.to_string()),
                 Some(("mwalt", v)) if !v.is_empty() => s.alt = Some(v.to_string()),
+                Some(("mwvid", v)) if !v.is_empty() => s.vid = Some(v.to_string()),
                 _ => {}
             }
         }
@@ -1378,7 +1972,12 @@ pub async fn stream_prefetch(service: String, id: String, hq: Option<u8>, fmt: O
         return Ok(true);
     }
     let u = resolve_pub(&service, &id, hq, &fmt).await?;
-    cache_put(key, u);
+    cache_put(key.clone(), u.clone());
+    // An HLS stream is measured now too, so the switch needs no HEADs.
+    let url = Secret::of(&u).url;
+    if url.contains(".m3u8") {
+        hls_prepare(&key, &url).await;
+    }
     Ok(true)
 }
 
@@ -1638,7 +2237,10 @@ fn serve_relay(
 
 #[cfg(test)]
 mod range_tests {
-    use super::{hls_segments, parse_range, token, token_ok, RangeSpec};
+    use super::{
+        content_range_total, hls_attr, hls_ctype, hls_parts, hls_variant, parse_range, plain_range, token, token_ok, HlsFile, HlsPart,
+        RangeSpec,
+    };
 
     fn bytes(r: &str, total: u64) -> (u64, u64) {
         match parse_range(Some(r), total) {
@@ -1681,10 +2283,13 @@ mod range_tests {
         assert!(matches!(parse_range(None, 1000), RangeSpec::None));
     }
 
+    fn urls(parts: &[HlsPart]) -> Vec<&str> {
+        parts.iter().map(|p| p.url.as_str()).collect()
+    }
+
     #[test]
     fn hls_playlist_yields_segments_in_order() {
-        // The shape SoundCloud hands back for an HLS-only track: a media
-        // playlist, not a master one, with tags carrying no address.
+        // The old SoundCloud shape: MP3 segments, tags carrying no address.
         let playlist = "#EXTM3U\n\
                         #EXT-X-VERSION:3\n\
                         #EXT-X-TARGETDURATION:10\n\
@@ -1695,18 +2300,86 @@ mod range_tests {
                         #EXTINF:5.5,\n\
                         https://cdn.example/abs/seg2.ts\n\
                         #EXT-X-ENDLIST\n";
+        let parts = hls_parts(playlist, "https://cdn.example/hls/track/media.m3u8").unwrap();
         assert_eq!(
-            hls_segments(playlist, "https://cdn.example/hls/track/media.m3u8"),
+            urls(&parts),
             vec![
                 "https://cdn.example/hls/track/seg0.ts",
                 "https://cdn.example/media/seg1.ts",
                 "https://cdn.example/abs/seg2.ts",
             ]
         );
-        // A master playlist has no segments of its own; its variant lines are
-        // picked out before this ever runs, so an empty result is correct.
-        assert!(hls_segments("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv.m3u8\n", "https://x/y/m.m3u8").len() == 1);
-        assert!(hls_segments("", "https://x/y/m.m3u8").is_empty());
+        assert!(parts.iter().all(|p| p.len.is_none() && p.sub.is_none()));
+        assert!(hls_parts("", "https://x/y/m.m3u8").unwrap().is_empty());
+    }
+
+    #[test]
+    fn hls_fmp4_keeps_the_init_section_first() {
+        // SoundCloud's AAC renditions today: CMAF fragments that mean nothing
+        // without the init section named by #EXT-X-MAP. Dropping it was the
+        // "service answered, file did not play" failure.
+        let playlist = "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:10\n#EXT-X-PLAYLIST-TYPE:VOD\n\
+                        #EXT-X-MAP:URI=\"https://m.example/aac_160k/u/init.mp4?expires=9&Policy=a,b\"\n\
+                        #EXTINF:10.0078,\nhttps://m.example/aac_160k/u/data000.m4s?expires=9\n\
+                        #EXTINF:10.0078,\ndata001.m4s?expires=9\n#EXT-X-ENDLIST\n";
+        let parts = hls_parts(playlist, "https://m.example/aac_160k/u/playlist.m3u8").unwrap();
+        assert_eq!(
+            urls(&parts),
+            vec![
+                "https://m.example/aac_160k/u/init.mp4?expires=9&Policy=a,b",
+                "https://m.example/aac_160k/u/data000.m4s?expires=9",
+                "https://m.example/aac_160k/u/data001.m4s?expires=9",
+            ]
+        );
+        assert_eq!(hls_ctype(&parts, true), "audio/mp4");
+        // A repeated map (after a discontinuity) is not inserted twice.
+        let twice = format!("{playlist}#EXT-X-MAP:URI=\"https://m.example/aac_160k/u/init.mp4?expires=9&Policy=a,b\"\n");
+        assert_eq!(hls_parts(&twice, "https://m.example/p.m3u8").unwrap().len(), 3);
+    }
+
+    #[test]
+    fn hls_byteranges_and_keys() {
+        let playlist = "#EXTM3U\n#EXT-X-MAP:URI=\"all.mp4\",BYTERANGE=\"700@0\"\n\
+                        #EXT-X-BYTERANGE:1000@700\n#EXTINF:4,\nall.mp4\n\
+                        #EXT-X-BYTERANGE:500\n#EXTINF:2,\nall.mp4\n";
+        let parts = hls_parts(playlist, "https://h/x/p.m3u8").unwrap();
+        assert_eq!(parts.iter().map(|p| p.sub).collect::<Vec<_>>(), vec![Some((0, 700)), Some((700, 1000)), Some((1700, 500))]);
+        assert_eq!(parts.iter().map(|p| p.len).collect::<Vec<_>>(), vec![Some(700), Some(1000), Some(500)]);
+        assert!(hls_parts("#EXT-X-KEY:METHOD=AES-128,URI=\"k\"\nseg.ts\n", "https://h/p.m3u8").is_err());
+        assert!(hls_parts("#EXT-X-KEY:METHOD=NONE\nseg.ts\n", "https://h/p.m3u8").is_ok());
+        assert_eq!(hls_attr("METHOD=SAMPLE-AES,URI=\"a,b\",IV=0x1", "IV").as_deref(), Some("0x1"));
+        assert_eq!(hls_attr("URI=\"a,b\",IV=0x1", "URI").as_deref(), Some("a,b"));
+    }
+
+    #[test]
+    fn hls_master_picks_by_bandwidth() {
+        let m = "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=64000,CODECS=\"mp4a.40.2\"\nlow/p.m3u8\n\
+                 #EXT-X-STREAM-INF:BANDWIDTH=160000,CODECS=\"mp4a.40.2\"\nhigh/p.m3u8\n";
+        assert_eq!(hls_variant(m, "https://h/a/master.m3u8", false).as_deref(), Some("https://h/a/high/p.m3u8"));
+        assert_eq!(hls_variant(m, "https://h/a/master.m3u8", true).as_deref(), Some("https://h/a/low/p.m3u8"));
+        assert!(hls_variant("#EXTM3U\n", "https://h/m.m3u8", false).is_none());
+    }
+
+    #[test]
+    fn hls_file_locates_bytes() {
+        let part = |n| HlsPart { url: String::new(), sub: None, len: Some(n) };
+        let f = HlsFile { parts: vec![part(100), part(50), part(10)], total: Some(160), ctype: "audio/mp4", ua: None };
+        assert_eq!(f.locate(0), (0, 0));
+        assert_eq!(f.locate(99), (0, 99));
+        assert_eq!(f.locate(100), (1, 0));
+        assert_eq!(f.locate(155), (2, 5));
+        assert_eq!(f.locate(160), (3, 0));
+    }
+
+    #[test]
+    fn plain_ranges_and_totals() {
+        assert_eq!(plain_range("bytes=0-"), Some((0, None)));
+        assert_eq!(plain_range("bytes=100-199"), Some((100, Some(199))));
+        assert_eq!(plain_range("bytes=-500"), None);
+        assert_eq!(plain_range("bytes=0-1,5-6"), None);
+        assert_eq!(plain_range("bytes=9-3"), None);
+        assert_eq!(content_range_total("bytes 0-524287/3456789"), Some(3_456_789));
+        assert_eq!(content_range_total("bytes 0-1/*"), None);
     }
 
     #[test]
@@ -1794,3 +2467,249 @@ mod range_tests {
     }
 }
 
+
+/// The proxy end to end against fake upstreams on loopback: a googlevideo
+/// that refuses open-ended and oversized ranges, and a SoundCloud-style HLS
+/// rendition (init section + fragments). Offline; runs with `cargo test`.
+#[cfg(test)]
+mod upstream_tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    fn byte(i: u64) -> u8 {
+        (i % 251) as u8
+    }
+
+    fn range_of(req: &tiny_http::Request) -> Option<String> {
+        req.headers()
+            .iter()
+            .find(|h| h.field.equiv("Range"))
+            .map(|h| h.value.as_str().to_string())
+    }
+
+    /// Serves `/gv?clen=N` like googlevideo (bounded ranges only) and an HLS
+    /// rendition under `/hls/`. Returns the port and a playlist-fetch counter.
+    fn fake(gv_len: u64, parts: Vec<Vec<u8>>) -> (u16, Arc<AtomicUsize>) {
+        let server = Arc::new(tiny_http::Server::http("127.0.0.1:0").unwrap());
+        let port = server.server_addr().to_ip().unwrap().port();
+        let playlists = Arc::new(AtomicUsize::new(0));
+        let pl = playlists.clone();
+        let parts = Arc::new(parts);
+        std::thread::spawn(move || loop {
+            let Ok(req) = server.recv() else { break };
+            let (pl, parts) = (pl.clone(), parts.clone());
+            std::thread::spawn(move || answer(req, gv_len, &pl, &parts));
+        });
+        (port, playlists)
+    }
+
+    fn answer(req: tiny_http::Request, gv_len: u64, pl: &AtomicUsize, parts: &[Vec<u8>]) {
+        let path = req.url().split('?').next().unwrap_or("").to_string();
+        let range = range_of(&req).and_then(|r| super::plain_range(&r));
+        let hdr = |k: &str, v: &str| tiny_http::Header::from_bytes(k.as_bytes(), v.as_bytes()).unwrap();
+        if path == "/gv" {
+            // Open-ended, missing or larger than 3 MiB: refused.
+            let Some((s, Some(e))) = range else {
+                let _ = req.respond(tiny_http::Response::from_string("no").with_status_code(403));
+                return;
+            };
+            if s >= gv_len {
+                let resp = tiny_http::Response::from_string("")
+                    .with_status_code(416)
+                    .with_header(hdr("Content-Range", &format!("bytes */{gv_len}")));
+                let _ = req.respond(resp);
+                return;
+            }
+            if e - s >= 3 * 1024 * 1024 {
+                let _ = req.respond(tiny_http::Response::from_string("no").with_status_code(403));
+                return;
+            }
+            let e = e.min(gv_len - 1);
+            let body: Vec<u8> = (s..=e).map(byte).collect();
+            let resp = tiny_http::Response::from_data(body)
+                .with_status_code(206)
+                .with_header(hdr("Content-Range", &format!("bytes {s}-{e}/{gv_len}")))
+                .with_header(hdr("Content-Type", "audio/webm"));
+            let _ = req.respond(resp);
+            return;
+        }
+        if path == "/hls/p.m3u8" {
+            pl.fetch_add(1, Ordering::SeqCst);
+            let mut text = String::from("#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:10\n#EXT-X-MAP:URI=\"init.mp4?expires=99999999999\"\n");
+            for i in 1..parts.len() {
+                text.push_str(&format!("#EXTINF:10.0,\ndata{:03}.m4s?expires=99999999999\n", i - 1));
+            }
+            text.push_str("#EXT-X-ENDLIST\n");
+            let _ = req.respond(tiny_http::Response::from_string(text));
+            return;
+        }
+        let idx = if path == "/hls/init.mp4" {
+            Some(0)
+        } else {
+            path.strip_prefix("/hls/data")
+                .and_then(|p| p.strip_suffix(".m4s"))
+                .and_then(|n| n.parse::<usize>().ok())
+                .map(|n| n + 1)
+        };
+        let Some(data) = idx.and_then(|i| parts.get(i)).cloned() else {
+            let _ = req.respond(tiny_http::Response::from_string("404").with_status_code(404));
+            return;
+        };
+        let total = data.len() as u64;
+        if req.method() == &tiny_http::Method::Head {
+            let _ = req.respond(tiny_http::Response::new(200.into(), vec![], std::io::empty(), Some(total as usize), None));
+            return;
+        }
+        match range {
+            Some((s, e)) => {
+                let e = e.unwrap_or(total - 1).min(total - 1);
+                let resp = tiny_http::Response::from_data(data[s as usize..=e as usize].to_vec())
+                    .with_status_code(206)
+                    .with_header(hdr("Content-Range", &format!("bytes {s}-{e}/{total}")));
+                let _ = req.respond(resp);
+            }
+            None => {
+                let _ = req.respond(tiny_http::Response::from_data(data));
+            }
+        }
+    }
+
+    fn get(url: &str, range: Option<&str>) -> (u16, Vec<(String, String)>, Vec<u8>) {
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        rt.block_on(async {
+            let c = reqwest::Client::builder().no_proxy().build().unwrap();
+            let mut req = c.get(url);
+            if let Some(r) = range {
+                req = req.header("Range", r);
+            }
+            let r = req.send().await.unwrap();
+            let st = r.status().as_u16();
+            let hs = r
+                .headers()
+                .iter()
+                .map(|(k, v)| (k.as_str().to_ascii_lowercase(), v.to_str().unwrap_or("").to_string()))
+                .collect();
+            (st, hs, r.bytes().await.unwrap().to_vec())
+        })
+    }
+
+    fn h<'a>(hs: &'a [(String, String)], k: &str) -> Option<&'a str> {
+        hs.iter().find(|(n, _)| n == k).map(|(_, v)| v.as_str())
+    }
+
+    #[test]
+    fn googlevideo_is_read_in_bounded_windows() {
+        let n: u64 = 5 * 1024 * 1024 + 12345;
+        let (up, _) = fake(n, vec![vec![0]]);
+        let port = super::spawn().unwrap();
+        let tok = super::token();
+        let key = super::cache_key_of("ytm", "fakevid1", 1, "best");
+        super::cache_put(key, format!("http://127.0.0.1:{up}/gv?clen={n}&itag=251#mwua=ANDROID_VR"));
+        let url = format!("http://127.0.0.1:{port}/stream/ytm/fakevid1?k={tok}&hq=1&fmt=best&alt=0");
+
+        // What <audio> sends first: an open-ended range. The fake refuses
+        // those outright, exactly like googlevideo did.
+        let (st, hs, body) = get(&url, Some("bytes=0-"));
+        assert_eq!(st, 206);
+        assert_eq!(h(&hs, "content-range"), Some(format!("bytes 0-{}/{n}", n - 1).as_str()));
+        assert_eq!(body.len() as u64, n);
+        assert!(body.iter().enumerate().all(|(i, b)| *b == byte(i as u64)));
+
+        // A seek into the middle.
+        let mid = n / 2 + 7;
+        let (st, hs, body) = get(&url, Some(&format!("bytes={mid}-")));
+        assert_eq!(st, 206);
+        assert_eq!(h(&hs, "content-range"), Some(format!("bytes {mid}-{}/{n}", n - 1).as_str()));
+        assert_eq!(body.len() as u64, n - mid);
+        assert!(body.iter().enumerate().all(|(i, b)| *b == byte(mid + i as u64)));
+
+        // A bounded range, and no range at all.
+        let (st, _, body) = get(&url, Some("bytes=100-199"));
+        assert_eq!((st, body.len()), (206, 100));
+        assert_eq!(body[0], byte(100));
+        let (st, hs, body) = get(&url, None);
+        assert_eq!(st, 200);
+        assert_eq!(h(&hs, "content-length"), Some(n.to_string().as_str()));
+        assert_eq!(body.len() as u64, n);
+
+        // Past the end.
+        let (st, hs, _) = get(&url, Some(&format!("bytes={n}-")));
+        assert_eq!(st, 416);
+        assert_eq!(h(&hs, "content-range"), Some(format!("bytes */{n}").as_str()));
+    }
+
+    #[test]
+    fn hls_is_served_as_one_seekable_file() {
+        let sizes = [700usize, 30_000, 25_000, 31_337, 9_000];
+        let mut parts = Vec::new();
+        let mut i = 0u64;
+        for n in sizes {
+            parts.push((0..n).map(|_| {
+                i += 1;
+                byte(i * 7)
+            }).collect::<Vec<u8>>());
+        }
+        let whole: Vec<u8> = parts.concat();
+        let total = whole.len() as u64;
+        let (up, playlists) = fake(1, parts);
+        let port = super::spawn().unwrap();
+        let tok = super::token();
+        let key = super::cache_key_of("sc", "fakehls1", 1, "best");
+        super::cache_put(key, format!("http://127.0.0.1:{up}/hls/p.m3u8"));
+        let url = format!("http://127.0.0.1:{port}/stream/sc/fakehls1?k={tok}&hq=1&fmt=best");
+
+        let (st, hs, body) = get(&url, Some("bytes=0-"));
+        assert_eq!(st, 206);
+        assert_eq!(h(&hs, "content-type"), Some("audio/mp4"));
+        assert_eq!(h(&hs, "accept-ranges"), Some("bytes"));
+        assert_eq!(h(&hs, "content-range"), Some(format!("bytes 0-{}/{total}", total - 1).as_str()));
+        assert_eq!(body, whole, "init section + every fragment, in order");
+
+        // A range across a part boundary, then one inside the last part.
+        let (st, _, body) = get(&url, Some("bytes=29000-62000"));
+        assert_eq!(st, 206);
+        assert_eq!(body, whole[29000..=62000].to_vec());
+        let (st, _, body) = get(&url, Some(&format!("bytes={}-", total - 100)));
+        assert_eq!(st, 206);
+        assert_eq!(body, whole[(total - 100) as usize..].to_vec());
+        let (st, hs, body) = get(&url, None);
+        assert_eq!(st, 200);
+        assert_eq!(h(&hs, "content-length"), Some(total.to_string().as_str()));
+        assert_eq!(body.len() as u64, total);
+        let (st, _, _) = get(&url, Some(&format!("bytes={total}-")));
+        assert_eq!(st, 416);
+
+        // Measured once: the seeks above came from the cache.
+        assert_eq!(playlists.load(Ordering::SeqCst), 1);
+    }
+}
+
+#[cfg(test)]
+mod live_sc {
+    /// The real SoundCloud through the proxy (needs the network):
+    /// `MW_SC=<track id> cargo test live_sc -- --ignored --nocapture`.
+    /// Bodies land in /tmp/sc_live_<n>.bin for ffprobe.
+    #[test]
+    #[ignore]
+    fn live_sc_proxy() {
+        let id = std::env::var("MW_SC").unwrap_or_else(|_| "2152309329".into());
+        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        let t0 = std::time::Instant::now();
+        let u = rt.block_on(crate::api::sc_stream_url("", &id));
+        println!("resolve {:?}: {:?}", t0.elapsed(), u.as_ref().map(|u| u.split('?').next().unwrap_or("").to_string()));
+        let port = super::spawn().unwrap();
+        let tok = super::token();
+        for (i, r) in ["bytes=0-", "bytes=1000000-", "bytes=0-"].iter().enumerate() {
+            let t0 = std::time::Instant::now();
+            let out = std::process::Command::new("curl")
+                .args(["-s", "-D", "-", "-o", &format!("/tmp/sc_live_{i}.bin"), "-w", "%{http_code} %{size_download}", "-H"])
+                .arg(format!("Range: {r}"))
+                .arg(format!("http://127.0.0.1:{port}/stream/sc/{id}?k={tok}&hq=1&fmt=best"))
+                .output()
+                .unwrap();
+            let txt = String::from_utf8_lossy(&out.stdout).to_string();
+            let heads: Vec<&str> = txt.lines().filter(|l| l.starts_with("Content-") || l.starts_with("HTTP/")).collect();
+            println!("{r}: {:?} in {:?} {}", heads, t0.elapsed(), txt.lines().last().unwrap_or(""));
+        }
+    }
+}

@@ -8,14 +8,14 @@ can be recoloured and put on any background — or on none at all:
   clear-auto   no background; the app picks white or dark by the system theme
   clear-light  no background, white glyph (dark taskbars)
   clear-dark   no background, near-black glyph (light taskbars)
-  clear-neon   no background, violet→cyan gradient glyph (reads on both)
-  classic …    squircle tiles with a gradient fill
+  classic …    squircle tiles with a gradient fill (classic is the default)
 
 Writes src/icons/app/<id>.png (256 px, what the running window and the picker
 use). With --bundle it also regenerates the installer/exe icons in
-src-tauri/icons (and src/icons/icon.png) from the «clear-neon» variant — a
-glyph without a background that reads on light and dark taskbars alike — via
-round-icons.py's writer, with a bolder drawing for the ≤48 px frames.
+src-tauri/icons (and src/icons/icon.png) from the «classic» variant — the
+white cat on the black tile, which reads on light and dark taskbars alike —
+via round-icons.py's writer, with a bolder drawing for the ≤48 px frames.
+Round 6 dropped the two neon variants: no neon anywhere in the app.
 
     pip install pillow numpy
     python scripts/icon-variants.py [--bundle]
@@ -36,10 +36,8 @@ N = 5.0
 VARIANTS = {
     "clear-light": ("clear", None, "#ffffff"),
     "clear-dark":  ("clear", None, "#17161d"),
-    "clear-neon":  ("clear", None, ("#8b5cf6", "#06b6d4")),
     "classic":     ("tile", ("#141418", "#050507"), "#ffffff"),
     "midnight":    ("tile", ("#3b3a8f", "#12112e"), "#ffffff"),
-    "neon":        ("tile", ("#8b5cf6", "#db2777"), "#ffffff"),
     "ocean":       ("tile", ("#38bdf8", "#1e3a8a"), "#ffffff"),
     "mint":        ("tile", ("#34d399", "#065f46"), "#ffffff"),
     "sunset":      ("tile", ("#fb923c", "#be123c"), "#ffffff"),
@@ -108,13 +106,6 @@ def build(vid, size=M, bold=None):
         g = place(mask, size, .94, bold=bold or 11)
         out = colour_layer(size, fg).convert("RGBA")
         out.putalpha(g)
-        if vid == "clear-neon":
-            # a faint dark halo keeps the light end of the gradient legible on white
-            halo = g.filter(ImageFilter.GaussianBlur(size * .012)).point(lambda v: int(v * .35))
-            base = Image.new("RGBA", (size, size), (20, 16, 40, 0))
-            base.putalpha(halo)
-            base.alpha_composite(out)
-            out = base
         return out
     tile = gradient(size, bg).convert("RGBA")
     # soft top light on the tile
@@ -142,7 +133,7 @@ def main():
         sys.path.insert(0, os.path.join(ROOT, "scripts"))
         import importlib
         ri = importlib.import_module("round-icons")
-        ri.write_all(build("clear-neon", bold=5), small=build("clear-neon", bold=13))
+        ri.write_all(build("classic", bold=5), small=build("classic", bold=13))
 
 
 if __name__ == "__main__":

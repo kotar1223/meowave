@@ -2608,7 +2608,7 @@ html[data-fullscreen="true"] .fp {
   width: 180px;
   height: 180px;
   border-radius: 50%;
-  background: rgba(147, 51, 234, 0.32);
+  background: rgb(var(--accent-rgb) / 0.32);
   filter: blur(48px);
   pointer-events: none;
   animation: floatOrb 8s ease-in-out infinite, pulseGlow 6s ease-in-out infinite;
@@ -2620,7 +2620,7 @@ html[data-fullscreen="true"] .fp {
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background: rgba(99, 102, 241, 0.32);
+  background: rgb(var(--accent-rgb) / 0.32);
   filter: blur(52px);
   pointer-events: none;
   animation: floatOrb 10s ease-in-out infinite reverse, pulseGlow 7s ease-in-out infinite;
@@ -2683,8 +2683,8 @@ html[data-fullscreen="true"] .fp {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(168, 85, 247, 0.12);
-  border: 1px solid rgba(168, 85, 247, 0.28);
+  background: rgb(var(--accent-rgb) / 0.12);
+  border: 1px solid rgb(var(--accent-rgb) / 0.28);
   border-radius: 12px;
   padding: 6px 12px;
   margin: 6px 0;
@@ -2693,8 +2693,8 @@ html[data-fullscreen="true"] .fp {
   user-select: none;
 }
 .chat-track-chip:hover {
-  background: rgba(168, 85, 247, 0.22);
-  border-color: rgba(168, 85, 247, 0.45);
+  background: rgb(var(--accent-rgb) / 0.22);
+  border-color: rgb(var(--accent-rgb) / 0.45);
   transform: translateY(-1px);
 }
 .chat-track-chip button {
@@ -3123,7 +3123,7 @@ html[data-fullscreen="true"] .fp {
 }
 .status-indicator.listening {
   background: var(--accent);
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.65);
+  box-shadow: 0 0 8px rgb(var(--accent-rgb) / 0.65);
   animation: pulseListening 2s infinite ease-in-out;
 }
 .status-indicator.offline {
@@ -3172,7 +3172,7 @@ html[data-fullscreen="true"] .fp {
   background: var(--accent);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 2px 10px rgba(168, 85, 247, 0.35);
+  box-shadow: 0 2px 10px rgb(var(--accent-rgb) / 0.35);
 }
 
 .people-search-box {
@@ -3200,7 +3200,7 @@ html[data-fullscreen="true"] .fp {
 .people-search-box input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.18);
 }
 
 /* ── Friends List & Cards Grid ────────────────────────────────── */
@@ -3259,8 +3259,8 @@ html[data-fullscreen="true"] .fp {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(168, 85, 247, 0.12);
-  border: 1px solid rgba(168, 85, 247, 0.26);
+  background: rgb(var(--accent-rgb) / 0.12);
+  border: 1px solid rgb(var(--accent-rgb) / 0.26);
   border-radius: 8px;
   padding: 3px 8px;
   margin-top: 4px;
@@ -3324,8 +3324,8 @@ html[data-fullscreen="true"] .fp {
   justify-content: space-between;
   gap: 14px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(99, 102, 241, 0.08));
-  border: 1px solid rgba(168, 85, 247, 0.25);
+  background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.12), rgb(var(--accent-rgb) / 0.08));
+  border: 1px solid rgb(var(--accent-rgb) / 0.25);
   border-radius: 14px;
   margin-bottom: 16px;
 }
@@ -5060,17 +5060,17 @@ html[data-theme="light"]{
 html{transition:--cv-a var(--cv-fade) cubic-bezier(.45,0,.25,1),--cv-b var(--cv-fade) cubic-bezier(.45,0,.25,1)}
 html[data-theme="dark"][data-coverbg="on"]:not([data-wall]) body{
   background:
-    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 34%),transparent) 0%,transparent 74%),
-    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 28%),transparent) 0%,transparent 74%),
+    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 24%),transparent) 0%,transparent 76%),
+    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 19%),transparent) 0%,transparent 76%),
     radial-gradient(130% 85% at 50% -25%,oklch(21% 0.03 275 / .5) 0%,transparent 62%),
     var(--bg)}
 html[data-theme="light"][data-coverbg="on"]:not([data-wall]) body{
   background:
-    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 26%),transparent) 0%,transparent 74%),
-    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 20%),transparent) 0%,transparent 74%),
+    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 18%),transparent) 0%,transparent 76%),
+    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 14%),transparent) 0%,transparent 76%),
     var(--bg)}
-html[data-coverbg="on"] .haze i:nth-child(1){background:radial-gradient(circle,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 22%),transparent) 0%,transparent 70%)}
-html[data-coverbg="on"] .haze i:nth-child(2){background:radial-gradient(circle,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 18%),transparent) 0%,transparent 70%)}
+html[data-coverbg="on"] .haze i:nth-child(1){background:radial-gradient(circle,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 14%),transparent) 0%,transparent 70%)}
+html[data-coverbg="on"] .haze i:nth-child(2){background:radial-gradient(circle,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 11%),transparent) 0%,transparent 70%)}
 
 /* ── surfaces ── */
 :root{
@@ -5161,42 +5161,48 @@ html[data-lite] .bar,html[data-lite] .hsheet,html[data-lite] .rail.pane{-webkit-
 .appicon-l{max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 html[data-theme="light"] .appicon{background:oklch(100% 0 0 / .5)}
 
-/* ── Accounts: one card per service ── */
-.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;margin-top:16px}
-.acc-card{position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px;border-radius:20px;border:1px solid var(--line);
- background:linear-gradient(155deg,color-mix(in oklab,var(--brand) 10%,transparent),transparent 58%),oklch(100% 0 0 / .025);
- transition:border-color .25s var(--dlg-ease,ease),background-color .25s}
-.acc-card[data-on="true"]{border-color:color-mix(in oklab,var(--brand) 30%,var(--line))}
-.acc-card:has(.acc-lib),.acc-card:has(.tokrow),.acc-card:has(.guide){grid-column:1/-1}
-.acc-top{display:flex;align-items:center;gap:12px;min-width:0}
-.acc-logo{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:13px;color:#fff;background:var(--brand);
- box-shadow:0 8px 20px -10px var(--brand),inset 0 1px 0 oklch(100% 0 0 / .25)}
-.acc-card[data-acc-card="ym"] .acc-logo,.acc-card[data-acc-card="sp"] .acc-logo{color:#121212}
-.acc-logo .sic{width:22px;height:22px}
-.acc-meta{flex:1;min-width:0;display:grid;gap:3px}
-.acc-meta b{font-size:.95rem;font-weight:600;letter-spacing:-.005em}
-.acc-meta small{display:flex;align-items:center;gap:6px;min-width:0;color:var(--mute);font-size:.76rem;line-height:1.3}
-.acc-card[data-on="true"] .acc-meta small::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:#34c759;box-shadow:0 0 0 3px rgb(52 199 89 / .18)}
-.acc-card[data-warn="true"] .acc-meta small::before{background:#f5a524;box-shadow:0 0 0 3px rgb(245 165 36 / .2)}
-.acc-ava{flex:none;width:34px;height:34px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px color-mix(in oklab,var(--brand) 55%,transparent)}
-.acc-desc{margin:0;color:var(--mute);font-size:.8rem;line-height:1.45}
+/* ── Accounts (round 6): one quiet list, like Spotify's settings —
+   monochrome marks, the name and the state, outline buttons on the right.
+   "The Deezer icon is wrong … elegant, black and white … something white at
+   the bottom looks bad": no brand tiles, no white pills. ── */
+.acc-grid{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.acc-card{position:relative;min-width:0}
+.acc-card+.acc-card{border-top:1px solid var(--line)}
+.acc-line{display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 14px 12px 16px;transition:background-color .2s var(--e)}
+.acc-card:hover .acc-line{background:oklch(100% 0 0 / .022)}
+.acc-logo{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:8px;color:var(--text);background:oklch(100% 0 0 / .065)}
+.acc-logo .sic{width:20px;height:20px}
+.acc-meta{flex:1;min-width:0;display:grid;gap:2px}
+.acc-meta b{font-size:.92rem;font-weight:600;letter-spacing:-.005em}
+.acc-meta small{display:flex;align-items:center;gap:7px;min-width:0;color:var(--mute);font-size:.76rem;line-height:1.35}
+.acc-meta small>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-card[data-on="true"] .acc-meta small::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--text);opacity:.85}
+.acc-card[data-warn="true"] .acc-meta small::before{background:#d9a441;opacity:1}
+.acc-ava{flex:none;width:18px;height:18px;border-radius:50%;object-fit:cover}
+.acc-act{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex:none}
+.acc-act .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:999px;font-size:.78rem;line-height:1}
+.acc-act .btn:hover{transform:none}
+.acc-act .acc-go{border:1px solid oklch(100% 0 0 / .3);background:transparent;color:var(--text);font-weight:600}
+.acc-act .acc-go:hover{border-color:oklch(100% 0 0 / .75)}
+.acc-act .acc-go.on{border-color:oklch(100% 0 0 / .55);background:oklch(100% 0 0 / .07);color:var(--text)}
+.acc-act .acc-go[aria-busy="true"]{opacity:.7;pointer-events:none}
+.acc-act .acc-alt{border-color:transparent;background:transparent;color:var(--mute);font-weight:500;padding:0 10px}
+.acc-act .acc-alt:hover{color:var(--text)}
+.acc-act .btn:disabled{opacity:.45}
+.acc-sub{display:grid;gap:10px;padding:0 16px 14px 66px}
+.acc-spin{animation:spin 1s linear infinite}
 .acc-hint{margin:0;font-size:.76rem;color:var(--mute);word-break:break-all}
 .acc-hint a{color:var(--text)}
-.acc-act{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
-.acc-act .btn,.acc-act .primary{display:inline-flex;align-items:center;gap:6px}
-.acc-act .btn.ghost{background:transparent;border-color:transparent;color:var(--mute)}
-.acc-act .btn.ghost:hover{color:var(--text);background:oklch(100% 0 0 / .06)}
-.acc-spin{animation:spin 1s linear infinite}
 .acc-lib{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--line)}
 .acc-lib-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px}
 .acc-lib-head b{font-size:.84rem;font-weight:600}
 .acc-lib-head .btn{display:inline-flex;align-items:center;gap:6px}
-.acc-rows{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px;max-height:min(46vh,380px);overflow:auto;padding:2px}
-.acc-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:14px;background:oklch(100% 0 0 / .035)}
-.acc-row:hover{background:oklch(100% 0 0 / .06)}
-.acc-row-art{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:10px;overflow:hidden;background:oklch(100% 0 0 / .07);color:var(--mute)}
+.acc-rows{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px;max-height:min(46vh,380px);overflow:auto;padding:2px}
+.acc-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:10px;padding:5px 6px 5px 5px;border-radius:8px}
+.acc-row:hover{background:oklch(100% 0 0 / .05)}
+.acc-row-art{position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:6px;overflow:hidden;background:oklch(100% 0 0 / .07);color:var(--mute)}
 .acc-row-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.acc-row.is-liked .acc-row-art{background:linear-gradient(135deg,#e5466f,#8b5cf6);color:#fff}
+.acc-row.is-liked .acc-row-art{background:oklch(100% 0 0 / .12);color:var(--text)}
 .acc-row-meta{display:grid;gap:1px;min-width:0}
 .acc-row-meta b{overflow:hidden;font-size:.84rem;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
 .acc-row-meta small{color:var(--mute);font-size:.72rem}
@@ -5204,13 +5210,86 @@ html[data-theme="light"] .appicon{background:oklch(100% 0 0 / .5)}
 .acc-note{color:var(--mute);font-size:.72rem;line-height:1.4}
 .acc-lib.is-load,.acc-lib.is-err{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:.82rem}
 .acc-lib.is-err span:first-child{flex:1;min-width:0}
-.acc-card .tokrow{padding:12px 0 0;border-top:1px solid var(--line)}
-.acc-card .guide{margin:0}
-.acc-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.acc-foot .btn{display:inline-flex;align-items:center;gap:6px}
+.acc-sub .tokrow{padding:12px 0 0;border-top:1px solid var(--line)}
+.acc-sub .guide{margin:0}
+.acc-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+.acc-foot .btn{display:inline-flex;align-items:center;gap:6px;border-radius:999px}
 .acc-foot small{color:var(--mute);font-size:.76rem}
-html[data-theme="light"] .acc-card{background:linear-gradient(155deg,color-mix(in oklab,var(--brand) 12%,transparent),transparent 58%),oklch(100% 0 0 / .62)}
-html[data-theme="light"] .acc-row{background:oklch(0% 0 0 / .035)}
-html[data-theme="light"] .acc-row:hover{background:oklch(0% 0 0 / .06)}
-html[data-theme="light"] .acc-act .btn.ghost:hover{background:oklch(0% 0 0 / .05)}
-@media (max-width:560px){.acc-grid{grid-template-columns:1fr}.acc-rows{grid-template-columns:1fr}}
+html[data-theme="light"] .acc-card:hover .acc-line{background:oklch(0% 0 0 / .025)}
+html[data-theme="light"] .acc-logo{background:oklch(0% 0 0 / .06)}
+html[data-theme="light"] .acc-act .acc-go{border-color:oklch(0% 0 0 / .28)}
+html[data-theme="light"] .acc-act .acc-go:hover{border-color:oklch(0% 0 0 / .7)}
+html[data-theme="light"] .acc-act .acc-go.on{border-color:oklch(0% 0 0 / .5);background:oklch(0% 0 0 / .05)}
+html[data-theme="light"] .acc-row:hover{background:oklch(0% 0 0 / .045)}
+html[data-theme="light"] .acc-row-art{background:oklch(0% 0 0 / .06)}
+html[data-theme="light"] .acc-row.is-liked .acc-row-art{background:oklch(0% 0 0 / .1)}
+@media (max-width:620px){
+  .acc-line{flex-wrap:wrap;row-gap:10px}
+  .acc-act{width:100%;padding-left:50px;justify-content:flex-start}
+  .acc-sub{padding-left:16px}
+  .acc-rows{grid-template-columns:1fr}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Round 6 design layer: no neon, no glare, squarer.
+   «весь неон из интерфейса убери», «по поводу настроек … убери блик,
+   сделай квадратнее». Loaded last; it only takes things away.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* No glow anywhere in the interface. The "Свечение" setting now lights only
+   the background wave (app.js keeps --glow at 0); these are the halos that
+   did not depend on it. */
+.status-indicator.listening{box-shadow:none}
+.people-filter-chip.active{color:var(--md-sys-color-on-primary);box-shadow:none}
+.quests-profile-card:hover{box-shadow:0 10px 26px -16px rgb(0 0 0 / .55)}
+.ly-off-val.shifted{text-shadow:none}
+.modalact .primary.sm,.modalact .primary.sm.danger{box-shadow:none}
+.rail .navbtn[aria-current="true"] .nav-icon-box{box-shadow:none}
+.quests-profile-icon,.quests-profile-btn,.quests-profile-btn:hover{box-shadow:none}
+.equipped-badge-banner .b-art{box-shadow:none}
+.podium-card.first{box-shadow:none}
+.splash-mark img{filter:drop-shadow(0 14px 28px rgb(0 0 0/.5))}
+/* a dialog opens focused on itself, not on a button: no ring at its foot
+   until the keyboard asks for one (m3.js, showModal) */
+.mdd:focus,.modalbox:focus{outline:none}
+.auth-orb-1,.auth-orb-2{display:none}
+.splash-glow{background:radial-gradient(circle,rgb(255 255 255/.05) 0%,rgb(255 255 255/.018) 40%,transparent 70%)}
+html[data-theme="light"] .splash-glow{background:radial-gradient(circle,rgb(0 0 0/.045) 0%,transparent 70%)}
+
+/* No glare: the dialog and settings surfaces lose the accent-tinted sheen
+   at the top and the bright inner edge; they are one flat tone. */
+:root{
+  --dlg-bg:oklch(19.5% .012 278 / .96);
+  --dlg-shadow:0 32px 80px -20px oklch(0% 0 0 / .72),0 12px 30px -14px oklch(0% 0 0 / .55);
+  --glass-hl:0 0 #0000;
+}
+html[data-theme="light"]{
+  --dlg-bg:oklch(98.6% .003 280 / .97);
+  --dlg-shadow:0 30px 70px -22px oklch(25% .05 280 / .32),0 10px 26px -14px oklch(25% .05 280 / .22);
+  --glass-hl:0 0 #0000;
+}
+
+/* Squarer settings: the window, its panels, rows and controls. */
+#v-settings.setov-box{border-radius:14px}
+html[data-theme] .setov-body>.stab>.panel,.setov-body>.stab>.panel{border-radius:12px}
+.setov-search{border-radius:8px}
+#setov #settabs button{border-radius:8px}
+#setov #settabs button[aria-selected="true"]{background:oklch(100% 0 0 / .085);box-shadow:none}
+#setov #settabs button[aria-selected="true"] .material-symbols-rounded{color:var(--text)}
+html[data-theme="light"] #setov #settabs button[aria-selected="true"]{background:oklch(0% 0 0 / .06)}
+.setov-body [data-hit="true"]{border-radius:8px}
+.setov-body .seg{border-radius:10px}
+.setov-body .seg button{border-radius:7px}
+.setov-body .btn{border-radius:8px}
+.setov-body .acc-act .btn,.setov-body .acc-foot .btn{border-radius:999px}
+.setov-body input:not([type=range]):not([type=checkbox]):not([type=radio]),.setov-body select,.setov-body textarea{border-radius:8px}
+.setov-body .appicon{border-radius:10px}
+.setov-body .appicon-pv{border-radius:10px}
+.setov-body .tokrow input{border-radius:8px}
+/* the dialogs share the squarer corners */
+.mdd{border-radius:16px}
+.mdd-h .mdd-ic{border-radius:10px;background:oklch(100% 0 0 / .07);color:var(--text);box-shadow:none}
+html[data-theme="light"] .mdd-h .mdd-ic{background:oklch(0% 0 0 / .06)}
+.modalwrap>.modalbox,.modalwrap>.modalbox.pane{border-radius:16px}
+.import-head-icon{border-radius:10px;background:oklch(100% 0 0 / .07);color:var(--text);box-shadow:none}
+@media (max-width:560px){.mdd{border-radius:16px 16px 0 0}}

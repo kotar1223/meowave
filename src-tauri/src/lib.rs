@@ -1,9 +1,11 @@
 mod accounts;
 mod api;
+mod browser;
 mod config;
 mod discord;
 mod dz;
 mod feeds;
+mod fsguard;
 mod links;
 mod local;
 mod lyrics;
@@ -558,6 +560,7 @@ pub fn run() {
             stream::stream_alt,
             accounts::acc_status,
             accounts::acc_login,
+            accounts::acc_login_browser,
             accounts::acc_paste,
             accounts::acc_logout,
             accounts::acc_lists,
@@ -571,6 +574,7 @@ pub fn run() {
             links::link_resolve,
             spanon::artist_profile,
             taskbar::taskbar_set_playing,
+            fsguard::other_fullscreen,
             mpris::mpris_update,
         ])
         .on_window_event(|window, event| match event {

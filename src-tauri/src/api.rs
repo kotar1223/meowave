@@ -587,6 +587,46 @@ pub async fn sc_search(token: &str, query: &str) -> Result<Vec<Track>, String> {
         .collect())
 }
 
+/// Kind of a SoundCloud transcoding, best first (see `sc_stream_url`).
+fn sc_rank(t: &serde_json::Value) -> u8 {
+    let proto = t.pointer("/format/protocol").and_then(|p| p.as_str()).unwrap_or("");
+    let mime = t
+        .pointer("/format/mime_type")
+        .and_then(|m| m.as_str())
+        .unwrap_or("")
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    let preset = t.get("preset").and_then(|p| p.as_str()).unwrap_or("");
+    match (proto, mime.as_str()) {
+        ("progressive", "audio/mpeg") => 0,
+        ("progressive", _) => 1,
+        ("hls", "audio/mpeg") => 2,
+        ("hls", "audio/mp4" | "audio/aac" | "audio/x-m4a") => 3,
+        ("hls", m) if m.contains("ogg") || m.contains("opus") => 4,
+        _ if mime.contains("mpegurl") || preset.starts_with("abr") => 6,
+        _ => 5,
+    }
+}
+
+/// Bitrate a SoundCloud preset names (`aac_160k`, `mp3_1_0` → 128).
+fn sc_kbps(t: &serde_json::Value) -> u32 {
+    let preset = t.get("preset").and_then(|p| p.as_str()).unwrap_or("");
+    if let Some(k) = preset
+        .split('_')
+        .find_map(|p| p.strip_suffix('k').and_then(|n| n.parse::<u32>().ok()))
+    {
+        return k;
+    }
+    match t.get("quality").and_then(|q| q.as_str()) {
+        Some("hq") => 256,
+        Some("sq") => 128,
+        _ => 64,
+    }
+}
+
 pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
     let c = client()?;
     let req_builder = sc_req(&c, &format!("{SC_API}/tracks/{id}"), token).await?;
@@ -659,30 +699,14 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         })
         .collect();
 
-    // Sort playable candidates by format stability:
-    // 1. Progressive MP3
-    // 2. Any progressive stream
-    // 3. HLS MP3 (transmuxed smoothly by our proxy)
-    // 4. HLS AAC / MP4
-    // 5. Any other HLS
-    playable.sort_by_key(|t| {
-        let proto = t.pointer("/format/protocol").and_then(|p| p.as_str()).unwrap_or("");
-        let mime = t.pointer("/format/mime_type").and_then(|m| m.as_str()).unwrap_or("");
-        if proto == "progressive" && mime.contains("mpeg") {
-            0
-        } else if proto == "progressive" {
-            1
-        } else if proto == "hls" && mime.contains("mpeg") {
-            2
-        } else if proto == "hls" && (mime.contains("aac") || mime.contains("mp4")) {
-            3
-        } else if proto == "hls" {
-            4
-        } else {
-            5
-        }
-    });
-
+    // Best first. The MIME type is compared whole: `audio/mpegurl` (the
+    // adaptive "abr" master playlist) used to match `contains("mpeg")` and
+    // rank as HLS MP3, ahead of the plain AAC rendition.
+    //   1. progressive MP3, then any progressive file
+    //   2. HLS MP3, then HLS AAC (fMP4 — the proxy joins init + fragments)
+    //   3. HLS Opus, then anything else; the adaptive master last
+    // and within a kind, the higher bitrate.
+    playable.sort_by_key(|t| (sc_rank(t), std::cmp::Reverse(sc_kbps(t))));
     for t in playable.into_iter().filter(|_| !snipped) {
         if let Some(url) = t.get("url").and_then(|u| u.as_str()) {
             if let Ok(rb) = sc_req(&c, url, token).await {
@@ -716,7 +740,7 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
                         "[meowave] sc_stream_url: '{}' id={} has no full stream (snipped={snipped}); same recording on YTM id={}",
                         raw_title, id, hit.id
                     );
-                    return Ok(format!("{}#mwua={}", stream_res.url, stream_res.client));
+                    return Ok(format!("{}#mwua={}&mwvid={}", stream_res.url, stream_res.client, hit.id));
                 }
             }
         }

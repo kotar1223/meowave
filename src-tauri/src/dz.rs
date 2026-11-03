@@ -238,7 +238,7 @@ pub async fn stream_url(id: &str, hq: u8, fmt: &str) -> Result<String, String> {
     if let Ok(hits) = crate::ytm::search(&q).await {
         if let Some(h) = crate::matching::best(&hits, &i.t, &i.a, i.d) {
             if let Ok(p) = crate::ytm::stream(&h.id, hq > 0, fmt).await {
-                return Ok(format!("{}#mwua={}", p.url, p.client));
+                return Ok(format!("{}#mwua={}&mwvid={}", p.url, p.client, h.id));
             }
         }
     }
