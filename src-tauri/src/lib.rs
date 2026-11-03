@@ -1,3 +1,4 @@
+mod accounts;
 mod api;
 mod config;
 mod discord;
@@ -554,6 +555,13 @@ pub fn run() {
             stream_info,
             stream::stream_prefetch,
             stream::stream_diag,
+            stream::stream_alt,
+            accounts::acc_status,
+            accounts::acc_login,
+            accounts::acc_paste,
+            accounts::acc_logout,
+            accounts::acc_lists,
+            accounts::acc_tracks,
             ytm::ytm_selftest,
             feeds::feeds_home,
             feeds::feeds_open,

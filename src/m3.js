@@ -28,8 +28,8 @@ function dialog({icon,title,body,actions=[],cls=""}){
  const wrap=document.createElement("div");
  wrap.className="mdd-wrap";wrap.dataset.open="false";
  wrap.innerHTML=`<div class="mdd ${cls}" role="dialog" aria-modal="true" aria-labelledby="${id}t">
-  ${icon?`<span class="mdd-ic">${IC(icon,24)}</span>`:""}
-  <h2 class="mdd-t" id="${id}t">${esc(title||"")}</h2>
+  <div class="mdd-h">${icon?`<span class="mdd-ic">${IC(icon,24)}</span>`:""}
+  <h2 class="mdd-t" id="${id}t">${esc(title||"")}</h2></div>
   <div class="mdd-b"></div>
   <div class="mdd-a"></div></div>`;
  const bodyEl=wrap.querySelector(".mdd-b"),actEl=wrap.querySelector(".mdd-a");
@@ -215,6 +215,30 @@ function ytcPanelInit(){
   finally{btn.removeAttribute("aria-busy")}});
  cp?.addEventListener("click",()=>{if(last)copyText(ytcReport(last))})}
 
+/* ═══════════════════ YouTube → another source ═══════════════════
+   The proxy answers a refused YouTube track with the same recording from
+   Yandex Music or SoundCloud (stream.rs `ytm_alternative`). The listener is
+   told once per track where it really plays from, and why. */
+const svcLabel=id=>SERVICES.find(s=>s.id===id)?.name||({ym:"Yandex Music",sc:"SoundCloud",ytm:"YouTube Music",dz:"Deezer"})[id]||id;
+function altNote(tr,r){
+ toast(t("alt.note").replace("{s}",svcLabel(r.s)),7000,{icon:"swap_horiz",actions:[{label:t("alt.why"),run:()=>altInfo(tr,r)}]})}
+function altInfo(tr,r){
+ const b=document.createElement("div");
+ b.innerHTML=`<p class="mdd-p">${esc(t("alt.s").replace("{s}",svcLabel(r.s)))}</p>
+  ${r.t?`<div class="m3-li m3-li-tag"><span class="m3-li-lead">${IC("graphic_eq",20)}</span><span class="m3-li-body"><b>${esc(r.t)}</b><small>${esc(r.a||"")} · ${esc(svcLabel(r.s))}</small></span></div>`:""}
+  <p class="mdd-p mdd-mute">${esc(t("alt.fix"))}</p>`;
+ dialog({icon:"swap_horiz",title:t("alt.t"),body:b,actions:[
+  {label:t("ytc.run"),run:()=>{ytcDialog?.(tr?.id)}},
+  {label:t("wv.done"),primary:true}]})}
+function altSwitchInit(){
+ const panel=$("ytc-panel");if(!panel||$("ytm-alt"))return;
+ const f=document.createElement("div");f.className="field";
+ f.innerHTML=`<div><label for="ytm-alt" data-i18n="alt.set">${esc(t("alt.set"))}</label><small data-i18n="alt.set.s">${esc(t("alt.set.s"))}</small></div><button class="sw" id="ytm-alt" aria-pressed="true" aria-label="${esc(t("alt.set"))}"></button>`;
+ panel.insertBefore(f,panel.querySelector(".ytc-acts"));
+ const sw=f.querySelector("#ytm-alt");
+ const paint=()=>sw.setAttribute("aria-pressed",String(S.x?.ytmAlt!==false));paint();
+ sw.addEventListener("click",()=>{S.x.ytmAlt=S.x.ytmAlt===false;paint();save()})}
+
 /* ═════════════════════════ mini player ═════════════════════════
    The same window, shrunk to a card that stays above everything else: cover,
    the current line of synced lyrics, transport and like. Window geometry is
@@ -234,6 +258,7 @@ function miniBuild(){
  el.className="mini";el.id="mini";el.hidden=true;
  el.setAttribute("role","region");el.setAttribute("aria-label",t("mini.t"));
  el.innerHTML=`<div class="mini-bg" aria-hidden="true"><i></i></div>
+  <span class="mini-grip" aria-hidden="true"></span>
   <div class="mini-card">
    <div class="mini-art"><img alt="" draggable="false" hidden><span class="material-symbols-rounded mini-art-ph" aria-hidden="true">music_note</span><i class="mini-eq" aria-hidden="true"><b></b><b></b><b></b></i></div>
    <div class="mini-meta">
@@ -242,21 +267,21 @@ function miniBuild(){
     <span class="mini-a"></span>
    </div>
    <div class="mini-top">
-    <button class="m3i" data-mini="pin" aria-pressed="true">${IC("keep",20)}</button>
-    <button class="m3i" data-mini="exit">${IC("open_in_full",20)}</button>
+    <button class="m3i" data-mini="pin" aria-pressed="true">${IC("keep",18)}</button>
+    <button class="m3i" data-mini="exit">${IC("open_in_full",18)}</button>
    </div>
    <p class="mini-ly" aria-live="off"></p>
-   <div class="mini-seek" data-mini="seek" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="mini-fill"></i><i class="mini-knob"></i></div>
-   <div class="mini-row">
+   <div class="mini-seekrow">
     <span class="mini-time">0:00</span>
-    <div class="mini-ctrls">
-     <button class="m3i" data-mini="dis">${IC("thumb_down",20)}</button>
-     <button class="m3i" data-mini="prev">${IC("skip_previous",24)}</button>
-     <button class="mini-play" data-mini="play">${IC("play_arrow",26)}</button>
-     <button class="m3i" data-mini="next">${IC("skip_next",24)}</button>
-     <button class="m3i" data-mini="fav" aria-pressed="false">${IC("favorite",20)}</button>
-    </div>
+    <div class="mini-seek" data-mini="seek" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i class="mini-fill"></i><i class="mini-knob"></i></div>
     <span class="mini-time mini-dur">0:00</span>
+   </div>
+   <div class="mini-ctrls">
+    <button class="m3i" data-mini="dis">${IC("thumb_down",20)}</button>
+    <button class="m3i" data-mini="prev">${IC("skip_previous",26)}</button>
+    <button class="mini-play" data-mini="play">${IC("play_arrow",28)}</button>
+    <button class="m3i" data-mini="next">${IC("skip_next",26)}</button>
+    <button class="m3i" data-mini="fav" aria-pressed="false">${IC("favorite",20)}</button>
    </div>
   </div>`;
  document.body.appendChild(el);
@@ -272,11 +297,12 @@ function miniBuild(){
   else if(k==="dis")document.getElementById("npdislike")?.click();
   setTimeout(miniPaint,60)});
  /* The card is the window: dragging anywhere that is not a control moves it.
-    Done by hand rather than with data-tauri-drag-region, whose double-click
-    maximises the window — exactly what a mini player must not do. */
+    Not data-tauri-drag-region, whose double-click maximises the window —
+    exactly what a mini player must not do. */
  el.addEventListener("pointerdown",e=>{
-  if(e.button!==0||e.target.closest("button,[data-mini]"))return;
-  const w=TAURI&&curWin();if(w?.startDragging){e.preventDefault();w.startDragging().catch(()=>{})}});
+  if(e.button!==0||e.target.closest("button,[data-mini],input"))return;
+  const w=TAURI&&curWin();if(!w)return;
+  e.preventDefault();miniDrag(w,e)});
  const seek=el.querySelector(".mini-seek");
  const seekAt=x=>{const r=seek.getBoundingClientRect();const d=+S.dur||+S.current?.d||0;if(d>0)seekSeconds(clamp((x-r.left)/Math.max(1,r.width),0,1)*d);miniPaint()};
  seek.addEventListener("pointerdown",e=>{e.stopPropagation();seek.setPointerCapture?.(e.pointerId);seekAt(e.clientX);
@@ -291,6 +317,37 @@ function miniLabels(){
  const el=MINI.el;if(!el)return;
  const L={pin:t("mini.pin"),exit:t("mini.exit"),dis:t("mini.dis"),prev:t("np.prev"),next:t("np.next"),fav:t("act.fav"),play:t("np.play"),seek:t("mini.seek")};
  el.querySelectorAll("[data-mini]").forEach(b=>{const v=L[b.dataset.mini];if(v){b.title=v;b.setAttribute("aria-label",v)}})}
+
+/* Round 5: "the mini player cannot be moved". The native move loop
+   (startDragging) is asked first — it is the smoothest where it works. When
+   it does not take over (the page keeps receiving pointer moves well after
+   the request, i.e. the OS never grabbed the mouse), the window is moved by
+   hand: pointer capture plus setPosition, one IPC call per frame. That
+   fallback is remembered for the rest of the session. */
+async function miniDrag(w,e){
+ const D=DPI(),host=MINI.el;if(!host)return;
+ const st={x:e.screenX,y:e.screenY,id:e.pointerId,t0:performance.now(),manual:MINI.manualDrag===true,pos:null,sf:1,raf:0,last:null,done:false};
+ host.dataset.drag="1";
+ if(!st.manual&&w.startDragging)w.startDragging().catch(()=>{st.manual=true;MINI.manualDrag=true});
+ else st.manual=true;
+ try{host.setPointerCapture(e.pointerId)}catch(_){}
+ const up=()=>{if(st.done)return;st.done=true;delete host.dataset.drag;
+  host.removeEventListener("pointermove",mv);host.removeEventListener("pointerup",up);host.removeEventListener("pointercancel",up);
+  try{host.releasePointerCapture(st.id)}catch(_){}};
+ const mv=ev=>{
+  if(!(ev.buttons&1)){up();return}
+  const dx=ev.screenX-st.x,dy=ev.screenY-st.y;
+  if(!st.manual){
+   if(performance.now()-st.t0<220||Math.hypot(dx,dy)<8)return;
+   st.manual=true;MINI.manualDrag=true}
+  if(!st.pos||!D.PhysicalPosition)return;
+  st.last=[dx,dy];
+  if(!st.raf)st.raf=requestAnimationFrame(()=>{st.raf=0;if(!st.last)return;
+   const [ax,ay]=st.last;
+   w.setPosition(new D.PhysicalPosition(Math.round(st.pos.x+ax*st.sf),Math.round(st.pos.y+ay*st.sf))).catch(()=>{})})};
+ host.addEventListener("pointermove",mv);host.addEventListener("pointerup",up);host.addEventListener("pointercancel",up);
+ st.sf=await tryA(()=>w.scaleFactor(),devicePixelRatio||1)||1;
+ st.pos=await tryA(()=>w.outerPosition(),null)}
 
 function miniLyric(tr){
  const el=MINI.el.querySelector(".mini-ly");
@@ -325,6 +382,7 @@ function miniPaint(){
   const img=el.querySelector(".mini-art img");
   if(src){img.hidden=false;if(img.getAttribute("src")!==src)img.src=src}else{img.hidden=true;img.removeAttribute("src")}
   el.querySelector(".mini-bg i").style.backgroundImage=src?`url("${src.replace(/"/g,"%22")}")`:"";
+  window.MWFX?.flow?.setCover?.(src||"");
   MINI.lyIdx=-2}
  const wave=PLAYCTX.key==="wave"&&!empty;
  const sname=empty?"":svcName(tr._resolvedSvc||tr.s);
@@ -381,6 +439,8 @@ async function miniEnter(){
  MINI.on=true;MINI.key="";MINI.lyIdx=-2;
  el.hidden=false;
  document.documentElement.dataset.mini="on";
+ /* the full-screen player's moving cover, lent to the mini card */
+ try{el.dataset.flow=String(!!window.MWFX?.flow?.host?.(el.querySelector(".mini-bg")))}catch(_){el.dataset.flow="false"}
  miniLabels();miniPaint();
  clearInterval(MINI.timer);MINI.timer=setInterval(miniPaint,250);
  requestAnimationFrame(()=>{el.dataset.open="true"})}
@@ -402,6 +462,7 @@ async function miniExit(){
  MINI.on=false;MINI.saved=null;
  if(MINI.el){MINI.el.dataset.open="false";MINI.el.hidden=true}
  delete document.documentElement.dataset.mini;
+ try{window.MWFX?.flow?.host?.(null)}catch(_){}
  $("minibtn")?.focus({preventScroll:true})}
 
 async function miniToggle(on){
@@ -432,10 +493,58 @@ addEventListener("keydown",e=>{
 const prevI18n=window.applyI18n;
 if(typeof prevI18n==="function")window.applyI18n=function(){
  const r=prevI18n.apply(this,arguments);
- try{miniBtnLabel();miniLabels();MINI.key="";miniPaint()}catch(_){}
+ try{miniBtnLabel();miniLabels();MINI.key="";miniPaint();iconPicker()}catch(_){}
  return r};
 
-function init(){miniButton();ytcPanelInit()}
+/* ═════════════════════════ app icon ═════════════════════════
+   Round 5: the icon comes in colours and without a background. The choice
+   drives the running window's icon (taskbar / Alt-Tab) through setIcon and
+   every logo inside the app. «Без фона · авто» follows the system theme for
+   the window (that is what the taskbar wears) and the app theme inside. */
+const APP_ICONS=["clear-neon","clear-auto","clear-light","clear-dark","classic","midnight","neon","ocean","mint","sunset","sakura","lavender","gold","paper"];
+const ICON_DEFAULT="clear-neon";
+const iconId=()=>APP_ICONS.includes(S.x?.appIcon)?S.x.appIcon:ICON_DEFAULT;
+function iconFile(id,forWindow){
+ if(id!=="clear-auto")return id;
+ const dark=forWindow?matchMedia("(prefers-color-scheme: dark)").matches:document.documentElement.dataset.theme!=="light";
+ return dark?"clear-light":"clear-dark"}
+const iconUrl=f=>`./icons/app/${f}.png`;
+function iconLogos(){
+ const u=iconUrl(iconFile(iconId(),false));
+ document.querySelectorAll(".rail-logo,.tb-icon,.splash-mark img,.about-app-icon").forEach(img=>{if(img.getAttribute("src")!==u)img.setAttribute("src",u)});
+ const l=document.querySelector('link[rel="icon"]');if(l&&l.getAttribute("href")!==u)l.setAttribute("href",u)}
+let ICON_SET="";
+async function iconWindow(){
+ if(!TAURI)return;
+ const f=iconFile(iconId(),true);
+ if(ICON_SET===f)return;
+ /* The exe already carries the default variant: a fresh start needs no call. */
+ if(!ICON_SET&&f===ICON_DEFAULT){ICON_SET=f;return}
+ const w=curWin(),I=window.__TAURI__?.image?.Image;
+ if(!w?.setIcon||!I?.new)return;
+ try{
+  const img=new Image();img.src=iconUrl(f);await img.decode();
+  const n=256,c=document.createElement("canvas");c.width=c.height=n;
+  const g=c.getContext("2d");g.drawImage(img,0,0,n,n);
+  const px=g.getImageData(0,0,n,n).data;
+  const icon=await I.new(new Uint8Array(px.buffer.slice(0)),n,n);
+  await w.setIcon(icon);ICON_SET=f}
+ catch(e){console.warn("[meowave] icon:",e?.message||e)}}
+function iconPicker(){
+ const host=$("appicons");if(!host)return;
+ const cur=iconId();
+ host.setAttribute("aria-label",t("set.icon"));
+ host.innerHTML=APP_ICONS.map(id=>`<button type="button" class="appicon" role="radio" data-appicon="${id}" ${id.startsWith("clear")?`data-clear="${iconFile(id,false).slice(6)}"`:""} aria-checked="${id===cur}" title="${esc(t("ico."+id))}"><span class="appicon-pv"><img src="${iconUrl(iconFile(id,false))}" alt="" width="40" height="40" draggable="false"></span><span class="appicon-l">${esc(t("ico."+id))}</span></button>`).join("")}
+function iconApply(){iconLogos();iconWindow()}
+document.addEventListener("click",e=>{
+ const b=e.target.closest?.("#appicons [data-appicon]");if(!b)return;
+ if(b.dataset.appicon===iconId())return;
+ S.x.appIcon=b.dataset.appicon;save();iconPicker();iconApply();
+ toast(t("ico.set"),2400,{icon:"check_circle"})});
+try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(iconId()==="clear-auto")iconWindow()})}catch(_){}
+new MutationObserver(()=>{iconPicker();if(iconId()==="clear-auto")iconLogos()}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+function init(){miniButton();ytcPanelInit();altSwitchInit();iconPicker();iconApply()}
 init();
-window.MW3={dialog,layer,toast,copyText,pickSource,failDetails,ytcDialog,miniToggle,get miniOn(){return MINI.on}};
+window.MW3={dialog,layer,toast,copyText,pickSource,failDetails,ytcDialog,miniToggle,altNote,altInfo,get miniOn(){return MINI.on}};
 })();

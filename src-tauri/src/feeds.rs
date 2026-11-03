@@ -382,7 +382,16 @@ async fn sc_get(path: &str) -> Result<Value, String> {
 }
 
 async fn sc_home() -> Result<Vec<Shelf>, String> {
-    let v = sc_get("/mixed-selections?limit=10").await?;
+    /* Signed in, the same call answers with the user's own mixes; a session
+       that has expired falls back to the guest selections. */
+    let signed = match crate::accounts::credential("sc") {
+        Some(tok) => crate::accounts::sc_call(&tok, "/mixed-selections?limit=10").await.ok(),
+        None => None,
+    };
+    let v = match signed {
+        Some(v) => v,
+        None => sc_get("/mixed-selections?limit=10").await?,
+    };
     let mut shelves = Vec::new();
     for sel in v.get("collection").and_then(|c| c.as_array()).cloned().unwrap_or_default() {
         let title = sel.get("title").and_then(|t| t.as_str()).unwrap_or("").to_string();
@@ -466,6 +475,13 @@ pub async fn sc_station(id: &str) -> Result<Vec<Track>, String> {
 async fn ytm_home(hl: &str) -> Result<Vec<Shelf>, String> {
     let mut out = Vec::new();
     let mut last_err = None;
+    // Signed in: the user's own home page (mixes, "Listen again") comes first.
+    if let Some(cookie) = crate::accounts::credential("ytm") {
+        match crate::ytm::signed_shelves(&cookie, "FEmusic_home", hl).await {
+            Ok(mut s) => out.append(&mut s),
+            Err(e) => last_err = Some(e),
+        }
+    }
     for bid in ["FEmusic_explore", "FEmusic_charts"] {
         match crate::ytm::browse_shelves(bid, None, hl).await {
             Ok(mut s) => out.append(&mut s),
@@ -604,12 +620,22 @@ async fn ym_open(kind: &str, id: &str) -> Result<Opened, String> {
 #[tauri::command]
 pub async fn feeds_home(service: String, lang: Option<String>) -> Result<Vec<Shelf>, String> {
     let hl = lang.unwrap_or_else(|| "ru".into());
-    match service.as_str() {
+    // A signed-in account adds the user's own library on top.
+    let mut mine = crate::accounts::shelves(&service, &hl).await;
+    let rest = match service.as_str() {
         "ytm" => ytm_home(&hl).await,
         "sc" => sc_home().await,
         "dz" => crate::dz::home().await,
         "ym" => ym_home().await,
         other => Err(format!("no collections for {other}")),
+    };
+    match rest {
+        Ok(mut r) => {
+            mine.append(&mut r);
+            Ok(mine)
+        }
+        Err(_) if !mine.is_empty() => Ok(mine),
+        Err(e) => Err(e),
     }
 }
 
@@ -618,6 +644,18 @@ pub async fn feeds_home(service: String, lang: Option<String>) -> Result<Vec<She
 #[tauri::command]
 pub async fn feeds_open(service: String, kind: String, id: String, lang: Option<String>) -> Result<Opened, String> {
     let hl = lang.unwrap_or_else(|| "ru".into());
+    /* A playlist is read as the signed-in user first: private ones and the
+       liked tracks are only there. Anything else falls through to the guest
+       read below. */
+    if kind == "playlist" {
+        if let Some(r) = crate::accounts::open(&service, &id).await {
+            match r {
+                Ok(tracks) if !tracks.is_empty() => return Ok(Opened { title: String::new(), tracks, shelves: vec![] }),
+                Err(e) if id == crate::accounts::LIKED => return Err(e),
+                _ => {}
+            }
+        }
+    }
     match service.as_str() {
         "ytm" => match kind.as_str() {
             "browse" => {

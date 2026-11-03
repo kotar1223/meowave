@@ -711,6 +711,14 @@ fn handle(
     // Only YouTube Music has more than one, and for it the choice is the
     // difference between playing and silence — see ytm::stream.
     let fmt = query_param(query, "fmt").unwrap_or_else(|| "best".to_string());
+    // Title, artist and length of a YouTube track, so a refusal can be served
+    // from another service (`ytm_alternative`); `alt=0` turns that off.
+    let hint = query_param(query, "t").map(|t| Hint {
+        t,
+        a: query_param(query, "a").unwrap_or_default(),
+        d: query_param(query, "d").and_then(|d| d.parse().ok()).unwrap_or(0),
+    });
+    let alt_ok = query_param(query, "alt").as_deref() != Some("0");
 
     // Artwork relay: /img/<percent-encoded url>. Covers come from hosts that
     // are frequently blocked outright (ytimg) even when search works, and an
@@ -775,7 +783,24 @@ fn handle(
 
         let upstream = match cache_get(&cache_key) {
             Some(u) => u,
-            None => match rt.block_on(resolve_pub(&service, &id, hq, &fmt)) {
+            None => match rt.block_on(async {
+                let alt_hint = if service == "ytm" && alt_ok { hint.as_ref() } else { None };
+                // The IP was just bot-checked: go elsewhere first, YouTube after.
+                if let Some(h) = alt_hint {
+                    if crate::ytm::bot_checked_recently() {
+                        if let Ok(u) = ytm_alternative(&id, h, hq).await {
+                            return Ok(u);
+                        }
+                    }
+                }
+                match resolve_pub(&service, &id, hq, &fmt).await {
+                    Ok(u) => Ok(u),
+                    Err(e) => match alt_hint {
+                        Some(h) => ytm_alternative(&id, h, hq).await.map_err(|e2| format!("{e}; {e2}")),
+                        None => Err(e),
+                    },
+                }
+            }) {
                 Ok(u) => {
                     cache_put(cache_key.clone(), u.clone());
                     u
@@ -802,7 +827,7 @@ fn handle(
             let mut req = c.get(&fetch_url);
             // googlevideo only serves a media stream to a client that looks like
             // one of Google's own players and always asks for a byte range.
-            let is_google = service == "ytm" || fetch_url.contains("googlevideo.com");
+            let is_google = (service == "ytm" && secret.alt.is_none()) || fetch_url.contains("googlevideo.com");
             if is_google {
                 req = req.header("User-Agent", secret.ua());
                 if range.is_none() {
@@ -1192,6 +1217,8 @@ struct Secret {
     key: Option<String>,
     codec: Option<String>,
     client: Option<String>,
+    /// Set when a YouTube track is served from another service (`ym`, `sc`).
+    alt: Option<String>,
 }
 
 impl Secret {
@@ -1200,12 +1227,13 @@ impl Secret {
             Some((u, f)) if f.starts_with("mw") => (u.to_string(), f),
             _ => (raw.to_string(), ""),
         };
-        let mut s = Secret { url, key: None, codec: None, client: None };
+        let mut s = Secret { url, key: None, codec: None, client: None, alt: None };
         for kv in frag.split('&') {
             match kv.split_once('=') {
                 Some(("mwk", v)) if !v.is_empty() => s.key = Some(v.to_string()),
                 Some(("mwc", v)) if !v.is_empty() => s.codec = Some(v.to_string()),
                 Some(("mwua", v)) if !v.is_empty() => s.client = Some(v.to_string()),
+                Some(("mwalt", v)) if !v.is_empty() => s.alt = Some(v.to_string()),
                 _ => {}
             }
         }
@@ -1223,6 +1251,80 @@ impl Secret {
             _ => return None,
         })
     }
+}
+
+/// YouTube tracks currently served from another service: video id → where.
+static ALT: Mutex<Option<HashMap<String, serde_json::Value>>> = Mutex::new(None);
+
+fn note_alt(video_id: &str, v: serde_json::Value) {
+    if let Ok(mut g) = ALT.lock() {
+        let m = g.get_or_insert_with(HashMap::new);
+        if m.len() > 256 {
+            m.clear();
+        }
+        m.insert(video_id.to_string(), v);
+    }
+}
+
+/// Where a YouTube track is really playing from, if YouTube refused it and
+/// the proxy found the same recording elsewhere. `None` for a normal stream.
+#[tauri::command]
+pub fn stream_alt(id: String) -> Option<serde_json::Value> {
+    ALT.lock().ok().and_then(|g| g.as_ref().and_then(|m| m.get(&id).cloned()))
+}
+
+/// What the frontend knows about a track, sent with the stream request so a
+/// refusal can be answered with the same song from somewhere else.
+pub(crate) struct Hint {
+    pub t: String,
+    pub a: String,
+    pub d: u32,
+}
+
+fn with_frag(url: String, kv: &str) -> String {
+    if url.contains("#mw") {
+        format!("{url}&{kv}")
+    } else {
+        format!("{url}#{kv}")
+    }
+}
+
+/// The same recording from another service, for a YouTube track that YouTube
+/// will not serve (its bot check on VPN and shared IPs refuses every client).
+/// Strict matching only (`matching::best`): another song is worse than an
+/// honest error. Yandex first when connected — it streams in the quality the
+/// user picked — then SoundCloud.
+pub(crate) async fn ytm_alternative(video_id: &str, h: &Hint, hq: u8) -> Result<String, String> {
+    if h.t.trim().is_empty() {
+        return Err("no title to look for".into());
+    }
+    let q = format!("{} {}", h.a, h.t);
+    if let Ok(Some(tok)) = crate::tokens::read_token("ym") {
+        if !tok.trim().is_empty() {
+            if let Ok(hits) = crate::api::ym_search(&tok, &q).await {
+                if let Some(m) = crate::matching::best(&hits, &h.t, &h.a, h.d) {
+                    let lossless = if hq == 2 { crate::api::ym_lossless_url(&tok, &m.id).await.ok() } else { None };
+                    let url = match lossless {
+                        Some(u) => Ok(u),
+                        None => crate::api::ym_stream_url(&tok, &m.id, hq > 0).await,
+                    };
+                    if let Ok(u) = url {
+                        note_alt(video_id, serde_json::json!({"s": "ym", "id": m.id, "t": m.t, "a": m.a}));
+                        return Ok(with_frag(u, "mwalt=ym"));
+                    }
+                }
+            }
+        }
+    }
+    if let Ok(hits) = crate::api::sc_search("", &q).await {
+        if let Some(m) = crate::matching::best(&hits, &h.t, &h.a, h.d) {
+            if let Ok(u) = crate::api::sc_stream_url("", &m.id).await {
+                note_alt(video_id, serde_json::json!({"s": "sc", "id": m.id, "t": m.t, "a": m.a}));
+                return Ok(with_frag(u, "mwalt=sc"));
+            }
+        }
+    }
+    Err("the same track was not found on Yandex Music or SoundCloud".into())
 }
 
 pub(crate) async fn resolve_pub(service: &str, id: &str, hq: u8, fmt: &str) -> Result<String, String> {
@@ -1261,6 +1363,12 @@ pub(crate) async fn resolve_pub(service: &str, id: &str, hq: u8, fmt: &str) -> R
 #[tauri::command]
 pub async fn stream_prefetch(service: String, id: String, hq: Option<u8>, fmt: Option<String>) -> Result<bool, String> {
     if service == "local" || service == "sp" {
+        return Ok(false);
+    }
+    // Behind a bot check every client refuses again; the real request will be
+    // answered from another service (`ytm_alternative`), so do not hammer
+    // YouTube ahead of time and make the IP's standing worse.
+    if service == "ytm" && crate::ytm::bot_checked_recently() {
         return Ok(false);
     }
     let hq = hq.unwrap_or(1).min(2);
@@ -1633,4 +1741,56 @@ mod range_tests {
         assert!(!token_ok(&format!("1{t}")));
         assert!(!token_ok(&format!("{}{}", t, "a".repeat(256))));
     }
+
+    /// End to end against the real YouTube: search, then pull each result
+    /// through this proxy exactly as <audio> does (open-ended range, then a
+    /// seek into the middle), and report bytes and timing. Files land in
+    /// /tmp/mw_live_<id> for ffprobe.
+    #[tokio::test(flavor = "multi_thread")]
+    #[ignore]
+    async fn live_ytm_proxy() {
+        let port = super::spawn().expect("proxy");
+        let tok = super::token();
+        let q = std::env::var("MW_Q").unwrap_or_else(|_| "кино звезда по имени солнце".into());
+        let tracks = crate::ytm::search(&q).await.expect("search");
+        let c = reqwest::Client::new();
+        for tr in tracks.iter().take(std::env::var("MW_N").ok().and_then(|v| v.parse().ok()).unwrap_or(4)) {
+            let url = format!(
+                "http://127.0.0.1:{port}/stream/ytm/{}?k={tok}&hq=1&fmt=best&t={}&a={}&d={}",
+                tr.id,
+                urlencoding::encode(&tr.t),
+                urlencoding::encode(&tr.a),
+                tr.d
+            );
+            let t0 = std::time::Instant::now();
+            let r = c.get(&url).header("Range", "bytes=0-").send().await;
+            match r {
+                Err(e) => println!("{} {:?}: ERR {e}", tr.id, tr.t),
+                Ok(r) => {
+                    let st = r.status().as_u16();
+                    let ct = r.headers().get("content-type").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+                    let cl = r.headers().get("content-length").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+                    let first = t0.elapsed();
+                    let body = r.bytes().await.map(|b| b.to_vec()).unwrap_or_default();
+                    let _ = std::fs::write(format!("/tmp/mw_live_{}", tr.id), &body);
+                    println!(
+                        "{} {:?} [{}s]: HTTP {st} {ct} len={cl} got={} first={:?} total={:?}",
+                        tr.id, tr.t, tr.d, body.len(), first, t0.elapsed()
+                    );
+                    if let Ok(total) = cl.parse::<u64>() {
+                        let mid = total / 2;
+                        let r2 = c.get(&url).header("Range", format!("bytes={mid}-")).send().await;
+                        if let Ok(r2) = r2 {
+                            let st2 = r2.status().as_u16();
+                            let n2 = r2.bytes().await.map(|b| b.len()).unwrap_or(0);
+                            println!("   seek {mid}-: HTTP {st2} got={n2} (want {})", total - mid);
+                        }
+                    }
+                }
+            }
+            println!("   alt: {:?}", super::stream_alt(tr.id.clone()));
+            println!("   diag: {}", super::stream_diag("ytm".into(), tr.id.clone()).replace('\n', " | "));
+        }
+    }
 }
+

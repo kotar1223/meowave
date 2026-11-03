@@ -108,6 +108,32 @@ fn health_set(client: &str, ok: bool) {
     }
 }
 
+/// When every client last answered "Sign in to confirm you're not a bot".
+/// That is a verdict on the IP (VPNs, shared and datacenter addresses), not on
+/// one video, so for a while the proxy goes to another service first instead
+/// of spending seconds per track on clients that will all refuse again.
+static BOT_CHECK: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+const BOT_MEMORY: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
+pub fn bot_checked_recently() -> bool {
+    BOT_CHECK
+        .lock()
+        .ok()
+        .and_then(|g| *g)
+        .is_some_and(|t| t.elapsed() < BOT_MEMORY)
+}
+
+fn bot_check_set(on: bool) {
+    if let Ok(mut g) = BOT_CHECK.lock() {
+        *g = if on { Some(std::time::Instant::now()) } else { None };
+    }
+}
+
+/// True when a refusal list says YouTube wants a signed-in, human session.
+pub fn is_bot_check(why: &str) -> bool {
+    why.contains("LOGIN_REQUIRED") || why.contains("not a bot")
+}
+
 /// Called by the stream proxy when googlevideo refuses a URL this client
 /// minted, so the next resolve starts with a different one.
 pub fn note_media_failure(client: &str, why: &str) {
@@ -844,6 +870,11 @@ pub async fn browse_shelves(browse_id: &str, params: Option<&str>, hl: &str) -> 
         body["params"] = Value::String(p.to_string());
     }
     let resp = post_web("browse", body).await?;
+    Ok(shelves_of(&resp))
+}
+
+/// The shelves of one browse response, whichever renderer holds them.
+fn shelves_of(resp: &Value) -> Vec<crate::feeds::Shelf> {
     let mut raw: Vec<&Value> = Vec::new();
     fn walk<'a>(v: &'a Value, out: &mut Vec<&'a Value>) {
         match v {
@@ -862,7 +893,7 @@ pub async fn browse_shelves(browse_id: &str, params: Option<&str>, hl: &str) -> 
             _ => {}
         }
     }
-    walk(&resp, &mut raw);
+    walk(resp, &mut raw);
     let mut shelves = Vec::new();
     for sh in raw {
         let title = {
@@ -890,7 +921,131 @@ pub async fn browse_shelves(browse_id: &str, params: Option<&str>, hl: &str) -> 
         }
         shelves.push(crate::feeds::Shelf { title, s: "ytm".into(), cards });
     }
-    Ok(shelves)
+    shelves
+}
+
+/* ═══════════════ signed in: the user's own YouTube Music ═══════════════ */
+
+/// One cookie out of a `Cookie:` header.
+pub fn cookie_value<'a>(header: &'a str, name: &str) -> Option<&'a str> {
+    header
+        .split(';')
+        .filter_map(|p| p.trim().split_once('='))
+        .find(|(k, _)| *k == name)
+        .map(|(_, v)| v.trim())
+        .filter(|v| !v.is_empty())
+}
+
+/// The `Authorization` music.youtube.com sends with a signed request:
+/// SHA-1 of "<unix time> <SAPISID> <origin>", prefixed with the time.
+pub fn sapisid_hash(cookie: &str, now: u64) -> Option<String> {
+    use sha1::{Digest, Sha1};
+    let sid = cookie_value(cookie, "SAPISID").or_else(|| cookie_value(cookie, "__Secure-3PAPISID"))?;
+    let digest = Sha1::digest(format!("{now} {sid} https://music.youtube.com").as_bytes());
+    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    Some(format!("SAPISIDHASH {now}_{hex}"))
+}
+
+/// A WEB_REMIX call made as the signed-in user: the session cookies plus the
+/// SAPISIDHASH header, exactly what the site itself sends.
+async fn post_signed(path: &str, cookie: &str, body: Value) -> Result<Value, String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let auth = sapisid_hash(cookie, now).ok_or("the YouTube cookie has no SAPISID")?;
+    let r = client()?
+        .post(format!("{MUSIC_API}/{path}?prettyPrint=false"))
+        .header("User-Agent", WEB_UA)
+        .header("Content-Type", "application/json")
+        .header("Origin", "https://music.youtube.com")
+        .header("X-Origin", "https://music.youtube.com")
+        .header("Referer", "https://music.youtube.com/")
+        .header("X-Goog-AuthUser", "0")
+        .header("X-YouTube-Client-Name", "67")
+        .header("X-YouTube-Client-Version", "1.20240726.01.00")
+        .header("Cookie", cookie)
+        .header("Authorization", auth)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("network: {e}"))?;
+    if matches!(r.status().as_u16(), 401 | 403) {
+        return Err("YouTube Music: the session has expired, sign in again".into());
+    }
+    r.error_for_status()
+        .map_err(|e| format!("YouTube rejected the request: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("bad response: {e}"))
+}
+
+fn find_key<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
+    match v {
+        Value::Object(map) => map.get(key).or_else(|| map.values().find_map(|c| find_key(c, key))),
+        Value::Array(items) => items.iter().find_map(|i| find_key(i, key)),
+        _ => None,
+    }
+}
+
+/// Name and avatar of the signed-in account; an error when the cookies do
+/// not sign anyone in (YouTube answers a guest menu then).
+pub async fn account(cookie: &str) -> Result<(String, Option<String>), String> {
+    let resp = post_signed("account/account_menu", cookie, json!({ "context": web_ctx_lang("en") })).await?;
+    let head = find_key(&resp, "activeAccountHeaderRenderer").ok_or("YouTube Music: not signed in")?;
+    let name = runs_text(head.get("accountName"));
+    if name.is_empty() {
+        return Err("YouTube Music: not signed in".into());
+    }
+    Ok((name, last_thumb(head.pointer("/accountPhoto/thumbnails"))))
+}
+
+/// Shelves of a browse page as the signed-in user sees it: `FEmusic_home`
+/// answers with their own mixes, "Listen again" and recommendations.
+pub async fn signed_shelves(cookie: &str, browse_id: &str, hl: &str) -> Result<Vec<crate::feeds::Shelf>, String> {
+    let resp = post_signed("browse", cookie, json!({ "context": web_ctx_lang(hl), "browseId": browse_id })).await?;
+    Ok(shelves_of(&resp))
+}
+
+/// The playlists in the user's library (their own and saved ones).
+pub async fn signed_playlists(cookie: &str, hl: &str) -> Result<Vec<crate::feeds::Card>, String> {
+    let shelves = signed_shelves(cookie, "FEmusic_liked_playlists", hl).await?;
+    let mut seen = std::collections::HashSet::new();
+    Ok(shelves
+        .into_iter()
+        .flat_map(|s| s.cards)
+        .filter(|c| c.kind == "playlist" && c.id != "LM" && c.id != "SE" && seen.insert(c.id.clone()))
+        .collect())
+}
+
+/// Every track of a playlist as the signed-in user sees it, private ones and
+/// "Liked music" (`LM`) included.
+pub async fn signed_tracks(cookie: &str, id: &str) -> Result<Vec<Track>, String> {
+    const MAX_PAGES: usize = 60;
+    let id = id.trim();
+    let browse_id = if id.starts_with("VL") { id.to_string() } else { format!("VL{id}") };
+    let mut body = json!({ "context": web_remix_ctx(), "browseId": browse_id });
+    let mut tracks: Vec<Track> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for _ in 0..MAX_PAGES {
+        let resp = post_signed("browse", cookie, body).await?;
+        let mut items = Vec::new();
+        collect(&resp, &mut items);
+        let before = tracks.len();
+        for t in items.iter().filter_map(|i| parse_item(i)) {
+            if seen.insert(t.id.clone()) {
+                tracks.push(t);
+            }
+        }
+        let Some(token) = continuation_token(&resp).map(|t| t.to_string()) else {
+            break;
+        };
+        if tracks.len() == before {
+            break;
+        }
+        body = json!({ "context": web_remix_ctx(), "continuation": token });
+    }
+    Ok(tracks)
 }
 
 /// Search YouTube Music songs. Tries WEB_REMIX first, falls back to ANDROID_MUSIC.
@@ -1174,6 +1329,7 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
                 diag_note(video_id, format!("{client}: {note}, itag {}", pick.itag));
                 if probe == Probe::Ok {
                     health_set(client, true);
+                    bot_check_set(false);
                 }
                 return Ok(pick);
             }
@@ -1185,6 +1341,11 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
         return Ok(p);
     }
     let all = refusals.join("; ");
+    // Every client that answered asked for a sign-in: remember it for the IP.
+    let bot = refusals.iter().filter(|r| is_bot_check(r)).count();
+    if bot > 0 && bot + refusals.iter().filter(|r| r.contains("UNPLAYABLE")).count() >= refusals.len() {
+        bot_check_set(true);
+    }
     Err(if all.is_empty() {
         "YouTube will not play this track: no client answered".to_string()
     } else {
@@ -1561,5 +1722,21 @@ mod tests {
             }
             Err(e) => println!("SEARCH ERR: {e}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod signed_tests {
+    #[test]
+    fn cookie_and_sapisid_hash() {
+        let c = "SID=abc; HSID=h; SAPISID=sapi/xyz; __Secure-3PAPISID=other";
+        assert_eq!(super::cookie_value(c, "SAPISID"), Some("sapi/xyz"));
+        assert_eq!(super::cookie_value(c, "NOPE"), None);
+        // Known vector: sha1("1700000000 sapi/xyz https://music.youtube.com").
+        let h = super::sapisid_hash(c, 1_700_000_000).unwrap();
+        assert_eq!(h, "SAPISIDHASH 1700000000_e7290328656c49ce0de13ef1c51967deb4e5f279");
+        assert!(super::sapisid_hash("SID=1", 1).is_none());
+        let fallback = super::sapisid_hash("__Secure-3PAPISID=q", 5).unwrap();
+        assert!(fallback.starts_with("SAPISIDHASH 5_"));
     }
 }

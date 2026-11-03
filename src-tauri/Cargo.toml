@@ -30,6 +30,8 @@ md5 = "0.7"
 # access token.
 rand = "0.8"
 sha2 = "0.10"
+# YouTube Music's signed requests carry SAPISIDHASH, a SHA-1 of the session id.
+sha1 = "0.10"
 base64 = "0.22"
 # Yandex Music lossless: get-file-info is signed with HMAC-SHA256 and the file
 # arrives AES-128-CTR encrypted ("encraw"); the stream proxy decrypts it.

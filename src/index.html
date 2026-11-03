@@ -58,7 +58,7 @@
 <div class="ob" id="ob">
   <div class="obc pane">
     <section class="obstep" data-on="true" data-step="0">
-      <div class="eyebrow" style="margin-bottom:18px;display:inline-flex;align-items:center;gap:8px"><img src="./icons/icon.png" width="20" height="20" style="border-radius:5px" alt=""> Meowave</div>
+      <div class="eyebrow" style="margin-bottom:18px;display:inline-flex;align-items:center;gap:8px"><img src="./icons/app/classic.png" width="20" height="20" style="border-radius:5px" alt=""> Meowave</div>
       <h1 data-i18n="ob.lang.t">Язык интерфейса</h1>
       <p class="lead" data-i18n="ob.lang.s">Меняется в любой момент в настройках.</p>
       <div class="opts" id="oblang" role="radiogroup"></div>
@@ -248,12 +248,11 @@
         <div class="stab" data-stab="acc" data-active="true">
         <div class="panel pane">
           <h3 data-i18n="set.acc">Аккаунты</h3>
-          <p class="ph" data-i18n="set.acc.s">SoundCloud и YouTube Music работают без входа. Для Yandex Music нужен токен — инструкция ниже. Токены уходят в системный keychain.</p>
-          <div id="accounts"></div>
-          <div id="ymacc" style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px"></div>
-          <div id="sppanel" style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px" hidden>
-            <h3>Spotify</h3>
-            <div id="spbody"></div>
+          <p class="ph" data-i18n="set.acc.s">Подключите свои аккаунты — лайки и плейлисты переедут в библиотеку, а ваши подборки появятся в шторке. Вход идёт на странице самого сервиса; Meowave хранит только ключ сессии, в системном keychain.</p>
+          <div class="acc-grid" id="accounts"></div>
+          <div class="acc-foot">
+            <button class="btn sm" id="acc-link-imp"><span class="material-symbols-rounded" style="font-size:16px">link</span><span data-i18n="acc.link">Импорт по ссылке</span></button>
+            <small data-i18n="acc.link.s">Плейлист или альбом с любой площадки — без входа</small>
           </div>
         </div>
         </div>
@@ -365,6 +364,21 @@
           <div class="field field-palette">
             <div class="palette-header"><label data-i18n="set.accent">Акцентный цвет</label><small data-i18n="set.accent.s">По умолчанию без цвета</small></div>
             <div class="swatches palette-strip" id="accent"></div>
+          </div>
+          <div class="field">
+            <div><label data-i18n="set.cbg">Фон по обложке</label><small data-i18n="set.cbg.s">Фон приложения мягко принимает цвета текущей обложки</small></div>
+            <button class="sw on" id="cbg" aria-pressed="true" aria-label="cover background"></button>
+          </div>
+          <div class="field field-wall" id="cbg-box">
+            <div class="wallsl"><label data-i18n="set.cbg.k">Насыщенность</label><input type="range" id="cbg-k" min="10" max="100" value="55"><span id="cbg-k-v">55%</span></div>
+          </div>
+          <div class="field">
+            <div><label data-i18n="set.cfade">Смена цвета</label><small data-i18n="set.cfade.s">Как быстро акцент и фон переходят к новой обложке</small></div>
+            <div class="seg" id="cfade" role="group"><button data-v="0" data-i18n="cf.0">Сразу</button><button data-v="1" aria-pressed="true" data-i18n="cf.1">Плавно</button><button data-v="2" data-i18n="cf.2">Очень плавно</button></div>
+          </div>
+          <div class="field field-palette">
+            <div class="palette-header"><label data-i18n="set.icon">Иконка приложения</label><small data-i18n="set.icon.s">Значок окна на панели задач и в самом приложении</small></div>
+            <div class="appicons" id="appicons" role="radiogroup" data-i18n-aria="set.icon"></div>
           </div>
           <div class="field">
             <div><label data-i18n="set.dens">Плотность частиц</label></div>
@@ -1043,13 +1057,23 @@
   </div>
 </div>
 
-<div class="modalwrap" id="modal" hidden data-open="false" role="dialog" aria-modal="true">
-  <div class="modalbox pane" role="document">
-    <h3 id="modal-title"></h3>
-    <label class="ph" id="modal-label" for="modal-input"></label>
-    <input id="modal-input" autocomplete="off" spellcheck="false" maxlength="60">
+<div class="modalwrap" id="modal" hidden data-open="false" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-sub">
+  <div class="modalbox dlg" role="document">
+    <div class="dlg-head">
+      <span class="dlg-ic" id="modal-ic" aria-hidden="true"><span class="material-symbols-rounded">edit</span></span>
+      <div class="dlg-tt">
+        <h3 id="modal-title"></h3>
+        <p class="dlg-sub" id="modal-sub" hidden></p>
+      </div>
+    </div>
+    <div class="tf" id="modal-field">
+      <input id="modal-input" autocomplete="off" spellcheck="false" maxlength="60" placeholder=" ">
+      <label class="tf-l" id="modal-label" for="modal-input"></label>
+      <button type="button" class="tf-x" id="modal-clear" tabindex="-1" aria-label="clear"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="tf-foot" id="modal-foot"><span id="modal-hint"></span><span id="modal-count"></span></div>
     <div class="modalact">
-      <button class="btn" id="modal-cancel"></button>
+      <button class="dlg-btn" id="modal-cancel"></button>
       <button class="primary sm" id="modal-ok"></button>
     </div>
   </div>

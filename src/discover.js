@@ -861,7 +861,7 @@ function wallInit(){
   const inp=$("modal-input"),ml=inp?inp.maxLength:60;
   if(inp)inp.maxLength=2048;
   let u=null;
-  try{u=await askText(t("wall.url.ask"),W.isLink()?st.wallLink:"")}finally{if(inp)inp.maxLength=ml>0?ml:60}
+  try{u=await askText(t("dlg.wall.t"),W.isLink()?st.wallLink:"",{icon:"wallpaper",label:t("dlg.link"),placeholder:"https://…",sub:t("wall.url.ask"),required:true,max:2048})}finally{if(inp)inp.maxLength=ml>0?ml:60}
   if(u==null||!String(u).trim())return;
   if(!(await W.setUrl(u))){toast(t("wall.url.bad"));return}
   st.wallApp=true;W.save();W.render();wallUI();toast(t("wall.set"))});
@@ -922,6 +922,11 @@ if(typeof legacyI18n==="function")window.applyI18n=function(){
  }catch(_){}
  return r};
 
+/* An account signed in or out: its tab of the sheet is read again. */
+window.hsForget=id=>{
+ if(id)HS.cache.delete(id);else HS.cache.clear();
+ const b=$("hs-body");if(b&&(!id||b.dataset.svc===id))b.dataset.svc="";
+ try{refreshAll()}catch(_){}};
 function init(){
  waveCfg();paintWaveUI();hsTabs();hsInit();wallInit();dndInit();
  window.renderWaveHint=waveHint;window.paintHero=paintHero;

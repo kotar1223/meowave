@@ -47,9 +47,11 @@ def build_master():
     return flat
 
 
-def render(master, size):
+def render(master, size, small=None):
     if size == MASTER:
         return master.copy()
+    if small is not None and size <= 48:  # a bolder drawing for taskbar sizes
+        master = small
     im = master.resize((size, size), Image.Resampling.LANCZOS)
     if size <= 48:  # small sizes get a light sharpen so the cat stays readable
         a = im.split()[3]
@@ -59,7 +61,12 @@ def render(master, size):
 
 
 def main():
-    master = build_master()
+    write_all(build_master())
+
+
+def write_all(master, small=None):
+    """Every icon Tauri ships, from one 1024 px master (and optionally a
+    bolder one for the ≤48 px frames)."""
     pngs = {
         "icon.png": 512, "32x32.png": 32, "64x64.png": 64, "128x128.png": 128, "128x128@2x.png": 256,
         "Square30x30Logo.png": 30, "Square44x44Logo.png": 44, "Square71x71Logo.png": 71,
@@ -68,12 +75,12 @@ def main():
         "StoreLogo.png": 50,
     }
     for name, size in pngs.items():
-        render(master, size).save(os.path.join(OUT, name), optimize=True)
+        render(master, size, small).save(os.path.join(OUT, name), optimize=True)
     ico = [16, 20, 24, 32, 40, 48, 64, 128, 256]
-    frames = [render(master, s) for s in ico]
+    frames = [render(master, s, small) for s in ico]
     frames[-1].save(os.path.join(OUT, "icon.ico"), format="ICO", sizes=[(s, s) for s in ico], append_images=frames[:-1])
     master.save(os.path.join(OUT, "icon.icns"), format="ICNS",
-                append_images=[render(master, s) for s in (16, 32, 64, 128, 256, 512)])
+                append_images=[render(master, s, small) for s in (16, 32, 64, 128, 256, 512)])
     render(master, 512).save(os.path.join(ROOT, "src", "icons", "icon.png"), optimize=True)
     print("icons written to", OUT)
 

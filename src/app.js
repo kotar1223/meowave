@@ -46,12 +46,12 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "hs.t":"Подборки","hs.load":"Загружаем подборки…","hs.err":"Не удалось загрузить подборки","hs.retry":"Повторить","hs.empty":"Здесь пока пусто","hs.ymtok":"Для подборок Яндекса нужен токен (Настройки → Аккаунты)",
 "dv.back":"Назад","dv.play":"Слушать","dv.shuffle":"Перемешать","dv.save":"В медиатеку","dv.saved":"Сохранено в плейлисты","dv.load":"Открываем…","dv.err":"Не удалось открыть","dv.tracks":"Треки","dv.top":"Популярные треки","dv.albums":"Альбомы","dv.singles":"Синглы и EP","dv.related":"Похожие артисты","dv.about":"Об артисте","dv.monthly":"{n} слушателей в месяц","dv.followers":"{n} подписчиков","dv.cities":"Где слушают","dv.follow":"Отслеживать","dv.following":"Вы отслеживаете","dv.lib":"В вашей медиатеке","dv.radio":"Радио артиста","dv.plays":"{n} прослушиваний","dv.src":"Данные: {s}",
 "fps.align.r":"Справа","set.wall":"Обои приложения","set.wall.s":"Картинка, GIF или видео за всем интерфейсом","wall.none":"Не выбраны","wall.file":"Файл","wall.url":"По ссылке","wall.clear":"Убрать","wall.dim":"Затемнение","wall.blur":"Размытие","wall.url.ask":"Ссылка на картинку, GIF или видео (https://…)","wall.url.bad":"Нужна ссылка https:// на картинку или видео",
-"snk.close":"Закрыть","fail.more":"Подробнее","fail.other":"Другой источник","fail.t":"Почему трек не играет","fail.s":"Всё, что приложение знает о сбое. Если повторяется — скопируйте и пришлите разработчику.","fail.copy":"Копировать","fail.copied":"Скопировано","fail.src":"Источник","fail.probe":"Проверка потока","fail.none":"Подробностей нет: сервис ответил, но файл не воспроизвёлся.","src.t":"Другой источник","src.s":"Тот же трек на других сервисах — выберите, откуда играть.","src.load":"Ищем копии трека…","src.none":"Других источников не нашлось","src.exact":"Точно","src.close":"Похоже","src.maybe":"Другая версия?","src.now":"Играет из: {s}","ytc.t":"Проверка YouTube Music","ytc.s":"Спрашивает каждый клиент YouTube, отдаёт ли он звук на ваше подключение, и проверяет начало и середину файла. Если YouTube Music не играет — пришлите результат.","ytc.run":"Проверить YouTube Music","ytc.btn":"Проверить","ytc.busy":"Проверяем клиенты YouTube… это займёт до минуты","ytc.ok":"Работает","ytc.part":"Только начало","ytc.bad":"Не отдаёт","ytc.sum.ok":"Звук целиком отдают клиенты: {n} из {m} — YouTube Music должен играть","ytc.sum.bad":"Ни один клиент не отдаёт звук целиком. Обычно виноват VPN или общий IP — смените сервер или выключите VPN","ytc.desk":"Проверка работает только в приложении","ytc.copy":"Копировать отчёт","ytc.formats":"форматов: {n}","ytc.start":"начало","ytc.deep":"середина","wv.sheet":"Регулировка волны","wv.sheet.s":"Меняется сразу — играющая волна перестроится на ходу","wv.sheet.def":"Настройки по умолчанию","wv.reset":"Сбросить","wv.done":"Готово","wv.live":"Моя волна","wv.now":"Сейчас играет","wv.next":"Дальше","wv.resume":"Продолжить","wv.src.auto.s":"Яндекс, если подключён, иначе другие сервисы","wv.src.ym.s":"Моя волна Яндекса — знает ваши вкусы","wv.src.mix.s":"Из ваших треков и похожих на них","wv.div.default.s":"Любимое и новое вперемешку","wv.div.favorite.s":"Чаще то, что вы уже любите","wv.div.discover.s":"Больше незнакомых артистов","wv.div.popular.s":"Хиты и то, что слушают все","wv.mood.all.s":"Волна подстроится сама","wv.mood.active.s":"Энергично и в ритм","wv.mood.fun.s":"Легко и солнечно","wv.mood.calm.s":"Чтобы выдохнуть","wv.mood.sad.s":"Для дождливого вечера","mini.t":"Мини-плеер","mini.on":"Мини-плеер поверх окон (Ctrl+M)","mini.exit":"Развернуть (Ctrl+M)","mini.pin":"Поверх всех окон","mini.pin.on":"Мини-плеер поверх всех окон","mini.pin.off":"Мини-плеер как обычное окно","mini.idle":"Ничего не играет","mini.idle.s":"Запустите волну или трек","mini.seek":"Позиция","mini.dis":"Не нравится","mini.err":"Не удалось переключить мини-плеер","wv.any":"Любое","wv.lang.any":"Любой","wv.cap":"Волна","wv.mix":"Из ваших треков · {s}","dv.verified":"Подтверждённый артист","dv.rank":"#{n} в мире","dv.gallery":"Галерея","dv.popular":"Популярные релизы","dv.more":"Ещё","wall.set":"Обои установлены","drop.files":"Добавлено файлов: {n}",
+"alt.note":"YouTube не отдал трек — играет из {s}","alt.why":"Почему","alt.t":"Трек играет из другого сервиса","alt.s":"YouTube попросил подтвердить, что вы не бот, и отказался отдавать звук. Так бывает с VPN, общим или корпоративным IP. Чтобы трек не молчал, Meowave нашёл ту же запись в {s} и играет её оттуда.","alt.fix":"Чтобы снова слушать с YouTube: выключите VPN для Meowave (раздельное туннелирование), смените сервер VPN или направьте YouTube через прокси в Настройки → Сеть.","alt.set":"Подменять источник, если YouTube отказывает","alt.set.s":"Тот же трек из Яндекс Музыки или SoundCloud — только точное совпадение","alt.from":"Найдено: {t} — {a}","snk.close":"Закрыть","fail.more":"Подробнее","fail.other":"Другой источник","fail.t":"Почему трек не играет","fail.s":"Всё, что приложение знает о сбое. Если повторяется — скопируйте и пришлите разработчику.","fail.copy":"Копировать","fail.copied":"Скопировано","fail.src":"Источник","fail.probe":"Проверка потока","fail.none":"Подробностей нет: сервис ответил, но файл не воспроизвёлся.","src.t":"Другой источник","src.s":"Тот же трек на других сервисах — выберите, откуда играть.","src.load":"Ищем копии трека…","src.none":"Других источников не нашлось","src.exact":"Точно","src.close":"Похоже","src.maybe":"Другая версия?","src.now":"Играет из: {s}","ytc.t":"Проверка YouTube Music","ytc.s":"Спрашивает каждый клиент YouTube, отдаёт ли он звук на ваше подключение, и проверяет начало и середину файла. Если YouTube Music не играет — пришлите результат.","ytc.run":"Проверить YouTube Music","ytc.btn":"Проверить","ytc.busy":"Проверяем клиенты YouTube… это займёт до минуты","ytc.ok":"Работает","ytc.part":"Только начало","ytc.bad":"Не отдаёт","ytc.sum.ok":"Звук целиком отдают клиенты: {n} из {m} — YouTube Music должен играть","ytc.sum.bad":"Ни один клиент не отдаёт звук целиком. Обычно виноват VPN или общий IP — смените сервер или выключите VPN","ytc.desk":"Проверка работает только в приложении","ytc.copy":"Копировать отчёт","ytc.formats":"форматов: {n}","ytc.start":"начало","ytc.deep":"середина","wv.sheet":"Регулировка волны","wv.sheet.s":"Меняется сразу — играющая волна перестроится на ходу","wv.sheet.def":"Настройки по умолчанию","wv.reset":"Сбросить","wv.done":"Готово","wv.live":"Моя волна","wv.now":"Сейчас играет","wv.next":"Дальше","wv.resume":"Продолжить","wv.src.auto.s":"Яндекс, если подключён, иначе другие сервисы","wv.src.ym.s":"Моя волна Яндекса — знает ваши вкусы","wv.src.mix.s":"Из ваших треков и похожих на них","wv.div.default.s":"Любимое и новое вперемешку","wv.div.favorite.s":"Чаще то, что вы уже любите","wv.div.discover.s":"Больше незнакомых артистов","wv.div.popular.s":"Хиты и то, что слушают все","wv.mood.all.s":"Волна подстроится сама","wv.mood.active.s":"Энергично и в ритм","wv.mood.fun.s":"Легко и солнечно","wv.mood.calm.s":"Чтобы выдохнуть","wv.mood.sad.s":"Для дождливого вечера","mini.t":"Мини-плеер","mini.on":"Мини-плеер поверх окон (Ctrl+M)","mini.exit":"Развернуть (Ctrl+M)","mini.pin":"Поверх всех окон","mini.pin.on":"Мини-плеер поверх всех окон","mini.pin.off":"Мини-плеер как обычное окно","mini.idle":"Ничего не играет","mini.idle.s":"Запустите волну или трек","mini.seek":"Позиция","mini.dis":"Не нравится","mini.err":"Не удалось переключить мини-плеер","wv.any":"Любое","wv.lang.any":"Любой","wv.cap":"Волна","wv.mix":"Из ваших треков · {s}","dv.verified":"Подтверждённый артист","dv.rank":"#{n} в мире","dv.gallery":"Галерея","dv.popular":"Популярные релизы","dv.more":"Ещё","wall.set":"Обои установлены","drop.files":"Добавлено файлов: {n}",
 "set.covf":"Обложка следует за курсором","set.covf.s":"Лёгкий наклон обложки в полноэкранном плеере",
 "drop.t":"Отпустите, чтобы включить","drop.s":"Ссылка на трек, альбом или плейлист: YouTube Music, Spotify, Яндекс Музыка, SoundCloud, Deezer","drop.busy":"Открываем ссылку…","drop.bad":"Эту ссылку не получилось открыть","drop.list":"«{n}»: {c} треков в очереди","drop.one":"Играет: {n}",
 "home.t":"Тишина. Поле ждёт.","home.s":"Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.","home.start":"Запустить волну",
 "lib.pl":"Плейлисты","lib.fav":"Избранное","lib.rec":"Недавнее",
-"set.t":"Настройки","set.acc":"Аккаунты","set.acc.s":"Authorization Code + PKCE, без сервера. Spotify — схема meowave://callback, Google/YouTube — localhost-редирект.",
+"set.t":"Настройки","set.acc":"Аккаунты","set.acc.s":"Подключите свои аккаунты — лайки и плейлисты переедут в библиотеку, а ваши подборки появятся в шторке. Вход идёт на странице самого сервиса; Meowave хранит только ключ сессии, в системном keychain.",
 "set.sp":"Пространственный звук","set.sp.s":"PannerNode в режиме HRTF: источник летает вокруг головы по орбите и проходит над ней. Плюс ConvolverNode для комнаты.",
 "set.sp.on":"Движение вокруг головы","set.sp.hint":"Только в наушниках","set.sp.speed":"Скорость оборота","set.sp.rad":"Радиус орбиты","set.sp.elev":"Проход над головой",
 "set.q":"Качество","set.q.s":"Lossless там, где сервис его отдаёт.","set.q.l":"Поток","q.low":"Низкое","q.mid":"Среднее","q.high":"Высокое",
@@ -116,7 +116,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "eq.pinned":"Пресет закреплён за треком","eq.unpinned":"Привязка снята",
 "upd.t":"Обновления","upd.s":"Проверка при запуске. Обновление скачивается и устанавливается само, подпись проверяется.","upd.check":"Проверить сейчас","upd.btn":"Проверить","upd.checking":"Проверяем…","upd.none":"Установлена последняя версия ({v})","upd.found":"Доступна версия {v}","upd.ask":"Обновить до {v}?","upd.install":"Обновить","upd.installing":"Скачиваем обновление…","upd.fail":"Не удалось проверить",
 "about.tg":"Канал проекта","about.tgchat":"Чат разработки","about.thanks":"Спасибо чату за тесты, идеи и сообщения об ошибках.",
-"snd.rate":"Скорость","snd.boost":"Громче","snd.boost.off":"выкл","snd.slowed":"slowed","snd.nightcore":"nightcore","snd.normal":"обычно","dlg.ok":"ОК","dlg.cancel":"Отмена",
+"snd.rate":"Скорость","snd.boost":"Громче","snd.boost.off":"выкл","snd.slowed":"slowed","snd.nightcore":"nightcore","snd.normal":"обычно","dlg.ok":"ОК","dlg.cancel":"Отмена","set.icon":"Иконка приложения","set.icon.s":"Значок окна на панели задач и в самом приложении","ico.set":"Иконка изменена","acc.in":"Войти","acc.out":"Выйти","acc.import":"Импорт","acc.paste":"Вставить ключ","acc.token":"Токен","acc.as":"Вы вошли как {u}","acc.stale":"Сессия не подтвердилась — войдите заново","acc.wait":"Ждём входа в отдельном окне…","acc.off.ytm":"Играет без входа · войдите, чтобы перенести библиотеку","acc.off.sc":"Играет без входа · войдите, чтобы перенести библиотеку","acc.off.dz":"Играет без входа · войдите, чтобы перенести библиотеку","acc.off.ym":"Нужен вход: поиск, Моя волна и lossless","acc.off.sp":"Не подключён · звук находится на других площадках","acc.d.ytm":"Лайки, плейлисты и личные миксы в шторке","acc.d.sc":"Лайки, плейлисты и подборки «для вас» в шторке","acc.d.dz":"Любимые треки и плейлисты, ваша полка в шторке","acc.d.ym":"Моя волна, лайки, плейлисты и lossless","acc.d.sp":"Любимые треки и плейлисты · нужен свой Client ID","acc.lib":"Что перенести","acc.all":"Перенести всё","acc.all.t":"Перенести библиотеку {s}?","acc.all.s":"Любимые треки попадут в избранное, плейлисты ({n}) — в библиотеку. Уже перенесённые обновятся, а не задвоятся.","acc.all.ok":"Перенести","acc.liked":"Любимые треки","acc.liked.s":"Попадут в избранное","acc.pl":"Плейлист","acc.tofav":"В избранное","acc.importing":"Переносим…","acc.again":"Ещё раз","acc.note":"Треки играют с родной площадки. Повторный перенос плейлиста обновляет его, а не создаёт копию.","acc.window":"Откроется окно {s} — войдите как обычно, оно закроется само","acc.ok":"{s}: вы вошли как {u}","acc.ok0":"{s} подключён","acc.err.jar":"Окно входа не отдало сессию — воспользуйтесь «Вставить ключ»","acc.err.time":"Вход не завершён — окно закрыто","acc.out.t":"Выйти из {s}?","acc.out.s":"Перенесённые треки и плейлисты останутся. Пропадёт только ваша полка в шторке.","acc.paste.t":"Ключ сессии {s}","acc.paste.ok":"Подключить","acc.paste.h":"Хранится только в системном keychain","acc.paste.l.ytm":"Заголовок Cookie","acc.paste.l.sc":"oauth_token","acc.paste.l.dz":"arl","acc.paste.s.ytm":"Если окно входа не пускает: откройте music.youtube.com в своём браузере, F12 → «Сеть», обновите страницу, выберите запрос browse и скопируйте значение заголовка Cookie целиком.","acc.paste.s.sc":"Откройте soundcloud.com в своём браузере, F12 → «Приложение» → Cookies → soundcloud.com и скопируйте значение oauth_token.","acc.paste.s.dz":"Откройте deezer.com в своём браузере, F12 → «Приложение» → Cookies → deezer.com и скопируйте значение arl.","acc.paste.bad":"Не похоже на ключ сессии — проверьте, что скопировано целиком","acc.desk":"Вход в аккаунты работает в приложении для компьютера","acc.sp.cid.t":"Spotify Client ID","acc.sp.cid.s":"Создайте приложение на developer.spotify.com/dashboard с Redirect URI http://localhost:8080/callback и вставьте его Client ID.","acc.link":"Импорт по ссылке","acc.link.s":"Плейлист или альбом с любой площадки — без входа","ico.clear-neon":"Неон без фона","ico.clear-auto":"Авто без фона","ico.clear-light":"Белая без фона","ico.clear-dark":"Тёмная без фона","ico.classic":"Классика","ico.midnight":"Полночь","ico.neon":"Неон","ico.ocean":"Океан","ico.mint":"Мята","ico.sunset":"Закат","ico.sakura":"Сакура","ico.lavender":"Лаванда","ico.gold":"Золото","ico.paper":"Бумага","set.cbg":"Фон по обложке","set.cbg.s":"Фон приложения мягко принимает цвета текущей обложки","set.cbg.k":"Насыщенность","set.cfade":"Смена цвета","set.cfade.s":"Как быстро акцент и фон переходят к новой обложке","cf.0":"Сразу","cf.1":"Плавно","cf.2":"Очень плавно","dlg.name":"Название","dlg.create":"Создать","dlg.save":"Сохранить","dlg.next":"Далее","dlg.find":"Найти","dlg.add":"Добавить","dlg.link":"Ссылка","dlg.user":"Имя пользователя","dlg.newpl.s":"Соберите свою подборку — треки добавляются из любого списка через правый клик.","dlg.rename.t":"Переименовать плейлист","dlg.pldel.s":"Плейлист исчезнет из библиотеки. Избранное и сами треки останутся.","dlg.genius.t":"Найти текст на Genius","dlg.genius.l":"Исполнитель и название","dlg.quasar.t":"Вход по Quasar ID","dlg.quasar.l":"Quasar ID или почта","dlg.wall.t":"Обои по ссылке","dlg.loc.t":"Очистить локальные треки?","dlg.loc.s":"Все локальные треки уйдут из библиотеки. Файлы на диске не удаляются.","dlg.room.t":"Новая комната","dlg.add.t":"Добавить в группу","dlg.upd.s":"Что нового:",
 "upd.norelease":"Релизов пока нет — это первая версия",
 "pr.ban.hint":"Нажмите, чтобы сменить баннер","pr.ban.cta":"Сменить баннер","pr.badges":"значков","img.big":"Изображение слишком большое","crop.avatar":"Аватар","crop.banner":"Баннер","crop.cover":"Обложка плейлиста","crop.zoom":"Масштаб","crop.reset":"Сброс","crop.save":"Сохранить","crop.hint":"Перетащите изображение, колесо мыши — масштаб.","plctx.cover":"Сменить обложку","plctx.coveroff":"Убрать обложку","plctx.cover.ok":"Обложка обновлена","plctx.cover.off":"Обложка убрана","plctx.rename":"Переименовать","plctx.renamed":"Название изменено","plctx.rmtrack":"Убрать из плейлиста","plctx.eq":"Эквалайзер для плейлиста","eq.pl.pinned":"Пресет закреплён за плейлистом",
 "img.big.gif":"GIF слишком большой","img.fail":"Не удалось обработать изображение","img.up":"Загружаем…","img.ok":"Изображение сохранено",
@@ -180,12 +180,12 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "hs.t":"Collections","hs.load":"Loading collections…","hs.err":"Could not load collections","hs.retry":"Retry","hs.empty":"Nothing here yet","hs.ymtok":"Yandex collections need a token (Settings → Accounts)",
 "dv.back":"Back","dv.play":"Play","dv.shuffle":"Shuffle","dv.save":"Add to library","dv.saved":"Saved to playlists","dv.load":"Opening…","dv.err":"Could not open","dv.tracks":"Tracks","dv.top":"Popular tracks","dv.albums":"Albums","dv.singles":"Singles & EPs","dv.related":"Fans also like","dv.about":"About","dv.monthly":"{n} monthly listeners","dv.followers":"{n} followers","dv.cities":"Where people listen","dv.follow":"Follow","dv.following":"Following","dv.lib":"In your library","dv.radio":"Artist radio","dv.plays":"{n} plays","dv.src":"Data: {s}",
 "fps.align.r":"Right","set.wall":"App wallpaper","set.wall.s":"An image, GIF or video behind the whole interface","wall.none":"None","wall.file":"File","wall.url":"From link","wall.clear":"Remove","wall.dim":"Dim","wall.blur":"Blur","wall.url.ask":"Link to an image, GIF or video (https://…)","wall.url.bad":"Needs an https:// link to an image or video",
-"snk.close":"Dismiss","fail.more":"Details","fail.other":"Other source","fail.t":"Why the track did not play","fail.s":"Everything the app knows about the failure. If it keeps happening, copy it and send it to the developer.","fail.copy":"Copy","fail.copied":"Copied","fail.src":"Source","fail.probe":"Stream check","fail.none":"No details: the service answered, but the file did not play.","src.t":"Other source","src.s":"The same track on other services — pick where to play it from.","src.load":"Looking for copies of the track…","src.none":"No other source found","src.exact":"Exact","src.close":"Close","src.maybe":"Other version?","src.now":"Playing from {s}","ytc.t":"YouTube Music check","ytc.s":"Asks every YouTube client whether it serves audio to your connection and checks the start and the middle of the file. If YouTube Music does not play, send the result.","ytc.run":"Check YouTube Music","ytc.btn":"Run check","ytc.busy":"Checking YouTube clients… this can take up to a minute","ytc.ok":"Works","ytc.part":"Start only","ytc.bad":"Refused","ytc.sum.ok":"{n} of {m} clients serve the whole file — YouTube Music should play","ytc.sum.bad":"No client serves the whole file. Usually a VPN or a shared IP — switch the server or turn the VPN off","ytc.desk":"The check only works in the desktop app","ytc.copy":"Copy report","ytc.formats":"formats: {n}","ytc.start":"start","ytc.deep":"middle","wv.sheet":"Tune your wave","wv.sheet.s":"Applies instantly — a playing wave rebuilds on the fly","wv.sheet.def":"Default settings","wv.reset":"Reset","wv.done":"Done","wv.live":"My Wave","wv.now":"Now playing","wv.next":"Up next","wv.resume":"Resume","wv.src.auto.s":"Yandex if connected, otherwise the other services","wv.src.ym.s":"Yandex My Wave — knows your taste","wv.src.mix.s":"From your tracks and ones like them","wv.div.default.s":"Favourites and new music mixed","wv.div.favorite.s":"More of what you already love","wv.div.discover.s":"More artists you have not heard","wv.div.popular.s":"Hits and what everyone plays","wv.mood.all.s":"The wave adapts on its own","wv.mood.active.s":"Energetic, on the beat","wv.mood.fun.s":"Light and sunny","wv.mood.calm.s":"To breathe out","wv.mood.sad.s":"For a rainy evening","mini.t":"Mini player","mini.on":"Mini player on top (Ctrl+M)","mini.exit":"Expand (Ctrl+M)","mini.pin":"Always on top","mini.pin.on":"Mini player stays on top","mini.pin.off":"Mini player as a normal window","mini.idle":"Nothing playing","mini.idle.s":"Start the wave or a track","mini.seek":"Position","mini.dis":"Dislike","mini.err":"Could not switch the mini player","wv.any":"Any","wv.lang.any":"Any","wv.cap":"Wave","wv.mix":"From your tracks · {s}","dv.verified":"Verified artist","dv.rank":"#{n} in the world","dv.gallery":"Gallery","dv.popular":"Popular releases","dv.more":"More","wall.set":"Wallpaper set","drop.files":"Files added: {n}",
+"alt.note":"YouTube refused the track — playing it from {s}","alt.why":"Why","alt.t":"Playing from another service","alt.s":"YouTube asked to confirm you are not a bot and refused to serve the audio. This happens behind VPNs and shared or corporate IPs. So the track is not silent, Meowave found the same recording on {s} and plays it from there.","alt.fix":"To listen from YouTube again: exclude Meowave from the VPN (split tunnelling), switch the VPN server, or route YouTube through a proxy in Settings → Network.","alt.set":"Switch source when YouTube refuses","alt.set.s":"The same track from Yandex Music or SoundCloud — exact matches only","alt.from":"Found: {t} — {a}","snk.close":"Dismiss","fail.more":"Details","fail.other":"Other source","fail.t":"Why the track did not play","fail.s":"Everything the app knows about the failure. If it keeps happening, copy it and send it to the developer.","fail.copy":"Copy","fail.copied":"Copied","fail.src":"Source","fail.probe":"Stream check","fail.none":"No details: the service answered, but the file did not play.","src.t":"Other source","src.s":"The same track on other services — pick where to play it from.","src.load":"Looking for copies of the track…","src.none":"No other source found","src.exact":"Exact","src.close":"Close","src.maybe":"Other version?","src.now":"Playing from {s}","ytc.t":"YouTube Music check","ytc.s":"Asks every YouTube client whether it serves audio to your connection and checks the start and the middle of the file. If YouTube Music does not play, send the result.","ytc.run":"Check YouTube Music","ytc.btn":"Run check","ytc.busy":"Checking YouTube clients… this can take up to a minute","ytc.ok":"Works","ytc.part":"Start only","ytc.bad":"Refused","ytc.sum.ok":"{n} of {m} clients serve the whole file — YouTube Music should play","ytc.sum.bad":"No client serves the whole file. Usually a VPN or a shared IP — switch the server or turn the VPN off","ytc.desk":"The check only works in the desktop app","ytc.copy":"Copy report","ytc.formats":"formats: {n}","ytc.start":"start","ytc.deep":"middle","wv.sheet":"Tune your wave","wv.sheet.s":"Applies instantly — a playing wave rebuilds on the fly","wv.sheet.def":"Default settings","wv.reset":"Reset","wv.done":"Done","wv.live":"My Wave","wv.now":"Now playing","wv.next":"Up next","wv.resume":"Resume","wv.src.auto.s":"Yandex if connected, otherwise the other services","wv.src.ym.s":"Yandex My Wave — knows your taste","wv.src.mix.s":"From your tracks and ones like them","wv.div.default.s":"Favourites and new music mixed","wv.div.favorite.s":"More of what you already love","wv.div.discover.s":"More artists you have not heard","wv.div.popular.s":"Hits and what everyone plays","wv.mood.all.s":"The wave adapts on its own","wv.mood.active.s":"Energetic, on the beat","wv.mood.fun.s":"Light and sunny","wv.mood.calm.s":"To breathe out","wv.mood.sad.s":"For a rainy evening","mini.t":"Mini player","mini.on":"Mini player on top (Ctrl+M)","mini.exit":"Expand (Ctrl+M)","mini.pin":"Always on top","mini.pin.on":"Mini player stays on top","mini.pin.off":"Mini player as a normal window","mini.idle":"Nothing playing","mini.idle.s":"Start the wave or a track","mini.seek":"Position","mini.dis":"Dislike","mini.err":"Could not switch the mini player","wv.any":"Any","wv.lang.any":"Any","wv.cap":"Wave","wv.mix":"From your tracks · {s}","dv.verified":"Verified artist","dv.rank":"#{n} in the world","dv.gallery":"Gallery","dv.popular":"Popular releases","dv.more":"More","wall.set":"Wallpaper set","drop.files":"Files added: {n}",
 "set.covf":"Cover follows the cursor","set.covf.s":"A slight tilt of the cover in the fullscreen player",
 "drop.t":"Drop to play","drop.s":"A track, album or playlist link: YouTube Music, Spotify, Yandex Music, SoundCloud, Deezer","drop.busy":"Opening the link…","drop.bad":"Could not open this link","drop.list":"“{n}”: {c} tracks queued","drop.one":"Playing: {n}",
 "home.t":"Silence. The field waits.","home.s":"Start the wave: the stream builds from your artists, cover and queue open fullscreen.","home.start":"Start the wave",
 "lib.pl":"Playlists","lib.fav":"Favorites","lib.rec":"Recent",
-"set.t":"Settings","set.acc":"Accounts","set.acc.s":"Authorization Code + PKCE, no server. Spotify uses meowave://callback, Google/YouTube a localhost redirect.",
+"set.t":"Settings","set.acc":"Accounts","set.acc.s":"Connect your accounts: likes and playlists move into your library, and your own collections appear in the sheet. You sign in on the service’s own page; Meowave keeps only the session key, in the system keychain.",
 "set.sp":"Spatial audio","set.sp.s":"PannerNode in HRTF mode: the source orbits your head and passes overhead. Plus a ConvolverNode for room.",
 "set.sp.on":"Orbit around the head","set.sp.hint":"Headphones only","set.sp.speed":"Orbit speed","set.sp.rad":"Orbit radius","set.sp.elev":"Overhead arc",
 "set.q":"Quality","set.q.s":"Lossless where the service serves it.","set.q.l":"Stream","q.low":"Low","q.mid":"Medium","q.high":"High",
@@ -250,7 +250,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "eq.pinned":"Preset pinned to this track","eq.unpinned":"Preset unpinned",
 "upd.t":"Updates","upd.s":"Checked at startup. Updates download and install themselves; the signature is verified.","upd.check":"Check now","upd.btn":"Check","upd.checking":"Checking…","upd.none":"You are on the latest version ({v})","upd.found":"Version {v} available","upd.ask":"Update to {v}?","upd.install":"Update","upd.installing":"Downloading the update…","upd.fail":"Could not check",
 "about.tg":"Project channel","about.tgchat":"Development chat","about.thanks":"Thanks to the chat for testing, ideas and bug reports.",
-"snd.rate":"Speed","snd.boost":"Louder","snd.boost.off":"off","snd.slowed":"slowed","snd.nightcore":"nightcore","snd.normal":"normal","dlg.ok":"OK","dlg.cancel":"Cancel",
+"snd.rate":"Speed","snd.boost":"Louder","snd.boost.off":"off","snd.slowed":"slowed","snd.nightcore":"nightcore","snd.normal":"normal","dlg.ok":"OK","dlg.cancel":"Cancel","set.icon":"App icon","set.icon.s":"The window icon on the taskbar and inside the app","ico.set":"Icon changed","acc.in":"Sign in","acc.out":"Sign out","acc.import":"Import","acc.paste":"Paste key","acc.token":"Token","acc.as":"Signed in as {u}","acc.stale":"The session was not confirmed, sign in again","acc.wait":"Waiting for the sign-in window…","acc.off.ytm":"Plays without an account · sign in to bring your library","acc.off.sc":"Plays without an account · sign in to bring your library","acc.off.dz":"Plays without an account · sign in to bring your library","acc.off.ym":"Needs sign-in: search, My Wave and lossless","acc.off.sp":"Not connected · the sound comes from other services","acc.d.ytm":"Likes, playlists and your own mixes in the sheet","acc.d.sc":"Likes, playlists and picks made for you in the sheet","acc.d.dz":"Favourite tracks and playlists, your shelf in the sheet","acc.d.ym":"My Wave, likes, playlists and lossless","acc.d.sp":"Liked songs and playlists · needs your own Client ID","acc.lib":"What to bring over","acc.all":"Bring everything","acc.all.t":"Bring over your {s} library?","acc.all.s":"Liked tracks go to favourites, playlists ({n}) into the library. Ones already brought over are updated, not duplicated.","acc.all.ok":"Bring over","acc.liked":"Liked songs","acc.liked.s":"Go to favourites","acc.pl":"Playlist","acc.tofav":"To favourites","acc.importing":"Importing…","acc.again":"Again","acc.note":"Tracks play from their home service. Bringing a playlist over again updates it instead of making a copy.","acc.window":"A {s} window opens: sign in as usual, it closes by itself","acc.ok":"{s}: signed in as {u}","acc.ok0":"{s} connected","acc.err.jar":"The sign-in window gave no session, use “Paste key”","acc.err.time":"The sign-in did not finish, the window was closed","acc.out.t":"Sign out of {s}?","acc.out.s":"Imported tracks and playlists stay. Only your shelf in the sheet goes away.","acc.paste.t":"{s} session key","acc.paste.ok":"Connect","acc.paste.h":"Kept only in the system keychain","acc.paste.l.ytm":"Cookie header","acc.paste.l.sc":"oauth_token","acc.paste.l.dz":"arl","acc.paste.s.ytm":"If the sign-in window refuses: open music.youtube.com in your browser, F12 → Network, reload, pick a browse request and copy the whole Cookie request header.","acc.paste.s.sc":"Open soundcloud.com in your browser, F12 → Application → Cookies → soundcloud.com and copy the oauth_token value.","acc.paste.s.dz":"Open deezer.com in your browser, F12 → Application → Cookies → deezer.com and copy the arl value.","acc.paste.bad":"That does not look like a session key, check that it was copied whole","acc.desk":"Account sign-in works in the desktop app","acc.sp.cid.t":"Spotify Client ID","acc.sp.cid.s":"Create an app at developer.spotify.com/dashboard with the Redirect URI http://localhost:8080/callback and paste its Client ID.","acc.link":"Import by link","acc.link.s":"A playlist or album from any service, no sign-in","ico.clear-neon":"Neon, transparent","ico.clear-auto":"Auto, transparent","ico.clear-light":"White, transparent","ico.clear-dark":"Dark, transparent","ico.classic":"Classic","ico.midnight":"Midnight","ico.neon":"Neon","ico.ocean":"Ocean","ico.mint":"Mint","ico.sunset":"Sunset","ico.sakura":"Sakura","ico.lavender":"Lavender","ico.gold":"Gold","ico.paper":"Paper","set.cbg":"Background from cover","set.cbg.s":"The app background gently takes on the colours of the current cover","set.cbg.k":"Intensity","set.cfade":"Colour change","set.cfade.s":"How fast the accent and background move to a new cover","cf.0":"Instant","cf.1":"Smooth","cf.2":"Very smooth","dlg.name":"Name","dlg.create":"Create","dlg.save":"Save","dlg.next":"Next","dlg.find":"Find","dlg.add":"Add","dlg.link":"Link","dlg.user":"Username","dlg.newpl.s":"Build your own selection — add tracks from any list with a right-click.","dlg.rename.t":"Rename playlist","dlg.pldel.s":"The playlist disappears from your library. Favourites and the tracks themselves stay.","dlg.genius.t":"Find lyrics on Genius","dlg.genius.l":"Artist and title","dlg.quasar.t":"Sign in with Quasar ID","dlg.quasar.l":"Quasar ID or email","dlg.wall.t":"Wallpaper from a link","dlg.loc.t":"Clear local tracks?","dlg.loc.s":"Every local track leaves the library. Files on disk are kept.","dlg.room.t":"New room","dlg.add.t":"Add to group","dlg.upd.s":"What’s new:",
 "upd.norelease":"No releases published yet — this is the first version",
 "pr.ban.hint":"Click to change the banner","pr.ban.cta":"Change banner","pr.badges":"badges","img.big":"Image is too large","crop.avatar":"Avatar","crop.banner":"Banner","crop.cover":"Playlist cover","crop.zoom":"Zoom","crop.reset":"Reset","crop.save":"Save","crop.hint":"Drag the image, scroll to zoom.","plctx.cover":"Change cover","plctx.coveroff":"Remove cover","plctx.cover.ok":"Cover updated","plctx.cover.off":"Cover removed","plctx.rename":"Rename","plctx.renamed":"Renamed","plctx.rmtrack":"Remove from playlist","plctx.eq":"Equaliser for this playlist","eq.pl.pinned":"Preset pinned to this playlist",
 "img.big.gif":"GIF is too large","img.fail":"Could not process the image","img.up":"Uploading…","img.ok":"Image saved",
@@ -605,7 +605,15 @@ function closeModal(ok){
  el._hide=setTimeout(()=>{el.hidden=true},200);
  if(r)r(ok?(wantsInput?val:true):null)}
 
-function showModal({title,label,value="",confirm,cancel,input=true,danger=false}){
+/* Round 5 dialog: icon chip + headline + supporting text, an MD3 text field
+   with a floating label, a counter and a clear button, and a text "Cancel"
+   next to a filled pill. Every option is optional, so the old two-argument
+   askText(title,value) callers keep working and simply get the new look.
+   `required` keeps OK disabled until something is typed — for names that
+   must not be empty; free-text fields (a group description) leave it off so
+   clearing the text stays possible. For a confirm, `label` is the supporting
+   text (the update dialog passes its release notes there). */
+function showModal({title,label="",sub="",value="",placeholder="",confirm,cancel,input=true,danger=false,icon,required=false,hint="",max=0,secret=false}){
  const el=document.getElementById("modal");
  if(!el)return Promise.resolve(null);
  /* Only one dialog can be shown at a time — the DOM holds a single #modal.
@@ -616,34 +624,71 @@ function showModal({title,label,value="",confirm,cancel,input=true,danger=false}
  if(modalRes){const prev=modalRes;modalRes=null;prev(null)}
  clearTimeout(el._hide);
  el.hidden=false;
- document.getElementById("modal-title").textContent=title||"";
- const lab=document.getElementById("modal-label");
- lab.textContent=label||"";lab.hidden=!label;
- const inp=document.getElementById("modal-input");
- inp.hidden=!input;
+ const $m=id=>document.getElementById(id);
+ $m("modal-title").textContent=title||"";
+ const subText=sub||(!input?label:"");
+ const subEl=$m("modal-sub");
+ if(subEl){subEl.textContent=subText||"";subEl.hidden=!subText}
+ const ic=$m("modal-ic");
+ if(ic){
+  const name=icon||(input?"edit":danger?"delete":"help");
+  const g=ic.firstElementChild||ic.appendChild(document.createElement("span"));
+  g.className="material-symbols-rounded";g.textContent=name;
+  ic.dataset.tone=danger?"danger":""}
+ const field=$m("modal-field"),foot=$m("modal-foot");
+ const lab=$m("modal-label");
+ const fieldLabel=input?label:"";
+ if(lab){lab.textContent=fieldLabel||"";lab.hidden=!fieldLabel}
+ const inp=$m("modal-input");
+ if(field)field.hidden=!input;
+ if(field)field.dataset.nolabel=String(!fieldLabel);
+ if(foot)foot.hidden=!input;
+ const hintEl=$m("modal-hint");if(hintEl)hintEl.textContent=hint||"";
  el.dataset.input=String(!!input);
- if(input){inp.value=value||""}
- const okBtn=document.getElementById("modal-ok");
+ el.dataset.required=String(!!(input&&required));
+ el.dataset.danger=String(!!danger);
+ inp.hidden=!input;
+ if(input){inp.maxLength=max>0?max:60;inp.type=secret?"password":"text";inp.value=value||"";inp.placeholder=placeholder||" "}
+ const okBtn=$m("modal-ok");
  okBtn.textContent=confirm||t("dlg.ok");
  okBtn.className="primary sm"+(danger?" danger":"");
- document.getElementById("modal-cancel").textContent=cancel||t("dlg.cancel");
- requestAnimationFrame(()=>{el.dataset.open="true";if(input)inp.focus();else okBtn.focus()});
+ $m("modal-cancel").textContent=cancel||t("dlg.cancel");
+ modalSync();
+ requestAnimationFrame(()=>{el.dataset.open="true";
+  if(input){inp.focus();try{inp.select()}catch(_){}}else okBtn.focus()});
  return new Promise(r=>{modalRes=r})}
 
+/* Counter, clear button and the "required" gate follow the field live. The
+   counter only appears for short names — "37/2048" under a URL is noise. */
+function modalSync(){
+ const el=document.getElementById("modal");if(!el)return;
+ const inp=document.getElementById("modal-input"),ok=document.getElementById("modal-ok");
+ const cnt=document.getElementById("modal-count");
+ if(!inp||!ok)return;
+ const n=inp.value.length,max=inp.maxLength>0?inp.maxLength:0;
+ if(cnt)cnt.textContent=el.dataset.input==="true"&&max&&max<=200?`${n}/${max}`:"";
+ ok.disabled=el.dataset.required==="true"&&!inp.value.trim()}
+
 /* Drop-in replacements. askText resolves to the string or null; askConfirm to
-   true or null, so both are falsy when dismissed. */
-const askText=(title,value="")=>showModal({title,label:"",value,input:true});
-const askConfirm=(title,confirm,danger=true)=>
- showModal({title,input:false,confirm,danger});
+   true or null, so both are falsy when dismissed. The optional last argument
+   takes the showModal options above (icon, sub, label, confirm, required…). */
+const askText=(title,value="",o={})=>showModal({title,value,input:true,...o});
+const askConfirm=(title,confirm,danger=true,o={})=>
+ showModal({title,input:false,confirm,danger,...o});
 
 document.addEventListener("click",e=>{
  if(e.target.closest("#modal-ok"))return closeModal(true);
+ if(e.target.closest("#modal-clear")){
+  const inp=document.getElementById("modal-input");
+  if(inp){inp.value="";modalSync();inp.focus()}return}
  if(e.target.closest("#modal-cancel")||e.target.id==="modal")return closeModal(false)});
+document.addEventListener("input",e=>{if(e.target.id==="modal-input")modalSync()});
 document.addEventListener("keydown",e=>{
  const el=document.getElementById("modal");
  if(!el||el.dataset.open!=="true")return;
  if(e.key==="Escape"){e.preventDefault();closeModal(false)}
- if(e.key==="Enter"&&e.target.id==="modal-input"){e.preventDefault();closeModal(true)}});
+ if(e.key==="Enter"&&e.target.id==="modal-input"){e.preventDefault();
+  if(!document.getElementById("modal-ok")?.disabled)closeModal(true)}});
 
 let lastToastText = "";
 let lastToastAt = 0;
@@ -916,6 +961,12 @@ function load(tr,auto,resumePos=0){
     const sEnd=au.seekable.end(au.seekable.length-1);
     if(Number.isFinite(sEnd)&&sEnd>0)S.dur=sEnd;
    }
+   /* YouTube refused and the proxy found the track elsewhere: say where it
+      really plays from, once per track. */
+   if(tr.s==="ytm"&&TAURI&&!tr._altAsked){tr._altAsked=true;
+    inv("stream_alt",{id:String(tr.id)}).then(r=>{
+     if(!r||!r.s||!sameTrack(tr,S.current))return;
+     tr._alt=r.s;window.MW3?.altNote?.(tr,r)}).catch(()=>{})}
    if(tr.s==="dz"&&Number.isFinite(metaDur)&&metaDur>0&&metaDur<=31&&trDur>45&&!tr._pvWarned){
     tr._pvWarned=true;
     toast(LANG==="ru"?"Полной версии не нашлось ни на одном сервисе — Deezer отдал только 30-секундный фрагмент":"No full version was found on any service — Deezer only has a 30-second preview",6500)}
@@ -1796,18 +1847,189 @@ function renderSrvDropdown(){
  }).join("");
 }
 let tokOpen=null;
+/* ═════════ Accounts: the user's own libraries on other services ═════════
+   YouTube Music, SoundCloud and Deezer sign in through accounts.rs: a window
+   on the service's own page, only the session key kept, in the keychain.
+   Yandex keeps its token flow and Spotify its OAuth. Once connected, every
+   card offers the same thing: liked tracks into favourites, playlists into
+   the library; the personal shelf in the sheet comes from the same account. */
+const ACC_ORDER=["ytm","sc","dz","ym","sp"];
+const ACC_RUST=["ytm","sc","dz"];
+const ACC_BRAND={ytm:"#ff2d55",sc:"#ff6a1a",dz:"#a238ff",ym:"#ffcc00",sp:"#1ed760"};
+const ACC={};
+const accSt=id=>ACC[id]||(ACC[id]={st:null,open:false,lists:null,busy:"",done:null,paste:""});
+const accOn=id=>ACC_RUST.includes(id)?!!accSt(id).st?.connected:!!svc(id).conn;
+const accErr=e=>String(e?.message||e||"");
+function accUser(id){
+ if(ACC_RUST.includes(id))return accSt(id).st?.user||"";
+ /* SP is declared further down; a render during boot must not trip on it. */
+ if(id==="sp")try{return SP.me?.display_name||SP.me?.id||""}catch(_){}
+ return ""}
+const accLikedRow=()=>({id:"me:liked",name:t("acc.liked"),liked:true,total:null,art:null});
+const accRustIO=id=>({lists:()=>inv("acc_lists",{service:id,lang:LANG}),tracks:l=>inv("acc_tracks",{service:id,id:l.id})});
+const ACC_IO={ytm:accRustIO("ytm"),sc:accRustIO("sc"),dz:accRustIO("dz"),
+ ym:{lists:async()=>[accLikedRow(),...((await inv("ym_playlists"))||[]).map(p=>({id:String(p.id),name:p.name,total:p.total??null,art:p.art||null}))],
+  tracks:l=>l.liked?inv("ym_liked_tracks"):inv("ym_playlist_tracks",{kind:l.id})},
+ sp:{lists:async()=>[accLikedRow(),...((await inv("spotify_playlists"))||[]).map(p=>({id:String(p.id),name:p.name,total:p.total??null,art:p.art||p.image||null}))],
+  tracks:l=>l.liked?inv("spotify_liked_tracks"):inv("spotify_playlist_tracks",{pid:l.id})}};
+function accStatus(id){
+ const a=accSt(id),on=accOn(id),u=accUser(id);
+ if(!on&&a.busy==="login")return t("acc.wait");
+ if(on&&a.st?.error)return t("acc.stale");
+ if(on)return u?t("acc.as").replace("{u}",u):t("connected");
+ return t("acc.off."+id)}
+const accTokHTML=id=>`<div class="tokrow"><input id="tok-${id}" type="password" placeholder="${t("tok.ph")}" autocomplete="off">
+ <button class="btn" data-toksave="${id}">${t("tok.save")}</button><small style="color:var(--mute);font-size:.72rem">${t("tok.hint")}</small></div>${id==="ym"?ymGuide():""}`;
+function accLibHTML(id){
+ const a=accSt(id),L=a.lists;
+ if(!L)return `<div class="acc-lib is-load"><span class="material-symbols-rounded acc-spin" aria-hidden="true">progress_activity</span><span>${esc(t("hs.load"))}</span></div>`;
+ if(L.error)return `<div class="acc-lib is-err"><span>${esc(L.error)}</span><button class="btn sm" data-accretry="${id}"><span class="material-symbols-rounded" style="font-size:16px">refresh</span><span>${esc(t("hs.retry"))}</span></button></div>`;
+ const busy=a.busy;
+ const rows=L.items.map((l,i)=>{
+  const done=a.done?.[i],now=busy==="row"+i;
+  const label=now?t("acc.importing"):done?t("acc.again"):l.liked?t("acc.tofav"):t("sp.import");
+  const sub=l.liked?t("acc.liked.s"):l.total!=null?`${l.total} ${t("tracks")}`:t("acc.pl");
+  return `<div class="acc-row${l.liked?" is-liked":""}">
+   <span class="acc-row-art"><span class="material-symbols-rounded" aria-hidden="true">${l.liked?"favorite":"queue_music"}</span>${l.art?`<img src="${esc(l.art)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}</span>
+   <span class="acc-row-meta"><b title="${esc(l.name)}">${esc(l.name)}</b><small>${esc(sub)}</small></span>
+   <button class="btn sm${done?" on":""}" data-accrow="${id}" data-i="${i}"${busy?" disabled":""}>${now?`<span class="material-symbols-rounded acc-spin" style="font-size:16px">progress_activity</span>`:done?`<span class="material-symbols-rounded" style="font-size:16px">check</span>`:""}<span>${esc(label)}</span></button></div>`}).join("");
+ return `<div class="acc-lib"><div class="acc-lib-head"><b>${esc(t("acc.lib"))}</b>
+  ${L.items.length>1?`<button class="btn sm" data-accall="${id}"${busy?" disabled":""}><span class="material-symbols-rounded" style="font-size:16px">download</span><span>${esc(t("acc.all"))}</span></button>`:""}</div>
+  <div class="acc-rows">${rows||`<p class="ph">${esc(t("sp.nolists"))}</p>`}</div><small class="acc-note">${esc(t("acc.note"))}</small></div>`}
+function accCard(id){
+ const a=accSt(id),on=accOn(id);
+ const logo=(SVC_ICONS[id]||"").replace('width="14" height="14"','width="22" height="22"');
+ const ava=on&&a.st?.avatar?`<img class="acc-ava" src="${esc(a.st.avatar)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">`:"";
+ const I=(n,spin)=>`<span class="material-symbols-rounded${spin?" acc-spin":""}" style="font-size:16px" aria-hidden="true">${n}</span>`;
+ const act=on
+  ?`<button class="btn sm${a.open?" on":""}" data-accimp="${id}" aria-expanded="${a.open}">${I("library_add")}<span>${esc(t("acc.import"))}</span></button>
+   <button class="btn sm ghost" data-accout="${id}">${I("logout")}<span>${esc(t("acc.out"))}</span></button>`
+  :`<button class="primary sm" data-accin="${id}">${I(a.busy==="login"?"progress_activity":"login",a.busy==="login")}<span>${esc(t("acc.in"))}</span></button>
+   ${id==="sp"?`<button class="btn sm ghost" data-sp-cid-toggle="true">${I("key")}<span>Client ID</span></button>`
+    :`<button class="btn sm ghost" data-accpaste="${id}"${a.busy==="paste"?" disabled":""}>${I(id==="ym"?"key":"content_paste")}<span>${esc(t(id==="ym"?"acc.token":"acc.paste"))}</span></button>`}`;
+ const hint=!on&&id==="ym"&&a.paste?`<p class="acc-hint">${esc(t("ym.acc.open"))} <a href="#" data-accopen="${esc(a.paste)}">${esc(a.paste)}</a></p>`:"";
+ const extra=on&&a.open?accLibHTML(id):(!on&&tokOpen===id?(id==="sp"?spGuide():accTokHTML(id)):"");
+ return `<section class="acc-card" data-acc-card="${id}" data-on="${on}"${on&&a.st?.error?' data-warn="true"':""} style="--brand:${ACC_BRAND[id]}">
+  <div class="acc-top"><span class="acc-logo">${logo}</span>
+   <div class="acc-meta"><b>${esc(svc(id).name)}</b><small>${esc(accStatus(id))}</small></div>${ava}</div>
+  <p class="acc-desc">${esc(t("acc.d."+id))}</p>${hint}
+  <div class="acc-act">${act}</div>${extra}</section>`}
 function renderAccounts(){
- document.getElementById("accounts").innerHTML=SERVICES.map(s=>s.free?`
-  <div class="acc"><span class="an"><b>${esc(svc(s.id).name)}</b><span>${t("nologin")} · ${esc(svc(s.id).redir||"")}</span></span>
-  <span class="btn on" aria-disabled="true">${t("ready")}</span></div>`:`
-  <div class="acc"><span class="an"><b>${esc(svc(s.id).name)}</b><span>${s.conn?t("connected")+" · keychain: meowave/"+s.id:t("noauth")}</span></span>
-  <div style="display:flex;gap:6px;align-items:center">
-   ${s.id==="sp"&&!s.conn?`<button class="btn sm" data-sp-cid-toggle="true" title="${LANG==="ru"?"Настроить Client ID":"Configure Client ID"}"><span class="material-symbols-rounded" style="font-size:16px">key</span> Client ID</button>`:""}
-   <button class="btn ${s.conn?"on":""}" data-acc="${s.id}">${s.conn?t("disconnect"):t("connect")}</button>
-  </div></div>
-  ${tokOpen===s.id?(s.id==="sp"?spGuide():`<div class="tokrow"><input id="tok-${s.id}" type="password" placeholder="${t("tok.ph")}" autocomplete="off">
-   <button class="btn" data-toksave="${s.id}">${t("tok.save")}</button><small style="color:var(--mute);font-size:.72rem">${t("tok.hint")}</small></div>
-   ${s.id==="ym"?ymGuide():""}`):""}`).join("")}
+ const host=document.getElementById("accounts");if(!host)return;
+ host.innerHTML=ACC_ORDER.map(accCard).join("");
+ icons()}
+async function accLists(id,force){
+ const a=accSt(id);
+ if(a.lists&&!a.lists.error&&!force)return;
+ a.lists=null;a.done=null;renderAccounts();
+ try{a.lists={items:((await ACC_IO[id].lists())||[]).filter(x=>x&&x.name)}}
+ catch(e){a.lists={error:accErr(e)}}
+ renderAccounts()}
+async function accImport(id,i){
+ const a=accSt(id),l=a.lists?.items?.[i];if(!l||a.busy)return;
+ a.busy="row"+i;renderAccounts();
+ try{
+  const rows=await ACC_IO[id].tracks(l);
+  /* A playlist remembers where it came from: bringing it over again fills
+     the same one instead of adding a twin. */
+  await importRows(rows||[],id==="sp"?null:id,l.name,!!l.liked,l.liked?null:`${id}:${l.id}`);
+  (a.done||(a.done={}))[i]=true;
+ }catch(e){toast(accErr(e),5200)}
+ a.busy="";renderAccounts()}
+async function accImportAll(id){
+ const a=accSt(id),items=a.lists?.items||[];if(!items.length||a.busy)return;
+ const n=items.filter(x=>!x.liked).length;
+ const ok=await askConfirm(t("acc.all.t").replace("{s}",svc(id).name),t("acc.all.ok"),false,{icon:"download",sub:t("acc.all.s").replace("{n}",n)});
+ if(!ok)return;
+ for(let i=0;i<items.length;i++)await accImport(id,i)}
+async function ymLoginFlow(){
+ if(!TAURI)return toast(t("acc.desk"));
+ toast(t("ym.acc.browser"));
+ try{
+  const started=await inv("ym_login_start");
+  toast(t("ym.acc.wait"),9000);
+  if(started?.paste){accSt("ym").paste=started.paste;renderAccounts()}
+  /* The paste page stores the token whenever the user finishes; polling
+     flips the card to connected. */
+  let tries=0;
+  const poll=setInterval(async()=>{
+   tries++;await initServices();
+   if(svc("ym").conn||tries>20){clearInterval(poll);accSt("ym").paste="";renderAccounts()}},3000);
+ }catch(e){toast(accErr(e),5200)}}
+async function spClientId(){
+ let cid=SP_CLIENT_ID||(await inv("spotify_get_client_id").catch(()=>""))||"";
+ if(cid)return cid;
+ const v=await askText(t("acc.sp.cid.t"),"",{icon:"key",label:"Client ID",sub:t("acc.sp.cid.s"),confirm:t("tok.save"),required:true,max:120});
+ if(!v||!v.trim())return "";
+ await inv("spotify_set_client_id",{clientId:v.trim()}).catch(()=>{});
+ SP_CLIENT_ID=v.trim();return SP_CLIENT_ID}
+async function spLoginFlow(){
+ if(!TAURI)return toast(t("acc.desk"));
+ if(!await spClientId())return;
+ toast(t("sp.browser"));
+ try{SP.me=await inv("spotify_login");await initServices()}
+ catch(e){toast(accErr(e),5200)}
+ renderAccounts();renderSrv();icons()}
+async function accLogin(id){
+ if(id==="ym")return ymLoginFlow();
+ if(id==="sp")return spLoginFlow();
+ if(!TAURI)return toast(t("acc.desk"));
+ const a=accSt(id);a.busy="login";renderAccounts();
+ clearTimeout(a.loginT);a.loginT=setTimeout(()=>{if(a.busy==="login"){a.busy="";renderAccounts()}},11*60*1000);
+ try{await inv("acc_login",{service:id});toast(t("acc.window").replace("{s}",svc(id).name),6500,{icon:"open_in_new"})}
+ catch(e){a.busy="";toast(accErr(e),5200);renderAccounts()}}
+const accOkText=(id,u)=>u?t("acc.ok").replace("{s}",svc(id).name).replace("{u}",u):t("acc.ok0").replace("{s}",svc(id).name);
+async function accPaste(id){
+ if(id==="ym"){tokOpen=tokOpen==="ym"?null:"ym";renderAccounts();if(tokOpen)document.getElementById("tok-ym")?.focus();return}
+ if(!TAURI)return toast(t("acc.desk"));
+ const v=await askText(t("acc.paste.t").replace("{s}",svc(id).name),"",{icon:"content_paste",label:t("acc.paste.l."+id),sub:t("acc.paste.s."+id),confirm:t("acc.paste.ok"),required:true,max:16384,secret:true,hint:t("acc.paste.h")});
+ if(!v)return;
+ const a=accSt(id);a.busy="paste";renderAccounts();
+ try{a.st=await inv("acc_paste",{service:id,value:v});a.lists=null;toast(accOkText(id,a.st?.user),4800,{icon:"check_circle"});window.hsForget?.(id)}
+ catch(e){const m=accErr(e);toast(/^paste:/.test(m)?t("acc.paste.bad"):m,6500)}
+ a.busy="";renderAccounts()}
+async function accLogout(id){
+ const ok=await askConfirm(t("acc.out.t").replace("{s}",svc(id).name),t("acc.out"),true,{icon:"logout",sub:t("acc.out.s")});
+ if(!ok)return;
+ const a=accSt(id);a.open=false;a.lists=null;a.done=null;
+ if(ACC_RUST.includes(id)){await inv("acc_logout",{service:id}).catch(()=>{});a.st={service:id,connected:false}}
+ else if(id==="sp"){await inv("spotify_logout").catch(()=>{});SP={me:null,lists:null};await initServices()}
+ else{await deleteToken(id).catch(()=>{});const s=svc(id);s.conn=false;s.on=false}
+ window.hsForget?.(id);
+ renderAccounts();renderSrv();icons()}
+async function accRefresh(id){
+ if(!TAURI||!ACC_RUST.includes(id))return;
+ try{accSt(id).st=await inv("acc_status",{service:id})}catch(_){}
+ renderAccounts()}
+function accRefreshAll(){
+ ACC_RUST.forEach(accRefresh);
+ if(TAURI&&svc("sp").conn&&!SP.me)inv("spotify_me").then(m=>{if(m){SP.me=m;renderAccounts()}}).catch(()=>{})}
+/* TAURI itself is declared further down; read the bridge directly here. */
+if(window.__TAURI__?.core&&window.__TAURI__?.event?.listen)window.__TAURI__.event.listen("acc-changed",e=>{
+ const p=e?.payload||{},id=p.service;if(!id||!ACC_RUST.includes(id))return;
+ const a=accSt(id);a.busy="";clearTimeout(a.loginT);
+ if(p.ok){
+  a.st={service:id,connected:true,user:p.user||"",avatar:null};a.lists=null;
+  toast(accOkText(id,p.user),4800,{icon:"check_circle"});
+  window.hsForget?.(id);accRefresh(id)}
+ else if(p.error==="cookies")toast(t("acc.err.jar"),7000);
+ else if(p.error==="timeout")toast(t("acc.err.time"),5200);
+ else if(p.error)toast(String(p.error),5200);
+ renderAccounts()});
+document.addEventListener("click",e=>{
+ const b=e.target.closest?.("[data-accin],[data-accout],[data-accimp],[data-accpaste],[data-accrow],[data-accall],[data-accretry],[data-accopen],#acc-link-imp");
+ if(!b)return;
+ e.preventDefault();
+ const d=b.dataset;
+ if(b.id==="acc-link-imp")openImportModal();
+ else if(d.accin)accLogin(d.accin);
+ else if(d.accout)accLogout(d.accout);
+ else if(d.accimp){const a=accSt(d.accimp);a.open=!a.open;renderAccounts();if(a.open)accLists(d.accimp)}
+ else if(d.accpaste)accPaste(d.accpaste);
+ else if(d.accrow)accImport(d.accrow,+d.i);
+ else if(d.accall)accImportAll(d.accall);
+ else if(d.accretry)accLists(d.accretry,true);
+ else if(d.accopen)openExternal(d.accopen)});
 function spGuide(){
  return `<div class="guide" style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surf);border:1px solid var(--line);border-radius:12px;margin:6px 0 12px">
   <div style="font-size:.82rem;color:var(--text)"><b>Spotify Client ID</b>: ${LANG==="ru"?"укажите Client ID из дашборда Spotify:":"set Spotify Client ID for OAuth:"}</div>
@@ -2110,7 +2332,7 @@ async function removeLocal(id){
  save();renderLib();renderLocalInfo();renderWaveHint();
  toast(t("loc.removed"))}
 async function clearLocal(){
- if(!await askConfirm(t("loc.clear.ask"),t("loc.clear")))return;
+ if(!await askConfirm(t("dlg.loc.t"),t("loc.clear"),true,{icon:"folder_off",sub:t("dlg.loc.s")}))return;
  TRACKS=TRACKS.filter(x=>x.s!=="local");
  LOCAL_PATHS=[];
  save();renderLib();renderLocalInfo();renderWaveHint();
@@ -2205,7 +2427,7 @@ function renderLib(){
      `<button class="plc" data-pl="${i}">${plCover({tracks:g.list},40+i*4,12+i*2)}
       <b>${esc(g.a)}</b><span>${g.list.length} ${t("tracks")}</span></button>`).join("")+`</div>`:"");
   document.getElementById("plnew").onclick=async()=>{
-   const n=await askText(t("ctx.newpl.ask"));if(n)newPlaylist(n)};
+   const n=await askText(t("pl.new"),"",{icon:"playlist_add",label:t("dlg.name"),sub:t("dlg.newpl.s"),confirm:t("dlg.create"),required:true});if(n)newPlaylist(n)};
   document.getElementById("plimport")?.addEventListener("click",openImportModal)}
  else if(S.tab==="fav"){
   /* Newest first: the thing you just hearted is the thing you want to see. */
@@ -3443,7 +3665,7 @@ function sameTrack(a,b){return !!a&&!!b&&trackIdent(a)===trackIdent(b)}
 async function searchGeniusPrompt(tr){
  if(!tr||tr.mode==="empty")return;
  const defQ=`${tr.a||""} ${tr.t||""}`.trim();
- const q=await askText(t("ly.genius_prompt")||"Search Genius for lyrics (Artist Title):", defQ);
+ const q=await askText(t("dlg.genius.t"),defQ,{icon:"lyrics",label:t("dlg.genius.l"),confirm:t("dlg.find"),required:true});
  if(!q||!q.trim())return;
  toast(t("ly.load"));
  try{
@@ -4588,6 +4810,7 @@ function showSettingsTab(id){
  setovTitle();
  const sc=document.getElementById("setov-body");if(sc&&!(sc.dataset.search==="true"))sc.scrollTop=0;
  if(id==="lib")refreshCacheSize();
+ if(id==="acc")accRefreshAll();
  if(id==="net"){pxLoad();paintDiscord()}
  if(id==="look")paintLyPanel();
  /* Widths are only measurable once the panel is displayed. */
@@ -5463,6 +5686,7 @@ function setTheme(v){S.theme=v;
  document.documentElement.dataset.theme=v==="system"?(d?"dark":"light"):v;
  spriteCache={}}
 function setAccent(id){
+ stopAccentTween();
  S.accent=id;document.documentElement.dataset.accent=id;
  const st=document.documentElement.style,a=ACCENTS.find(x=>x[0]===id);
  if(id==="adaptive"){
@@ -5927,7 +6151,11 @@ function streamUrl(tr){
  if(tr?.blob)return null;
  if(!STREAM_PORT||!tr?.id)return null;
  const fmt=tr.s==="ytm"?`&fmt=${encodeURIComponent(ytmFmt(tr))}`:"";
- return `http://127.0.0.1:${STREAM_PORT}/stream/${encodeURIComponent(tr.s)}/${encodeURIComponent(tr.id)}?k=${encodeURIComponent(STREAM_KEY)}&hq=${hqFlag()}${fmt}`;
+ /* Title, artist and length ride along for YouTube: when YouTube refuses the
+    track (its bot check behind VPNs), the proxy plays the same recording from
+    Yandex Music or SoundCloud instead of failing. */
+ const hint=tr.s==="ytm"?`&t=${encodeURIComponent(String(tr.t||"").slice(0,200))}&a=${encodeURIComponent(String(tr.a||"").slice(0,200))}&d=${Math.round(+tr.d||0)}${S.x?.ytmAlt===false?"&alt=0":""}`:"";
+ return `http://127.0.0.1:${STREAM_PORT}/stream/${encodeURIComponent(tr.s)}/${encodeURIComponent(tr.id)}?k=${encodeURIComponent(STREAM_KEY)}&hq=${hqFlag()}${fmt}${hint}`;
 }
 /* The media element only reports a numeric code, so every failure used to look
    identical: "Не удалось воспроизвести". The proxy knows the real reason —
@@ -7024,11 +7252,12 @@ function renderDislikes(){
    accent instead of resetting the whole interface to grey. */
 let accentAdaptCache={};
 function adaptAccent(tr){
- if(!tr||!tr.art)return;
+ if(!tr||!tr.art){coverTint(null);return}
  const hit=accentAdaptCache[trackKey(tr)];
  if(hit){
   document.documentElement.style.setProperty("--fp-tint",hit.raw.join(" "));
   if(hit.raw2)document.documentElement.style.setProperty("--fp-tint-2",hit.raw2.join(" "));
+  coverTint(hit.raw,hit.raw2);
   if(S.accent==="adaptive")applyAccentRgb(hit.ui);
   return}
  const img=new Image();
@@ -7069,6 +7298,7 @@ function adaptAccent(tr){
    if(keys.length>200)delete accentAdaptCache[keys[0]];
    document.documentElement.style.setProperty("--fp-tint",best.join(" "));
    document.documentElement.style.setProperty("--fp-tint-2",second.join(" "));
+   if(sameTrack(tr,S.current))coverTint(best,second);
    if(S.accent==="adaptive"&&sameTrack(tr,S.current))applyAccentRgb(rgb);
   }catch(e){/* a cover served without CORS taints the canvas; keep the accent */}};
   img.onerror=()=>{};
@@ -7095,15 +7325,86 @@ function liftForUi([r,g,b]){
   out[i]=Math.min(255,out[i]+28)}
  return out}
 
-function applyAccentRgb([r,g,b]){
+/* Round 5: a new cover no longer cuts the accent over in one frame. The
+   colour is tweened (ease-in-out, 0.7 s by default — "Смена цвета" in Вид)
+   from whatever is on screen now; the particle sprites are re-tinted a few
+   times during the tween instead of on every frame, and once at the end. */
+let ACC_NOW=null,ACC_RAF=0;
+function colorFadeMs(){const v=+(S.x?.cfade??1);return v<=0?0:v>=2?1600:700}
+function setAccentVars([r,g,b]){
  const st=document.documentElement.style;
- document.documentElement.dataset.accent="adaptive";
  st.setProperty("--accent",`rgb(${r} ${g} ${b})`);
  st.setProperty("--accent-soft",`rgb(${r} ${g} ${b} / .16)`);
  st.setProperty("--accent-rgb",`${r} ${g} ${b}`);
- st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b);
- /* The particle sprites are pre-tinted, so their cache has to go. */
- spriteCache={}}
+ st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b)}
+function applyAccentRgb(rgb){
+ const de=document.documentElement;
+ de.dataset.accent="adaptive";
+ cancelAnimationFrame(ACC_RAF);ACC_RAF=0;
+ const ms=colorFadeMs();
+ let from=ACC_NOW;
+ if(!from){
+  const cur=getComputedStyle(de).getPropertyValue("--accent-rgb").trim().split(/\s+/).map(Number);
+  from=cur.length===3&&cur.every(Number.isFinite)?cur:null}
+ const still=matchMedia("(prefers-reduced-motion: reduce)").matches||document.hidden;
+ if(!from||ms<=0||still||from.every((v,i)=>Math.abs(v-rgb[i])<3)){
+  setAccentVars(rgb);ACC_NOW=rgb.slice();spriteCache={};return}
+ const t0=performance.now();let lastSprite=t0;
+ const step=now=>{
+  const k=Math.min(1,(now-t0)/ms),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+  const cur=from.map((v,i)=>Math.round(v+(rgb[i]-v)*e));
+  setAccentVars(cur);ACC_NOW=cur;
+  /* The 2D field caches pre-tinted sprites; re-tint ~5×/s, not 60×. */
+  if(now-lastSprite>200){spriteCache={};lastSprite=now}
+  if(k<1)ACC_RAF=requestAnimationFrame(step);else{ACC_RAF=0;spriteCache={}}};
+ ACC_RAF=requestAnimationFrame(step)}
+function stopAccentTween(){cancelAnimationFrame(ACC_RAF);ACC_RAF=0;ACC_NOW=null}
+
+/* "Фон по обложке": two glows behind the whole interface take the cover's
+   colours. They are registered CSS colours (@property --cv-a/--cv-b in
+   app.css), so the browser itself cross-fades them — no script per frame.
+   The sampled pixel is normalised to a mid lightness first: a near-black
+   cover would otherwise tint nothing and a neon one would shout. Greys stay
+   neutral instead of turning into an arbitrary hue. */
+function bgTone([r,g,b]){
+ r/=255;g/=255;b/=255;
+ const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;let h=0,s=0;
+ if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
+  h=(mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4)/6}
+ if(s<.12)return [150,148,168];
+ const L=.5,Sa=Math.min(.82,Math.max(.42,s));
+ const q=L<.5?L*(1+Sa):L+Sa-L*Sa,p=2*L-q;
+ const f=t=>{t=(t%1+1)%1;return t<1/6?p+(q-p)*6*t:t<.5?q:t<2/3?p+(q-p)*(2/3-t)*6:p};
+ return [f(h+1/3),f(h),f(h-1/3)].map(v=>Math.round(v*255))}
+let CV_LAST=null;
+function coverBgPrefs(){
+ const de=document.documentElement,on=S.x?.cbg!==false;
+ de.dataset.coverbg=on?"on":"off";
+ const k=Math.max(0,Math.min(100,+(S.x?.cbgK??55)))/100;
+ de.style.setProperty("--cv-k",String(on?k:0));
+ de.style.setProperty("--cv-fade",Math.round(colorFadeMs()*1.6)+"ms")}
+function coverTint(a,b){
+ CV_LAST=a?[a,b||a]:null;
+ const st=document.documentElement.style;
+ if(!a){st.setProperty("--cv-a","rgb(0 0 0 / 0)");st.setProperty("--cv-b","rgb(0 0 0 / 0)");return}
+ st.setProperty("--cv-a",`rgb(${bgTone(a).join(" ")})`);
+ st.setProperty("--cv-b",`rgb(${bgTone(b||a).join(" ")})`)}
+function coverBgUI(){
+ const sw=document.getElementById("cbg"),box=document.getElementById("cbg-box");
+ const on=S.x?.cbg!==false,k=Math.round(+(S.x?.cbgK??55));
+ if(sw){sw.setAttribute("aria-pressed",String(on));sw.classList.toggle("on",on)}
+ if(box)box.hidden=!on;
+ const r=document.getElementById("cbg-k"),v=document.getElementById("cbg-k-v");
+ if(r&&+r.value!==k)r.value=k;if(v)v.textContent=k+"%";
+ setSeg("cfade",+(S.x?.cfade??1))}
+(function coverBgWire(){
+ const sw=document.getElementById("cbg");
+ sw?.addEventListener("click",()=>{S.x.cbg=!(S.x.cbg!==false);coverBgPrefs();coverBgUI();save()});
+ const r=document.getElementById("cbg-k");
+ r?.addEventListener("input",()=>{S.x.cbgK=+r.value;coverBgPrefs();coverBgUI()});
+ r?.addEventListener("change",()=>save());
+ seg("cfade",v=>{S.x.cfade=+v;coverBgPrefs()})})();
+
 function applyTrackPreset(tr){
  /* A track's own preset wins over its playlist's: the more specific choice is
     the one the user made last and about this exact song. */
@@ -7132,7 +7433,7 @@ function pinPresetToTrack(tr,presetId){
 
 async function deletePlaylist(pid){
  const pl=PLAYLISTS.find(p=>p.id===pid);if(!pl)return;
- if(!await askConfirm(t("pl.del.ask").replace("{n}",pl.name),t("pl.del")))return;
+ if(!await askConfirm(t("pl.del.ask").replace("{n}",pl.name),t("pl.del"),true,{icon:"delete",sub:t("dlg.pldel.s")}))return;
  PLAYLISTS=PLAYLISTS.filter(p=>p.id!==pid);plOpen=null;save();renderLib();toast(t("pl.deleted"));
  if(sb&&sbUser&&!isLocalPl(pl)){
   try{
@@ -7206,7 +7507,7 @@ async function checkUpdate(manual){
    return;
   }
   if(st)st.textContent=t("upd.found").replace("{v}",u.version);
-  const go=await showModal({title:t("upd.ask").replace("{v}",u.version),
+  const go=await showModal({title:t("upd.ask").replace("{v}",u.version),icon:"system_update",
    label:(u.body||"").slice(0,300),input:false,confirm:t("upd.install")});
   if(!go)return;
   toast(t("upd.installing"),20000);
@@ -7550,7 +7851,7 @@ async function setPlCover(pid,dataUrl){
 
 async function renamePlaylist(pid){
  const pl=PLAYLISTS.find(p=>p.id===pid);if(!pl)return;
- const n=await askText(t("plctx.rename"),pl.name);
+ const n=await askText(t("dlg.rename.t"),pl.name,{icon:"edit",label:t("dlg.name"),confirm:t("dlg.save"),required:true});
  if(!n||n===pl.name)return;
  pl.name=n;
  if(sb&&sbUser&&!isLocalPl(pl)){
@@ -7599,7 +7900,7 @@ addEventListener("click",e=>{
  else if(act==="eqoff")pinPresetToTrack(tr,null);
  else if(act==="pl")addToPlaylist(b.dataset.pid,tr);
  else if(act==="newpl"){
-  askText(t("ctx.newpl.ask")).then(n=>{
+  askText(t("pl.new"),"",{icon:"playlist_add",label:t("dlg.name"),sub:t("dlg.newpl.s"),confirm:t("dlg.create"),required:true}).then(n=>{
    if(n)newPlaylist(n).then(pid=>{if(pid)addToPlaylist(pid,tr)})})}
 },true);
 addEventListener("keydown",e=>{if(e.key==="Escape")closeCtx()});
@@ -7828,7 +8129,7 @@ function renderProfile(savedVals={}){
  if(!sbUser){
   if(S.guest){
    const favs=TRACKS.filter(x=>x.fav).length;
-   const ava=S.avatar||sbProfile?.avatar_url||"./icons/icon.png";
+   const ava=S.avatar||sbProfile?.avatar_url||"./icons/app/classic.png";
    const ban=S.banner||sbProfile?.banner_url||"";
    box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
      <label class="banner" title="${t("pr.ban.hint")}" style="${!ban?'background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))':''}">
@@ -7885,7 +8186,7 @@ function renderProfile(savedVals={}){
    <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
     <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
      <div style="position:absolute;inset:-3px;background:rgb(var(--accent-rgb) / .16);border-radius:16px;filter:blur(10px);opacity:.5"></div>
-     <img src="./icons/icon.png" style="position:relative;width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
+     <img src="./icons/app/classic.png" style="position:relative;width:52px;height:52px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
     </div>
     <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
     <p class="ph" style="margin:0;font-size:0.82rem">${LANG==="ru"?"Синхронизируйте любимые треки, историю прослушивания и достижения":"Sync your favorite tracks, listening history and badges"}</p>
@@ -7962,7 +8263,7 @@ function renderProfile(savedVals={}){
    S.guest=true;save();toast(t("pr.auth.guest.ok")||"Гостевой профиль активен");renderProfile();
   });
   document.getElementById("au-quasar-btn")?.addEventListener("click",async()=>{
-   const qId=await askText(LANG==="ru"?"Введите ваш Quasar ID или почту:":"Enter your Quasar ID or email:","");
+   const qId=await askText(t("dlg.quasar.t"),"",{icon:"badge",label:t("dlg.quasar.l"),confirm:t("dlg.next"),required:true});
    if(!qId||!qId.trim())return;
    const em=document.getElementById("au-email");
    if(em){
@@ -8121,7 +8422,7 @@ const needAuth=(box,saved={})=>{
   <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
    <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
     <div style="position:absolute;inset:-3px;background:rgb(var(--accent-rgb) / .16);border-radius:16px;filter:blur(10px);opacity:.5"></div>
-    <img src="./icons/icon.png" style="position:relative;width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
+    <img src="./icons/app/classic.png" style="position:relative;width:52px;height:52px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
    </div>
    <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
    <p class="ph" style="margin:0;font-size:0.82rem">${LANG==="ru"?"Синхронизация медиатеки, комнат, чатов и профиля":"Sync library, rooms, chats and profile"}</p>
@@ -8221,7 +8522,7 @@ const needAuth=(box,saved={})=>{
  box.querySelector("#qau-submit")?.addEventListener("click",()=>submitAuth(authTab));
  box.querySelector("#qau-magic")?.addEventListener("click",()=>submitAuth("magic"));
  box.querySelector("#qau-quasar-btn")?.addEventListener("click",async()=>{
-  const qId=await askText(LANG==="ru"?"Введите ваш Quasar ID или почту:":"Enter your Quasar ID or email:","");
+  const qId=await askText(t("dlg.quasar.t"),"",{icon:"badge",label:t("dlg.quasar.l"),confirm:t("dlg.next"),required:true});
   if(!qId||!qId.trim())return;
   const em=box.querySelector("#qau-email");
   if(em){
@@ -9243,7 +9544,7 @@ async function renderChats(){
      </div>`;
 
     document.getElementById("newdm").onclick=async()=>{
-      const n=await askText(t("chat.addwho"));
+      const n=await askText(t("dlg.add.t"),"",{icon:"person_add",label:t("dlg.user"),confirm:t("dlg.add"),required:true});
       if(!n)return;
       if(isGuest||!sbUser){
         const mockList=getMockFriends();
@@ -9265,7 +9566,7 @@ async function renderChats(){
 
     if(!isGuest){
       document.getElementById("newgrp")?.addEventListener("click",async()=>{
-        const n=await askText(t("chat.newgrp"));
+        const n=await askText(t("chat.newgrp"),"",{icon:"group_add",label:t("dlg.name"),confirm:t("dlg.create"),required:true});
         if(!n)return;
         let data=null,error=null;
         try{({data,error}=await sb.rpc("create_group_chat",{name:n}))}
@@ -9755,16 +10056,16 @@ async function loadChatMembers(){
 
 async function customizeGroup(){
  const c=SOC.chat;if(!c||!c.chat)return;
- const name=await askText(t("chat.rename"),c.name);
+ const name=await askText(t("chat.custom"),c.name,{icon:"edit",label:t("chat.rename"),confirm:t("dlg.save")});
  if(name&&name!==c.name){
   const {error}=await sb.from("chats").update({name}).eq("id",c.chat);
   if(!error){c.name=name;SOC.chat.name=name}}
-  const about=await askText(t("chat.about.ph"),c.group?.about||"");
+  const about=await askText(t("chat.custom"),c.group?.about||"",{icon:"notes",label:t("chat.about.ph"),confirm:t("dlg.save")});
   /* Cancel (null) must leave the description alone, not wipe it. */
   if(about!=null&&about!==(c.group?.about||"")){
    const {error}=await sb.from("chats").update({about:about||null}).eq("id",c.chat);
    if(!error)c.group={...(c.group||{}),about:about||null}}
- const wantPic=await askConfirm(t("chat.avatar.q"),t("dlg.ok"),false);
+ const wantPic=await askConfirm(t("chat.avatar.q"),t("dlg.ok"),false,{icon:"image"});
  if(wantPic){
   const f=document.createElement("input");f.type="file";f.accept="image/png,image/jpeg,image/webp";
   const picked=new Promise(r=>{f.onchange=()=>r(f.files?.[0]||null);f.oncancel=()=>r(null)});
@@ -9817,11 +10118,11 @@ async function renderRooms(){
    ||`<p class="ph">${t("room.none")}</p>`}
  </div>`;
  document.getElementById("mkroom").onclick=async()=>{
-  const n=await askText(t("room.newname"));
+  const n=await askText(t("dlg.room.t"),"",{icon:"meeting_room",label:t("room.newname"),confirm:t("dlg.next"),required:true});
   if(!n)return;
   /* One decision, two buttons: "Private" is OK, "Public" is cancel — there is
      no third "abort" state worth a dialog of its own. */
-  const priv=await showModal({title:t("room.privq"),input:false,
+  const priv=await showModal({title:t("room.privq"),input:false,icon:"lock",
    confirm:t("room.privyes"),cancel:t("room.privpub")});
   const {data,error}=await sb.rpc("create_room",{name:n,private:!!priv});
   if(error)return toast(error.message);
@@ -10103,7 +10404,7 @@ function paintRoomShell(){
   if(error)await sb.from("room_members").delete().eq("room_id",r.id).eq("user_id",me);
   SOC.room=null;socClearAll();renderRooms()};
   document.getElementById("delroom")?.addEventListener("click",async()=>{
-  if(!await askConfirm(t("room.delq"),t("room.del"),true))return;
+  if(!await askConfirm(t("room.delq"),t("room.del"),true,{icon:"delete"}))return;
   await sb.from("rooms").delete().eq("id",r.id);
    SOC.room=null;socClearAll();renderRooms();toast(t("room.deleted"))});
  document.getElementById("copycode").onclick=()=>{
@@ -11156,6 +11457,7 @@ document.documentElement.style.setProperty("--blur",S.blur+"px");
 build(innerWidth<900?Math.round(safeParticleDensity()*.45):safeParticleDensity());
 setSeg("theme",S.theme);setSeg("lang",LANG);setSeg("quality",S.quality);
 setSeg("dens",S.dens);setSeg("pspeed",S.pspeed);setSeg("glow",S.glow);setSeg("blur",S.blur);
+coverBgPrefs();coverBgUI();
 document.getElementById("vol").value=Math.round(S.vol*100);
 document.getElementById("shuffle").setAttribute("aria-pressed",String(S.shuffle));
 document.getElementById("repeat").setAttribute("aria-pressed",String(S.repeat));
@@ -11297,16 +11599,23 @@ async function renderSpotify(){
    the rest are matched to YouTube Music by name, like the Spotify importer.
    Sequential matching stays: parallel searches trip YouTube's guest quota. */
 const SP_IMPORT_MAX=200;
-async function importRows(rows,svcId,name,asFavorites){
+async function importRows(rows,svcId,name,asFavorites,src){
  if(!rows||!rows.length)return toast(t("sp.empty"));
- const take=rows.slice(0,SP_IMPORT_MAX);
+ /* Rows that already carry a playable id need no search, so the cap that
+    keeps YouTube's guest quota safe does not apply to them. */
+ const direct=r=>!!(r&&((r.id&&(r.s==="ytm"||r.s==="sc"||r.s==="ym"||r.s==="dz"))||(r.i&&svcId&&svcId!=="sp")));
+ const take=rows.slice(0,rows.every(direct)?5000:SP_IMPORT_MAX);
  if(rows.length>take.length)toast(t("sp.capped").replace("{n}",take.length),6500);
  toast(t("sp.importing").replace("{n}",take.length),6000);
  let plId=null,pl=null;
  if(!asFavorites){
-  plId=await newPlaylist(name||"Import");
-  if(!plId)return;
-  pl=PLAYLISTS.find(p=>p.id===plId)}
+  pl=src?PLAYLISTS.find(p=>p.src===src)||null:null;
+  if(pl)plId=pl.id;
+  else{
+   plId=await newPlaylist(name||"Import");
+   if(!plId)return;
+   pl=PLAYLISTS.find(p=>p.id===plId);
+   if(pl&&src)pl.src=src}}
  let ok=0;
  for(const r of take){
   let hit=null;
@@ -11346,7 +11655,8 @@ async function importRows(rows,svcId,name,asFavorites){
     if(!TRACKS.some(x=>x.id===hit.id&&x.s===hit.s))TRACKS.push(hit);autoDownload(hit,null);ok++}}
   else if(pl&&!pl.tracks.some(x=>String(x.id)===String(hit.id)&&x.s===hit.s)){
    pl.tracks.push(hit);autoDownload(hit,pl.name);ok++}
-  await new Promise(res=>setTimeout(res,60))}
+  if(!direct(r))await new Promise(res=>setTimeout(res,60));
+  else if(ok%50===49)await new Promise(res=>setTimeout(res,0))}
  if(!asFavorites&&pl&&ok>0&&sb&&sbUser&&!isLocalPl(pl)){
   try{
    const {error}=await sb.rpc("playlist_sync",{pid:plId,tracks:pl.tracks.map(plPayload),replace_all:true});
@@ -11505,7 +11815,7 @@ function initUIFont(){
  }
 }
 
-if(TAURI){setTimeout(renderSpotify,800);setTimeout(renderYmAcc,900)}
+if(TAURI){setTimeout(renderSpotify,800);setTimeout(renderYmAcc,900);setTimeout(accRefreshAll,1600)}
 initSearchReveal();
 initUIFont();
 document.getElementById("quests-back-btn")?.addEventListener("click",()=>go("profile"));

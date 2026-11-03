@@ -32,6 +32,8 @@ Obsidian-хранилище с памяткой о проекте: как уст
 - [[Features/Discord RPC]]
 - [[Features/Streaming|Стриминг]]
 - [[Features/Import|Импорт плейлистов]]
+- [[Features/Accounts|Аккаунты площадок]]
+- [[Features/Design|Дизайн и диалоги]]
 - [[Features/App icon|Иконка приложения]]
 - [[Features/Keyboard shortcuts|Горячие клавиши]]
 

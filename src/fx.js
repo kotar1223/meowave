@@ -200,9 +200,24 @@ function flowDraw(dt){
  g.fillStyle="#101014";g.fillRect(0,0,w,h);
  if(FLOW.cur){const s=Math.max(w,h)*1.25;g.drawImage(FLOW.cur.tex,(w-s)/2,(h-s)/2,s,s)}}
 
+/* The same canvas can be lent to another surface — the mini player shows the
+   full-screen player's moving cover behind its card. One WebGL context, one
+   texture pair; only the parent element changes. null gives it back. */
+let FLOW_HOST=null;
+function flowHost(el){
+ const cv=flowCanvas();if(!cv)return false;
+ const grain=cv.nextElementSibling&&cv.nextElementSibling.classList.contains("fp-grain")?cv.nextElementSibling:null;
+ const target=el||document.getElementById("fp");if(!target)return false;
+ FLOW_HOST=el||null;
+ target.insertBefore(cv,target.firstChild);
+ if(grain)target.insertBefore(grain,cv.nextSibling);
+ FLOW.last=0;flowSize();flowDraw(0);flowKick();
+ return FLOW.ok}
 function flowActive(){
+ if(document.hidden)return false;
+ if(FLOW_HOST)return FLOW_HOST.isConnected&&document.documentElement.dataset.mini==="on";
  const fp=document.getElementById("fp");
- return !!fp&&fp.dataset.open==="true"&&(fp.dataset.bgMode||"dynamic")==="dynamic"&&!document.hidden}
+ return !!fp&&fp.dataset.open==="true"&&(fp.dataset.bgMode||"dynamic")==="dynamic"}
 /* Drawn at up to 40 fps: the field moves a fraction of a pixel per frame, so
    more frames would not look any smoother, while every one of them makes the
    compositor re-blur a full-window layer. Time-based, so the speed holds. */
@@ -401,7 +416,7 @@ document.addEventListener("pointerleave",()=>{COV.mx.t=0;COV.my.t=0;coverKick()}
 
 /* ───────────────────────── public API ───────────────────────── */
 window.MWFX={
- flow:{setCover,kick:flowKick,speed:v=>{FLOW.speed=clamp(+v||0,0,3)}},
+ flow:{setCover,kick:flowKick,host:flowHost,speed:v=>{FLOW.speed=clamp(+v||0,0,3)}},
  wall:{load:wallLoad,pick:wallPick,clear:wallClear,render:wallRender,settings:FXS,save:saveFx,has:()=>!!WALL.url,
   setFile:wallSetFile,setUrl:wallSetUrl,name:()=>WALL.name,kind:()=>WALL.type,isLink:()=>!!FXS.wallLink},
  cover:{el:coverEl,flyFrom:coverFlyFrom,flyTo:coverFlyTo,land:coverLand,reset:coverReset,
