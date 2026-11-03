@@ -284,6 +284,33 @@
         </div>
 
         <div class="panel pane">
+          <h3 data-i18n="lc.t">Комфорт прослушивания</h3>
+          <p class="ph" data-i18n="lc.s">Мягкие паузы, ровная громкость и плавные переходы между треками.</p>
+          <div class="field">
+            <div><label data-i18n="lc.fade">Плавная пауза</label><small data-i18n="lc.fade.s">Звук затихает и возвращается за доли секунды, без щелчка</small></div>
+            <button class="sw" id="lc-fade" aria-pressed="true" aria-label="fade"></button>
+          </div>
+          <div class="field">
+            <div><label data-i18n="lc.norm">Выравнивание громкости</label><small data-i18n="lc.norm.s">Тихие и громкие треки звучат ровно; уровень запоминается для каждого трека</small></div>
+            <button class="sw" id="lc-norm" aria-pressed="false" aria-label="normalize"></button>
+          </div>
+          <div class="field">
+            <div><label data-i18n="lc.trans">Мягкий переход</label><small><span id="lc-trans-v">Выключен</span> · <span data-i18n="lc.trans.s">затухание в конце трека и плавный старт следующего</span></small></div>
+            <input type="range" id="lc-trans" min="0" max="12" value="0" aria-label="transition">
+          </div>
+          <div class="field">
+            <div><label data-i18n="sleep.t">Таймер сна</label><small id="lc-sleep-v">Выключен</small></div>
+            <div class="seg" id="lc-sleep" role="group">
+              <button data-sleep="off" aria-pressed="true" data-i18n="sleep.offb">Выкл</button>
+              <button data-sleep="15" aria-pressed="false">15</button>
+              <button data-sleep="30" aria-pressed="false">30</button>
+              <button data-sleep="60" aria-pressed="false">60</button>
+              <button data-sleep="track" aria-pressed="false" data-i18n="sleep.trackb">Трек</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel pane">
           <h3 data-i18n="set.q">Качество</h3>
           <p class="ph" data-i18n="set.q.s">Lossless там, где сервис его отдаёт.</p>
           <div class="field">
@@ -374,9 +401,9 @@
             <div class="field">
               <div><label data-i18n="fp.set.font">Шрифт текста песен</label></div>
               <select class="fpset-select" id="ly-font-select" style="max-width:220px">
-                <option value="">Inter (По умолчанию)</option>
-                <option value="Roboto">Roboto (Material 3 Cyrillic)</option>
-                <option value="Golos Text">Golos Text (Кириллица)</option>
+                <option value="">Golos Text (по умолчанию)</option>
+                <option value="Inter Tight">Inter Tight</option>
+                <option value="Roboto">Roboto</option>
                 <option value="Montserrat">Montserrat</option>
                 <option value="Manrope">Manrope</option>
                 <option value="Rubik">Rubik</option>
@@ -392,7 +419,7 @@
                 <option value="Cinzel">Cinzel</option>
                 <option value="Space Grotesk">Space Grotesk</option>
                 <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-              </select>
+            </select>
             </div>
             <div class="field">
               <div><label data-i18n="set.font.ui">Шрифт интерфейса (UI Font)</label></div>
@@ -664,118 +691,129 @@
   <div class="fp-volumetric" id="fpvolumetric" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="fp-vignette" aria-hidden="true"></div>
   <div class="fpc" id="fpc"></div>
-  <div class="fp-settings-popover pane" id="fp-settings-popover" hidden>
+  <aside class="fp-settings-popover fpset" id="fp-settings-popover" hidden data-open="false" role="dialog" aria-labelledby="fpset-title">
     <div class="fpset-head">
-      <div class="fpset-title"><span class="material-symbols-rounded">tune</span><span data-i18n="fp.set.t">Настройки плеера</span></div>
-      <button class="ic sm close" id="fpset-close"><span class="material-symbols-rounded">close</span></button>
+      <div class="fpset-title" id="fpset-title" data-i18n="fp.set.t">Настройки плеера</div>
+      <button class="fpx-ib" id="fpset-close" aria-label="close"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="fpset-body">
-      <div class="fpset-row">
-        <label data-i18n="fp.set.bg">Фон плеера</label>
-        <div class="seg-group" id="fp-bg-mode-group">
-          <button class="seg-btn active" data-bg="dynamic" data-i18n="fp.bg.dynamic">Альбом</button>
-          <button class="seg-btn" data-bg="ambient" data-i18n="fp.bg.ambient">Эмбиент</button>
-          <button class="seg-btn" data-bg="wallpaper" data-i18n="fp.bg.wall">Обои</button>
-          <button class="seg-btn" data-bg="black" data-i18n="fp.bg.black">OLED</button>
-        </div>
-      </div>
-      <div class="fpset-row fpset-wall" id="fp-wall-box">
-        <div class="fpset-label-row">
-          <label data-i18n="fp.wall.t">Обои: картинка, GIF или видео</label>
-        </div>
-        <div class="fpwall-file">
-          <span class="material-symbols-rounded">wallpaper</span>
-          <span class="fpwall-name" id="fp-wall-name">Не выбраны</span>
-          <button class="btn sm" id="fp-wall-pick" data-i18n="fp.wall.pick">Выбрать</button>
-          <button class="btn sm text" id="fp-wall-clear" data-i18n="fp.wall.clear">Убрать</button>
-        </div>
-        <div class="fpset-label-row">
-          <label data-i18n="fp.wall.dim">Затемнение</label>
-          <span class="fpset-val" id="fp-wall-dim-val">35%</span>
-        </div>
-        <input type="range" id="fp-wall-dim" min="0" max="85" value="35">
-        <div class="fpset-label-row">
-          <label data-i18n="fp.wall.blur">Размытие обоев</label>
-          <span class="fpset-val" id="fp-wall-blur-val">0px</span>
-        </div>
-        <input type="range" id="fp-wall-blur" min="0" max="40" value="0">
-        <div class="fpset-switch-row fpwall-app">
-          <div>
-            <label data-i18n="fp.wall.app">Обои на фоне всего приложения</label>
-            <small data-i18n="fp.wall.app_sub">Не только в полноэкранном плеере</small>
+      <section class="fpset-group">
+        <h4 data-i18n="fps.g.bg">Фон</h4>
+        <div class="fpset-card">
+          <div class="fpset-row fpset-col">
+            <div class="fpset-label"><b data-i18n="fp.set.bg">Фон плеера</b></div>
+            <div class="seg-group" id="fp-bg-mode-group">
+              <button class="seg-btn active" data-bg="dynamic" data-i18n="fp.bg.dynamic">Альбом</button>
+              <button class="seg-btn" data-bg="ambient" data-i18n="fp.bg.ambient">Эмбиент</button>
+              <button class="seg-btn" data-bg="wallpaper" data-i18n="fp.bg.wall">Обои</button>
+              <button class="seg-btn" data-bg="black" data-i18n="fp.bg.black">OLED</button>
+            </div>
           </div>
-          <button class="sw" id="fp-wall-app" aria-pressed="false"></button>
+          <div class="fpset-row fpset-col fpset-wall" id="fp-wall-box">
+            <div class="fpwall-file">
+              <span class="material-symbols-rounded">wallpaper</span>
+              <span class="fpwall-name" id="fp-wall-name">Не выбраны</span>
+              <button class="fpx-chip" id="fp-wall-pick" data-i18n="fp.wall.pick">Выбрать</button>
+              <button class="fpx-chip ghost" id="fp-wall-clear" data-i18n="fp.wall.clear">Убрать</button>
+            </div>
+            <small class="fpset-hint" data-i18n="fp.wall.t">Картинка, GIF или видео — только в полноэкранном плеере</small>
+            <div class="fpset-label"><b data-i18n="fp.wall.dim">Затемнение</b><span class="fpset-val" id="fp-wall-dim-val">35%</span></div>
+            <input type="range" id="fp-wall-dim" min="0" max="85" value="35">
+            <div class="fpset-label"><b data-i18n="fp.wall.blur">Размытие обоев</b><span class="fpset-val" id="fp-wall-blur-val">0px</span></div>
+            <input type="range" id="fp-wall-blur" min="0" max="40" value="0">
+          </div>
+          <div class="fpset-row fpset-col fpset-only-dynamic">
+            <div class="fpset-label"><b data-i18n="fps.speed">Скорость движения</b><span class="fpset-val" id="fp-speed-val">100%</span></div>
+            <input type="range" id="fp-speed-range" min="0" max="200" value="100">
+          </div>
+          <div class="fpset-row fpset-col fpset-only-ambient">
+            <div class="fpset-label"><b data-i18n="fp.set.blur">Размытие фона</b><span class="fpset-val" id="fp-blur-val">75px</span></div>
+            <input type="range" id="fp-blur-range" min="20" max="120" value="75">
+          </div>
+          <div class="fpset-row fpset-col">
+            <div class="fpset-label"><b data-i18n="fps.bright">Яркость фона</b><span class="fpset-val" id="fp-glow-val">100%</span></div>
+            <input type="range" id="fp-glow-range" min="0" max="150" value="100">
+          </div>
         </div>
-      </div>
-      <div class="fpset-row">
-        <div class="fpset-label-row">
-          <label data-i18n="fp.set.glow">Подсветка</label>
-          <span class="fpset-val" id="fp-glow-val">100%</span>
+      </section>
+      <section class="fpset-group">
+        <h4 data-i18n="fps.g.text">Текст и шрифт</h4>
+        <div class="fpset-card">
+          <div class="fpset-row">
+            <div class="fpset-label"><b data-i18n="fps.font">Шрифт плеера</b><small data-i18n="fps.font_sub">Название, артист и текст песни</small></div>
+            <select class="fpset-select" id="fp-font-select">
+              <option value="">Golos Text (по умолчанию)</option>
+              <option value="Inter Tight">Inter Tight</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Manrope">Manrope</option>
+              <option value="Rubik">Rubik</option>
+              <option value="Unbounded">Unbounded</option>
+              <option value="Russo One">Russo One</option>
+              <option value="Comfortaa">Comfortaa</option>
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="JetBrains Mono">JetBrains Mono</option>
+              <option value="Fira Code">Fira Code</option>
+              <option value="Outfit">Outfit</option>
+              <option value="Geist">Geist</option>
+              <option value="Syne">Syne</option>
+              <option value="Cinzel">Cinzel</option>
+              <option value="Space Grotesk">Space Grotesk</option>
+              <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+            </select>
+          </div>
+          <div class="fpset-row fpset-col">
+            <div class="fpset-label"><b data-i18n="fps.lysize">Размер текста песни</b><span class="fpset-val" id="fp-lysize-val">44px</span></div>
+            <input type="range" id="fp-lysize-range" min="24" max="88" value="44">
+          </div>
+          <div class="fpset-row fpset-col">
+            <div class="fpset-label"><b data-i18n="fp.set.fill">Подсветка строки</b></div>
+            <div class="seg-group" id="fp-fill-mode-group">
+              <button class="seg-btn active" data-fill="karaoke" data-i18n="fp.fill.smooth">Плавная</button>
+              <button class="seg-btn" data-fill="line" data-i18n="fp.fill.line">Построчно</button>
+              <button class="seg-btn" data-fill="off" data-i18n="fp.fill.off">Без заливки</button>
+            </div>
+          </div>
+          <div class="fpset-row fpset-col">
+            <div class="fpset-label"><b data-i18n="fps.align">Выравнивание текста</b></div>
+            <div class="seg-group" id="fp-align-group">
+              <button class="seg-btn active" data-align="left" data-i18n="fps.align.l">Слева</button>
+              <button class="seg-btn" data-align="center" data-i18n="fps.align.c">По центру</button>
+            </div>
+          </div>
+          <div class="fpset-row">
+            <div class="fpset-label"><b data-i18n="fps.lyblur">Размывать дальние строки</b><small data-i18n="fps.lyblur_sub">Фокус остаётся на текущей строке</small></div>
+            <button class="sw on" id="fp-lyblur-sw" aria-pressed="true"></button>
+          </div>
         </div>
-        <input type="range" id="fp-glow-range" min="0" max="150" value="100">
-      </div>
-      <div class="fpset-row">
-        <div class="fpset-label-row">
-          <label data-i18n="fp.set.blur">Размытие фона</label>
-          <span class="fpset-val" id="fp-blur-val">75px</span>
+      </section>
+      <section class="fpset-group">
+        <h4 data-i18n="fps.g.cover">Обложка и поведение</h4>
+        <div class="fpset-card">
+          <div class="fpset-row fpset-col">
+            <div class="fpset-label"><b data-i18n="fps.size">Размер обложки</b></div>
+            <div class="seg-group" id="fp-zoom-mode-group">
+              <button class="seg-btn active" data-zoom="normal" data-i18n="fp.zoom.normal">Обычный</button>
+              <button class="seg-btn" data-zoom="large" data-i18n="fp.zoom.large">Крупный</button>
+              <button class="seg-btn" data-zoom="full" data-i18n="fp.zoom.full">Максимум</button>
+            </div>
+          </div>
+          <div class="fpset-row">
+            <div class="fpset-label"><b data-i18n="fps.shrink">Уменьшать на паузе</b><small data-i18n="fps.shrink_sub">Обложка мягко отступает, пока музыка стоит</small></div>
+            <button class="sw on" id="fp-drift-sw" aria-pressed="true"></button>
+          </div>
+          <div class="fpset-row">
+            <div class="fpset-label"><b data-i18n="fps.beat">Пульс под бит</b><small data-i18n="fps.beat_sub">Обложка слегка дышит в такт басу</small></div>
+            <button class="sw" id="fp-wobble-sw" aria-pressed="false"></button>
+          </div>
+          <div class="fpset-row">
+            <div class="fpset-label"><b data-i18n="fps.idle">Прятать управление</b><small data-i18n="fps.idle_sub">Через 3,5 секунды без движения мыши</small></div>
+            <button class="sw on" id="fp-idle-sw" aria-pressed="true"></button>
+          </div>
         </div>
-        <input type="range" id="fp-blur-range" min="20" max="120" value="75">
-      </div>
-      <div class="fpset-row">
-        <label data-i18n="fp.set.font">Шрифт текста</label>
-        <select class="fpset-select" id="fp-font-select">
-          <option value="">Inter (По умолчанию)</option>
-          <option value="Roboto">Roboto (Material 3 Cyrillic)</option>
-          <option value="Golos Text">Golos Text (Кириллица)</option>
-          <option value="Montserrat">Montserrat</option>
-          <option value="Manrope">Manrope</option>
-          <option value="Rubik">Rubik</option>
-          <option value="Unbounded">Unbounded</option>
-          <option value="Russo One">Russo One</option>
-          <option value="Comfortaa">Comfortaa</option>
-          <option value="Playfair Display">Playfair Display</option>
-          <option value="JetBrains Mono">JetBrains Mono</option>
-          <option value="Fira Code">Fira Code</option>
-          <option value="Outfit">Outfit</option>
-          <option value="Geist">Geist</option>
-          <option value="Syne">Syne</option>
-          <option value="Cinzel">Cinzel</option>
-          <option value="Space Grotesk">Space Grotesk</option>
-          <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-        </select>
-      </div>
-      <div class="fpset-row">
-        <label data-i18n="fp.set.fill">Режим караоке</label>
-        <div class="seg-group" id="fp-fill-mode-group">
-          <button class="seg-btn active" data-fill="karaoke" data-i18n="fp.fill.smooth">Плавное</button>
-          <button class="seg-btn" data-fill="line" data-i18n="fp.fill.line">Построчно</button>
-          <button class="seg-btn" data-fill="off" data-i18n="fp.fill.off">Без заливки</button>
-        </div>
-      </div>
-      <div class="fpset-row fpset-switch-row">
-        <div>
-          <label data-i18n="fp.set.wobble">Раскачка обложки</label>
-          <small data-i18n="fp.set.wobble_sub">Анимация бита и парения</small>
-        </div>
-        <button class="sw on" id="fp-wobble-sw" aria-pressed="true"></button>
-      </div>
-      <div class="fpset-row">
-        <label data-i18n="fp.set.zoom">Масштаб обложки (YouTube Music)</label>
-        <div class="seg-group" id="fp-zoom-mode-group">
-          <button class="seg-btn active" data-zoom="normal" data-i18n="fp.zoom.normal">Обычный</button>
-          <button class="seg-btn" data-zoom="large" data-i18n="fp.zoom.large">Крупный</button>
-          <button class="seg-btn" data-zoom="full" data-i18n="fp.zoom.full">На весь экран</button>
-        </div>
-      </div>
-      <div class="fpset-row fpset-switch-row">
-        <div>
-          <label data-i18n="fp.set.drift">Плавный дрейф и парение</label>
-          <small data-i18n="fp.set.drift_sub">Анимация движения обложки на весь экран</small>
-        </div>
-        <button class="sw on" id="fp-drift-sw" aria-pressed="true"></button>
-      </div>
+      </section>
     </div>
-  </div>
+  </aside>
 </div>
 
 <div class="dock-backdrop" id="dock-backdrop" hidden></div>
@@ -818,6 +856,38 @@
       <label for="boost" data-i18n="snd.boost">Громче</label>
       <input type="range" id="boost" min="100" max="300" value="100" aria-label="boost">
       <output id="boost-v">—</output>
+    </div>
+    <div class="fxrow fxsw">
+      <label for="dock-norm" data-i18n="lc.norm">Выравнивание громкости</label>
+      <button class="sw" id="dock-norm" aria-pressed="false" aria-label="normalize"></button>
+    </div>
+  </div>
+  <div class="dock-rv" id="dock-rv" data-on="false">
+    <div class="dock-rv-head">
+      <span class="material-symbols-rounded" aria-hidden="true">blur_on</span>
+      <b data-i18n="rv.t">Реверберация</b>
+      <button class="sw" id="rv-sw" aria-pressed="false" aria-label="reverb"></button>
+    </div>
+    <div class="rv-rooms" id="rv-rooms" role="group">
+      <button data-rv="room" aria-pressed="false" data-i18n="rv.room">Комната</button>
+      <button data-rv="hall" aria-pressed="true" data-i18n="rv.hall">Зал</button>
+      <button data-rv="church" aria-pressed="false" data-i18n="rv.church">Собор</button>
+      <button data-rv="plate" aria-pressed="false" data-i18n="rv.plate">Пластина</button>
+    </div>
+    <div class="fxrow">
+      <label for="rv-mix" data-i18n="rv.mix">Смесь</label>
+      <input type="range" id="rv-mix" min="0" max="80" value="25" aria-label="mix">
+      <output id="rv-mix-v">25%</output>
+    </div>
+    <div class="fxrow">
+      <label for="rv-size" data-i18n="rv.size">Хвост</label>
+      <input type="range" id="rv-size" min="3" max="60" value="24" aria-label="decay">
+      <output id="rv-size-v">2.4 с</output>
+    </div>
+    <div class="fxrow">
+      <label for="rv-tone" data-i18n="rv.tone">Тон</label>
+      <input type="range" id="rv-tone" min="0" max="100" value="52" aria-label="tone">
+      <output id="rv-tone-v">тёплый</output>
     </div>
   </div>
   <div class="presets" id="presets"></div>

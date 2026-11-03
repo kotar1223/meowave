@@ -296,6 +296,42 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "nologin":"No sign-in needed","ready":"Ready"}};
 let LANG="ru";
 const t=k=>I18N[LANG][k]??I18N.ru[k]??k;
+/* Strings of the redesigned full player, its settings sheet, the settings
+   window and the listening-comfort features. */
+Object.assign(I18N.ru,{
+"fpx.close":"Свернуть","sleep.t":"Таймер сна","sleep.left":"Осталось","sleep.off":"Выключен","sleep.offb":"Выкл","sleep.trackb":"Трек",
+"fps.g.bg":"Фон","fps.speed":"Скорость движения","fps.bright":"Яркость фона","fps.g.text":"Текст и шрифт",
+"fps.font":"Шрифт плеера","fps.font_sub":"Название, артист и текст песни","fps.lysize":"Размер текста песни",
+"fps.align":"Выравнивание текста","fps.align.l":"Слева","fps.align.c":"По центру",
+"fps.lyblur":"Размывать дальние строки","fps.lyblur_sub":"Фокус остаётся на текущей строке",
+"fps.g.cover":"Обложка и поведение","fps.size":"Размер обложки",
+"fps.shrink":"Уменьшать на паузе","fps.shrink_sub":"Обложка мягко отступает, пока музыка стоит",
+"fps.beat":"Пульс под бит","fps.beat_sub":"Обложка слегка дышит в такт басу",
+"fps.idle":"Прятать управление","fps.idle_sub":"Через 3,5 секунды без движения мыши",
+"rv.t":"Реверберация","rv.room":"Комната","rv.hall":"Зал","rv.church":"Собор","rv.plate":"Пластина",
+"rv.mix":"Смесь","rv.size":"Хвост","rv.tone":"Тон",
+"lc.t":"Комфорт прослушивания","lc.s":"Мягкие паузы, ровная громкость и плавные переходы между треками.",
+"lc.fade":"Плавная пауза","lc.fade.s":"Звук затихает и возвращается за доли секунды, без щелчка",
+"lc.norm":"Выравнивание громкости","lc.norm.s":"Тихие и громкие треки звучат ровно; уровень запоминается для каждого трека",
+"lc.trans":"Мягкий переход","lc.trans.s":"затухание в конце трека и плавный старт следующего",
+"set.search":"Поиск настроек","fp.set.font":"Шрифт полноэкранного плеера"});
+Object.assign(I18N.en,{
+"fpx.close":"Collapse","sleep.t":"Sleep timer","sleep.left":"Left","sleep.off":"Off","sleep.offb":"Off","sleep.trackb":"Track",
+"fps.g.bg":"Background","fps.speed":"Motion speed","fps.bright":"Background brightness","fps.g.text":"Text & font",
+"fps.font":"Player font","fps.font_sub":"Title, artist and lyrics","fps.lysize":"Lyrics size",
+"fps.align":"Lyrics alignment","fps.align.l":"Left","fps.align.c":"Centre",
+"fps.lyblur":"Blur distant lines","fps.lyblur_sub":"Keeps the focus on the current line",
+"fps.g.cover":"Cover & behaviour","fps.size":"Cover size",
+"fps.shrink":"Shrink when paused","fps.shrink_sub":"The cover steps back while the music is stopped",
+"fps.beat":"Beat pulse","fps.beat_sub":"The cover breathes with the bass",
+"fps.idle":"Hide controls","fps.idle_sub":"After 3.5 seconds without mouse movement",
+"rv.t":"Reverb","rv.room":"Room","rv.hall":"Hall","rv.church":"Cathedral","rv.plate":"Plate",
+"rv.mix":"Mix","rv.size":"Decay","rv.tone":"Tone",
+"lc.t":"Listening comfort","lc.s":"Soft pauses, even loudness and smooth transitions between tracks.",
+"lc.fade":"Soft pause","lc.fade.s":"Sound fades out and back in within a fraction of a second, no click",
+"lc.norm":"Volume levelling","lc.norm.s":"Quiet and loud tracks play at an even level; remembered per track",
+"lc.trans":"Soft transition","lc.trans.s":"fade at the end of a track and a gentle start of the next",
+"set.search":"Search settings","fp.set.font":"Full player font"});
 /* Social strings kept apart from the main dictionaries only so the block stays
    readable; t() reads them identically. */
 Object.assign(I18N.ru,{
@@ -447,18 +483,21 @@ const PRESETS=[
   {id:"night",n:{ru:"Ночь",en:"Night"},g:[2,3.5,2.5,1,.5,-1,-2.5,-5,-6.5,-8]},
   {id:"voice",n:{ru:"Голос",en:"Voice"},g:[-2,-3,-2,1,3.5,3,1.5,0,-1,-2]}];
 /* [id, css color, "r g b" — тот же цвет для частиц и неоновых теней] */
+/* A quiet, curated palette: soft, slightly greyed tones that sit well on a
+   dark glass interface instead of Tailwind's saturated neons. The ids are the
+   old ones, so a saved choice maps onto its calmer counterpart. */
 const ACCENTS=[
  ["none","oklch(82% 0 0)",""],
- ["violet","#9d8df1","157 141 241"],
- ["indigo","#707bfb","112 123 251"],
- ["blue","#38bdf8","56 189 248"],
- ["cyan","#2dd4bf","45 212 191"],
- ["teal","#14b8a6","20 184 166"],
- ["emerald","#34d399","52 211 153"],
- ["amber","#f59e0b","245 158 11"],
- ["coral","#f97316","249 115 22"],
- ["rose","#f43f5e","244 63 94"],
- ["pink","#ec4899","236 72 153"]];
+ ["violet","#b3a6e8","179 166 232"],
+ ["indigo","#9ca8ec","156 168 236"],
+ ["blue","#8db7dd","141 183 221"],
+ ["cyan","#8ccbd0","140 203 208"],
+ ["teal","#7fbfb2","127 191 178"],
+ ["emerald","#9cc7a4","156 199 164"],
+ ["amber","#dcc196","220 193 150"],
+ ["coral","#e7ad92","231 173 146"],
+ ["rose","#e3a3ae","227 163 174"],
+ ["pink","#d9a5cf","217 165 207"]];
 
 /* state */
 /* Title is resolved through i18n when rendered, not stored: a literal here
@@ -481,7 +520,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
     font family. Applied as CSS variables by applyLyVars(). */
  ly:{size:44,weight:640,glow:1,cov:320,gap:14,font:""},
  fpBgMode:"dynamic",fpGlow:100,fpBlur:75,lyKaraoke:"karaoke",fpWobble:true,fpZoom:"normal",fpDrift:true,profileTrack:null,avatar:null,banner:null,
- glow:1,blur:14,theme:"dark",accent:"none",dens:2200,pspeed:.35,
+ glow:0,blur:14,theme:"dark",accent:"none",dens:2200,pspeed:.35,
  /* One explicit switch for weak machines. No auto-detection: the automatic
    tier system misjudged real hardware and its cuts looked like breakage, so
    this is the user's call, applied and reverted in one click. */
@@ -494,7 +533,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
  /* raw | fx — whether a download bakes in the equaliser and the speed. */
  dlMode:"raw",
  /* Any colour, not just the preset swatches. */
- customAccent:"#a78bfa",
+ customAccent:"#b3a6e8",
  /* Per-track equaliser: { "svc:id": presetId }. */
  eqByTrack:{},
  /* Playlist id -> preset id. Applied while that playlist is the open one. */
@@ -505,7 +544,10 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
  dislikes:{},
 eq:[...PRESETS[0].g],preset:"flat",custom:[],fpTab:"queue",listen:0,stab:"acc",
 sp:{on:false,speed:.10,rad:.7,elev:.55},
-eqMode:"global",preamp:0};
+eqMode:"global",preamp:0,
+/* Newer preferences live in one object so save()/load stay one line each. */
+x:{glow2:true,fpPane:"lyrics",flowSpeed:100,lyAlign:"left",lyBlur:true,beat:false,shrink:true,idle:true,
+ fadePP:true,trans:0,norm:false,rvOn:false,rvMix:25,rvSize:2.4,rvTone:52,rvPre:22,rvRoom:"hall"}};
 window.S=S;
 const fmt=s=>{s=Math.max(0,Math.floor(s||0));return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`};
 /* Listening total for the profile card. Under an hour it reads in minutes,
@@ -635,6 +677,9 @@ function ensureAudioEl(){
   au.addEventListener("play",()=>applyRate());
   au.addEventListener("playing",()=>{
     if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
+    /* First sound of a new track: soft-transition fade-in; later "playing"
+       events are resumes (from anywhere), which must undo a pause fade. */
+    if(A.fadeGen!==A.gen){A.fadeGen=A.gen;transStart()}else fadeResume();
     applyRate();S.playing=true;sync();
   });
   au.addEventListener("stalled",()=>{
@@ -746,7 +791,11 @@ function initAudio(){
  const out=A.bands[A.bands.length-1];out.connect(A.pan);out.connect(A.byp);
  A.pan.connect(A.air);A.air.connect(A.dry);A.air.connect(A.conv);A.conv.connect(A.wet);
  A.dry.connect(A.gain);A.wet.connect(A.gain);A.byp.connect(A.gain);
- A.gain.connect(A.boost);A.boost.connect(A.lim);A.lim.connect(A.an);A.an.connect(ctx.destination);
+ /* Volume -> levelling -> fades -> boost/limiter. The levelling meter taps
+    the equaliser output, before the volume, so it measures the track. */
+ A.norm=ctx.createGain();A.fade=ctx.createGain();A.out=out;
+ A.lvl=ctx.createAnalyser();A.lvl.fftSize=2048;out.connect(A.lvl);
+ A.gain.connect(A.norm);A.norm.connect(A.fade);A.fade.connect(A.boost);A.boost.connect(A.lim);A.lim.connect(A.an);A.an.connect(ctx.destination);
  if(ctx.listener.positionZ){ctx.listener.positionX.value=0;ctx.listener.positionY.value=0;ctx.listener.positionZ.value=0}
  A.gain.gain.value=S.muted?0:(S.vol??0.8);
  const au=ensureAudioEl();
@@ -756,7 +805,7 @@ function initAudio(){
    A.media.connect(A.pre||A.bands[0]);
   }catch(e){console.warn("[meowave] createMediaElementSource in initAudio:",e)}
  }
- applySpatial();applyBoost();applyRate();applyEQ();}
+ applySpatial();applyBoost();applyRate();applyEQ();applyReverb();applyNorm();}
 function cleanMusicTitle(artist, title){
  let t=(title||"").trim();
  let a=(artist||"").trim();
@@ -772,65 +821,8 @@ function cleanMusicTitle(artist, title){
 
 function load(tr,auto,resumePos=0){
  if(!tr||tr.mode==="empty")return;
- if(tr.s==="sp"&&!tr._resolved){
-  const clean=cleanMusicTitle(tr.a,tr.t);
-  const queries=[clean.query, clean.altQuery, `${clean.primaryArtist} ${clean.t}`, clean.t, `${tr.a||""} ${tr.t||""}`.trim()]
-   .filter((q,idx,arr)=>Boolean(q)&&arr.indexOf(q)===idx);
-
-  const pickBestCandidate=(hits)=>{
-   if(!hits||!hits.length)return null;
-   const origDur=tr.d?(+tr.d||0):0;
-   let best=null;
-   let bestScore=-9999;
-   for(const h of hits){
-    if(!h||!h.id)continue;
-    let score=0;
-    const hDur=h.d?(+h.d||0):0;
-    if(origDur>45){
-     if(hDur>0&&hDur<=35){
-      score-=100;
-     }else if(hDur>0){
-      const diff=Math.abs(hDur-origDur);
-      if(diff<=12)score+=50;
-      else if(diff<=30)score+=30;
-      else if(diff<=60)score+=10;
-      else score-=20;
-     }
-    }
-    if(h.s==="ym")score+=10;
-    else if(h.s==="ytm")score+=8;
-    else if(h.s==="sc")score+=5;
-    if(score>bestScore){
-     bestScore=score;
-     best=h;
-    }
-   }
-   return best||hits[0];
-  };
-
-  (async()=>{
-   for(const q of queries){
-    if(!sameTrack(tr,S.current))return;
-    try{
-     const hits=await searchRemote(q);
-     if(!sameTrack(tr,S.current))return;
-     const match=pickBestCandidate(hits);
-     if(match){
-      tr._resolved=true;
-      tr._resolvedId=match.id;
-      tr._resolvedSvc=match.s;
-      const resolvedTrack={...tr,id:match.id,s:match.s,mode:"local",_resolved:true};
-      load(resolvedTrack,auto,resumePos);
-      return;
-     }
-    }catch(e){console.warn("[meowave] remote resolve attempt error:",e)}
-   }
-   if(!sameTrack(tr,S.current))return;
-   S.playing=false;sync();
-   toast(LANG==="ru"?"Не удалось найти аудиопоток для Spotify трека":"Could not find playable audio stream for Spotify track");
-  })();
-  return;
- }
+ /* Spotify is metadata only: find the sound elsewhere (see sprResolve). */
+ if(tr.s==="sp"){sprPlay(tr,auto,resumePos);return}
  initAudio();
  if(A.ctx&&A.ctx.state==="suspended"){A.ctx.resume().catch(()=>{})}
  /* Stop a generated source (test tone); the <audio> element keeps living. */
@@ -872,6 +864,7 @@ function load(tr,auto,resumePos=0){
     if(Number.isFinite(sEnd)&&sEnd>0)S.dur=sEnd;
    }
    renderNP();paint();
+   lyricsDurCheck();
    if(fp.dataset.open==="true")renderFP();
    if(resumePos&&resumePos>0&&resumePos<(S.dur||au.duration||9999)){
     try{
@@ -923,7 +916,7 @@ function load(tr,auto,resumePos=0){
    }else if((!S.dur||!Number.isFinite(S.dur)||S.dur<=0)&&now>0){
     S.dur=Math.ceil(now);
    }
-   S.pos=now;paint()};
+   S.pos=now;paint();transTick(now,S.dur)};
   A.onEnd=()=>{
    if(gen!==A.gen)return;
    if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
@@ -942,6 +935,7 @@ function load(tr,auto,resumePos=0){
     });
     return;
    }
+   if(sleepAtTrackEnd())return;
    next();
   };
   A.onErr=()=>{
@@ -1303,73 +1297,84 @@ function drawVis(){
 const FINE = (typeof matchMedia === "function") && matchMedia("(pointer:fine)").matches;
 const RM = (typeof matchMedia === "function") && matchMedia("(prefers-reduced-motion:reduce)").matches;
 
-/* Material 3 Expressive wavy progress.
-   The played part is a travelling sine wave, the rest is a flat track, and the
-   two are split by a vertical pill handle with a gap on each side, ending in a
-   stop dot. Geometry is in real pixels (the viewBox follows the element size),
-   so the wave keeps its wavelength and the strokes are not stretched on a wide
-   bar. The wave grows in while playing and settles flat on pause, as the spec
-   describes. Nothing is rewritten when nothing moved. */
-const M3W={amp:0,phase:0,seekFrac:null,tracks:new Map()};
+/* Material 3 Expressive wavy progress, compositor-driven.
+
+   The played part is a travelling sine wave, the rest a flat track, split by a
+   vertical pill handle with a gap on each side and ending in a stop dot.
+
+   The old version rebuilt the whole SVG path in JavaScript on every frame,
+   inside a loop capped at 60 fps, so on a 75/100/144 Hz screen it visibly ran
+   at 35-50 fps and stuttered whenever the main thread was busy. Now:
+   - the wave is ONE periodic path, drawn once per size (and per amplitude
+     while it grows or settles on play/pause), slid sideways by a CSS
+     animation — the compositor moves it at the display's own refresh rate;
+   - the played length, the rest of the track and the handle are plain boxes
+     touched only when the position moves by half a pixel;
+   - when paused the wave flattens and the animation is paused, costing
+     nothing at all. */
+const M3W={amp:0,ampDrawn:-1,seekFrac:null,tracks:new Map()};
 function m3WaveTrack(track){
  let st=M3W.tracks.get(track);
- if(st&&st.svg.isConnected)return st;
- track.querySelectorAll(".m3-wave-svg").forEach(n=>n.remove());
- track.insertAdjacentHTML("afterbegin",`<svg class="m3-wave-svg" aria-hidden="true"><path class="m3-track-rest"/><path class="m3-track-wave"/><circle class="m3-track-stop" r="2"/><rect class="m3-track-thumb" rx="2"/></svg>`);
- const svg=track.querySelector(".m3-wave-svg");
- st={svg,wave:svg.querySelector(".m3-track-wave"),rest:svg.querySelector(".m3-track-rest"),
-  stop:svg.querySelector(".m3-track-stop"),thumb:svg.querySelector(".m3-track-thumb"),
-  w:0,h:0,hover:0,hoverT:0,key:"",big:track.id==="fptrack"};
- const measure=()=>{const r=track.getBoundingClientRect();st.w=r.width;st.h=r.height;
-  svg.setAttribute("viewBox",`0 0 ${Math.max(1,r.width).toFixed(1)} ${Math.max(1,r.height).toFixed(1)}`);st.key=""};
+ if(st&&st.root.isConnected)return st;
+ track.querySelectorAll(".m3w,.m3-wave-svg").forEach(n=>n.remove());
+ track.insertAdjacentHTML("afterbegin",`<div class="m3w" aria-hidden="true"><div class="m3w-played"><svg class="m3w-svg"><path class="m3w-path"/></svg></div><i class="m3w-rest"></i><i class="m3w-stop"></i><i class="m3w-thumbpos"><b class="m3w-thumb"></b></i></div>`);
+ const root=track.querySelector(".m3w");
+ const big=track.id==="fptrack";
+ st={root,big,played:root.querySelector(".m3w-played"),svg:root.querySelector(".m3w-svg"),path:root.querySelector(".m3w-path"),
+  rest:root.querySelector(".m3w-rest"),stop:root.querySelector(".m3w-stop"),thumb:root.querySelector(".m3w-thumbpos"),
+  w:0,h:0,x:-1,amp:-1,wl:big?40:34,stroke:big?5:4};
+ root.style.setProperty("--m3w-wl",(-st.wl)+"px");
+ root.style.setProperty("--m3w-sw",st.stroke+"px");
+ const measure=()=>{const r=track.getBoundingClientRect();
+  if(Math.abs(r.width-st.w)<.5&&Math.abs(r.height-st.h)<.5)return;
+  st.w=r.width;st.h=r.height;st.amp=-1;st.x=-1};
  measure();
  if(typeof ResizeObserver==="function"){st.ro=new ResizeObserver(measure);st.ro.observe(track)}
- track.addEventListener("pointerenter",()=>{st.hoverT=1});
- track.addEventListener("pointerleave",()=>{if(!seeking)st.hoverT=0});
  M3W.tracks.set(track,st);
  return st}
-function m3WaveDraw(st,p,amp,phase,dt){
- st.hover+=((seeking&&M3W.seekFrac!=null?1:st.hoverT)-st.hover)*Math.min(1,dt*14);
+/* One period-exact sine, long enough to slide by a wavelength. Drawn with
+   quadratic curves (two per half wave) instead of hundreds of line segments. */
+function m3WavePath(st,amp){
+ const w=st.w+st.wl*2,h=st.h,cy=h/2,a=(st.big?3.6:3)*amp,q=st.wl/4;
+ st.svg.setAttribute("width",w.toFixed(1));st.svg.setAttribute("height",h.toFixed(1));
+ st.svg.setAttribute("viewBox",`0 0 ${w.toFixed(1)} ${h.toFixed(1)}`);
+ let d=`M0 ${cy.toFixed(2)}`;
+ if(a<.05)d+=`L${w.toFixed(1)} ${cy.toFixed(2)}`;
+ else for(let x=0,s=1;x<w;x+=q*2,s=-s){
+  /* A quadratic peaks at half its control offset, hence 2a. */
+  d+=`Q${(x+q).toFixed(2)} ${(cy-s*a*2).toFixed(2)} ${(x+q*2).toFixed(2)} ${cy.toFixed(2)}`}
+ st.path.setAttribute("d",d);
+ st.amp=amp}
+function m3WaveDraw(st,p,amp){
  const w=st.w,h=st.h;if(w<8||h<4)return;
- const stroke=st.big?5:4,cy=h/2,pad=stroke/2;
- const ampPx=(st.big?3.4:3)*amp,wl=st.big?38:34;
- const thumbW=4,thumbH=Math.min(h,(st.big?18:16)+st.hover*4),gap=4+thumbW/2;
+ if(Math.abs(st.amp-amp)>.004||st.amp<0)m3WavePath(st,amp);
+ const pad=st.stroke/2,gap=4+2;
  const x=pad+p*(w-2*pad);
- const key=`${x.toFixed(1)}|${ampPx.toFixed(2)}|${(phase%(Math.PI*2)).toFixed(2)}|${thumbH.toFixed(1)}|${w}|${h}`;
- if(key===st.key)return;st.key=key;
- const waveEnd=x-gap;
- let d="";
- if(waveEnd>pad){
-  const k=2*Math.PI/wl;
-  d=`M${pad.toFixed(1)} ${cy.toFixed(2)}`;
-  for(let xx=pad+2;xx<waveEnd;xx+=2){
-   /* The first half-wavelength ramps in so the line starts on the baseline. */
-   const ramp=Math.min(1,(xx-pad)/(wl*.5));
-   d+=`L${xx.toFixed(1)} ${(cy+Math.sin(xx*k-phase)*ampPx*ramp).toFixed(2)}`}
-  const ramp=Math.min(1,(waveEnd-pad)/(wl*.5));
-  d+=`L${waveEnd.toFixed(1)} ${(cy+Math.sin(waveEnd*k-phase)*ampPx*ramp).toFixed(2)}`}
- st.wave.setAttribute("d",d);
- const restStart=x+gap,restEnd=w-pad;
- st.rest.setAttribute("d",restStart<restEnd?`M${restStart.toFixed(1)} ${cy}L${restEnd.toFixed(1)} ${cy}`:"");
- st.rest.style.strokeWidth=stroke+"px";st.wave.style.strokeWidth=stroke+"px";
- st.stop.setAttribute("cx",(w-pad).toFixed(1));st.stop.setAttribute("cy",cy);
- st.stop.style.opacity=restEnd-restStart>stroke*2?"1":"0";
- st.thumb.setAttribute("x",(x-thumbW/2).toFixed(1));st.thumb.setAttribute("width",thumbW);
- st.thumb.setAttribute("y",(cy-thumbH/2).toFixed(1));st.thumb.setAttribute("height",thumbH.toFixed(1))}
+ if(Math.abs(x-st.x)<.5)return;
+ st.x=x;
+ const waveEnd=Math.max(0,x-gap),restStart=x+gap;
+ st.played.style.width=waveEnd.toFixed(1)+"px";
+ st.rest.style.left=restStart.toFixed(1)+"px";
+ st.rest.style.opacity=restStart<w-pad-st.stroke?"1":"0";
+ st.stop.style.opacity=(w-pad)-restStart>st.stroke*2?"1":"0";
+ st.thumb.style.transform=`translate3d(${x.toFixed(1)}px,0,0)`}
 function updateWavyProgress(dt, curPos, dur) {
  const playing=!!S.playing&&!RM;
- M3W.amp+=((playing?1:0)-M3W.amp)*Math.min(1,dt*5);
- if(Math.abs(M3W.amp)<.002)M3W.amp=0;
- if(playing)M3W.phase=(M3W.phase+dt*4.2)%(Math.PI*2000);
+ const target=playing?1:0;
+ M3W.amp+=(target-M3W.amp)*Math.min(1,dt*6);
+ if(Math.abs(M3W.amp-target)<.01)M3W.amp=target;
  const effectiveDur=dur>0?dur:0;
  let p=effectiveDur?Math.max(0,Math.min(1,curPos/effectiveDur)):0;
  /* While a drag is in progress the handle follows the pointer, not the
     media element, or it would snap back to the old time between moves. */
  if(seeking&&effectiveDur)p=Math.max(0,Math.min(1,S.pos/effectiveDur));
+ const moving=playing||M3W.amp>0;
  for(const id of ["btrack","fptrack"]){
   const track=document.getElementById(id);
   if(!track||!track.offsetParent&&id==="fptrack")continue;
-  m3WaveDraw(m3WaveTrack(track),p,M3W.amp,M3W.phase,dt)}
+  const st=m3WaveTrack(track);
+  if(st.root.dataset.run!==String(moving))st.root.dataset.run=String(moving);
+  m3WaveDraw(st,p,M3W.amp)}
 }
 
 /* headline proximity weight */
@@ -1420,7 +1425,7 @@ const toD = p => 'M' + p.map(q => q[0].toFixed(2) + ' ' + q[1].toFixed(2)).join(
     60fps is the ceiling now; CSS motion is unaffected and stays on the
     compositor's own refresh rate. Only the canvas field and the karaoke clock
     are capped. */
-let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=1000/60-2,fieldDt=0;
+let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=1000/60,fieldDt=0;
 function onReducedMotionChange(reduced){
  staticFieldDrawn=false;
  if(!reduced && renderOn && !raf) raf=requestAnimationFrame(frame);
@@ -1434,14 +1439,18 @@ function advanceClock(dt){
 function frame(now){
  if(!renderOn||document.hidden){raf=0;return}
  const isReduce=BOOT.reduce;
- if(now-lastFrame<budget){raf=requestAnimationFrame(frame);return}
- lastFrame=now;
+ const since=now-lastFrame;
+ if(since<budget-1.5){raf=requestAnimationFrame(frame);return}
+ /* Keep the phase instead of resetting it to `now`: on a 75 Hz screen the
+    reset halved the loop to 37 fps, since every other vsync arrived just under
+    the budget. With the remainder carried over it averages a true 60. */
+ lastFrame=since>budget*3?now:now-(since%budget);
  const dt=Math.min(.25,(now-last)/1000);last=now;
  if(!isReduce){
   staticFieldDrawn=false;
   /* If fullscreen player is open, skip drawing hidden background particles */
   if(fp.dataset.open==="true"){
-   drawVis();
+   fpBeat(dt);
   }else{
    const lvl=level();
    /* Glow dust does not need every frame the UI gets: 40 updates a second
@@ -1530,7 +1539,9 @@ function setRender(on){
   vis.c=null;vis.g=null}
 }
 /* Visible window renders at full monitor refresh rate */
-function setFocused(f){budget=0}
+/* Focus used to set the budget to 0 (uncapped). The wave and the cover
+   animations run on the compositor now, so the main loop stays at 60. */
+function setFocused(f){}
 document.addEventListener("visibilitychange",()=>setRender(!document.hidden));
 window.addEventListener("blur",()=>{/* Visible windows in tiling WMs keep smooth refresh */});
 window.addEventListener("focus",()=>{setFocused(true);setRender(true)});
@@ -1625,19 +1636,19 @@ function ymGuide(){
   </div></div>`}
 function renderSwatches(){
  const meta={
-  adaptive:{name:LANG==="ru"?"Адаптивная (Обложка)":"Adaptive (Artwork)",c:"#818cf8",grad:"conic-gradient(from 210deg,#f472b6,#818cf8,#22d3ee,#a3e635,#fbbf24,#f472b6)"},
+  adaptive:{name:LANG==="ru"?"Адаптивная (Обложка)":"Adaptive (Artwork)",c:"#b3a6e8",grad:"conic-gradient(from 210deg,#e3a3ae,#b3a6e8,#8db7dd,#9cc7a4,#dcc196,#e3a3ae)"},
   none:{name:LANG==="ru"?"Монохром":"Monochrome",c:"#9ca3af",grad:"#9ca3af"},
-  violet:{name:"Material Purple",c:"#9d8df1",grad:"#9d8df1"},
-  indigo:{name:"Electric Indigo",c:"#707bfb",grad:"#707bfb"},
-  blue:{name:"Ocean Sky",c:"#38bdf8",grad:"#38bdf8"},
-  cyan:{name:"Cyber Cyan",c:"#2dd4bf",grad:"#2dd4bf"},
-  teal:{name:"Nordic Teal",c:"#14b8a6",grad:"#14b8a6"},
-  emerald:{name:"Neon Emerald",c:"#34d399",grad:"#34d399"},
-  amber:{name:"Solar Amber",c:"#f59e0b",grad:"#f59e0b"},
-  coral:{name:"Sunset Coral",c:"#f97316",grad:"#f97316"},
-  rose:{name:"Vibrant Rose",c:"#f43f5e",grad:"#f43f5e"},
-  pink:{name:"Neon Pink",c:"#ec4899",grad:"#ec4899"},
-  custom:{name:LANG==="ru"?"Свой цвет":"Custom Color",c:S.customAccent||"#a78bfa",grad:S.customAccent||"#a78bfa"}
+  violet:{name:LANG==="ru"?"Лаванда":"Lavender",c:"#b3a6e8",grad:"#b3a6e8"},
+  indigo:{name:LANG==="ru"?"Барвинок":"Periwinkle",c:"#9ca8ec",grad:"#9ca8ec"},
+  blue:{name:LANG==="ru"?"Небо":"Sky",c:"#8db7dd",grad:"#8db7dd"},
+  cyan:{name:LANG==="ru"?"Туман":"Mist",c:"#8ccbd0",grad:"#8ccbd0"},
+  teal:{name:LANG==="ru"?"Море":"Sea",c:"#7fbfb2",grad:"#7fbfb2"},
+  emerald:{name:LANG==="ru"?"Шалфей":"Sage",c:"#9cc7a4",grad:"#9cc7a4"},
+  amber:{name:LANG==="ru"?"Песок":"Sand",c:"#dcc196",grad:"#dcc196"},
+  coral:{name:LANG==="ru"?"Персик":"Peach",c:"#e7ad92",grad:"#e7ad92"},
+  rose:{name:LANG==="ru"?"Пудра":"Blush",c:"#e3a3ae",grad:"#e3a3ae"},
+  pink:{name:LANG==="ru"?"Орхидея":"Orchid",c:"#d9a5cf",grad:"#d9a5cf"},
+  custom:{name:LANG==="ru"?"Свой цвет":"Custom Color",c:S.customAccent||"#b3a6e8",grad:S.customAccent||"#b3a6e8"}
  };
 
  const cardHtml=(id,color,title,isCustom=false,isAdaptive=false)=>{
@@ -1675,7 +1686,7 @@ function renderSwatches(){
     <span class="tone-chip" style="background:${color};opacity:.2" title="Surface Tint"></span>
     <span class="tone-chip" style="background:${color};filter:brightness(1.2)" title="Accent"></span>
    </div>
-   ${isCustom?`<input type="color" class="palette-custom-input" id="accpick" value="${S.customAccent||"#a78bfa"}" title="${t("acc.custom")}">`:""}
+   ${isCustom?`<input type="color" class="palette-custom-input" id="accpick" value="${S.customAccent||"#b3a6e8"}" title="${t("acc.custom")}">`:""}
   </div>`;
  };
 
@@ -1874,6 +1885,19 @@ function renderArtist(name){
   setTrack(a.list[0],true,true,"art:"+a.name)};
  icons()}
 
+/* Artist page from anywhere (full player, context menu). Someone who is not in
+   the library yet gets a search for their name instead of an empty page. */
+function openArtist(name){
+ if(!name)return;
+ const first=String(name).split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b)\s*/i)[0].trim()||name;
+ const list=artistList();
+ const hit=list.find(x=>x.name===name)||list.find(x=>x.name.toLowerCase()===first.toLowerCase());
+ if(!hit){
+  const q=document.getElementById("q");if(q)q.value=first;
+  go("search");return}
+ go("library");S.tab="art";artOpen=hit.name;
+ document.querySelectorAll("#libtabs [data-tab]").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="art"));
+ renderArtist(hit.name)}
 /* Removing imported files. They are only referenced by path, so this forgets
    them — it never deletes anything from disk. */
 async function removeLocal(id){
@@ -2182,172 +2206,611 @@ let queue=[];
    favourite toggle or a language switch does not replay the cover animation —
    only an actual change of song does. */
 let fpLastKey=null;
-function renderFP(){
- const tr=S.current,pc=S.dur>0?S.pos/S.dur*100:0;
- const key=trackKey(tr);
- const swapped=fpLastKey!==null&&fpLastKey!==key;
- fpLastKey=key;
+/* ───────────── Spotify without Premium: the audio resolver ─────────────
+   A Spotify track is metadata only; its sound comes from a free service.
+   - Every candidate is scored on title similarity, artist match and duration
+     (within 2-3 s is a strong sign of the same recording), with penalties for
+     versions the original is not: live, remix, sped up, cover, karaoke…
+   - Two queries run in parallel; the rest only if nothing scores well.
+   - A confident winner is remembered per Spotify id for 30 days, so the next
+     play starts at once, and the next Spotify track in the queue is resolved
+     ahead of time.
+   - The player's top island shows "Spotify -> source" and lets the user pick
+     another candidate; that choice is pinned. */
+const SPR={key:"mw.spr",map:null,alts:new Map(),inflight:new Map()};
+function sprMap(){
+ if(SPR.map)return SPR.map;
+ try{SPR.map=new Map(JSON.parse(localStorage.getItem(SPR.key)||"[]"))}catch(_){SPR.map=new Map()}
+ return SPR.map}
+function sprSave(){clearTimeout(sprSave.t);sprSave.t=setTimeout(()=>{
+ const m=sprMap(),now=Date.now();
+ for(const [k,v] of m)if(!v.pin&&now-(v.at||0)>30*864e5)m.delete(k);
+ while(m.size>3000)m.delete(m.keys().next().value);
+ try{localStorage.setItem(SPR.key,JSON.stringify([...m]))}catch(_){}},1500)}
+const SPR_STOP=new Set(["topic","vevo","official","audio","video","music","lyrics","lyric","hd","hq","4k","mv","clip","visualizer","the"]);
+const sprTokens=s=>String(s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+ .replace(/\((?![^)]*\b(remix|live|acoustic|slowed|sped)\b)[^)]*\)|\[[^\]]*\]/g," ")
+ .replace(/\b(feat|ft|featuring|prod)\b.*$/,"").replace(/[^\p{L}\p{N}]+/gu," ").trim().split(" ")
+ .filter(w=>w&&!SPR_STOP.has(w));
+function sprSim(a,b){
+ const A=new Set(sprTokens(a)),B=new Set(sprTokens(b));if(!A.size||!B.size)return 0;
+ let n=0;for(const w of A)if(B.has(w))n++;return 2*n/(A.size+B.size)}
+const sprPrimary=a=>String(a||"").split(/[,;&\/]|\s+(?:feat\.?|ft\.?|featuring|x|и)\s+/i)[0].trim();
+const SPR_VER=/\b(live|remix|sped\s*up|speed\s*up|slowed|nightcore|reverb|8d|cover|karaoke|instrumental|acoustic|demo|mashup|bass\s*boost(?:ed)?|lo-?fi|phonk\s*remix)\b/i;
+function sprScore(tr,h){
+ const d0=+tr.d||0,d=+h.d||0;
+ const tSim=sprSim(tr.t,h.t);
+ /* "Artist - Title" uploads put the artist into the title. */
+ const aSim=Math.max(sprSim(tr.a,h.a),sprSim(sprPrimary(tr.a),h.a),
+  sprTokens(sprPrimary(tr.a)).every(w=>sprTokens(h.t).includes(w))?.75:0);
+ let sc=tSim*60+aSim*35;
+ const want=(SPR_VER.exec(tr.t||"")||[])[1],got=(SPR_VER.exec(h.t||"")||[])[1];
+ if(got&&!want)sc-=45;else if(want&&got&&want.toLowerCase()===got.toLowerCase())sc+=10;else if(want&&!got)sc-=15;
+ if(d0>30&&d>0){
+  const diff=Math.abs(d-d0);
+  sc+=diff<=2?40:diff<=5?30:diff<=10?14:diff<=25?0:diff<=60?-20:-45;
+  if(d<=35)sc-=80}
+ sc+=h.s==="ytm"?6:h.s==="ym"?5:h.s==="sc"?-2:0;
+ return Math.round(sc)}
+const sprKey=tr=>"sp:"+String(tr?._spOrig?.id||tr?.id||"");
+async function sprResolve(tr,force){
+ const k=sprKey(tr);
+ if(!force){const c=sprMap().get(k);if(c&&c.id&&c.s)return c}
+ if(SPR.inflight.has(k))return SPR.inflight.get(k);
+ const job=(async()=>{
+  const clean=cleanMusicTitle(tr.a,tr.t);
+  const qs=[clean.query,clean.altQuery,`${clean.primaryArtist} ${clean.t} audio`,clean.t]
+   .filter((q,i,a)=>q&&a.indexOf(q)===i);
+  const seen=new Map();
+  const run=async list=>{
+   const res=await Promise.all(list.map(q=>searchRemote(q).catch(()=>[])));
+   for(const hits of res)for(const h of hits||[]){
+    if(!h||!h.id||h.s==="sp"||h.s==="local")continue;
+    const kk=h.s+":"+h.id;if(!seen.has(kk))seen.set(kk,{...h,score:sprScore(tr,h)})}};
+  const ranked=()=>[...seen.values()].sort((a,b)=>b.score-a.score);
+  await run(qs.slice(0,2));
+  let best=ranked();
+  if(!best.length||best[0].score<75){await run(qs.slice(2));best=ranked()}
+  SPR.alts.set(k,best.slice(0,8));
+  const top=best[0];if(!top)return null;
+  const rec={s:top.s,id:String(top.id),t:top.t,a:top.a,d:+top.d||0,score:top.score,at:Date.now()};
+  if(top.score>=45){sprMap().set(k,rec);sprSave()}
+  return rec})();
+ SPR.inflight.set(k,job);
+ try{return await job}finally{SPR.inflight.delete(k)}}
+/* Resolve what plays next while this one plays, so the skip is instant. */
+let sprPrefetchTimer=0;
+function sprPrefetchNext(){
+ clearTimeout(sprPrefetchTimer);
+ sprPrefetchTimer=setTimeout(()=>{
+  const nx=queue.slice(0,2).filter(x=>x&&x.s==="sp"&&!sprMap().has(sprKey(x)));
+  nx.reduce((p,x)=>p.then(()=>sprResolve(x).catch(()=>null)),Promise.resolve())},4000)}
+function sprPlay(tr,auto,resumePos){
+ sprResolve(tr).then(rec=>{
+  if(!sameTrack(tr,S.current))return;
+  if(!rec){S.playing=false;sync();
+   toast(LANG==="ru"?"Не нашли, откуда играть этот трек Spotify":"Could not find a playable source for this Spotify track");return}
+  tr._resolvedSvc=rec.s;tr._resolvedId=rec.id;
+  const copy={...tr,id:rec.id,s:rec.s,mode:"local",_resolved:true,_resolvedId:rec.id,_resolvedSvc:rec.s,_spOrig:{id:String(tr.id)}};
+  delete copy._spAlt;
+  load(copy,auto,resumePos);
+  if(fp.dataset.open==="true")fpxIsland();
+  sprPrefetchNext()}).catch(e=>{console.warn("[meowave] spotify resolve:",e);
+  if(sameTrack(tr,S.current)){S.playing=false;sync();toast(t("load.err"))}})}
+/* The island's "choose another source" list. */
+async function spSourcePicker(btn){
+ document.getElementById("src-pop")?.remove();
+ const tr=S.current;if(!tr)return;
+ const ru=LANG==="ru",k=sprKey(tr);
+ const pop=document.createElement("div");pop.id="src-pop";pop.className="mw-pop mw-pop-wide";pop.setAttribute("role","menu");
+ document.body.appendChild(pop);
+ const place=()=>{const r=btn.getBoundingClientRect(),pw=pop.offsetWidth;
+  pop.style.left=Math.max(8,Math.min(innerWidth-pw-8,r.left+r.width/2-pw/2))+"px";pop.style.top=(r.bottom+8)+"px"};
+ const svcName=id=>SERVICES.find(s=>s.id===id)?.name||id;
+ const paint=list=>{
+  const cur=sprMap().get(k);
+  pop.innerHTML=`<div class="mw-pop-h">${fpxI("graphic_eq",18)}<b>${ru?"Источник звука":"Audio source"}</b><span>${ru?"Spotify без подписки":"Spotify, no Premium"}</span></div>`
+   +(list===null?`<div class="mw-pop-empty"><i class="fpx-dot pulse"></i>${ru?"Ищем варианты…":"Searching…"}</div>`
+    :!list.length?`<div class="mw-pop-empty">${ru?"Ничего не нашлось":"Nothing found"}</div>`
+    :list.map(h=>{const dd=(+h.d||0)&&(+tr.d||0)?Math.round(h.d-tr.d):null;
+      const on=cur&&String(cur.id)===String(h.id)&&cur.s===h.s;
+      return `<button role="menuitemradio" aria-checked="${!!on}" data-src="${esc(h.s)}|${esc(String(h.id))}">
+       <span class="src-main"><b>${esc(h.t||"")}</b><small>${esc(h.a||"")} · ${esc(svcName(h.s))}${dd!=null?` · ${dd===0?"±0":(dd>0?"+":"")+dd} ${ru?"с":"s"}`:""}</small></span>
+       <span class="src-score" title="${ru?"Совпадение":"Match"}"><i style="width:${Math.max(6,Math.min(100,h.score))}%"></i></span></button>`}).join(""))
+   +`<button role="menuitem" data-src="again" class="mw-pop-foot">${fpxI("refresh",16)}${ru?"Искать заново":"Search again"}</button>`;
+  place()};
+ paint(SPR.alts.get(k)||null);
+ pop.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-src]");if(!b)return;
+  if(b.dataset.src==="again"){sprMap().delete(k);SPR.alts.delete(k);paint(null);await sprResolve(tr,true);paint(SPR.alts.get(k)||[]);return}
+  const [s,id]=b.dataset.src.split("|");
+  const h=(SPR.alts.get(k)||[]).find(x=>x.s===s&&String(x.id)===id);if(!h)return;
+  sprMap().set(k,{s,id,t:h.t,a:h.a,d:+h.d||0,score:h.score,at:Date.now(),pin:true});sprSave();
+  pop.remove();
+  const pos=A.audio&&Number.isFinite(A.audio.currentTime)?A.audio.currentTime:S.pos;
+  toast(ru?`Источник: ${svcName(s)}`:`Source: ${svcName(s)}`);
+  load(S.current,S.playing,pos)});
+ setTimeout(()=>{const off=e=>{if(!pop.contains(e.target)&&e.target!==btn&&!btn.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off,true)}};
+  document.addEventListener("pointerdown",off,true)},0);
+ if(!SPR.alts.has(k)){await sprResolve(tr,true);if(pop.isConnected)paint(SPR.alts.get(k)||[])}}
+
+/* ───────────────────── listening comfort ─────────────────────
+   Small things that make long listening pleasant, all on the Web Audio graph:
+   - pause / play fade (no click, no hard cut);
+   - soft transitions: the end of a track fades out, the next one fades in;
+   - volume levelling: a slow per-track gain from the measured loudness,
+     remembered per track so a replay starts at the right level;
+   - a reverb send for the equaliser dock;
+   - a sleep timer that fades out instead of cutting off. */
+const fadeOk=()=>!!(A.ctx&&A.fade&&A.media);
+function fadeTo(v,sec){
+ if(!fadeOk())return;
+ const g=A.fade.gain,t=A.ctx.currentTime;
+ g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);
+ if(sec<=0)g.setValueAtTime(v,t);else g.linearRampToValueAtTime(v,t+sec)}
+let fadePauseTimer=0;
+/* Fade first, pause after. A play pressed during the fade cancels it. */
+function fadePause(au){
+ clearTimeout(fadePauseTimer);
+ if(!S.x.fadePP||!fadeOk()||au.paused){au.pause();return}
+ fadeTo(0,.2);
+ fadePauseTimer=setTimeout(()=>{if(!S.playing)au.pause()},210)}
+function fadeResume(sec){
+ clearTimeout(fadePauseTimer);
+ if(!fadeOk())return;
+ if(!S.x.fadePP&&!(sec>0.3)){fadeTo(1,0);return}
+ if(A.fade.gain.value>.98&&!(sec>0.3))return;
+ fadeTo(1,sec||.28)}
+/* Soft transitions: called from timeupdate. */
+const TRANS={gen:-1,out:false,inNext:false};
+function transTick(pos,dur){
+ const s=+S.x.trans||0;
+ if(!s||!fadeOk()||!S.playing||S.repeat||!(dur>s*2+5))return;
+ if(TRANS.gen!==A.gen){TRANS.gen=A.gen;TRANS.out=false}
+ const left=dur-pos;
+ if(!TRANS.out&&left<=s&&left>.3){TRANS.out=true;TRANS.inNext=true;fadeTo(.0001,left)}
+ else if(TRANS.out&&left>s+1){TRANS.out=false;fadeTo(1,.3)}}
+/* A new track starts: from silence after a soft ending, otherwise a short
+   ramp so a skip does not click. */
+function transStart(){
+ if(!fadeOk())return;
+ const s=+S.x.trans||0;
+ if(TRANS.inNext&&s){TRANS.inNext=false;fadeTo(.0001,0);fadeTo(1,Math.min(4,Math.max(.8,s/2)));return}
+ TRANS.inNext=false;
+ fadeTo(1,S.x.fadePP?.12:0)}
+
+/* Volume levelling. */
+const NORM={key:"",db:null,n:0,timer:0,buf:null,map:null};
+function normMap(){
+ if(NORM.map)return NORM.map;
+ try{NORM.map=new Map(JSON.parse(localStorage.getItem("mw.norm")||"[]"))}catch(_){NORM.map=new Map()}
+ return NORM.map}
+function normSaveSoon(){clearTimeout(normSaveSoon.t);normSaveSoon.t=setTimeout(()=>{
+ const m=normMap();while(m.size>500)m.delete(m.keys().next().value);
+ try{localStorage.setItem("mw.norm",JSON.stringify([...m]))}catch(_){}},4000)}
+const NORM_TARGET=-15;
+function normApply(sec){
+ if(!A.ctx||!A.norm)return;
+ let gdb=0;
+ if(S.x.norm&&NORM.db!=null)gdb=Math.max(-12,Math.min(6,NORM_TARGET-NORM.db));
+ A.norm.gain.setTargetAtTime(Math.pow(10,gdb/20),A.ctx.currentTime,sec??1.2)}
+function normTrack(tr){
+ const k=trackKey(tr);if(NORM.key===k)return;
+ NORM.key=k;NORM.n=0;
+ const hit=normMap().get(k);NORM.db=hit??null;
+ normApply(hit!=null?.05:.4)}
+function normTick(){
+ if(!S.x.norm||!A.lvl||!S.playing)return;
+ normTrack(S.current);
+ const a=A.lvl;if(!NORM.buf||NORM.buf.length!==a.fftSize)NORM.buf=new Float32Array(a.fftSize);
+ a.getFloatTimeDomainData(NORM.buf);
+ let e=0;for(let i=0;i<NORM.buf.length;i++)e+=NORM.buf[i]*NORM.buf[i];
+ const db=10*Math.log10(e/NORM.buf.length+1e-12);
+ /* Silence and fades say nothing about a track's loudness. */
+ if(db<-45)return;
+ NORM.n++;
+ const k=NORM.n<40?.12:.02;
+ NORM.db=NORM.db==null?db:NORM.db+(db-NORM.db)*k;
+ normApply(NORM.n<40?.8:2.5);
+ if(NORM.n%20===0){normMap().set(NORM.key,Math.round(NORM.db*10)/10);normSaveSoon()}}
+function applyNorm(){
+ clearInterval(NORM.timer);
+ if(S.x.norm){NORM.timer=setInterval(normTick,250);NORM.key="";normTrack(S.current)}
+ else if(A.norm&&A.ctx)A.norm.gain.setTargetAtTime(1,A.ctx.currentTime,.3)}
+
+/* Reverb send: EQ output -> pre-delay -> convolver -> tone -> wet -> volume. */
+const RV_ROOMS={room:{size:.9,tone:62,pre:8},hall:{size:2.4,tone:52,pre:22},church:{size:4.8,tone:40,pre:34},plate:{size:1.6,tone:80,pre:0}};
+function reverbIR(ctx,sec,tone){
+ /* Exponential decay (-60 dB at `sec`) of decorrelated noise per channel. A
+    one-pole low-pass that closes over time darkens the tail the way air does;
+    the convolver normalises the energy, so the size does not change loudness. */
+ const sr=ctx.sampleRate,len=Math.max(1,Math.floor(sr*sec)),b=ctx.createBuffer(2,len,sr);
+ const k60=6.9/sec,a0=.25+.7*tone/100,a1=a0*.25,ramp=Math.floor(sr*.004);
+ for(let c=0;c<2;c++){const d=b.getChannelData(c);let y=0;
+  for(let i=0;i<len;i++){const t=i/sr,a=a0+(a1-a0)*(t/sec);
+   y+=a*((Math.random()*2-1)*Math.exp(-k60*t)-y);
+   d[i]=i<ramp?y*i/ramp:y}}
+ return b}
+function applyReverb(){
+ if(!A.ctx||!A.out)return;
+ const R=S.x,ctx=A.ctx;
+ if(!A.rvIn){
+  A.rvIn=ctx.createGain();A.rvPre=ctx.createDelay(.2);A.rvConv=ctx.createConvolver();
+  A.rvTone=ctx.createBiquadFilter();A.rvTone.type="lowpass";A.rvOut=ctx.createGain();
+  A.rvIn.connect(A.rvPre);A.rvPre.connect(A.rvConv);A.rvConv.connect(A.rvTone);A.rvTone.connect(A.rvOut);A.rvOut.connect(A.gain);
+  A.rvLinked=false;A.rvSig=""}
+ const on=!!R.rvOn&&R.rvMix>0;
+ if(on&&!A.rvLinked){A.out.connect(A.rvIn);A.rvLinked=true}
+ const sig=`${R.rvSize}|${R.rvTone}`;
+ if(on&&A.rvSig!==sig){A.rvSig=sig;A.rvConv.buffer=reverbIR(ctx,Math.max(.3,R.rvSize),R.rvTone)}
+ const t=ctx.currentTime,mix=Math.max(0,Math.min(1,R.rvMix/100));
+ A.rvPre.delayTime.setTargetAtTime((R.rvPre||0)/1000,t,.05);
+ A.rvTone.frequency.setTargetAtTime(1800+R.rvTone*140,t,.05);
+ A.rvOut.gain.setTargetAtTime(on?mix*1.15:0,t,.08);
+ if(!on&&A.rvLinked){setTimeout(()=>{if(!(S.x.rvOn&&S.x.rvMix>0)&&A.rvLinked){try{A.out.disconnect(A.rvIn)}catch(_){}A.rvLinked=false}},400)}}
+function paintReverb(){
+ const R=S.x,on=id=>document.getElementById(id);
+ const sw=on("rv-sw");if(sw){sw.setAttribute("aria-pressed",String(!!R.rvOn));sw.classList.toggle("on",!!R.rvOn)}
+ const box=on("dock-rv");if(box)box.dataset.on=String(!!R.rvOn);
+ const m=on("rv-mix");if(m){m.value=R.rvMix;on("rv-mix-v").textContent=R.rvMix+"%";paintRange(m)}
+ const z=on("rv-size");if(z){z.value=Math.round(R.rvSize*10);on("rv-size-v").textContent=R.rvSize.toFixed(1)+(LANG==="ru"?" с":" s");paintRange(z)}
+ const tn=on("rv-tone");if(tn){tn.value=R.rvTone;on("rv-tone-v").textContent=R.rvTone<35?(LANG==="ru"?"тёмный":"dark"):R.rvTone>70?(LANG==="ru"?"яркий":"bright"):(LANG==="ru"?"тёплый":"warm");paintRange(tn)}
+ document.querySelectorAll("#rv-rooms [data-rv]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.rv===R.rvRoom)))}
+function initReverbUI(){
+ const on=id=>document.getElementById(id);
+ const upd=()=>{initAudio();applyReverb();paintReverb();save()};
+ on("rv-sw")?.addEventListener("click",()=>{S.x.rvOn=!S.x.rvOn;upd()});
+ on("rv-mix")?.addEventListener("input",e=>{S.x.rvMix=+e.target.value;if(!S.x.rvOn&&S.x.rvMix>0)S.x.rvOn=true;upd()});
+ on("rv-size")?.addEventListener("input",e=>{S.x.rvSize=+e.target.value/10;S.x.rvRoom="";upd()});
+ on("rv-tone")?.addEventListener("input",e=>{S.x.rvTone=+e.target.value;S.x.rvRoom="";upd()});
+ on("rv-rooms")?.addEventListener("click",e=>{const b=e.target.closest("[data-rv]");if(!b)return;
+  const p=RV_ROOMS[b.dataset.rv];if(!p)return;
+  Object.assign(S.x,{rvRoom:b.dataset.rv,rvSize:p.size,rvTone:p.tone,rvPre:p.pre,rvOn:true});upd()});
+ paintReverb()}
+
+/* Sleep timer. */
+const SLEEP={at:0,eot:false,tick:0,fading:false};
+function sleepLeftText(){
+ if(SLEEP.eot)return LANG==="ru"?"после трека":"after this track";
+ return fmt(Math.max(0,(SLEEP.at-Date.now())/1000))}
+function sleepPaint(){
+ const on=!!(SLEEP.at||SLEEP.eot);
+ document.querySelectorAll("#fp-sleep-btn").forEach(b=>{b.setAttribute("aria-pressed",String(on));b.title=on?`${t("sleep.t")}: ${sleepLeftText()}`:t("sleep.t")});
+ const left=document.getElementById("fpx-sleep-left");if(left)left.textContent=sleepLeftText();
+ const v=document.getElementById("lc-sleep-v");if(v)v.textContent=on?`${t("sleep.left")}: ${sleepLeftText()}`:t("sleep.off");
+ document.querySelectorAll("#lc-sleep [data-sleep]").forEach(b=>b.setAttribute("aria-pressed",String(
+  b.dataset.sleep==="off"?!on:b.dataset.sleep==="track"?SLEEP.eot:(SLEEP.at&&+b.dataset.sleep===SLEEP.min))))}
+function sleepFire(){
+ const au=A.audio;
+ SLEEP.at=0;SLEEP.eot=false;SLEEP.fading=false;clearInterval(SLEEP.tick);
+ if(S.playing){S.playing=false;if(au)au.pause();sync()}
+ setTimeout(()=>fadeTo(1,0),300);
+ toast(LANG==="ru"?"Таймер сна: музыка остановлена. Спокойной ночи":"Sleep timer: playback stopped. Good night");
+ sleepPaint();if(fp.dataset.open==="true")fpxIsland()}
+function sleepSet(v){
+ clearInterval(SLEEP.tick);SLEEP.at=0;SLEEP.eot=false;SLEEP.min=0;
+ if(SLEEP.fading){SLEEP.fading=false;fadeTo(1,.4)}
+ if(v==="track")SLEEP.eot=true;
+ else if(+v>0){SLEEP.min=+v;SLEEP.at=Date.now()+v*60000}
+ if(SLEEP.at||SLEEP.eot){
+  SLEEP.tick=setInterval(()=>{
+   if(SLEEP.at){const left=(SLEEP.at-Date.now())/1000;
+    if(left<=12&&!SLEEP.fading&&S.playing){SLEEP.fading=true;fadeTo(.0001,Math.max(.5,left))}
+    if(left<=0){sleepFire();return}}
+   else if(SLEEP.eot&&S.playing){const dur=S.dur||0,pos=A.audio?.currentTime||S.pos;
+    if(dur>20&&dur-pos<=8&&!SLEEP.fading){SLEEP.fading=true;fadeTo(.0001,Math.max(.5,dur-pos-.2))}}
+   sleepPaint()},1000);
+  toast(LANG==="ru"?(SLEEP.eot?"Остановлю после этого трека":`Таймер сна: ${v} мин`):(SLEEP.eot?"Stopping after this track":`Sleep timer: ${v} min`))}
+ sleepPaint();if(fp.dataset.open==="true")fpxIsland()}
+/* Called by the end-of-track handler; true means "stop here". */
+function sleepAtTrackEnd(){if(!SLEEP.eot)return false;sleepFire();return true}
+function sleepMenu(btn){
+ document.getElementById("sleep-pop")?.remove();
+ const ru=LANG==="ru",on=!!(SLEEP.at||SLEEP.eot);
+ const opts=[["15",ru?"15 минут":"15 minutes"],["30",ru?"30 минут":"30 minutes"],["45",ru?"45 минут":"45 minutes"],["60",ru?"1 час":"1 hour"],["90",ru?"1,5 часа":"1.5 hours"],["track",ru?"После этого трека":"After this track"]];
+ const pop=document.createElement("div");pop.id="sleep-pop";pop.className="mw-pop";pop.setAttribute("role","menu");
+ pop.innerHTML=`<div class="mw-pop-h">${fpxI("bedtime",18)}<b>${esc(t("sleep.t"))}</b>${on?`<span>${esc(sleepLeftText())}</span>`:""}</div>`
+  +opts.map(([v,l])=>`<button role="menuitemradio" data-sleep="${v}" aria-checked="${v==="track"?SLEEP.eot:(SLEEP.at&&+v===SLEEP.min)}">${esc(l)}</button>`).join("")
+  +(on?`<button role="menuitem" data-sleep="off" class="danger">${esc(ru?"Выключить таймер":"Turn off")}</button>`:"");
+ document.body.appendChild(pop);
+ const r=btn.getBoundingClientRect(),pw=pop.offsetWidth,ph=pop.offsetHeight;
+ pop.style.left=Math.max(8,Math.min(innerWidth-pw-8,r.left+r.width/2-pw/2))+"px";
+ pop.style.top=(r.bottom+8+ph>innerHeight?Math.max(8,r.top-ph-8):r.bottom+8)+"px";
+ pop.addEventListener("click",e=>{const b=e.target.closest("[data-sleep]");if(!b)return;
+  sleepSet(b.dataset.sleep==="off"?0:b.dataset.sleep);pop.remove()});
+ setTimeout(()=>{const off=e=>{if(!pop.contains(e.target)){pop.remove();document.removeEventListener("pointerdown",off,true)}};
+  document.addEventListener("pointerdown",off,true)},0)}
+function initComfortUI(){
+ const on=id=>document.getElementById(id);
+ const sw=(id,key,after)=>{const b=on(id);if(!b)return;
+  const paint=()=>{b.setAttribute("aria-pressed",String(!!S.x[key]));b.classList.toggle("on",!!S.x[key])};
+  b.addEventListener("click",()=>{S.x[key]=!S.x[key];paint();after?.();save()});paint()};
+ sw("lc-fade","fadePP");
+ sw("lc-norm","norm",()=>{initAudio();applyNorm()});
+ sw("dock-norm","norm",()=>{initAudio();applyNorm();const o=on("lc-norm");if(o){o.setAttribute("aria-pressed",String(!!S.x.norm));o.classList.toggle("on",!!S.x.norm)}});
+ const tr=on("lc-trans");
+ const trTxt=()=>{const v=on("lc-trans-v");if(v)v.textContent=S.x.trans>0?`${S.x.trans} ${LANG==="ru"?"с":"s"}`:t("sleep.off")};
+ if(tr){tr.value=S.x.trans||0;trTxt();tr.addEventListener("input",()=>{S.x.trans=+tr.value;trTxt();paintRange(tr);save()})}
+ on("lc-sleep")?.addEventListener("click",e=>{const b=e.target.closest("[data-sleep]");if(!b)return;sleepSet(b.dataset.sleep==="off"?0:b.dataset.sleep)});
+ sleepPaint()}
+
+/* ═══════════════════════════ full player ═══════════════════════════
+
+   One shell, built once and then updated in place.
+   - A track change crossfades the cover between two layers and slides the
+     title; nothing else is rebuilt, so there is no flash, the lyrics keep their
+     scroll position until the new ones arrive, and focus is not lost.
+   - A layout change (stage <-> side pane with lyrics or the queue) moves the
+     cover on its spring (fx.js) and glides the controls from where they were,
+     instead of tearing the DOM down and jumping.
+   - The play button is an MD3 Expressive shape: a circle while paused that
+     morphs into a rounded square while playing, and the glyph morphs between
+     play and pause point by point.
+   - Everything inside uses the player font (Settings -> font), not only the
+     lyrics. */
+const FPX={key:null,lySig:"",art:null,morphT:-1,morphRaf:0,titleKey:""};
+const fpxI=(n,sz)=>`<span class="material-symbols-rounded" aria-hidden="true"${sz?` style="font-size:${sz}px"`:""}>${n}</span>`;
+/* Both glyphs are two quads; the play triangle is split down the middle (the
+   halves overlap a little so no seam shows while anti-aliased). */
+const FPX_PLAY=[[8,5],[13.9,8.76],[13.9,15.24],[8,19],[13.4,8.44],[19,12],[19,12],[13.4,15.56]];
+const FPX_PAUSE=[[6.5,5],[10.2,5],[10.2,19],[6.5,19],[13.8,5],[17.5,5],[17.5,19],[13.8,19]];
+function fpxPP(t){
+ const P=FPX_PLAY.map((p,i)=>[p[0]+(FPX_PAUSE[i][0]-p[0])*t,p[1]+(FPX_PAUSE[i][1]-p[1])*t]);
+ const q=a=>"M"+a.map(p=>p[0].toFixed(2)+" "+p[1].toFixed(2)).join("L")+"Z";
+ return q(P.slice(0,4))+q(P.slice(4))}
+function fpxMorph(playing,instant){
+ const path=document.getElementById("fpx-pp");if(!path)return;
+ const to=playing?1:0;
+ cancelAnimationFrame(FPX.morphRaf);
+ if(instant||RM||FPX.morphT<0||!path.getAttribute("d")){FPX.morphT=to;path.setAttribute("d",fpxPP(to));return}
+ if(FPX.morphT===to)return;
+ const from=FPX.morphT,t0=performance.now(),dur=300;
+ const ease=x=>1-Math.pow(1-x,3);
+ const step=now=>{const k=Math.min(1,(now-t0)/dur);FPX.morphT=from+(to-from)*ease(k);
+  path.setAttribute("d",fpxPP(FPX.morphT));if(k<1)FPX.morphRaf=requestAnimationFrame(step)};
+ FPX.morphRaf=requestAnimationFrame(step)}
+
+function fpxShell(fpc){
+ const ru=LANG==="ru";
+ fpc.innerHTML=`
+ <div class="fpx" data-layout="stage" data-pane="lyrics">
+  <div class="fpx-frame" aria-hidden="true"></div>
+  <div class="fpx-top">
+   <div class="fpx-notch">
+    <button class="fpx-ib" id="fpclose" title="${esc(t("fpx.close"))}" aria-label="${esc(t("fpx.close"))}">${fpxI("keyboard_arrow_down",24)}</button>
+   </div>
+   <button class="fpx-notch fpx-island" id="fpx-island" type="button" aria-live="polite"></button>
+   <div class="fpx-notch">
+    <button class="fpx-ib" id="fp-sleep-btn" title="${esc(t("sleep.t"))}" aria-label="${esc(t("sleep.t"))}">${fpxI("bedtime",19)}</button>
+    <button class="fpx-ib" id="fp-sp-btn" title="${ru?"3D-звук":"3D audio"}" aria-label="3D audio">${fpxI("spatial_audio",19)}</button>
+    <button class="fpx-ib" id="fp-eq-btn" title="${ru?"Эквалайзер и эффекты":"Equalizer & effects"}" aria-label="Equalizer">${fpxI("equalizer",19)}</button>
+    <button class="fpx-ib" id="fp-fullscreen-toggle" title="${ru?"На весь экран (F11)":"Fullscreen (F11)"}" aria-label="fullscreen">${fpxI("fullscreen",20)}</button>
+    <button class="fpx-ib" id="fp-settings-btn" title="${esc(t("fp.set.t"))}" aria-label="settings">${fpxI("tune",19)}</button>
+   </div>
+  </div>
+  <div class="fpx-body">
+   <section class="fpx-player">
+    <div class="fpx-art"><div class="fpx-cover" id="fpx-cover" role="button" tabindex="0" aria-label="${esc(t("lyrics"))}"></div></div>
+    <div class="fpx-panel">
+     <div class="fpx-meta">
+      <div class="fpx-titles">
+       <h2 class="fpx-title"><span class="fpx-tt"></span><span class="fpx-exp" hidden title="Explicit">E</span></h2>
+       <button class="fpx-artist" id="fpx-artist" type="button"></button>
+      </div>
+      <button class="fpx-like" id="fpx-like" data-fav="" data-svc="" aria-pressed="false" title="${esc(t("act.fav"))}" aria-label="${esc(t("act.fav"))}">${fpxI("favorite",22)}</button>
+      <button class="fpx-ib fpx-more" id="fpx-more" title="${ru?"Ещё":"More"}" aria-label="${ru?"Ещё":"More"}">${fpxI("more_horiz",22)}</button>
+     </div>
+     <div class="fpx-seek">
+      <div class="track" id="fptrack"></div>
+      <div class="fpx-times"><span class="t" id="fpcur">0:00</span><span class="t" id="fpdur">0:00</span></div>
+     </div>
+     <div class="fpx-transport">
+      <button class="fpx-tb fpx-tb-sm" data-act="shuffle" aria-pressed="false" title="${esc(t("np.shuffle"))}">${fpxI("shuffle",22)}</button>
+      <button class="fpx-tb" data-act="prev" title="${esc(t("np.prev"))}">${fpxI("skip_previous",32)}</button>
+      <button class="fpx-play" data-act="play" title="${esc(t("np.play"))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="fpx-pp"/></svg></button>
+      <button class="fpx-tb" data-act="next" title="${esc(t("np.next"))}">${fpxI("skip_next",32)}</button>
+      <button class="fpx-tb fpx-tb-sm" data-act="repeat" aria-pressed="false" title="${esc(t("np.repeat"))}">${fpxI("repeat",22)}</button>
+     </div>
+     <div class="fpx-extras">
+      <div class="fpx-vol">
+       <button class="fpx-ib" id="fpx-mute" aria-label="volume">${fpxI("volume_up",20)}</button>
+       <input type="range" id="fpx-vol" min="0" max="100" value="80" aria-label="volume">
+      </div>
+      <div class="fpx-toggles">
+       <button class="fpx-ib" id="fp-mode" aria-pressed="false" title="${esc(t("lyrics"))} (L)" aria-label="${esc(t("lyrics"))}">${fpxI("lyrics",20)}</button>
+       <button class="fpx-ib" id="fpx-queue-btn" aria-pressed="false" title="${esc(t("queue"))}" aria-label="${esc(t("queue"))}">${fpxI("queue_music",20)}</button>
+      </div>
+     </div>
+    </div>
+   </section>
+   <section class="fpx-side">
+    <div class="lyr lyr-big" id="fplyr" data-synced="true"></div>
+    <div class="fpx-queue" id="fpq"></div>
+   </section>
+  </div>
+ </div>`;
+ FPX.art=null;FPX.lySig="";FPX.titleKey="";FPX.morphT=-1;
+ const on=(id,fn)=>document.getElementById(id)?.addEventListener("click",fn);
+ const toggleLyrics=()=>{
+  const want=!(S.fpMode==="lyric"&&S.x.fpPane!=="queue");
+  S.fpMode=want?"lyric":"stage";S.x.fpPane="lyrics";save();renderFP();
+  const tr=S.current,L=lyricsFor(tr);
+  if(want&&tr&&L&&L.state==="done"&&!L.lines?.length)searchGeniusPrompt(tr)};
+ on("fp-mode",toggleLyrics);
+ on("fpx-cover",toggleLyrics);
+ document.getElementById("fpx-cover")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();toggleLyrics()}});
+ on("fpx-queue-btn",()=>{
+  const want=!(S.fpMode==="lyric"&&S.x.fpPane==="queue");
+  S.fpMode=want?"lyric":"stage";S.x.fpPane="queue";save();renderFP()});
+ on("fp-fullscreen-toggle",toggleAppFullscreen);
+ on("fp-sp-btn",()=>{
+  initAudio();S.sp.on=!S.sp.on;applySpatial();save();updateSpButtons();
+  toast(S.sp.on?(ru?"3D-звук включён":"3D audio on"):(ru?"3D-звук выключен":"3D audio off"))});
+ on("fp-eq-btn",e=>{e.stopPropagation();openDockSheet(true)});
+ on("fp-sleep-btn",e=>{e.stopPropagation();sleepMenu(e.currentTarget)});
+ on("fpx-mute",()=>document.getElementById("mute")?.click());
+ on("fpx-artist",()=>{
+  const tr=S.current;if(!tr||tr.mode==="empty"||!tr.a)return;
+  closeFP();openArtist(tr.a)});
+ on("fpx-more",e=>{
+  e.stopPropagation();const tr=S.current;if(!tr||tr.mode==="empty")return;
+  const r=e.currentTarget.getBoundingClientRect();openCtx(r.left,r.bottom+6,tr)});
+ on("fpx-island",e=>{
+  e.stopPropagation();
+  const tr=S.current;if(!tr)return;
+  if(tr._spOrig||tr.s==="sp")spSourcePicker(e.currentTarget);
+  else if(S.fpMode!=="lyric"){S.fpMode="lyric";S.x.fpPane="lyrics";save();renderFP()}});
+ const vol=document.getElementById("fpx-vol");
+ if(vol){vol.addEventListener("input",()=>{if(S.muted)S.muted=false;setVolume(+vol.value/100);save()});
+  vol.addEventListener("wheel",e=>{e.preventDefault();if(S.muted)S.muted=false;setVolume(S.vol+(e.deltaY<0?.05:-.05));save()},{passive:false})}
+ wireSeek("fptrack");
+ fpxVolume();
+ icons()}
+
+function fpxVolume(){
+ const v=document.getElementById("fpx-vol");
+ if(v){v.value=Math.round((S.muted?0:S.vol)*100);paintRange(v)}
+ const m=document.getElementById("fpx-mute");
+ if(m){const n=(S.muted||S.vol===0)?"volume_off":(S.vol<0.5?"volume_down":"volume_up");
+  const s=m.querySelector(".material-symbols-rounded");if(s&&s.textContent!==n)s.textContent=n;
+  m.setAttribute("aria-pressed",String(!!S.muted))}}
+
+/* The cover: the new sleeve is decoded first, then faded in over the old one,
+   which leaves once the new one is fully opaque — no black frame between. */
+function fpxArt(tr,animate){
+ const box=document.getElementById("fpx-cover");if(!box)return;
+ const u=cssUrlRaw(tr?.art)||"";
+ const sig=u+"|"+(tr?.l1||"")+"|"+(tr?.l2||"");
+ if(sig===FPX.art&&box.firstElementChild)return;
+ FPX.art=sig;
+ const lay=document.createElement("div");lay.className="fpx-img";
+ lay.style.setProperty("--l1",tr?.l1||"54%");lay.style.setProperty("--l2",tr?.l2||"22%");
+ const put=ok=>{
+  if(FPX.art!==sig)return;
+  if(ok&&u)lay.style.backgroundImage=`url("${u.replace(/"/g,"%22")}")`;
+  else lay.dataset.fallback="1";
+  const olds=[...box.children];
+  if(animate&&olds.length&&!RM){lay.classList.add("in");
+   setTimeout(()=>olds.forEach(o=>o.remove()),460)}
+  else olds.forEach(o=>o.remove());
+  box.appendChild(lay)};
+ if(!u){put(false);return}
+ const im=new Image();im.decoding="async";
+ im.onload=()=>put(true);im.onerror=()=>put(false);im.src=u}
+
+function fpxTitle(tr,animate){
+ const x=document.querySelector("#fpc .fpx-titles");if(!x)return;
+ const title=tr?.t||"",artist=tr?.a||"—";
+ const k=title+"\u0001"+artist;
+ const tt=x.querySelector(".fpx-tt"),ar=x.querySelector(".fpx-artist"),ex=x.querySelector(".fpx-exp");
+ if(k!==FPX.titleKey){
+  FPX.titleKey=k;
+  tt.textContent=title;ar.textContent=artist;
+  ar.title=artist;tt.parentElement.title=title;
+  if(animate&&!RM&&x.animate){
+   x.animate([{opacity:0,transform:"translateY(12px)",filter:"blur(6px)"},{opacity:1,transform:"none",filter:"blur(0)"}],
+    {duration:460,easing:"cubic-bezier(.22,1,.36,1)"})}}
+ if(ex)ex.hidden=!isExplicit(tr)}
+
+/* Top centre island: where the sound comes from and what the lyrics are. */
+function fpxIsland(){
+ const el=document.getElementById("fpx-island");if(!el)return;
+ const ru=LANG==="ru",tr=S.current;
+ if(!tr||tr.mode==="empty"){el.hidden=true;return}
  const L=lyricsFor(tr);
- if(!L||L.state==="idle"){fetchLyrics(tr)}
- const hasLyrics=!!(L&&L.lines?.length>0);
- const lyricMode=S.fpMode==="lyric";
- const desiredMode=lyricMode?"lyric":"stage";
+ const svcName=id=>id==="local"?(ru?"Файл":"File"):(SERVICES.find(s=>s.id===id)?.name||id||"");
+ let src="";
+ if(tr._spOrig||(tr.s==="sp")){src=`<b class="fpx-is-sp">Spotify</b>${fpxI("arrow_right_alt",16)}<span>${esc(svcName(tr._spOrig?tr.s:(tr._resolvedSvc||"…")))}</span>`}
+ else src=`<span>${esc(svcName(tr.s))}</span>`;
+ let ly="";
+ if(L){
+  if(L.state==="loading"||L.state==="idle")ly=`<i class="fpx-dot pulse"></i><span>${ru?"Ищем текст…":"Finding lyrics…"}</span>`;
+  else if(L.state==="transcribing")ly=`<i class="fpx-dot pulse"></i><span>${ru?"Распознаём текст…":"Transcribing…"}</span>`;
+  else if(L.state==="error")ly=`<i class="fpx-dot bad"></i><span>${ru?"Текст недоступен":"Lyrics unavailable"}</span>`;
+  else if(L.lines?.length){
+   const prov={lrclib:"LRCLIB",genius:"Genius",ytm:"YouTube Music",ai:"Whisper",custom:ru?"свой":"custom"}[L.source]||"";
+   ly=`<i class="fpx-dot ${L.synced?"ok":""}"></i><span>${L.synced?(ru?"Синхронный текст":"Synced lyrics"):(ru?"Текст без таймингов":"Unsynced lyrics")}${prov?` · ${esc(prov)}`:""}</span>`}
+  else ly=`<i class="fpx-dot"></i><span>${ru?"Текст не найден":"No lyrics"}</span>`}
+ const sl=SLEEP.at?`<span class="fpx-is-sep"></span>${fpxI("bedtime",15)}<span id="fpx-sleep-left">${sleepLeftText()}</span>`:"";
+ document.getElementById("fp-sleep-btn")?.setAttribute("aria-pressed",String(!!(SLEEP.at||SLEEP.eot)));
+ const html=`${src}${ly?`<span class="fpx-is-sep"></span>${ly}`:""}${sl}`;
+ if(el.dataset.html!==html){el.dataset.html=html;el.innerHTML=html}
+ el.hidden=false;
+ el.dataset.click=(tr._spOrig||tr.s==="sp")?"source":"lyrics";
+ el.title=(tr._spOrig||tr.s==="sp")?(ru?"Выбрать другой источник звука":"Choose another audio source"):""}
 
- const fpc=document.getElementById("fpc");
- if(!fpc)return;
+/* What the lyric sheet was last drawn from; it is redrawn only when this
+   changes, so a pause, a seek or a favourite does not reset it. */
+function fpxLySig(tr){
+ const L=lyricsFor(tr);
+ return trackKey(tr)+"|"+(L?`${L.state}|${L.source||""}|${L.synced?1:0}|${L.lines?.length||0}|${L.lines?.[0]?.text||""}`:"none")}
 
- /* If container already matches current track and mode, update in-place without wiping DOM and triggering text jitter */
- if(!swapped && fpc.dataset.mode===desiredMode && fpc.querySelector(".fp-title")){
-  const titleEl=fpc.querySelector(".fp-title");
-  if(titleEl && titleEl.textContent!==(tr?.t||"")) titleEl.textContent=tr?.t||"";
-  const artistEl=fpc.querySelector(".fp-artist");
-  if(artistEl && artistEl.textContent!==(tr?.a||"—")) artistEl.textContent=tr?.a||"—";
-  const curTimeEl=fpc.querySelector("#fpcur");
-  if(curTimeEl) curTimeEl.textContent=fmt(S.pos);
-  const durTimeEl=fpc.querySelector("#fpdur");
-  const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0);
-  if(durTimeEl) durTimeEl.textContent=fmt(effectiveDur);
-  const trackBar=fpc.querySelector("#fptrack .f");
-  if(trackBar) trackBar.style.width=`${pc}%`;
-  const trackThumb=fpc.querySelector("#fptrack .h");
-  if(trackThumb) trackThumb.style.left=`${pc}%`;
-  const playBtn=fpc.querySelector(".play");
-  if(playBtn){
-   playBtn.title=S.playing?t("np.pause"):t("np.play");
-   playBtn.innerHTML=`<span class="material-symbols-rounded" style="font-size:24px">${S.playing?"pause":"play_arrow"}</span>`;
-  }
-  fpc.dataset.playing=S.playing?"true":"false";
-  return;
- }
+function fpxLayout(animate){
+ const x=document.querySelector("#fpc .fpx");if(!x)return;
+ const layout=S.fpMode==="lyric"?"lyrics":"stage";
+ const pane=S.x.fpPane==="queue"?"queue":"lyrics";
+ document.getElementById("fp-mode")?.setAttribute("aria-pressed",String(layout==="lyrics"&&pane==="lyrics"));
+ document.getElementById("fpx-queue-btn")?.setAttribute("aria-pressed",String(layout==="lyrics"&&pane==="queue"));
+ const changed=x.dataset.layout!==layout;
+ if(!changed&&x.dataset.pane===pane)return false;
+ const panel=x.querySelector(".fpx-panel");
+ const before=animate&&changed&&!RM?{cover:window.MWFX?.cover.rect(),panel:panel?.getBoundingClientRect()}:null;
+ x.dataset.layout=layout;x.dataset.pane=pane;
+ if(before){
+  if(before.cover)window.MWFX?.cover.flyFrom(before.cover,{k:200,c:21});
+  const now=panel?.getBoundingClientRect();
+  if(now&&before.panel&&panel.animate){
+   const dx=before.panel.left-now.left,dy=before.panel.top-now.top;
+   if(Math.abs(dx)+Math.abs(dy)>1)panel.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"none"}],
+    {duration:620,easing:"cubic-bezier(.22,1,.36,1)"})}}
+ return true}
 
- const art=coverStyle(tr?.art,tr?.l1,tr?.l2);
+function fpxSide(force){
+ const x=document.querySelector("#fpc .fpx");if(!x||x.dataset.layout!=="lyrics")return;
+ if(x.dataset.pane==="queue"){renderFPBody();return}
+ const sig=fpxLySig(S.current);
+ if(force||sig!==FPX.lySig){FPX.lySig=sig;renderLyricSheet()}}
+
+function renderFP(){
+ const tr=S.current;
+ const key=trackKey(tr);
+ const swapped=FPX.key!==null&&FPX.key!==key;
+ FPX.key=key;fpLastKey=key;
+ const L=lyricsFor(tr);
+ if(tr&&tr.mode!=="empty"&&(!L||L.state==="idle"))fetchLyrics(tr);
+ const fpc=document.getElementById("fpc");if(!fpc)return;
+ let built=false;
+ if(!fpc.querySelector(":scope>.fpx")){fpxShell(fpc);built=true}
+ const fpOpen=fp.dataset.open==="true";
  const u=cssUrlRaw(tr?.art);
  const fpbg=document.getElementById("fpbg");
  if(fpbg){
-  if(u){fpbg.style.backgroundImage=`url('${u}')`;fpbg.style.display=""}
-  else{fpbg.style.backgroundImage="";fpbg.style.display="none"}}
+  const want=u?`url("${u.replace(/"/g,"%22")}")`:"";
+  if(fpbg.dataset.u!==want){fpbg.dataset.u=want;fpbg.style.backgroundImage=want;fpbg.style.display=u?"":"none"}}
  window.MWFX?.flow.setCover(u||"");
- /* Where the cover was before this rebuild, so a layout change (stage <->
-    lyrics) can move it there physically instead of jumping. */
- const fpOpen=fp.dataset.open==="true";
- const prevMode=fpc.dataset.mode,prevCover=fpOpen&&!swapped?window.MWFX?.cover.rect():null;
- const expBadge=isExplicit(tr)?`<span class="fp-badge-exp" title="Explicit"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="11.5" r="1" fill="currentColor"/><path d="M8 4.2v4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>`:"";
- fpc.innerHTML=lyricMode?`
-  <div class="fp-actions-top">
-   <button class="fp-action-btn ${S.sp.on?"active":""}" id="fp-sp-btn" aria-label="3D Spatial Audio" title="${LANG==="ru"?"3D Пространственный звук":"3D Spatial Audio"}"><span class="material-symbols-rounded" style="font-size:20px">spatial_audio</span></button>
-   <button class="fp-action-btn" id="fp-eq-btn" aria-label="Equalizer" title="${LANG==="ru"?"Эквалайзер":"Equalizer"}"><span class="material-symbols-rounded" style="font-size:20px">equalizer</span></button>
-   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><span class="material-symbols-rounded" style="font-size:20px">fullscreen</span></button>
-   <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><span class="material-symbols-rounded" style="font-size:20px">tune</span></button>
-   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><span class="material-symbols-rounded" style="font-size:24px">expand_more</span></button>
-  </div>
-  <div class="fp-drag-handle" aria-hidden="true"></div>
-  <div class="fp-lyric-grid">
-   <div class="fp-lyric-left">
-    <div class="cover fpcover-lg" ${art}><canvas class="vis" id="vis"></canvas></div>
-    <div class="fp-meta-lyric">
-     <div class="fp-title-row">
-      <h2 class="fp-title">${esc(tr?.t||"")}</h2>${expBadge}
-     </div>
-     <p class="fp-artist">${esc(tr?.a||"—")}</p>
-     <div class="fpseek fpseek-lyric">
-      <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
-      <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t" id="fpdur">${fmt((Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0))}</span></div>
-     </div>
-     <div class="fpctrls fpctrls-lyric">
-      <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><span class="material-symbols-rounded" style="font-size:20px">shuffle</span></button>
-      <button class="ic" data-act="prev" title="${t("np.prev")}"><span class="material-symbols-rounded" style="font-size:20px">skip_previous</span></button>
-      <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px">${S.playing?"pause":"play_arrow"}</span></button>
-      <button class="ic" data-act="next" title="${t("np.next")}"><span class="material-symbols-rounded" style="font-size:20px">skip_next</span></button>
-      <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><span class="material-symbols-rounded" style="font-size:20px">repeat</span></button>
-      <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><span class="material-symbols-rounded" style="font-size:20px">favorite</span></button>
-      <button class="ic" id="fp-mode" title="${t("fp.mode")}"><span class="material-symbols-rounded" style="font-size:20px">album</span></button>
-     </div>
-    </div>
-   </div>
-   <div class="fp-lyric-right">
-    <div class="lyr lyr-big" id="fplyr" data-synced="true"></div>
-   </div>
-  </div>`:`
-  <div class="fp-actions-top">
-   <button class="fp-action-btn ${S.sp.on?"active":""}" id="fp-sp-btn" aria-label="3D Spatial Audio" title="${LANG==="ru"?"3D Пространственный звук":"3D Spatial Audio"}"><span class="material-symbols-rounded" style="font-size:20px">spatial_audio</span></button>
-   <button class="fp-action-btn" id="fp-eq-btn" aria-label="Equalizer" title="${LANG==="ru"?"Эквалайзер":"Equalizer"}"><span class="material-symbols-rounded" style="font-size:20px">equalizer</span></button>
-   <button class="fp-settings-btn" id="fp-fullscreen-toggle" aria-label="fullscreen" title="${LANG==="ru"?"На весь экран (F11)":"Fullscreen (F11)"}"><span class="material-symbols-rounded" style="font-size:20px">fullscreen</span></button>
-   <button class="fp-settings-btn" id="fp-settings-btn" aria-label="settings" title="${t("fp.set.t")||"Настройки плеера"}"><span class="material-symbols-rounded" style="font-size:20px">tune</span></button>
-   <button class="fpclose-btn" id="fpclose" aria-label="close" title="${t("close")}"><span class="material-symbols-rounded" style="font-size:24px">expand_more</span></button>
-  </div>
-  <div class="fp-drag-handle" aria-hidden="true"></div>
-  <div class="fp-stage-content">
-   <div class="cover fpcover-stage" ${art}><canvas class="vis" id="vis"></canvas></div>
-   <div class="fp-meta-stage">
-    <div class="fp-title-row">
-     <h2 class="fp-title">${esc(tr?.t||"")}</h2>${expBadge}
-    </div>
-    <p class="fp-artist">${esc(tr?.a||"—")}</p>
-    <div class="fpseek fpseek-stage">
-      <div class="track" id="fptrack"><div class="f" style="width:${pc}%"></div><div class="h" style="left:${pc}%"></div></div>
-     <div class="fpseek-times"><span class="t" id="fpcur">${fmt(S.pos)}</span><span class="t" id="fpdur">${fmt((Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0))}</span></div>
-     </div>
-    <div class="fpctrls fpctrls-stage">
-     <button class="ic" data-act="shuffle" aria-pressed="${S.shuffle}" title="${t("np.shuffle")}"><span class="material-symbols-rounded" style="font-size:20px">shuffle</span></button>
-     <button class="ic" data-act="prev" title="${t("np.prev")}"><span class="material-symbols-rounded" style="font-size:24px">skip_previous</span></button>
-     <button class="play" data-act="play" title="${S.playing?t("np.pause"):t("np.play")}"><span class="material-symbols-rounded" style="font-size:24px">${S.playing?"pause":"play_arrow"}</span></button>
-     <button class="ic" data-act="next" title="${t("np.next")}"><span class="material-symbols-rounded" style="font-size:24px">skip_next</span></button>
-     <button class="ic" data-act="repeat" aria-pressed="${S.repeat}" title="${t("np.repeat")}"><span class="material-symbols-rounded" style="font-size:20px">repeat</span></button>
-     <button class="heart" data-fav="${esc(tr?.id||"")}" data-svc="${esc(tr?.s||"")}" aria-pressed="${!!tr?.fav}" title="${t("act.fav")}"><span class="material-symbols-rounded" style="font-size:20px">favorite</span></button>
-     <button class="ic" id="fp-mode" title="${hasLyrics?t("lyrics"):t("ly.search_genius")}"><span class="material-symbols-rounded" style="font-size:20px">${hasLyrics?"lyrics":"search"}</span></button>
-    </div>
-   </div>
-  </div>`;
- if(lyricMode)renderLyricSheet();
- document.getElementById("fpc").dataset.mode=desiredMode;
+ const layoutChanged=fpxLayout(!built&&fpOpen);
+ fpxArt(tr,swapped&&fpOpen);
+ fpxTitle(tr,swapped&&fpOpen);
+ const like=document.getElementById("fpx-like");
+ if(like){like.dataset.fav=String(tr?.id??"");like.dataset.svc=tr?.s||"";like.setAttribute("aria-pressed",String(!!tr?.fav))}
+ document.querySelectorAll('#fpc [data-act="shuffle"]').forEach(b=>b.setAttribute("aria-pressed",String(!!S.shuffle)));
+ document.querySelectorAll('#fpc [data-act="repeat"]').forEach(b=>b.setAttribute("aria-pressed",String(!!S.repeat)));
+ const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d||0);
+ const cur=document.getElementById("fpcur");if(cur)cur.textContent=fmt(S.pos);
+ const du=document.getElementById("fpdur");if(du)du.textContent=fmt(effectiveDur);
+ const play=fpc.querySelector(".fpx-play");
+ if(play)play.title=S.playing?t("np.pause"):t("np.play");
+ fpxMorph(S.playing,built||!fpOpen);
+ fpc.dataset.playing=S.playing?"true":"false";
+ fpc.dataset.zoom=S.fpZoom||"normal";
+ if(swapped)FPX.lySig="";
+ fpxSide(layoutChanged&&S.x.fpPane!=="queue"&&!FPX.lySig);
+ fpxIsland();
+ updateSpButtons();
  applyLyVars();
- document.getElementById("fp-mode")?.addEventListener("click",()=>{
-  if(lyricMode){
-   S.fpMode="stage";save();renderFP();
-  }else{
-   S.fpMode="lyric";save();renderFP();
-   if(!hasLyrics && (!L || L.state==="error" || (!L.lines?.length && L.state==="done"))){
-    searchGeniusPrompt(tr);
-   }
-  }
- });
- document.querySelector(".fpcover-stage")?.addEventListener("click",()=>{
-  S.fpMode="lyric";save();renderFP();
-  if(!hasLyrics && (!L || L.state==="error" || (!L.lines?.length && L.state==="done"))){
-   searchGeniusPrompt(tr);
-  }
- });
- document.querySelector(".fpcover-lg")?.addEventListener("click",()=>{
-  S.fpMode="stage";save();renderFP()});
- document.getElementById("fp-fullscreen-toggle")?.addEventListener("click",toggleAppFullscreen);
- document.getElementById("fp-sp-btn")?.addEventListener("click",()=>{
-  initAudio();
-  S.sp.on = !S.sp.on;
-  applySpatial();
-  save();
-  updateSpButtons();
-  toast(S.sp.on ? (LANG==="ru"?"3D звук: включён":"3D audio: on") : (LANG==="ru"?"3D звук: выключен":"3D audio: off"));
- });
- document.getElementById("fp-eq-btn")?.addEventListener("click",()=>{
-  openDockSheet(true);
- });
- wireSeek("fptrack");
- if(fpOpen&&swapped)window.MWFX?.cover.land();
- else if(prevCover&&prevMode&&prevMode!==desiredMode)window.MWFX?.cover.flyFrom(prevCover,{k:210,c:20});
- const c=document.getElementById("fpc");
- if(swapped){
-  c.removeAttribute("data-swap");
-  void c.offsetWidth;
-  c.dataset.swap="1";
- }else c.removeAttribute("data-swap");
- c.dataset.playing=S.playing?"true":"false";
- c.dataset.zoom=S.fpZoom||"normal";
- c.dataset.drift=String(S.fpDrift!==false);
- fpWake();
- vis.c=document.getElementById("vis");
- if(vis.c){const r=vis.c.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);
-  vis.c.width=r.width*d;vis.c.height=r.height*d;vis.g=vis.c.getContext("2d")}
- icons()}
+ if(fpOpen&&swapped&&!built)window.MWFX?.cover.land();
+ fpWake()}
+
 window.renderFP=renderFP;window.paint=paint;
 /* The oversized lyric sheet (mockup 2): reuses the LYRICS cache and the sync
    engine, paints into #fplyr. syncLyrics() already targets any .lyr container
@@ -2355,6 +2818,9 @@ window.renderFP=renderFP;window.paint=paint;
 function renderLyricSheet(){
  const el=document.getElementById("fplyr");if(!el)return;
  const tr=S.current,L=lyricsFor(tr);
+ /* The tools row (source, timing offset, Genius, editor) lives outside the
+    scrolling sheet, pinned to the bottom of the pane; drop the last one. */
+ el.closest(".fpx-side")?.querySelectorAll(":scope>.lyr-header").forEach(n=>n.remove());
  if(!tr||tr.mode==="empty"){
   el.dataset.empty="true";
   el.innerHTML=`<div class="lyr-empty"><p class="hollow">${t("q.none")}</p></div>`;return}
@@ -2396,6 +2862,8 @@ function renderLyricSheet(){
  document.getElementById("lyr-edit-alt")?.addEventListener("click",()=>openLyricEditor(tr));
  el.querySelectorAll("[data-lyoff]").forEach(b=>b.addEventListener("click",(e)=>{e.stopPropagation();adjustLyricOffset(+b.dataset.lyoff)}));
  el.querySelectorAll("[data-lyreset]").forEach(b=>b.addEventListener("click",(e)=>{e.stopPropagation();resetLyricOffset()}));
+ const hd=el.querySelector(":scope>.lyr-header"),side=el.closest(".fpx-side");
+ if(hd&&side)side.appendChild(hd);
  el.scrollTop=0;
  lyLast=-1;syncLyrics(true);
  icons()}
@@ -2411,26 +2879,25 @@ function animFPBody(el){
  fpLastTab=S.fpTab;
  el.removeAttribute("data-anim");void el.offsetWidth;el.dataset.anim="in"}
 
-function renderFPBody(anim){
- const el=document.getElementById("fpbody");if(!el)return;
- if(anim)animFPBody(el);
- if(S.fpTab==="queue"){
-  if(!queue.length){el.innerHTML=`<p class="hollow">${t("q.none")}</p>`;return}
-  /* Where the queue came from, and a way to empty it. Without this the panel
-     was a list with no explanation of why those tracks and not others. */
-  el.innerHTML=`<div class="qhead"><span>${t("q.from")}: <b>${esc(ctxName(PLAYCTX.key))}</b></span>
-    <button class="btn sm" id="qclr">${t("q.clear")}</button></div>`
-   +`<div class="qlist" data-listctx="queue">`
-   +queue.map((x,i)=>`<div class="q" data-track="${esc(x.id)}" data-svc="${esc(x.s)}" style="--i:${Math.min(i,12)}">
-     <i class="n">${String(i+1).padStart(2,"0")}</i>
-     <b>${esc(x.t)}</b><em>${esc(x.a)}</em>
-     <button class="qrm" data-qrm="${esc(x.id)}" data-qsvc="${esc(x.s)}" aria-label="${esc(t("q.rm"))}" title="${esc(t("q.rm"))}"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>
-    </div>`).join("")
-   +`</div>`;
-  document.getElementById("qclr").onclick=()=>{queue=[];renderFPBody()};
-  icons();
-  return}
- renderLyrics()}
+/* The queue pane of the full player: what is playing, then what follows.
+   Rows are the regular [data-track] rows inside a data-listctx="queue"
+   holder, so clicking one jumps ahead exactly like the old queue tab did. */
+function renderFPBody(){
+ const el=document.getElementById("fpq");if(!el)return;
+ const x=document.querySelector("#fpc .fpx");
+ if(!x||x.dataset.layout!=="lyrics"||x.dataset.pane!=="queue")return;
+ const cur=S.current,ru=LANG==="ru";
+ const keep=el.querySelector(".fpq-list")?.scrollTop||0;
+ const head=`<div class="fpq-head"><div><b>${esc(t("queue"))}</b><small>${esc(t("q.from"))}: ${esc(ctxName(PLAYCTX.key))}</small></div>${queue.length?`<button class="fpx-chip" id="qclr">${fpxI("clear_all",16)}${esc(t("q.clear"))}</button>`:""}</div>`;
+ const now=cur&&cur.mode!=="empty"?`<div class="fpq-now"><div class="fpq-art" ${coverStyle(cur.art,cur.l1,cur.l2)}></div><span class="fpq-tx"><small>${esc(t("now"))}</small><b>${esc(cur.t||"")}</b><em>${esc(cur.a||"")}</em></span><span class="fpq-eq" aria-hidden="true"><i></i><i></i><i></i></span></div>`:"";
+ const rows=queue.slice(0,300).map((q,i)=>`<div class="q fpq-row" data-track="${esc(q.id)}" data-svc="${esc(q.s)}" style="--i:${Math.min(i,14)}">
+  <div class="fpq-art" ${coverStyle(q.art,q.l1,q.l2)}></div><span class="fpq-tx"><b>${esc(q.t||"")}</b><em>${esc(q.a||"")}</em></span>
+  <i class="fpq-d">${q.d?fmt(q.d):""}</i>
+  <button class="qrm" data-qrm="${esc(q.id)}" data-qsvc="${esc(q.s)}" aria-label="${esc(t("q.rm"))}" title="${esc(t("q.rm"))}">${fpxI("close",16)}</button></div>`).join("");
+ el.innerHTML=head+now+(queue.length?`<div class="qlist fpq-list" data-listctx="queue">${rows}</div>`
+  :`<div class="fpq-empty">${fpxI("queue_music",28)}<p>${esc(t("q.none"))}</p></div>`);
+ const l=el.querySelector(".fpq-list");if(l&&keep)l.scrollTop=keep;
+ document.getElementById("qclr")?.addEventListener("click",()=>{queue=[];renderFPBody();toast(ru?"Очередь очищена":"Queue cleared")})}
 
 /* ─────────────────────────── lyrics ───────────────────────────
 
@@ -2761,7 +3228,10 @@ document.addEventListener("keydown",e=>{
  const p=e.target.closest?.("#lyr p[data-at],#fplyr p[data-at],.lyr-big p[data-at]");
  if(p){e.preventDefault();lySeekFrom(p)}});
 
-function sameTrack(a,b){return !!a&&!!b&&String(a.id)===String(b.id)&&a.s===b.s}
+/* A Spotify track plays through a resolved copy from another service; both
+   are the same song to every "is this still the current track" check. */
+const trackIdent=x=>x._spOrig?"sp:"+x._spOrig.id:x.s+":"+String(x.id);
+function sameTrack(a,b){return !!a&&!!b&&trackIdent(a)===trackIdent(b)}
 
 async function searchGeniusPrompt(tr){
  if(!tr||tr.mode==="empty")return;
@@ -2774,7 +3244,7 @@ async function searchGeniusPrompt(tr){
   const res=await inv("lyrics_search_genius",{query:q.trim()});
   if(res&&res.lines&&res.lines.length){
    const key=trackKey(tr);
-   const lines=res.lines.filter(l=>l.text!==undefined);
+   const lines=cleanLyricLines(res.lines,false);
    LYRICS.set(key,{state:"done",source:"genius",synced:false,lines});
    toast(LANG==="ru"?"Текст найден на Genius. Нажмите «Синхронизировать» для добавления таймингов":"Lyrics found on Genius. Click «Auto-sync» to add timings", 4500);
    S.fpMode="lyric";save();
@@ -2789,20 +3259,40 @@ async function searchGeniusPrompt(tr){
  }
 }
 
+/* Section headers ("[Chorus]", "[Припев: …]") and the like come with Genius
+   and some plain-text sources. They are not sung, so they are not shown.
+   Blank lines collapse to one; in synced lyrics a blank timed line marks an
+   instrumental break and is kept. */
+function cleanLyricLines(lines,synced){
+ const out=[];
+ for(const l of lines||[]){
+  if(!l||l.text===undefined)continue;
+  let tx=String(l.text).replace(/[\u200b\ufeff]/g,"").trim();
+  if(/^\[[^\]]{0,80}\]$/.test(tx))continue;
+  tx=tx.replace(/^\[[^\]]{1,40}\]\s*/,"");
+  const prev=out[out.length-1];
+  if(!tx&&(!synced||l.at==null)&&(!prev||!prev.text))continue;
+  if(!tx&&synced&&prev&&!prev.text)continue;
+  out.push({...l,text:tx})}
+ while(out.length&&!out[out.length-1].text&&(!synced||out[out.length-1].at==null))out.pop();
+ return out}
 async function fetchLyrics(tr){
  if(!tr||tr.mode==="empty")return;
  const key=trackKey(tr),my=++lyReq;
  LYRICS.set(key,{state:"loading"});
- if(fp.dataset.open==="true"){
-  if(S.fpMode==="lyric")renderFP();
-  else if(S.fpTab==="lyrics")renderLyrics()}
+ if(fp.dataset.open==="true")renderFP();
  try{
+  /* The length of what actually plays beats the catalogue's: LRCLIB picks the
+     recording by duration, and a video with an intro is not the album cut. */
+  const real=sameTrack(tr,S.current)&&Number.isFinite(S.dur)&&S.dur>0?S.dur:0;
+  const dur=Math.round(real||tr.d||0);
   const res=TAURI?await inv("lyrics_get",{
    service:tr.s||"",id:String(tr.id||""),artist:tr.a||"",title:tr.t||"",
-   album:tr.al||"",duration:Math.round(tr.d||S.dur||0)}):null;
+   album:tr.al||"",duration:dur}):null;
   if(my!==lyReq)return;
-  const lines=(res?.lines||[]).filter(l=>l.text!==undefined);
-  LYRICS.set(key,{state:"done",source:res?.source||"none",synced:!!res?.synced,lines});
+  const synced=!!res?.synced;
+  const lines=cleanLyricLines(res?.lines||[],synced);
+  LYRICS.set(key,{state:"done",source:res?.source||"none",synced:synced&&lines.some(l=>l.at!=null),lines,dur});
  }catch(e){
   console.warn("lyrics:",e);
   if(my!==lyReq)return;
@@ -2811,6 +3301,17 @@ async function fetchLyrics(tr){
   if(fp.dataset.open==="true")renderFP();
   else if(S.fpTab==="lyrics")renderLyrics()}}
 
+/* Lyrics fetched before the real length was known were matched against the
+   catalogue length. If what plays turns out several seconds longer or shorter
+   (a video cut, a radio edit), ask again once with the real length. */
+function lyricsDurCheck(){
+ const tr=S.current;if(!tr||!(S.dur>0))return;
+ const L=lyricsFor(tr);
+ if(!L||L.state!=="done"||L.source==="custom"||L.redone||!L.dur)return;
+ if(Math.abs(L.dur-S.dur)<4)return;
+ const key=trackKey(tr);
+ LYRICS.delete(key);
+ fetchLyrics(tr).then(()=>{const n=LYRICS.get(key);if(n)n.redone=true})}
 /* Highlight follows the clock. Only the changed lines are touched — rewriting
    every <p> on each tick restarted the CSS transitions, which is what made a
    scrolling lyric look like it was flickering rather than gliding. */
@@ -3116,9 +3617,11 @@ function toggle(){
  if(S.current?.mode==="empty")return go("search");
  const au=ensureAudioEl();
  if(S.playing){
-  au.pause();
+  fadePause(au);
   S.playing=false;
  }else{
+  clearTimeout(fadePauseTimer);
+  if(!au.paused)fadeResume();
   A.ctx?.resume().catch(()=>{});
   if(!au.src||au.src==="about:blank"){
    load(S.current,true);
@@ -3219,7 +3722,7 @@ function buildQueue(cur){
   queue=after.filter(x=>!sameTrack(x,cur))}
  /* No slice(0,20): the queue *is* the schedule now, and a truncated one made
     the panel disagree with what actually played after track 20. */
- if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody()}
+ if(fp.dataset.open==="true")renderFPBody()}
 
 /* Puts a track next in line without changing what is playing. */
 function queueNext(tr){
@@ -3227,7 +3730,7 @@ function queueNext(tr){
  queue=queue.filter(x=>!sameTrack(x,tr));
  queue.unshift(tr);
  toast(t("q.next.ok").replace("{n}",tr.t||""));
- if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody()}
+ if(fp.dataset.open==="true")renderFPBody()}
 
 /* Appends to the end of the queue. */
 function queueLast(tr){
@@ -3235,11 +3738,11 @@ function queueLast(tr){
  queue=queue.filter(x=>!sameTrack(x,tr));
  queue.push(tr);
  toast(t("q.last.ok").replace("{n}",tr.t||""));
- if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody()}
+ if(fp.dataset.open==="true")renderFPBody()}
 
 function queueRemove(id,s){
  queue=queue.filter(x=>!(String(x.id)===String(id)&&x.s===s));
- if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody()}
+ if(fp.dataset.open==="true")renderFPBody()}
 
 function next(userInitiated){
  /* Repeat-one restart lives here for a track's natural end, but a manual skip
@@ -3378,7 +3881,7 @@ function waveExtend(){
     queue.push(x);
     if(!TRACKS.some(t=>sameTrack(t,x)))TRACKS.push(x);
    });
-   if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
+   if(fp.dataset.open==="true")renderFPBody();
    return true;
   }finally{
    waveExtendPromise=null;
@@ -3573,6 +4076,7 @@ function setVolume(v){
   mb.innerHTML=`<span class="material-symbols-rounded">${(S.muted||S.vol===0)?"volume_off":(S.vol<0.5?"volume_down":"volume_up")}</span>`;
  }
  if(A.gain)A.gain.gain.setTargetAtTime(S.muted?0:S.vol,A.ctx.currentTime,.02);
+ fpxVolume();
 }
 
 function sync(){
@@ -3582,7 +4086,8 @@ function sync(){
   F.mode=BOOT.done?(S.playing?"flow":"cloud"):"gather";
   const fpc=document.getElementById("fpc");
   if(fpc)fpc.dataset.playing=S.playing?"true":"false";
-  setPlayIcon(document.querySelector('#fpc [data-act="play"]'),name,20);
+  fpxMorph(S.playing);
+  const fpPlay=document.querySelector("#fpc .fpx-play");if(fpPlay)fpPlay.title=S.playing?t("np.pause"):t("np.play");
   updateMediaSession(S.current);
   if(window.__TAURI__){
    inv("taskbar_set_playing",{playing:!!S.playing}).catch(()=>{});
@@ -3593,6 +4098,9 @@ function sync(){
 /* nav */
 function go(v){
   if(!v)return;
+  /* Settings are a window over the page now, not a page of their own. */
+  if(v==="settings"){openSettings();return}
+  if(settingsIsOpen())closeSettings(true);
   S.view=v;
   const extraTabs = ["people", "rooms", "top", "profile", "settings"];
   const rail = document.getElementById("rail");
@@ -3695,7 +4203,7 @@ function toggleService(sid){
  if(!target.on){
   WAVE=WAVE.filter(x=>x.s!==sid);
   queue=queue.filter(x=>x.s!==sid);
-  if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
+  if(fp.dataset.open==="true")renderFPBody();
   if(S.current?.s===sid){
    if(queue.length)next(true);
    else stopAtEnd();
@@ -3724,6 +4232,7 @@ function toggleSrvDropdown(open){
  if(srvDdBtn)srvDdBtn.setAttribute("aria-expanded",String(isOpen));
 }
 srvDdBtn?.addEventListener("click",()=>toggleSrvDropdown());
+addEventListener("resize",()=>{if(srvDdSheet&&!srvDdSheet.hidden)toggleSrvDropdown(false)});
 srvDdClose?.addEventListener("click",()=>toggleSrvDropdown(false));
 srvDdBackdrop?.addEventListener("click",()=>toggleSrvDropdown(false));
 /* The "by artist / similar" switch is gone: the wave is always seeded from
@@ -3731,12 +4240,117 @@ srvDdBackdrop?.addEventListener("click",()=>toggleSrvDropdown(false));
 document.getElementById("libtabs").addEventListener("click",e=>{
  const b=e.target.closest("[data-tab]");if(!b)return;S.tab=b.dataset.tab;
  [...b.parentElement.children].forEach(x=>x.setAttribute("aria-selected",x===b));renderLib()});
+/* ═══════════════ settings window ═══════════════
+   Settings open as a window over the page (Liner-like) instead of replacing
+   it: a 240px side rail with search and sections, a header with the section
+   name and a close button. The #v-settings node is moved into a body-level
+   layer at boot — the views are transformed, and a transformed ancestor would
+   trap a fixed overlay inside the page. */
+const SETOV={t:0,focus:null,mo:null};
+function setovInit(){
+ if(document.getElementById("setov"))return;
+ const v=document.getElementById("v-settings");if(!v)return;
+ const ru=LANG==="ru";
+ const ov=document.createElement("div");ov.className="setov";ov.id="setov";ov.hidden=true;ov.dataset.open="false";
+ ov.innerHTML=`<div class="setov-scrim" data-setov-close></div>`;
+ v.classList.remove("view");v.classList.add("setov-box");v.dataset.active="false";
+ v.setAttribute("role","dialog");v.setAttribute("aria-modal","true");v.setAttribute("aria-labelledby","setov-title");
+ const side=document.createElement("aside");side.className="setov-side";
+ const vh=v.querySelector(":scope>.vh");if(vh)side.appendChild(vh);
+ side.insertAdjacentHTML("beforeend",`<label class="setov-search"><span class="material-symbols-rounded" aria-hidden="true">search</span><input id="setov-q" type="search" autocomplete="off" spellcheck="false" data-i18n-ph="set.search" placeholder="${ru?"Поиск настроек":"Search settings"}"></label>`);
+ const tabs=document.getElementById("settabs");if(tabs){side.appendChild(tabs);tabs.setAttribute("aria-orientation","vertical")}
+ side.insertAdjacentHTML("beforeend",`<p class="setov-none" id="setov-none" hidden></p>`);
+ const main=document.createElement("section");main.className="setov-main";
+ main.innerHTML=`<header class="setov-head"><h3 id="setov-title"></h3><button class="ic sm setov-close" id="setov-close" data-i18n-title="close" title="${ru?"Закрыть":"Close"}" aria-label="close"><span class="material-symbols-rounded">close</span></button></header><div class="setov-body" id="setov-body"></div>`;
+ const body=main.querySelector(".setov-body");
+ v.querySelectorAll(":scope>.stab").forEach(p=>body.appendChild(p));
+ v.replaceChildren(side,main);
+ ov.appendChild(v);document.body.appendChild(ov);
+ ov.addEventListener("click",e=>{if(e.target.closest("[data-setov-close],#setov-close"))closeSettings()});
+ const q=document.getElementById("setov-q");
+ q?.addEventListener("input",()=>setovSearch(q.value));
+ q?.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){e.preventDefault();e.stopPropagation();if(q.value){q.value="";setovSearch("")}else closeSettings()}
+  if(e.key==="Enter"){const hit=body.querySelector('.stab[data-active="true"] [data-hit="true"]');hit?.scrollIntoView({block:"center",behavior:"smooth"})}});
+ /* Segmented controls repaint their pill from an observer that only watches
+    #app; this layer lives outside it now. */
+ SETOV.mo=new MutationObserver(ms=>{const seen=new Set();
+  ms.forEach(m=>{const s=m.target.closest?.(".seg");if(s&&!seen.has(s)){seen.add(s);paintSeg(s)}})});
+ SETOV.mo.observe(ov,{subtree:true,attributes:true,attributeFilter:["aria-pressed"]});
+ /* Focus stays inside the window while it is open. */
+ ov.addEventListener("keydown",e=>{
+  if(e.key!=="Tab")return;
+  const f=[...v.querySelectorAll('button:not([disabled]),input:not([disabled]):not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);
+  if(!f.length)return;
+  const a=f[0],z=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus()}
+  else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}});
+ setovTitle()}
+function setovTitle(){
+ const h=document.getElementById("setov-title");if(!h)return;
+ const b=document.querySelector(`#settabs [data-stab="${S.stab||"acc"}"]`);
+ h.textContent=b?b.textContent.replace(/^\s*\S+\s+/,"").trim()||b.textContent.trim():t("set.t");
+ const lab=b?.querySelector("[data-i18n]");if(lab)h.textContent=lab.textContent;
+ /* The first card of a tab often repeats the tab's name; the header says it already. */
+ document.querySelectorAll("#setov-body>.stab").forEach(st=>{
+  const k=(document.querySelector(`#settabs [data-stab="${st.dataset.stab}"] [data-i18n]`)?.textContent||"").trim().toLowerCase();
+  const x=st.querySelector(":scope>.panel:first-child>h3");if(!x)return;
+  if(k&&x.textContent.trim().toLowerCase()===k)x.dataset.dup="true";else x.removeAttribute("data-dup")})}
+function settingsIsOpen(){const ov=document.getElementById("setov");return !!ov&&!ov.hidden&&ov.dataset.open==="true"}
+function openSettings(tab){
+ setovInit();
+ const ov=document.getElementById("setov"),v=document.getElementById("v-settings");if(!ov||!v)return;
+ clearTimeout(SETOV.t);
+ if(tab)S.stab=tab;
+ if(!settingsIsOpen())SETOV.focus=document.activeElement;
+ ov.hidden=false;void ov.offsetWidth;ov.dataset.open="true";v.dataset.active="true";
+ document.documentElement.dataset.setov="open";
+ showSettingsTab(S.stab||"acc");
+ document.querySelectorAll(".navbtn").forEach(b=>b.setAttribute("aria-current",b.dataset.nav==="settings"));
+ paintRail();
+ if(FINE)setTimeout(()=>document.getElementById("setov-q")?.focus({preventScroll:true}),80)}
+function closeSettings(instant){
+ const ov=document.getElementById("setov"),v=document.getElementById("v-settings");
+ if(!ov||ov.hidden)return;
+ clearTimeout(SETOV.t);
+ ov.dataset.open="false";if(v)v.dataset.active="false";
+ delete document.documentElement.dataset.setov;
+ document.querySelectorAll(".navbtn").forEach(b=>b.setAttribute("aria-current",b.dataset.nav===S.view));
+ paintRail();
+ const q=document.getElementById("setov-q");if(q&&q.value){q.value="";setovSearch("")}
+ if(instant||RM)ov.hidden=true;
+ else SETOV.t=setTimeout(()=>{if(ov.dataset.open!=="true")ov.hidden=true},280);
+ const f=SETOV.focus;SETOV.focus=null;
+ if(f&&f.isConnected&&!instant)try{f.focus({preventScroll:true})}catch(_){}}
+/* Search: sections without a match leave the rail, the first matching one
+   opens, and the matching rows are marked so the eye lands on them. */
+function setovSearch(raw){
+ const q=(raw||"").trim().toLowerCase();
+ const body=document.getElementById("setov-body");if(!body)return;
+ const none=document.getElementById("setov-none");
+ const tabs=[...document.querySelectorAll("#settabs [data-stab]")];
+ body.querySelectorAll("[data-hit]").forEach(x=>x.removeAttribute("data-hit"));
+ body.dataset.search=q?"true":"false";
+ if(!q){tabs.forEach(b=>b.hidden=false);if(none)none.hidden=true;return}
+ const hitTabs=[];
+ tabs.forEach(b=>{
+  const pane=body.querySelector(`.stab[data-stab="${b.dataset.stab}"]`);
+  let hit=b.textContent.toLowerCase().includes(q);
+  pane?.querySelectorAll(".field,.panel>h3,.panel>.ph").forEach(f=>{
+   if(f.textContent.toLowerCase().includes(q)){f.dataset.hit="true";hit=true}});
+  b.hidden=!hit;if(hit)hitTabs.push(b.dataset.stab)});
+ if(none){none.hidden=hitTabs.length>0;none.textContent=LANG==="ru"?"Ничего не найдено":"Nothing found"}
+ if(hitTabs.length&&!hitTabs.includes(S.stab)){S.stab=hitTabs[0];showSettingsTab(S.stab)}
+ const first=body.querySelector(`.stab[data-stab="${S.stab}"] [data-hit="true"]`);
+ if(first)first.scrollIntoView({block:"nearest"})}
 document.getElementById("settabs").addEventListener("click",e=>{
  const b=e.target.closest("[data-stab]");if(!b)return;
  S.stab=b.dataset.stab;showSettingsTab(S.stab);save()});
 function showSettingsTab(id){
  document.querySelectorAll("#settabs [data-stab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.stab===id));
  document.querySelectorAll(".stab").forEach(p=>p.dataset.active=(p.dataset.stab===id));
+ setovTitle();
+ const sc=document.getElementById("setov-body");if(sc&&!(sc.dataset.search==="true"))sc.scrollTop=0;
  if(id==="lib")refreshCacheSize();
  if(id==="net"){pxLoad();paintDiscord()}
  if(id==="look")paintLyPanel();
@@ -3785,7 +4399,7 @@ document.body.addEventListener("click",e=>{
    const i=queue.findIndex(x=>sameTrack(x,tr));
    if(i>=0)queue=queue.slice(i+1);
    setTrack(tr,true,false,undefined,true);
-   if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
+   if(fp.dataset.open==="true")renderFPBody();
    return}
   setTrack(tr,true,false,from);
   return}
@@ -4080,7 +4694,7 @@ function updateSpButtons(){
  ["sp-on","sp3d"].forEach(id=>document.getElementById(id)?.setAttribute("aria-pressed",String(on)));
  if(dockSpSw)dockSpSw.setAttribute("aria-pressed",String(on));
  document.querySelectorAll("#fp-sp-btn").forEach(btn=>{
-  btn.classList.toggle("active",on);
+  btn.classList.toggle("active",on);btn.setAttribute("aria-pressed",String(on));
  });
 }
 
@@ -4090,9 +4704,27 @@ function openDockSheet(open){
  const nextOpen = (typeof open === "boolean") ? open : !isCurrentlyOpen;
  dock.dataset.open = String(nextOpen);
  if(eqbtn)eqbtn.setAttribute("aria-expanded", String(nextOpen));
+ document.getElementById("fp-eq-btn")?.setAttribute("aria-pressed",String(nextOpen));
  if(dockBackdrop)dockBackdrop.hidden = !nextOpen;
 }
 window.openDockSheet=openDockSheet;
+/* The topmost dismissible layer, for Escape. */
+function closeTopLayer(){
+ const pop=document.querySelector("#sleep-pop,#src-pop");
+ if(pop){pop.remove();return true}
+ if(srvDdSheet&&!srvDdSheet.hidden){toggleSrvDropdown(false);srvDdBtn?.focus();return true}
+ if(fpSettingsOpen()){fpSettings(false);return true}
+ if(dock?.dataset.open==="true"){openDockSheet(false);return true}
+ if(settingsIsOpen()){closeSettings();return true}
+ return false}
+/* The equaliser closes on a press anywhere outside it (its own buttons
+   excepted, which toggle it). Menus opened from inside it live in <body>, so
+   a press inside one of those does not count as outside. */
+document.addEventListener("pointerdown",e=>{
+ if(dock?.dataset.open!=="true")return;
+ const t=e.target;if(!(t instanceof Element))return;
+ if(t.closest("#dock,#eqbtn,#fp-eq-btn,.ctx,.mw-pop,.modalwrap,.toasts"))return;
+ openDockSheet(false)},true);
 
 if(eqbtn)eqbtn.onclick=()=>openDockSheet();
 if(dockClose)dockClose.onclick=()=>openDockSheet(false);
@@ -4144,6 +4776,10 @@ document.getElementById("bands").addEventListener("pointerdown",e=>{
  vt.addEventListener("pointerup",up);
  vt.addEventListener("pointercancel",up);
 });
+/* The bands stretch with the dock on wide screens; knobs are placed in
+   pixels, so they are re-placed when the strip changes height. */
+if(typeof ResizeObserver==="function"){const bb=document.getElementById("bands");
+ let bh=0;if(bb)new ResizeObserver(en=>{const h=Math.round(en[0]?.contentRect.height||0);if(h!==bh){bh=h;FREQ.forEach((_,i)=>paintBand(i))}}).observe(bb)}
 document.getElementById("bands").addEventListener("keydown",e=>{
  const vt=e.target.closest(".vt");if(!vt)return;const i=+vt.dataset.b;
  if(e.key==="ArrowUp"||e.key==="ArrowRight"){setBand(i,S.eq[i]+.5);e.preventDefault()}
@@ -4317,176 +4953,146 @@ function setRepeat(on){
    canvas would come out 0x0 and the visualiser would silently never draw.
    Opening first gives the subtree a layout to measure. */
 let fpIdleTimer=null;
+/* The controls fade out after a few seconds without the pointer moving (unless
+   that is turned off). They stay while the pointer rests on them, while the
+   settings sheet or a menu is open, and while paused. */
 function fpWake(){
  const c=document.getElementById("fpc");
  if(!c)return;
- c.dataset.active="true";
+ if(c.dataset.active!=="true")c.dataset.active="true";
  clearTimeout(fpIdleTimer);
- if(S.playing){
-  fpIdleTimer=setTimeout(()=>{
-   if(fp.dataset.open==="true"&&S.playing)c.dataset.active="false";
-  },3500);
- }
-}
+ if(!S.playing||S.x.idle===false||fpSettingsOpen())return;
+ fpIdleTimer=setTimeout(()=>{
+  if(fp.dataset.open!=="true"||!S.playing||S.x.idle===false||fpSettingsOpen())return;
+  if(document.querySelector("#sleep-pop,#src-pop")||c.querySelector(".fpx-panel:hover,.fpx-top:hover")){fpWake();return}
+  c.dataset.active="false"},3500)}
+/* Beat pulse: the cover breathes with the low end. A fast and a slow average
+   of the bass; only the part of the fast one above the slow one (an onset)
+   moves the cover, so a loud but steady track does not just sit inflated. */
+const BEAT={fast:0,slow:0,v:0,el:null};
+function fpBeatReset(){BEAT.v=BEAT.fast=BEAT.slow=0;if(BEAT.el){BEAT.el.style.scale="";BEAT.el=null}}
+function fpBeat(dt){
+ if(!S.x.beat||RM||!A.an||!A.data)return;
+ if(!S.playing){if(BEAT.el)fpBeatReset();return}
+ const el=BEAT.el?.isConnected?BEAT.el:(BEAT.el=document.querySelector("#fpc .fpx-art"));
+ if(!el)return;
+ A.an.getByteFrequencyData(A.data);
+ const d=A.data,lv=(d[0]+d[1]*1.2+d[2]+d[3]*.6)/(3.8*255);
+ BEAT.fast+=(lv-BEAT.fast)*Math.min(1,dt*20);
+ BEAT.slow+=(lv-BEAT.slow)*Math.min(1,dt*1.6);
+ const want=Math.min(.05,Math.max(0,BEAT.fast-BEAT.slow*1.04)*.55);
+ BEAT.v+=(want-BEAT.v)*Math.min(1,dt*(want>BEAT.v?26:6));
+ const s=(1+BEAT.v).toFixed(4);
+ if(el.style.scale!==s)el.style.scale=s}
 function applyFPSettings(){
  const fpEl=document.getElementById("fp");
  if(!fpEl)return;
- const bg=S.fpBgMode||"dynamic";
- fpEl.dataset.bgMode=bg;
- window.MWFX?.flow.kick();window.MWFX?.wall.render();
- fpEl.dataset.wobble=String(S.fpWobble!==false);
- fpEl.style.setProperty("--fp-glow",((S.fpGlow??100)/100).toString());
+ const X=S.x,d=fpEl.dataset;
+ d.bgMode=S.fpBgMode||"dynamic";
+ d.shrink=String(X.shrink!==false);
+ d.beat=String(!!X.beat);
+ d.lyAlign=X.lyAlign==="center"?"center":"left";
+ d.lyBlur=String(X.lyBlur!==false);
+ d.idle=String(X.idle!==false);
+ fpEl.style.setProperty("--fp-glow",((S.fpGlow??100)/100).toFixed(2));
  fpEl.style.setProperty("--fp-blur",`${S.fpBlur??75}px`);
+ const M=window.MWFX;
+ if(M){M.flow.speed?.((X.flowSpeed??100)/100);M.flow.kick();M.wall.render()}
  const fpc=document.getElementById("fpc");
- if(fpc){
-  fpc.dataset.zoom=S.fpZoom||"normal";
-  fpc.dataset.drift=String(S.fpDrift!==false);
- }
+ if(fpc)fpc.dataset.zoom=S.fpZoom||"normal";
  const fill=S.lyKaraoke||"karaoke";
- const fplyr=document.getElementById("fplyr");
- if(fplyr)fplyr.dataset.karaoke=fill;
- const lyr=document.getElementById("lyr");
- if(lyr)lyr.dataset.karaoke=fill;
-}
+ for(const id of ["fplyr","lyr"]){const el=document.getElementById(id);if(el)el.dataset.karaoke=fill}
+ if(!X.beat)fpBeatReset();
+ if(X.idle===false||!S.playing)fpWake()}
+/* Settings sheet helpers: segmented groups, ranges with their readouts, switches. */
+function fpSegPaint(id,attr,val){
+ document.querySelectorAll(`#${id} .seg-btn`).forEach(b=>{const on=b.dataset[attr]===val;
+  b.classList.toggle("active",on);b.setAttribute("aria-pressed",String(on))})}
+function fpRangePaint(id,val,txt){
+ const r=document.getElementById(id);if(r){r.value=val;paintRange(r)}
+ const v=document.getElementById(id.replace(/-range$/,"-val"));if(v)v.textContent=txt}
+function fpSwPaint(id,on){
+ const b=document.getElementById(id);if(!b)return;
+ b.classList.toggle("on",!!on);b.setAttribute("aria-pressed",String(!!on))}
+function fpWallUI(){
+ const W=window.MWFX?.wall;if(!W)return;const st=W.settings;
+ const d=document.getElementById("fp-wall-dim"),b=document.getElementById("fp-wall-blur");
+ if(d){d.value=st.wallDim;paintRange(d);document.getElementById("fp-wall-dim-val").textContent=st.wallDim+"%"}
+ if(b){b.value=st.wallBlur;paintRange(b);document.getElementById("fp-wall-blur-val").textContent=st.wallBlur+"px"}}
 function syncFPSettingsUI(){
- const pop=document.getElementById("fp-settings-popover");
- if(!pop)return;
- const bgMode=S.fpBgMode||"dynamic";
- pop.querySelectorAll("#fp-bg-mode-group .seg-btn").forEach(btn=>{
-  btn.classList.toggle("active",btn.dataset.bg===bgMode);
- });
- const glowVal=S.fpGlow??100;
- const glowRange=document.getElementById("fp-glow-range");
- if(glowRange)glowRange.value=glowVal;
- const glowTxt=document.getElementById("fp-glow-val");
- if(glowTxt)glowTxt.textContent=`${glowVal}%`;
-
- const blurVal=S.fpBlur??75;
- const blurRange=document.getElementById("fp-blur-range");
- if(blurRange)blurRange.value=blurVal;
- const blurTxt=document.getElementById("fp-blur-val");
- if(blurTxt)blurTxt.textContent=`${blurVal}px`;
-
- const fontSelect=document.getElementById("fp-font-select");
- if(fontSelect)fontSelect.value=S.ly?.font||"";
- const lyFontSelect=document.getElementById("ly-font-select");
- if(lyFontSelect)lyFontSelect.value=S.ly?.font||"";
-
- const fillMode=S.lyKaraoke||"karaoke";
- pop.querySelectorAll("#fp-fill-mode-group .seg-btn").forEach(btn=>{
-  btn.classList.toggle("active",btn.dataset.fill===fillMode);
- });
-
- const zoomMode=S.fpZoom||"normal";
- pop.querySelectorAll("#fp-zoom-mode-group .seg-btn").forEach(btn=>{
-  btn.classList.toggle("active",btn.dataset.zoom===zoomMode);
- });
-
- const driftSw=document.getElementById("fp-drift-sw");
- if(driftSw){
-  const on=S.fpDrift!==false;
-  driftSw.classList.toggle("on",on);
-  driftSw.setAttribute("aria-pressed",String(on));
- }
-
- const wobbleSw=document.getElementById("fp-wobble-sw");
- if(wobbleSw){
-  const on=S.fpWobble!==false;
-  wobbleSw.classList.toggle("on",on);
-  wobbleSw.setAttribute("aria-pressed",String(on));
- }
-}
+ const X=S.x;
+ fpSegPaint("fp-bg-mode-group","bg",S.fpBgMode||"dynamic");
+ fpSegPaint("fp-fill-mode-group","fill",S.lyKaraoke||"karaoke");
+ fpSegPaint("fp-zoom-mode-group","zoom",S.fpZoom||"normal");
+ fpSegPaint("fp-align-group","align",X.lyAlign==="center"?"center":"left");
+ fpRangePaint("fp-speed-range",X.flowSpeed??100,`${X.flowSpeed??100}%`);
+ fpRangePaint("fp-blur-range",S.fpBlur??75,`${S.fpBlur??75}px`);
+ fpRangePaint("fp-glow-range",S.fpGlow??100,`${S.fpGlow??100}%`);
+ fpRangePaint("fp-lysize-range",S.ly.size,`${S.ly.size}px`);
+ fpSwPaint("fp-lyblur-sw",X.lyBlur!==false);
+ fpSwPaint("fp-drift-sw",X.shrink!==false);
+ fpSwPaint("fp-wobble-sw",!!X.beat);
+ fpSwPaint("fp-idle-sw",X.idle!==false);
+ for(const id of ["fp-font-select","ly-font-select"]){const s=document.getElementById(id);if(s)s.value=S.ly.font||""}
+ fpWallUI()}
+let saveT=0;
+function saveSoon(){clearTimeout(saveT);saveT=setTimeout(save,350)}
+/* The settings sheet slides in from the right edge of the player. */
+let fpSetTimer=0;
+function fpSettingsOpen(){const p=document.getElementById("fp-settings-popover");return !!p&&!p.hidden&&p.dataset.open==="true"}
+function fpSettings(open,instant){
+ const p=document.getElementById("fp-settings-popover");if(!p)return;
+ clearTimeout(fpSetTimer);
+ const btn=document.getElementById("fp-settings-btn");
+ if(btn){btn.setAttribute("aria-expanded",String(!!open));btn.setAttribute("aria-pressed",String(!!open))}
+ if(open){
+  syncFPSettingsUI();p.hidden=false;void p.offsetWidth;p.dataset.open="true";
+  document.getElementById("fpc")?.setAttribute("data-active","true");clearTimeout(fpIdleTimer);
+  requestAnimationFrame(()=>{p.querySelectorAll('input[type=range]').forEach(paintRange);paintAllSegs?.()});
+  return}
+ if(p.hidden)return;
+ p.dataset.open="false";
+ if(instant||RM)p.hidden=true;
+ else fpSetTimer=setTimeout(()=>{if(p.dataset.open!=="true")p.hidden=true},340);
+ fpWake()}
 function initFPSettings(){
- document.getElementById("fpset-close")?.addEventListener("click",()=>{
-  const pop=document.getElementById("fp-settings-popover");
-  if(pop)pop.hidden=true;
- });
- document.getElementById("fp-bg-mode-group")?.addEventListener("click",e=>{
-  const btn=e.target.closest(".seg-btn");
-  if(!btn)return;
-  S.fpBgMode=btn.dataset.bg;
-  applyFPSettings();syncFPSettingsUI();save();
-  if(S.fpBgMode==="wallpaper"&&window.MWFX&&!MWFX.wall.has())MWFX.wall.pick();
- });
+ const on=(id,ev,fn)=>document.getElementById(id)?.addEventListener(ev,fn);
+ const after=(rerender)=>{applyFPSettings();syncFPSettingsUI();saveSoon();if(rerender&&fp.dataset.open==="true")renderFP()};
+ const segw=(id,attr,fn,rerender)=>on(id,"click",e=>{const b=e.target.closest(".seg-btn");if(!b||b.disabled)return;fn(b.dataset[attr]);after(rerender)});
+ const rangew=(id,fn)=>on(id,"input",e=>{fn(+e.target.value);after()});
+ const sww=(id,fn)=>on(id,"click",()=>{fn();after()});
+ on("fpset-close","click",()=>fpSettings(false));
+ segw("fp-bg-mode-group","bg",v=>{S.fpBgMode=v;
+  const W=window.MWFX?.wall;
+  if(v==="wallpaper"&&W&&!W.has())W.pick().then(ok=>{if(ok){applyFPSettings();syncFPSettingsUI()}})});
+ segw("fp-fill-mode-group","fill",v=>{S.lyKaraoke=v;lyLast=-1;setTimeout(()=>syncLyrics(true),0)});
+ segw("fp-zoom-mode-group","zoom",v=>{S.fpZoom=v},true);
+ segw("fp-align-group","align",v=>{S.x.lyAlign=v;lyLast=-1;setTimeout(()=>syncLyrics(true),60)});
+ rangew("fp-speed-range",v=>{S.x.flowSpeed=v});
+ rangew("fp-blur-range",v=>{S.fpBlur=v});
+ rangew("fp-glow-range",v=>{S.fpGlow=v});
+ rangew("fp-lysize-range",v=>{S.ly.size=v;applyLyVars();paintLyPanel?.()});
+ sww("fp-lyblur-sw",()=>{S.x.lyBlur=!(S.x.lyBlur!==false)});
+ sww("fp-drift-sw",()=>{S.x.shrink=!(S.x.shrink!==false)});
+ sww("fp-wobble-sw",()=>{S.x.beat=!S.x.beat});
+ sww("fp-idle-sw",()=>{S.x.idle=!(S.x.idle!==false)});
  const W=window.MWFX?.wall;
- const wallUI=()=>{if(!W)return;const st=W.settings;
-  const d=document.getElementById("fp-wall-dim"),b=document.getElementById("fp-wall-blur"),a=document.getElementById("fp-wall-app");
-  if(d){d.value=st.wallDim;document.getElementById("fp-wall-dim-val").textContent=st.wallDim+"%"}
-  if(b){b.value=st.wallBlur;document.getElementById("fp-wall-blur-val").textContent=st.wallBlur+"px"}
-  if(a){a.classList.toggle("on",!!st.wallApp);a.setAttribute("aria-pressed",String(!!st.wallApp))}
-  W.render()};
  if(W){
-  document.getElementById("fp-wall-pick")?.addEventListener("click",async()=>{
-   if(await W.pick()&&S.fpBgMode!=="wallpaper"){S.fpBgMode="wallpaper";applyFPSettings();syncFPSettingsUI();save()}});
-  document.getElementById("fp-wall-clear")?.addEventListener("click",async()=>{
-   await W.clear();if(S.fpBgMode==="wallpaper"){S.fpBgMode="dynamic";applyFPSettings();syncFPSettingsUI();save()}});
-  document.getElementById("fp-wall-dim")?.addEventListener("input",e=>{W.settings.wallDim=+e.target.value;W.save();wallUI()});
-  document.getElementById("fp-wall-blur")?.addEventListener("input",e=>{W.settings.wallBlur=+e.target.value;W.save();wallUI()});
-  document.getElementById("fp-wall-app")?.addEventListener("click",()=>{W.settings.wallApp=!W.settings.wallApp;W.save();wallUI()});
-  wallUI();W.load()}
- document.getElementById("fp-glow-range")?.addEventListener("input",e=>{
-  S.fpGlow=parseInt(e.target.value,10);
-  applyFPSettings();
-  const txt=document.getElementById("fp-glow-val");
-  if(txt)txt.textContent=`${S.fpGlow}%`;
-  save();
- });
- document.getElementById("fp-blur-range")?.addEventListener("input",e=>{
-  S.fpBlur=parseInt(e.target.value,10);
-  applyFPSettings();
-  const txt=document.getElementById("fp-blur-val");
-  if(txt)txt.textContent=`${S.fpBlur}px`;
-  save();
- });
- document.getElementById("fp-font-select")?.addEventListener("change",e=>{
-  if(!S.ly)S.ly={};
-  S.ly.font=e.target.value;
-  applyLyVars();
-  const lySel=document.getElementById("ly-font-select");
-  if(lySel)lySel.value=e.target.value;
-  save();
- });
- document.getElementById("ly-font-select")?.addEventListener("change",e=>{
-  if(!S.ly)S.ly={};
-  S.ly.font=e.target.value;
-  applyLyVars();
-  const fpSel=document.getElementById("fp-font-select");
-  if(fpSel)fpSel.value=e.target.value;
-  save();
- });
- document.getElementById("fp-fill-mode-group")?.addEventListener("click",e=>{
-  const btn=e.target.closest(".seg-btn");
-  if(!btn)return;
-  S.lyKaraoke=btn.dataset.fill;
-  applyFPSettings();syncFPSettingsUI();save();
-  lyLast=-1;syncLyrics(true);
- });
- document.getElementById("fp-zoom-mode-group")?.addEventListener("click",e=>{
-  const btn=e.target.closest(".seg-btn");
-  if(!btn)return;
-  S.fpZoom=btn.dataset.zoom;
-  applyFPSettings();syncFPSettingsUI();save();renderFP();
- });
- document.getElementById("fp-drift-sw")?.addEventListener("click",()=>{
-  S.fpDrift=!(S.fpDrift!==false);
-  applyFPSettings();syncFPSettingsUI();save();renderFP();
- });
- document.getElementById("fp-wobble-sw")?.addEventListener("click",()=>{
-  S.fpWobble=!(S.fpWobble!==false);
-  applyFPSettings();syncFPSettingsUI();save();
- });
- document.addEventListener("click",e=>{
-  const sBtn=e.target.closest("#fp-settings-btn");
-  if(sBtn){
-   e.stopPropagation();
-   const pop=document.getElementById("fp-settings-popover");
-   if(pop){
-    pop.hidden=!pop.hidden;
-    if(!pop.hidden)syncFPSettingsUI();
-   }
-  }
- });
-}
+  on("fp-wall-pick","click",async()=>{if(await W.pick()){S.fpBgMode="wallpaper";after()}});
+  on("fp-wall-clear","click",async()=>{await W.clear();if(S.fpBgMode==="wallpaper")S.fpBgMode="dynamic";after()});
+  on("fp-wall-dim","input",e=>{W.settings.wallDim=+e.target.value;W.save();fpWallUI();W.render()});
+  on("fp-wall-blur","input",e=>{W.settings.wallBlur=+e.target.value;W.save();fpWallUI();W.render()});
+  fpWallUI();W.load()}
+ const font=e=>{S.ly.font=e.target.value;applyLyVars();syncFPSettingsUI();save()};
+ on("fp-font-select","change",font);
+ on("ly-font-select","change",font);
+ /* Outside the sheet, a click only closes it — it must not also press
+    whatever it landed on (capture runs before the buttons' own handlers). */
+ fp.addEventListener("click",e=>{
+  if(!fpSettingsOpen())return;
+  if(e.target.closest("#fp-settings-popover,#fp-settings-btn"))return;
+  e.stopPropagation();e.preventDefault();fpSettings(false)},true);
+ syncFPSettingsUI()}
 function npArtRect(){const a=document.querySelector("#np .art");const r=a&&!a.hidden?a.getBoundingClientRect():null;return r&&r.width?r:null}
 let fpCloseTimer=0;
 function openFP(){
@@ -4503,16 +5109,13 @@ function closeFP(){
  fp.dataset.open="false";
  window.MWFX?.wall.render();
  clearTimeout(fpIdleTimer);
- const pop=document.getElementById("fp-settings-popover");
- if(pop)pop.hidden=true;
+ fpSettings(false,true);
+ document.querySelectorAll("#sleep-pop,#src-pop").forEach(p=>p.remove());
+ fpBeatReset();
+ /* The blurred sleeve behind the ambient mode is a large layer; drop it while
+    closed. renderFP() puts it back (the cache key goes with it). */
  const fpbg=document.getElementById("fpbg");
- if(fpbg)fpbg.style.backgroundImage="";
- /* The full player is the largest surface in the app: a cover, a canvas and a
-    blurred sheet. Once closed it is not coming back this second, so its canvas
-    backing store is released rather than parked on the GPU. renderFP()
-    recreates it on the next open. */
- if(vis.c){vis.c.width=vis.c.height=1}
- vis.c=null;vis.g=null}
+ if(fpbg){fpbg.style.backgroundImage="";delete fpbg.dataset.u}}
 document.getElementById("expand").onclick=openFP;
 document.getElementById("np")?.addEventListener("click",e=>{
  if(e.target.closest(".npacts"))return;
@@ -4583,16 +5186,12 @@ if(fp&&fpcEl){
 fp.addEventListener("pointermove",fpWake);
 fp.addEventListener("pointerdown",fpWake);
 fp.addEventListener("click",e=>{
- if(e.target.closest("#fp-settings-popover")||e.target.closest("#fp-settings-btn"))return;
- const pop=document.getElementById("fp-settings-popover");
- if(pop&&!pop.hidden){pop.hidden=true;return}
- if(e.target===fp||e.target.id==="fpbg"||e.target.id==="fpc"||e.target.closest("#fpclose"))return closeFP();
- const tb=e.target.closest("[data-fptab]");
- if(tb){
-  if(S.fpTab===tb.dataset.fptab)return;
-  S.fpTab=tb.dataset.fptab;save();
-  document.querySelectorAll("[data-fptab]").forEach(x=>x.setAttribute("aria-selected",x===tb));
-  renderFPBody(true);return}
+ if(e.target.closest("#fp-settings-btn")){fpSettings(!fpSettingsOpen());return}
+ if(e.target.closest("#fp-settings-popover"))return;
+ /* Clicking empty space no longer closes the player itself: that was too
+    easy to do by accident. (An open settings sheet is closed by the capture
+    listener in initFPSettings before this runs.) */
+ if(e.target.closest("#fpclose"))return closeFP();
  const a=e.target.closest("[data-act]");
  if(a){const k=a.dataset.act;
   if(k==="play")toggle();if(k==="next")next(true);if(k==="prev")prev();
@@ -4633,7 +5232,7 @@ function setAccent(id){
   adaptAccent(S.current);
   return}
  if(id==="custom"){
-  applyCustomAccent(S.customAccent||"#a78bfa");
+  applyCustomAccent(S.customAccent||"#b3a6e8");
   renderSwatches();save();pushPrefs();
   return}
  if(id==="none"||!a||!a[2]){
@@ -4686,7 +5285,7 @@ function save(){
   lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,pspeed:S.pspeed,
   svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
    ?Object.fromEntries(SERVICES.filter(s=>!s.local).map(s=>[s.id,s.on])):null,
-  discord:{on:S.discord.on,tmpl:S.discord.tmpl,cid:S.discord.cid||""},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,profileTrack:S.profileTrack||null,
+  discord:{on:S.discord.on,tmpl:S.discord.tmpl,cid:S.discord.cid||""},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,x:S.x,profileTrack:S.profileTrack||null,
   avatar:S.avatar||null,banner:S.banner||null,username:S.username||null,
   lite:S.lite,litePrev,quality:S.quality,vol:S.vol,eq:S.eq,preset:S.preset,custom:S.custom,
   sp:{on:S.sp.on,speed:S.sp.speed,rad:S.sp.rad,elev:S.sp.elev},ob:obDone,listen:Math.round(S.listen),
@@ -4732,7 +5331,9 @@ function restore(){try{
  if(d.lang)LANG=d.lang;
  if(d.theme)S.theme=d.theme;
  if(d.accent)S.accent=d.accent;
- if(d.glow!=null)S.glow=d.glow;
+ /* Glow used to default to "medium"; the redesign is flat. Saves from before
+    it start with glow off once, later ones keep whatever the user picked. */
+ if(d.glow!=null)S.glow=d.x&&d.x.glow2?d.glow:0;
  if(d.blur!=null)S.blur=d.blur;
  if(d.dens)S.dens=d.dens;
  if(d.lite!==undefined){S.lite=!!d.lite;if(d.litePrev)litePrev=d.litePrev}
@@ -4810,6 +5411,7 @@ function restore(){try{
  if(d.fpWobble!==undefined)S.fpWobble=!!d.fpWobble;
  if(d.fpZoom)S.fpZoom=d.fpZoom;
  if(d.fpDrift!==undefined)S.fpDrift=!!d.fpDrift;
+ if(d.x&&typeof d.x==="object")Object.assign(S.x,d.x);
  if(d.profileTrack&&typeof d.profileTrack==="object")S.profileTrack=d.profileTrack;
  obDone=!!d.ob;
 }catch(e){}}
@@ -4829,14 +5431,23 @@ addEventListener("keydown",e=>{
    return;
   }
   if(e.code==="Space"){e.preventDefault();toggle()}
+  /* Escape peels one layer at a time: a menu, the player settings sheet, the
+     equaliser, the settings window — and only then the full player. */
   if(e.key==="Escape"){
-   if(document.documentElement.dataset.fullscreen==="true"){
-    toggleAppFullscreen();
-   }
-   closeFP();
-  }
-  if(e.key.toLowerCase()==="l"&&fp.dataset.open==="true"){S.fpMode=S.fpMode==="lyric"?"stage":"lyric";save();renderFP()}
-  if(e.key.toLowerCase()==="e")eqbtn.click();
+   if(closeTopLayer()){e.preventDefault();return}
+   if(fp.dataset.open==="true"){
+    if(document.documentElement.dataset.fullscreen==="true")toggleAppFullscreen();
+    closeFP()}
+   else if(document.documentElement.dataset.fullscreen==="true")toggleAppFullscreen();
+   return}
+  const plain=!(e.ctrlKey||e.metaKey||e.altKey);
+  if(plain&&e.code==="KeyL"&&fp.dataset.open==="true"){
+   const want=!(S.fpMode==="lyric"&&S.x.fpPane!=="queue");
+   S.fpMode=want?"lyric":"stage";S.x.fpPane="lyrics";save();renderFP()}
+  if(plain&&e.code==="KeyQ"&&fp.dataset.open==="true"){
+   const want=!(S.fpMode==="lyric"&&S.x.fpPane==="queue");
+   S.fpMode=want?"lyric":"stage";S.x.fpPane="queue";save();renderFP()}
+  if(plain&&e.code==="KeyE")openDockSheet();
   /* Shift+[ produces both "BracketLeft" and "{": chained, the reset used to
      undo the adjust from the same keystroke. Reset goes first for that reason. */
   if(e.code==="BraceLeft"||e.key==="{"||(e.altKey&&e.key==="0")){e.preventDefault();resetLyricOffset()}
@@ -5179,7 +5790,13 @@ async function fallbackResolveTrack(tr, auto, resumePos=0){
      _resolvedId: candidate.id,
      _resolvedSvc: candidate.s
     };
-    if(sameTrack(tr, S.current)){
+    /* A Spotify copy keeps its Spotify identity; the cache learns the
+       working source instead. */
+    if(tr._spOrig){
+     sprMap().set(sprKey(tr),{s:candidate.s,id:String(candidate.id),t:candidate.t,a:candidate.a,d:+candidate.d||0,score:0,at:Date.now()});sprSave();
+     if(S.current&&sameTrack(tr,S.current))S.current._resolvedSvc=candidate.s;
+    }
+    if(sameTrack(tr, S.current)&&!tr._spOrig){
      S.current = resolved;
      if(auto) S.playing = true;
      renderNP();
@@ -6092,7 +6709,7 @@ function toggleDislike(tr){
  /* Skip forward when the thing being hidden is the thing playing. */
  if(!was&&sameTrack(tr,S.current))next(true);
  else{renderNP();renderWaveHint();if(S.view==="library")renderLib()}
- if(fp.dataset.open==="true"&&S.fpTab==="queue")renderFPBody();
+ if(fp.dataset.open==="true")renderFPBody();
  renderDislikes();
  document.querySelectorAll("#npdislike").forEach(b=>b.setAttribute("aria-pressed",String(isDisliked(S.current))))}
 
@@ -6704,9 +7321,7 @@ addEventListener("click",e=>{
  else if(act==="dl")downloadTrack(tr);
  else if(act==="dlfx")downloadProcessed(tr);
  else if(act==="rmlocal")removeLocal(tr.id);
- else if(act==="artist"){go("library");S.tab="art";artOpen=tr.a;
-  document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab==="art"));
-  renderArtist(tr.a)}
+ else if(act==="artist")openArtist(tr.a);
  else if(act==="eq")pinPresetToTrack(tr,b.dataset.eq);
  else if(act==="eqoff")pinPresetToTrack(tr,null);
  else if(act==="pl")addToPlaylist(b.dataset.pid,tr);
@@ -6996,7 +7611,7 @@ function renderProfile(savedVals={}){
 
    <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
     <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
-     <div style="position:absolute;inset:-3px;background:linear-gradient(135deg,#a855f7,#6366f1);border-radius:16px;filter:blur(8px);opacity:0.6"></div>
+     <div style="position:absolute;inset:-3px;background:rgb(var(--accent-rgb) / .16);border-radius:16px;filter:blur(10px);opacity:.5"></div>
      <img src="./icons/icon.png" style="position:relative;width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
     </div>
     <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
@@ -7035,20 +7650,20 @@ function renderProfile(savedVals={}){
     <!-- Quasar ID SSO Button at the Bottom with Perks -->
     <div class="quasar-sso-container">
      <button class="quasar-sso-btn" id="au-quasar-btn" type="button">
-      <span class="material-symbols-rounded" style="font-size:20px;color:#7c3aed">auto_awesome</span>
+      <span class="material-symbols-rounded" style="font-size:20px;color:var(--accent)">auto_awesome</span>
       <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
      </button>
      <div class="quasar-sso-perks">
       <div class="quasar-sso-perk">
-       <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">chat_bubble</span>
+       <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">chat_bubble</span>
        <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
       </div>
       <div class="quasar-sso-perk">
-       <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">music_note</span>
+       <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">music_note</span>
        <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
       </div>
       <div class="quasar-sso-perk">
-       <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">bolt</span>
+       <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">bolt</span>
        <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
       </div>
      </div>
@@ -7127,7 +7742,7 @@ function renderProfile(savedVals={}){
   </div>
   <div class="panel pane">
    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-    <h3 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-rounded" style="font-size:20px;color:var(--accent,#a78bfa)">music_note</span><span>${LANG==="ru"?"Музыка в профиле":"Profile Music"}</span></h3>
+    <h3 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-rounded" style="font-size:20px;color:var(--accent)">music_note</span><span>${LANG==="ru"?"Музыка в профиле":"Profile Music"}</span></h3>
     ${S.profileTrack?`<button class="btn sm ghost" id="prof-track-clear">${LANG==="ru"?"Открепить":"Unpin"}</button>`:""}
    </div>
    <p class="ph" style="margin:0 0 12px">${LANG==="ru"?"Закрепите трек, который будет отображаться в вашем профиле Quasar ID":"Pin a featured song displayed on your Quasar ID profile"}</p>
@@ -7232,7 +7847,7 @@ const needAuth=(box,saved={})=>{
 
   <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
    <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
-    <div style="position:absolute;inset:-3px;background:linear-gradient(135deg,#a855f7,#6366f1);border-radius:16px;filter:blur(8px);opacity:0.6"></div>
+    <div style="position:absolute;inset:-3px;background:rgb(var(--accent-rgb) / .16);border-radius:16px;filter:blur(10px);opacity:.5"></div>
     <img src="./icons/icon.png" style="position:relative;width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,0.2);box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
    </div>
    <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
@@ -7264,20 +7879,20 @@ const needAuth=(box,saved={})=>{
    <!-- Quasar ID SSO Button at the Bottom with Perks -->
    <div class="quasar-sso-container">
     <button class="quasar-sso-btn" id="qau-quasar-btn" type="button">
-     <span class="material-symbols-rounded" style="font-size:20px;color:#7c3aed">auto_awesome</span>
+     <span class="material-symbols-rounded" style="font-size:20px;color:var(--accent)">auto_awesome</span>
      <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
     </button>
     <div class="quasar-sso-perks">
      <div class="quasar-sso-perk">
-      <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">chat_bubble</span>
+      <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">chat_bubble</span>
       <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
      </div>
      <div class="quasar-sso-perk">
-      <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">music_note</span>
+      <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">music_note</span>
       <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
      </div>
      <div class="quasar-sso-perk">
-      <span class="material-symbols-rounded" style="font-size:16px;color:#a78bfa;flex-shrink:0;margin-top:2px">bolt</span>
+      <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">bolt</span>
       <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
      </div>
     </div>
@@ -7370,6 +7985,8 @@ const socErrBox=(msg)=>`<div class="panel pane"><p class="ph" style="margin:0;co
    refuses (hosts outside its allow-list) retry the direct URL once, then give
    up and leave the initial. See the capture-phase "error" listener below. */
 const avat=(p,size=34,status=null)=>{
+ const pid=String(p?.id||p?.user_id||"");
+ const link=pid&&!/^(g:|grp)/.test(pid)?` data-profile="${esc(pid)}"`:"";
  const raw=String(p?.avatar_url||"").trim();
  const u=raw?cssUrlRaw(raw):"";
  const direct=/^https?:\/\//i.test(raw)?raw:"";
@@ -7377,12 +7994,37 @@ const avat=(p,size=34,status=null)=>{
  const letter=(un&&un!=="…"&&un!=="..."&&!/^\.+$/.test(un))?[...un][0].toUpperCase():"";
  const ghostInner=letter?`<span class="avat-l">${esc(letter)}</span>`:`<span class="material-symbols-rounded" style="font-size:${Math.round(size*0.58)}px">person</span>`;
  const img=u?`<img class="avat-img" src="${esc(u)}"${direct&&direct!==u?` data-direct="${esc(direct)}"`:""} alt="" loading="lazy" decoding="async" draggable="false">`:"";
- const base=`<span class="avat ghost${u?" has-img":""}" style="width:${size}px;height:${size}px;font-size:${Math.max(11,Math.round(size*.42))}px">${ghostInner}${img}</span>`;
+ const base=`<span class="avat ghost${u?" has-img":""}"${status?"":link} style="width:${size}px;height:${size}px;font-size:${Math.max(11,Math.round(size*.42))}px">${ghostInner}${img}</span>`;
  if(!status)return base;
  const dotCls=status==="listening"?"listening":(status==="online"?"online":"offline");
  const dotTitle=status==="listening"?(LANG==="ru"?"Слушает музыку":"Listening to music"):(status==="online"?(LANG==="ru"?"В сети":"Online"):(LANG==="ru"?"Не в сети":"Offline"));
- return `<div class="avat-wrap" style="width:${size}px;height:${size}px;--dot:${Math.max(9,Math.round(size*.26))}px">${base}<span class="status-indicator ${dotCls}" title="${dotTitle}"></span></div>`;
+ return `<div class="avat-wrap"${link} style="width:${size}px;height:${size}px;--dot:${Math.max(9,Math.round(size*.26))}px">${base}<span class="status-indicator ${dotCls}" title="${dotTitle}"></span></div>`;
 };
+/* A person is a link to their profile wherever they show up: avatars carry
+   data-profile, names data-person. Chat-list rows keep opening the chat —
+   there the whole row is the target. Captured, so the per-list handlers
+   that used to do the same thing do not run twice. */
+let PEOPLE_PENDING=null;
+const isMe=id=>typeof sbUser!=="undefined"&&!!sbUser&&String(id)===String(sbUser.id);
+function openProfile(id){
+ id=String(id||"");if(!id||isMe(id))return;
+ if(fp?.dataset.open==="true")closeFP();
+ if(settingsIsOpen())closeSettings(true);
+ if(S.view!=="people"){PEOPLE_PENDING=id;go("people");return}
+ renderPeopleProfile(id)}
+document.addEventListener("click",e=>{
+ const tg=e.target instanceof Element?e.target:null;
+ const el=tg?.closest("[data-profile],[data-person]");
+ if(!el)return;
+ const id=el.dataset.profile||el.dataset.person;
+ if(!id||isMe(id))return;
+ /* The chat list: the row opens the conversation. The profile header: it is
+    already the profile. A control inside the block does its own thing. */
+ if(!el.hasAttribute("data-person")&&el.closest("[data-openchat],.chat-dm-user,.profhead,.avatar-holder"))return;
+ const ctl=tg.closest("button,a,input,select,textarea");
+ if(ctl&&ctl!==el&&el.contains(ctl))return;
+ e.preventDefault();e.stopPropagation();
+ openProfile(id)},true);
 document.addEventListener("error",e=>{
  const im=e.target;
  if(!(im instanceof HTMLImageElement)||!im.classList.contains("avat-img"))return;
@@ -7901,6 +8543,7 @@ function animIn(el,cls){
 
 async function renderPeople(){
   const box=document.getElementById("peoplebody");if(!box)return;
+  if(PEOPLE_PENDING){const id=PEOPLE_PENDING;PEOPLE_PENDING=null;return renderPeopleProfile(id)}
   if(PEOPLE_TAB==="chats")return renderChats();
   hideChatPane();
   if(PEOPLE_TAB==="find")await renderPeopleFind(box);
@@ -7929,19 +8572,12 @@ async function renderPeopleFind(box){
       <button class="btn primary sm" id="people-guest-auth-btn">${LANG==="ru"?"Войти":"Sign In"}</button>
     </div>`:"" ;
 
-  const interestTags=["Lo-Fi","Synthwave","Jazz","Darkwave","Indie Rock","J-Rock","Electronic"];
-  const tagsHtml=interestTags.map(tag=>`<button class="people-filter-chip" data-interest="${esc(tag)}">${esc(tag)}</button>`).join("");
-
   box.innerHTML=`<div class="panel pane people-search">
     ${guestBanner}
     <div class="people-toolbar">
       <div class="people-search-box">
         <span class="material-symbols-rounded" style="font-size:18px">search</span>
         <input id="people-q" placeholder="${t("people.search.ph")}" value="${esc(PEOPLE_QUERY)}" maxlength="32" autocomplete="off">
-      </div>
-      <div class="people-filters-row">
-        <span style="font-size:0.75rem;color:var(--mute);margin-right:4px">${LANG==="ru"?"Жанры:":"Genres:"}</span>
-        ${tagsHtml}
       </div>
     </div>
     <div id="people-results"></div>
@@ -7977,8 +8613,7 @@ async function renderPeopleFind(box){
       if(!q)return true;
       const lq=q.toLowerCase();
       return m.username.toLowerCase().includes(lq) ||
-             (m.bio&&m.bio.toLowerCase().includes(lq)) ||
-             (m.genres&&m.genres.some(g=>g.toLowerCase().includes(lq)));
+             (m.bio&&m.bio.toLowerCase().includes(lq));
     });
 
     // Merge: if real community profiles found, use them; supplement with mock only if offline or empty
@@ -8028,7 +8663,6 @@ async function renderPeopleFind(box){
           ${visible.map(p=>{
             const isFr=!!p.isFriend;
             const banner=p.banner_url||"";
-            const tags=(p.genres||[]).map(g=>`<span class="people-tag">${esc(g)}</span>`).join("");
             const listeningChip=p.listening?`
               <div class="friend-listening-chip" style="margin-top:6px">
                 <div class="eq-bars"><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span></div>
@@ -8037,7 +8671,7 @@ async function renderPeopleFind(box){
               </div>`:"" ;
             return `
             <div class="people-find-card">
-              <div class="people-find-banner" style="${banner?`background-image:url('${cssUrl(banner)}')`:""}"></div>
+              <div class="people-find-banner" data-person="${esc(p.id)}" style="${banner?`background-image:url('${cssUrl(banner)}')`:""}"></div>
               <div class="people-find-body">
                 <div class="people-find-top">
                   ${avat(p, 46, p.status||"online")}
@@ -8047,7 +8681,6 @@ async function renderPeopleFind(box){
                 </div>
                 <div style="font-weight:600;font-size:0.92rem;cursor:pointer" data-person="${esc(p.id)}">${esc(p.username)}</div>
                 ${p.bio?`<div style="font-size:0.78rem;color:var(--mute);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.bio)}</div>`:""}
-                ${tags?`<div class="people-find-tags">${tags}</div>`:""}
                 ${listeningChip}
               </div>
             </div>`;
@@ -8118,13 +8751,6 @@ async function renderPeopleFind(box){
 
   document.getElementById("people-guest-auth-btn")?.addEventListener("click",()=>{
     needAuth(box);
-  });
-
-  box.querySelectorAll("[data-interest]").forEach(chip=>{
-    chip.onclick=()=>{
-      input.value=chip.dataset.interest;
-      run(chip.dataset.interest);
-    };
   });
 
   let debounceTimer=null;
@@ -8697,7 +9323,7 @@ async function paintChatInner(box){
        <button class="msg-act-btn danger" data-act="delete" title="${LANG==='ru'?'Удалить':'Delete'}"><span class="material-symbols-rounded" style="font-size:16px">delete</span></button>
       `:""}
      </div>
-     ${!mine&&SOC.chat.chat?`<span class="who">${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
+     ${!mine&&SOC.chat.chat?`<span class="who"${who?.user_id?` data-person="${esc(who.user_id)}"`:""}>${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
      <div class="msg-body">${chatBodyHtml(m)}</div><time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}});
 
   const hdr=SOC.chat.dm
@@ -10135,7 +10761,9 @@ function applyLyVars(){
  r.setProperty("--ly-glow",S.ly.glow);
  r.setProperty("--ly-cov",S.ly.cov);
  r.setProperty("--ly-gap",S.ly.gap);
- r.setProperty("--ly-font",S.ly.font?`'${S.ly.font}'`:'')}
+ /* The whole stack, so a family that is missing a glyph (or still loading
+    from the CDN) falls back to the bundled Golos Text rather than to serif. */
+ r.setProperty("--ly-font",(S.ly.font?`'${S.ly.font.replace(/'/g,"")}', `:"")+`"Golos Text", Inter, system-ui, sans-serif`)}
 function paintLyPanel(){
  const on=id=>document.getElementById(id);
  const size=on("ly-size"),weight=on("ly-weight"),glow=on("ly-glow"),cov=on("ly-cov"),gap=on("ly-gap");
@@ -10430,9 +11058,10 @@ document.getElementById("sp-rad-v").textContent=Math.round(S.sp.rad*100);
 document.getElementById("sp-elev").value=Math.round(S.sp.elev*100);
 document.getElementById("sp-elev-v").textContent=Math.round(S.sp.elev*100);
 updateSpButtons();
+setovInit();
 applyI18n();
 applyLyVars();paintLyPanel();
-applyFPSettings();initFPSettings();initImportModal();initLyricEditor();initMediaSession();
+applyFPSettings();initFPSettings();initReverbUI();initComfortUI();initImportModal();initLyricEditor();initMediaSession();
 renderBands();renderNP();paint();sync();go("home");search("");
 showSettingsTab(S.stab);renderWaveHint();renderLocalInfo();renderDislikes();
 /* Restore a custom accent before the first paint, or the field builds its

@@ -9,10 +9,9 @@
    The cover is reduced once to a small, colour-corrected texture (dark covers
    are lifted and slightly saturated, so a near-black sleeve gives a deep but
    visible colour field instead of a black-blue blot). Every frame a handful of
-   slowly rotating, oversized copies of that texture are layered into a tiny
-   canvas — about 120 px wide — which the compositor scales to the window. The
-   upscale itself is the blur, so the per-frame cost is a few drawImage calls on
-   a thumbnail-sized canvas. Capped at 30 fps, paused while hidden.
+   frame a WebGL shader warps that texture with drifting fractal noise into a
+   canvas about 1/7 of the window wide, which the compositor scales up. Driven
+   by real time, never rotated, paused while hidden.
 
    Cover physics
    -------------
@@ -43,33 +42,84 @@ function hsl2rgb(h,s,l){
  return [Math.round(f(h+1/3)*255),Math.round(f(h)*255),Math.round(f(h-1/3)*255)]}
 
 /* ───────────────────────── flow backdrop ───────────────────────── */
-const FLOW={cv:null,g:null,cur:null,prev:null,mix:1,t:0,raf:0,last:0,url:"",pulse:0,
- seed:Math.random()*100,on:false};
-const LAYERS=[
- /* scale, rotation speed (rad/s), orbit radius, orbit speed, alpha, phase */
- {s:2.3,r:.045,o:.00,os:0,  a:1,  p:0},
- {s:1.7,r:-.07,o:.22,os:.05,a:.62,p:1.7},
- {s:1.35,r:.09,o:.30,os:-.07,a:.5,p:3.1},
- {s:1.1,r:-.12,o:.26,os:.09,a:.38,p:4.6}];
+/* WebGL "liquid" backdrop. The cover becomes a small colour-corrected texture;
+   a fragment shader samples it through two layers of slowly drifting fractal
+   noise (domain warping), so the colours flow like ink in water instead of
+   spinning. Rendered at ~1/8 of the window and upscaled by the compositor,
+   which costs next to nothing, and driven by real time, so the motion speed
+   does not depend on the frame rate. A new cover cross-fades in over 1.2 s.
+   Without WebGL the cover is drawn once, blurred, with no animation. */
+const FLOW={cv:null,gl:null,g2:null,prog:null,u:{},tA:null,tB:null,mix:1,t:Math.random()*60,
+ raf:0,last:0,url:"",cur:null,ok:false,speed:1,drawn:0};
+const VS="attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}";
+const FS=`precision mediump float;
+uniform sampler2D uA;uniform sampler2D uB;uniform float uMix;uniform float uT;uniform vec2 uRes;
+varying vec2 v;
+float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);
+ return mix(mix(h(i),h(i+vec2(1.,0.)),u.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),u.x),u.y);}
+float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*n(p);p=p*2.02+vec2(1.7,9.2);a*=.5;}return s;}
+vec3 warp(sampler2D t,vec2 uv,float tm){
+ vec2 q=vec2(fbm(uv*1.35+vec2(0.,tm*.045)),fbm(uv*1.35+vec2(5.2,-tm*.04)));
+ vec2 r=vec2(fbm(uv*1.15+2.4*q+vec2(1.7,9.2)+tm*.03),fbm(uv*1.15+2.4*q+vec2(8.3,2.8)-tm*.035));
+ vec2 w=uv+(r-.5)*.95;
+ w=(w-.5)/1.3+.5;
+ return texture2D(t,w).rgb;}
+void main(){
+ vec2 c=v-.5;float a=uRes.x/uRes.y;if(a>1.)c.y/=a;else c.x*=a;vec2 uv=c+.5;
+ vec3 col=mix(warp(uA,uv,uT),warp(uB,uv,uT+23.),uMix);
+ float l=dot(col,vec3(.2126,.7152,.0722));col=mix(vec3(l),col,1.18);
+ col+=(h(gl_FragCoord.xy+fract(uT))-.5)*(1.6/255.);
+ gl_FragColor=vec4(col,1.);}`;
 
 function flowCanvas(){
  if(FLOW.cv&&FLOW.cv.isConnected)return FLOW.cv;
  const host=document.getElementById("fp");if(!host)return null;
+ host.querySelectorAll(":scope>.fp-flow,:scope>.fp-grain").forEach(n=>n.remove());
  const cv=document.createElement("canvas");
  cv.className="fp-flow";cv.setAttribute("aria-hidden","true");
  host.insertBefore(cv,host.firstChild);
  const grain=document.createElement("div");grain.className="fp-grain";grain.setAttribute("aria-hidden","true");
  host.insertBefore(grain,cv.nextSibling);
- FLOW.cv=cv;FLOW.g=cv.getContext("2d",{alpha:false});
+ FLOW.cv=cv;FLOW.ok=glInit(cv);
+ if(!FLOW.ok)FLOW.g2=cv.getContext("2d");
  flowSize();
  addEventListener("resize",flowSize,{passive:true});
  return cv}
+function glInit(cv){
+ let gl=null;
+ try{gl=cv.getContext("webgl",{alpha:false,antialias:false,depth:false,stencil:false,premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:"low-power"})}catch(_){}
+ if(!gl)return false;
+ const sh=(type,src)=>{const o=gl.createShader(type);gl.shaderSource(o,src);gl.compileShader(o);
+  if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)){console.warn("[fx] shader:",gl.getShaderInfoLog(o));return null}return o};
+ const vs=sh(gl.VERTEX_SHADER,VS),fs=sh(gl.FRAGMENT_SHADER,FS);if(!vs||!fs)return false;
+ const pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);gl.linkProgram(pr);
+ if(!gl.getProgramParameter(pr,gl.LINK_STATUS))return false;
+ gl.useProgram(pr);
+ const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+ const loc=gl.getAttribLocation(pr,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+ for(const k of ["uA","uB","uMix","uT","uRes"])FLOW.u[k]=gl.getUniformLocation(pr,k);
+ const mk=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.MIRRORED_REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.MIRRORED_REPEAT);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([16,16,20,255]));return t};
+ FLOW.tA=mk();FLOW.tB=mk();
+ gl.uniform1i(FLOW.u.uA,0);gl.uniform1i(FLOW.u.uB,1);
+ cv.addEventListener("webglcontextlost",e=>{e.preventDefault();FLOW.ok=false});
+ cv.addEventListener("webglcontextrestored",()=>{FLOW.ok=glInit(cv);if(FLOW.cur)upload(FLOW.tB,FLOW.cur.tex);flowKick()});
+ FLOW.gl=gl;FLOW.prog=pr;return true}
+function upload(t,canvas){
+ const gl=FLOW.gl;if(!gl)return;
+ gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas)}
 function flowSize(){
  const cv=FLOW.cv;if(!cv)return;
- const w=120,h=Math.max(48,Math.round(w*(innerHeight||800)/(innerWidth||1280)));
+ const W=innerWidth||1280,H=innerHeight||800;
+ const w=Math.round(Math.max(128,Math.min(260,W/7))),h=Math.max(72,Math.round(w*H/W));
  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;flowDraw(0)}}
 
-/* Small, blurred, colour-corrected copy of the cover. */
+/* Small, blurred, colour-corrected copy of the cover (128 px, a power of two,
+   so the shader may mirror-repeat it). */
 function buildTexture(img){
  const n=24,t=document.createElement("canvas");t.width=t.height=n;
  const x=t.getContext("2d",{willReadFrequently:true});
@@ -89,19 +139,18 @@ function buildTexture(img){
    l=l*(1+1.1*lift)+.1*lift;
    l=l*(1-.32*damp);
    s=Math.min(1,s*(1.06+.12*lift));
-   l=clamp(l*.92,.05,.66);
+   l=clamp(l*.9,.05,.62);
    const [r,g,b]=hsl2rgb(h,s,l);px[i]=r;px[i+1]=g;px[i+2]=b;
    const wgt=s*s+.02;tr+=r*wgt;tg+=g*wgt;tb+=b*wgt;tw+=wgt}
   x.putImageData(d,0,0);
   info={lum:L,tint:[tr/tw|0,tg/tw|0,tb/tw|0]};
  }catch(_){/* cross-origin cover: draw it as-is */}
- /* Two upscale passes give a smooth gradient instead of 24 visible blocks. */
  const m=document.createElement("canvas");m.width=m.height=64;
  const mx=m.getContext("2d");mx.imageSmoothingEnabled=true;mx.imageSmoothingQuality="high";
  mx.filter="blur(2px)";mx.drawImage(t,0,0,64,64);
- const o=document.createElement("canvas");o.width=o.height=160;
+ const o=document.createElement("canvas");o.width=o.height=128;
  const ox=o.getContext("2d");ox.imageSmoothingEnabled=true;ox.imageSmoothingQuality="high";
- ox.drawImage(m,0,0,160,160);
+ ox.filter="blur(3px)";ox.drawImage(m,-4,-4,136,136);
  return {tex:o,info}}
 
 function loadImage(url){
@@ -121,60 +170,58 @@ function setCover(url){
  loadImage(url).then(img=>{
   if(FLOW.url!==url)return;
   const t=buildTexture(img);
-  FLOW.prev=FLOW.cur;FLOW.cur=t;FLOW.mix=FLOW.prev?0:1;
+  if(FLOW.ok){
+   /* What is on screen now becomes A; the new cover fades in as B. */
+   if(FLOW.cur){upload(FLOW.tA,FLOW.cur.tex);FLOW.mix=0}else{upload(FLOW.tA,t.tex);FLOW.mix=1}
+   upload(FLOW.tB,t.tex)}
+  FLOW.cur=t;
   const fp=document.getElementById("fp");
   if(fp){const [r,g,b]=t.info.tint;fp.style.setProperty("--flow-tint",`${r} ${g} ${b}`)}
-  flowKick();
+  flowDraw(0);flowKick();
  }).catch(()=>{})}
 
-function drawComposition(g,tex,w,h,time,alpha){
- const p=FLOW.pulse;
- g.globalAlpha=alpha;
- for(let i=0;i<LAYERS.length;i++){
-  const L=LAYERS[i];
-  const ang=L.p+time*L.r*(1+p*.8);
-  const oa=L.p*1.3+time*L.os;
-  const cx=w/2+Math.cos(oa)*L.o*w,cy=h/2+Math.sin(oa*1.1)*L.o*h;
-  const size=Math.max(w,h)*L.s*(1+p*.06*(i?1:.5));
-  g.save();
-  g.globalAlpha=alpha*L.a;
-  g.translate(cx,cy);g.rotate(ang);
-  g.drawImage(tex,-size/2,-size/2,size,size);
-  g.restore()}
- g.globalAlpha=1}
-
+const easeIO=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 function flowDraw(dt){
- const g=FLOW.g,cv=FLOW.cv;if(!g||!cv)return;
+ const cv=FLOW.cv;if(!cv)return;
+ if(FLOW.ok&&FLOW.gl){
+  const gl=FLOW.gl;
+  FLOW.t+=dt*FLOW.speed;
+  if(FLOW.mix<1)FLOW.mix=Math.min(1,FLOW.mix+dt/1.2);
+  gl.viewport(0,0,cv.width,cv.height);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,FLOW.tA);
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,FLOW.tB);
+  gl.uniform1f(FLOW.u.uMix,easeIO(FLOW.mix));
+  gl.uniform1f(FLOW.u.uT,FLOW.t);
+  gl.uniform2f(FLOW.u.uRes,cv.width,cv.height);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  return}
+ const g=FLOW.g2;if(!g)return;
  const w=cv.width,h=cv.height;
- if(!FLOW.cur){g.fillStyle="#101014";g.fillRect(0,0,w,h);return}
- FLOW.t+=dt;
- if(FLOW.mix<1)FLOW.mix=Math.min(1,FLOW.mix+dt/1.1);
- if(FLOW.prev&&FLOW.mix<1)drawComposition(g,FLOW.prev.tex,w,h,FLOW.t+FLOW.seed,1);
- drawComposition(g,FLOW.cur.tex,w,h,FLOW.t+FLOW.seed,FLOW.prev?ease(FLOW.mix):1);
- if(FLOW.mix>=1)FLOW.prev=null}
-const ease=t=>1-Math.pow(1-t,3);
+ g.fillStyle="#101014";g.fillRect(0,0,w,h);
+ if(FLOW.cur){const s=Math.max(w,h)*1.25;g.drawImage(FLOW.cur.tex,(w-s)/2,(h-s)/2,s,s)}}
 
 function flowActive(){
  const fp=document.getElementById("fp");
  return !!fp&&fp.dataset.open==="true"&&(fp.dataset.bgMode||"dynamic")==="dynamic"&&!document.hidden}
+/* Drawn at up to 40 fps: the field moves a fraction of a pixel per frame, so
+   more frames would not look any smoother, while every one of them makes the
+   compositor re-blur a full-window layer. Time-based, so the speed holds. */
 function flowLoop(now){
  FLOW.raf=0;
  if(!flowActive())return;
- const dt=FLOW.last?Math.min(.1,(now-FLOW.last)/1000):0;
- if(now-FLOW.last>=31||!FLOW.last){
-  FLOW.last=now;
-  let lv=0;try{lv=typeof level==="function"?level():0}catch(_){}
-  FLOW.pulse+=(lv-FLOW.pulse)*Math.min(1,dt*6);
-  flowDraw(RM?0:dt)}
- if(!RM||FLOW.mix<1)FLOW.raf=requestAnimationFrame(flowLoop)}
+ if(FLOW.last&&now-FLOW.last<24){FLOW.raf=requestAnimationFrame(flowLoop);return}
+ const dt=FLOW.last?Math.min(.08,(now-FLOW.last)/1000):0;
+ FLOW.last=now;
+ flowDraw(RM?0:dt);
+ if(FLOW.ok&&((!RM&&FLOW.speed>0)||FLOW.mix<1))FLOW.raf=requestAnimationFrame(flowLoop)}
 function flowKick(){
  if(!FLOW.raf&&flowActive()){FLOW.last=0;FLOW.raf=requestAnimationFrame(flowLoop)}
- else if(!flowActive())flowDraw(0)}
+ else if(!flowActive()&&!FLOW.ok)flowDraw(0)}
 document.addEventListener("visibilitychange",flowKick);
 
 /* ───────────────────────── wallpapers ───────────────────────── */
 const FX_KEY="mw.fx";
-const FXS=Object.assign({wallDim:35,wallBlur:0,wallApp:false},(()=>{try{return JSON.parse(localStorage.getItem(FX_KEY)||"{}")}catch(_){return {}}})());
+const FXS=Object.assign({wallDim:35,wallBlur:0},(()=>{try{return JSON.parse(localStorage.getItem(FX_KEY)||"{}")}catch(_){return {}}})());
 const saveFx=()=>{try{localStorage.setItem(FX_KEY,JSON.stringify(FXS))}catch(_){}};
 const WALL={url:"",type:"",name:"",loaded:false};
 function idb(){
@@ -238,11 +285,11 @@ function wallNode(host,cls){
 function wallRender(){
  const fp=document.getElementById("fp");
  const inFp=fp&&(fp.dataset.bgMode||"")==="wallpaper";
- if(fp){const el=wallNode(fp,"fp-wall");el.hidden=!inFp||!WALL.url;playIf(el,inFp&&fp.dataset.open==="true")}
- const appEl=wallNode(document.body,"app-wall");
- const appOn=FXS.wallApp&&!!WALL.url;
- appEl.hidden=!appOn;document.documentElement.toggleAttribute("data-wall",appOn);
- playIf(appEl,appOn&&!(fp&&fp.dataset.open==="true"&&inFp));
+ if(fp){const el=wallNode(fp,"fp-wall");el.hidden=!inFp||!WALL.url;playIf(el,inFp&&fp.dataset.open==="true");
+  fp.dataset.hasWall=String(!!WALL.url)}
+ /* Wallpapers belong to the full player only. */
+ document.querySelectorAll("body>.app-wall").forEach(n=>n.remove());
+ document.documentElement.removeAttribute("data-wall");
  const st=document.getElementById("fp-wall-name");
  if(st)st.textContent=WALL.url?(WALL.name||(lang()==="ru"?"Обои выбраны":"Wallpaper set")):(lang()==="ru"?"Не выбраны":"None");
  const clr=document.getElementById("fp-wall-clear");if(clr)clr.disabled=!WALL.url}
@@ -261,7 +308,7 @@ function stepSpring(s,dt){
  return Math.abs(s.v-s.t)>.0005||Math.abs(s.vel)>.0005}
 const COV={el:null,x:spring(0,240,22),y:spring(0,240,22),s:spring(1,260,20),
  mx:spring(0,90,14),my:spring(0,90,14),raf:0,last:0,hold:false};
-function coverEl(){return document.querySelector("#fpc .fpcover-stage, #fpc .fpcover-lg")}
+function coverEl(){return document.querySelector("#fpc .fpx-cover")}
 function coverApply(){
  const el=COV.el;if(!el||!el.isConnected)return;
  const x=COV.x.v+COV.mx.v,y=COV.y.v+COV.my.v,s=COV.s.v;
@@ -326,7 +373,7 @@ document.addEventListener("pointerleave",()=>{COV.mx.t=0;COV.my.t=0;coverKick()}
 
 /* ───────────────────────── public API ───────────────────────── */
 window.MWFX={
- flow:{setCover,kick:flowKick},
+ flow:{setCover,kick:flowKick,speed:v=>{FLOW.speed=clamp(+v||0,0,3)}},
  wall:{load:wallLoad,pick:wallPick,clear:wallClear,render:wallRender,settings:FXS,save:saveFx,has:()=>!!WALL.url},
  cover:{el:coverEl,flyFrom:coverFlyFrom,flyTo:coverFlyTo,land:coverLand,reset:coverReset,
   rect:()=>{const e=coverEl();return e?e.getBoundingClientRect():null}}
