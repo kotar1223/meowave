@@ -79,5 +79,9 @@ __pycache__/
 *.deb
 *.rpm
 
-.agents/
+# Local agent skills stay out of git, except the project skills (meowave-*)
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/meowave-*/
 

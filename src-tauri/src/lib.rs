@@ -1,12 +1,17 @@
 mod api;
 mod config;
 mod discord;
+mod dz;
+mod feeds;
+mod links;
 mod local;
 mod lyrics;
+mod matching;
 mod mem;
 mod mpris;
 mod paths;
 mod proxy;
+mod spanon;
 mod spotify;
 mod stream;
 mod taskbar;
@@ -547,6 +552,14 @@ pub fn run() {
             discord::discord_test,
             discord::discord_status,
             stream_info,
+            stream::stream_prefetch,
+            feeds::feeds_home,
+            feeds::feeds_open,
+            feeds::wave_ym_start,
+            feeds::wave_ym_more,
+            feeds::wave_ym_feedback,
+            links::link_resolve,
+            spanon::artist_profile,
             taskbar::taskbar_set_playing,
             mpris::mpris_update,
         ])

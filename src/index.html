@@ -30,6 +30,7 @@
 
 <div class="haze" aria-hidden="true"><i></i><i></i></div>
 <canvas id="field" aria-hidden="true"></canvas>
+<canvas id="fieldgl" aria-hidden="true"></canvas>
 
 <!-- Custom window chrome. The OS frame is off (decorations:false in
      tauri.conf.json) so the whole shell can be themed; this strip is the
@@ -53,7 +54,7 @@
 </div>
 
 <!-- onboarding -->
-<div class="splash" id="splash"><div class="splash-ring"></div><img src="./icons/icon.png" alt="Meowave"><span>Meowave</span></div>
+<div class="splash" id="splash"><div class="splash-glow" aria-hidden="true"></div><div class="splash-ring"></div><div class="splash-mark"><img src="./icons/icon.png" alt="Meowave"></div><span>Meowave</span><div class="splash-bar" aria-hidden="true"><i></i></div></div>
 <div class="ob" id="ob">
   <div class="obc pane">
     <section class="obstep" data-on="true" data-step="0">
@@ -86,6 +87,10 @@
     </div>
   </div>
 </div>
+
+<!-- Drag a link from YouTube Music, Spotify, Yandex Music, SoundCloud or
+     Deezer (or an audio file) anywhere onto the window to play it. -->
+<div class="dropzone" id="dropzone" hidden><div class="dz-card"><span class="material-symbols-rounded">place_item</span><b data-i18n="drop.t">Отпустите, чтобы включить</b><small data-i18n="drop.s">Ссылка на трек, альбом или плейлист: YouTube Music, Spotify, Яндекс Музыка, SoundCloud, Deezer</small></div></div>
 
 <!-- app -->
 <div class="app" id="app" aria-hidden="true">
@@ -149,9 +154,27 @@
           <p data-i18n="home.s">Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.</p>
           <div class="row2">
             <button class="primary" id="start"><span class="material-symbols-rounded" style="font-size:18px">play_arrow</span><span data-i18n="home.start">Запустить волну</span></button>
+            <button class="btn wv-tune" id="wv-tune" aria-expanded="false" data-i18n-title="wv.tune" title="Настроить волну"><span class="material-symbols-rounded" style="font-size:18px">tune</span><span data-i18n="wv.tune">Настроить</span></button>
             <span class="wavehint" id="wavehint"></span>
           </div>
+          <div class="wv-moods" id="wv-moods" role="group" aria-label="Настроение"></div>
+          <div class="wv-pop" id="wv-pop" hidden></div>
         </div>
+        <section class="hsheet" id="hsheet" data-open="false" aria-label="Подборки">
+          <div class="hs-grip" id="hs-grip" role="button" tabindex="0" aria-expanded="false">
+            <i class="hs-bar" aria-hidden="true"></i>
+            <span class="hs-title"><span class="material-symbols-rounded" style="font-size:18px">auto_awesome_motion</span><span data-i18n="hs.t">Подборки</span></span>
+            <div class="hs-tabs" id="hs-tabs" role="tablist"></div>
+            <span class="material-symbols-rounded hs-chev" aria-hidden="true">expand_less</span>
+          </div>
+          <div class="hs-body" id="hs-body"></div>
+        </section>
+      </div>
+
+      <!-- Collections, charts and artist pages opened from the home sheet,
+           search or the player. Rendered by discover.js. -->
+      <div class="view" id="v-discover">
+        <div id="dcbody"></div>
       </div>
 
       <div class="view" id="v-search">
@@ -346,8 +369,8 @@
           <div class="field">
             <div><label data-i18n="set.dens">Плотность частиц</label></div>
             <div class="seg" id="dens" role="group">
-              <button data-v="900" data-i18n="d.low">Меньше</button><button data-v="2200" aria-pressed="true" data-i18n="d.mid">Средне</button>
-              <button data-v="4200" data-i18n="d.high">Много</button>
+              <button data-v="1400" data-i18n="d.low">Меньше</button><button data-v="3200" aria-pressed="true" data-i18n="d.mid">Средне</button>
+              <button data-v="6000" data-i18n="d.high">Много</button>
             </div>
           </div>
           <div class="field">
@@ -370,6 +393,25 @@
               <button data-v="0" data-i18n="off">Выкл</button><button data-v="14" aria-pressed="true" data-i18n="s.light">Лёгкий</button>
               <button data-v="26" data-i18n="s.strong">Сильный</button>
             </div>
+          </div>
+          <div class="field">
+            <div><label data-i18n="set.wall">Обои приложения</label><small data-i18n="set.wall.s">Картинка, GIF или видео за всем интерфейсом</small></div>
+            <button class="sw" id="wall-app" aria-pressed="false" aria-label="wallpaper"></button>
+          </div>
+          <div class="field field-wall" id="wall-app-box">
+            <div class="wallrow">
+              <span class="material-symbols-rounded" style="font-size:18px;opacity:.7">wallpaper</span>
+              <span class="wallname" id="wall-app-name" data-i18n="wall.none">Не выбраны</span>
+              <button class="btn" id="wall-app-pick" data-i18n="wall.file">Файл</button>
+              <button class="btn" id="wall-app-url" data-i18n="wall.url">По ссылке</button>
+              <button class="btn ghost" id="wall-app-clear" data-i18n="wall.clear">Убрать</button>
+            </div>
+            <div class="wallsl"><label data-i18n="wall.dim">Затемнение</label><input type="range" id="wall-app-dim" min="0" max="90" value="55"><span id="wall-app-dim-v">55%</span></div>
+            <div class="wallsl"><label data-i18n="wall.blur">Размытие</label><input type="range" id="wall-app-blur" min="0" max="40" value="0"><span id="wall-app-blur-v">0px</span></div>
+          </div>
+          <div class="field">
+            <div><label data-i18n="set.covf">Обложка следует за курсором</label><small data-i18n="set.covf.s">Лёгкий наклон обложки в полноэкранном плеере</small></div>
+            <button class="sw on" id="cov-follow" aria-pressed="true" aria-label="cover follow"></button>
           </div>
           <div class="field">
             <div><label data-i18n="set.lang">Язык</label></div>
@@ -779,6 +821,7 @@
             <div class="seg-group" id="fp-align-group">
               <button class="seg-btn active" data-align="left" data-i18n="fps.align.l">Слева</button>
               <button class="seg-btn" data-align="center" data-i18n="fps.align.c">По центру</button>
+              <button class="seg-btn" data-align="right" data-i18n="fps.align.r">Справа</button>
             </div>
           </div>
           <div class="fpset-row">
@@ -935,7 +978,7 @@
     </div>
     <div class="import-body">
       <div class="import-svcs" id="import-svcs" aria-hidden="true">
-        <span data-svc="sp">Spotify</span><span data-svc="ytm">YouTube Music</span><span data-svc="ym">Яндекс Музыка</span><span data-svc="sc">SoundCloud</span>
+        <span data-svc="sp">Spotify</span><span data-svc="ytm">YouTube Music</span><span data-svc="ym">Яндекс Музыка</span><span data-svc="sc">SoundCloud</span><span data-svc="dz">Deezer</span>
       </div>
       <div class="import-input-wrap">
         <span class="material-symbols-rounded import-link-ic">link</span>
@@ -1005,5 +1048,6 @@
 
 <script src="./fx.js" defer></script>
 <script src="./app.js" defer></script>
+<script src="./discover.js" defer></script>
 </body>
 </html>

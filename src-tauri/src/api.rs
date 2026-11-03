@@ -135,6 +135,7 @@ fn sec(ms: u64) -> u32 {
 ///
 /// A missing length on either side means there is nothing to compare, so the
 /// hit is accepted — `orig_secs` is 0 when SoundCloud reported no duration.
+#[allow(dead_code)]
 fn duration_ok(hit_secs: u32, orig_secs: u32, tolerance: i64) -> bool {
     if orig_secs <= 30 || hit_secs == 0 {
         return true;
@@ -183,6 +184,45 @@ pub async fn ym_search(token: &str, query: &str) -> Result<Vec<Track>, String> {
         .unwrap_or_default();
 
     Ok(items.iter().filter_map(ym_track).collect())
+}
+
+/// For the other modules (wave, collections, links) that read Yandex rows.
+pub(crate) fn ym_track_pub(v: &serde_json::Value) -> Option<Track> {
+    ym_track(v)
+}
+
+/// One SoundCloud track object as a Track.
+pub(crate) fn sc_track(v: &serde_json::Value) -> Option<Track> {
+    if v.get("kind").and_then(|k| k.as_str()).is_some_and(|k| k != "track") {
+        return None;
+    }
+    Some(Track {
+        id: v.get("id")?.to_string().trim_matches('"').to_string(),
+        s: "sc".into(),
+        t: v.get("title").and_then(|t| t.as_str()).unwrap_or("—").into(),
+        a: v.pointer("/publisher_metadata/artist")
+            .and_then(|u| u.as_str())
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| v.pointer("/user/username").and_then(|u| u.as_str()))
+            .unwrap_or("—")
+            .into(),
+        al: v
+            .pointer("/publisher_metadata/album_title")
+            .and_then(|x| x.as_str())
+            .unwrap_or("")
+            .into(),
+        d: sec(v
+            .get("full_duration")
+            .and_then(|d| d.as_u64())
+            .or_else(|| v.get("duration").and_then(|d| d.as_u64()))
+            .unwrap_or(0)),
+        art: v
+            .get("artwork_url")
+            .and_then(|a| a.as_str())
+            .map(|a| a.replace("-large.", "-t500x500."))
+            .or_else(|| v.pointer("/user/avatar_url").and_then(|a| a.as_str()).map(|s| s.to_string())),
+        mode: "local".into(),
+    })
 }
 
 fn ym_track(v: &serde_json::Value) -> Option<Track> {
@@ -293,6 +333,80 @@ pub async fn ym_stream_url(token: &str, id: &str, hq: bool) -> Result<String, St
     let trimmed = path.strip_prefix('/').unwrap_or(&path);
     let sign = format!("{:x}", md5::compute(format!("{YM_SALT}{trimmed}{s}")));
     Ok(format!("https://{host}/get-mp3/{sign}/{ts}{path}"))
+}
+
+/// Keys of the `get-file-info` signature: the first is what the current
+/// Android client signs with, the second an older build's, kept because a key
+/// rotation should cost a retry rather than lossless altogether.
+const YM_FILE_KEYS: &[&str] = &["kzqU4XhfCaY6B6JTHODeq5", "p93jhgh689SBReK6ghtw62"];
+
+/// Real lossless from Yandex Music.
+///
+/// "Lossless" used to request exactly what "high" did — the 320 kbps MP3 from
+/// download-info — so the setting changed nothing but the label, while the
+/// limiter in the audio chain made both sound squashed (see app.js). The
+/// lossless files only come from `get-file-info`, signed with an HMAC of the
+/// request, and they are delivered encrypted ("encraw"): AES-128-CTR with the
+/// key in the answer. The stream proxy decrypts on the fly; the key and codec
+/// travel to it in the URL fragment, which never leaves this process.
+pub async fn ym_lossless_url(token: &str, id: &str) -> Result<String, String> {
+    use base64::Engine;
+    use hmac::{Hmac, Mac};
+    let track_id = id.split(':').next().unwrap_or(id);
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let quality = "lossless";
+    let codecs = "flac,flac-mp4,mp3,aac,he-aac,aac-mp4,he-aac-mp4";
+    let transports = "encraw";
+    let mut last = String::from("no answer");
+    for key in YM_FILE_KEYS {
+        let msg = format!("{ts}{track_id}{quality}{}{transports}", codecs.replace(',', ""));
+        let mut mac = <Hmac<sha2::Sha256> as Mac>::new_from_slice(key.as_bytes()).map_err(|e| e.to_string())?;
+        mac.update(msg.as_bytes());
+        let sign = base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes());
+        let sign = sign.trim_end_matches('=');
+        let url = format!(
+            "{YM_API}/get-file-info?ts={ts}&trackId={track_id}&quality={quality}&codecs={}&transports={transports}&sign={}",
+            urlencoding::encode(codecs),
+            urlencoding::encode(sign)
+        );
+        let resp = match client()?
+            .get(&url)
+            .header("Authorization", ym_auth(token))
+            .header("X-Yandex-Music-Client", "YandexMusicAndroid/24023621")
+            .send()
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                last = format!("network: {e}");
+                continue;
+            }
+        };
+        let status = resp.status();
+        let v: serde_json::Value = resp.json().await.unwrap_or(serde_json::Value::Null);
+        if !status.is_success() {
+            last = format!("HTTP {}", status.as_u16());
+            continue;
+        }
+        let info = v.pointer("/result/downloadInfo").ok_or("no downloadInfo")?;
+        let file = info
+            .get("url")
+            .and_then(|u| u.as_str())
+            .or_else(|| info.pointer("/urls/0").and_then(|u| u.as_str()))
+            .ok_or("downloadInfo has no url")?;
+        let codec = info.get("codec").and_then(|c| c.as_str()).unwrap_or("");
+        let transport = info.get("transport").and_then(|c| c.as_str()).unwrap_or("");
+        let k = info.get("key").and_then(|c| c.as_str()).unwrap_or("");
+        let file = file.split('#').next().unwrap_or(file);
+        if transport == "encraw" && !k.is_empty() {
+            return Ok(format!("{file}#mwk={k}&mwc={codec}"));
+        }
+        return Ok(format!("{file}#mwc={codec}"));
+    }
+    Err(format!("Yandex lossless unavailable: {last}"))
 }
 
 /* ═══════════════════ SoundCloud ═══════════════════
@@ -495,16 +609,40 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         .await
         .map_err(|e| format!("bad response: {e}"))?;
 
-    let artist = track
-        .pointer("/user/username")
-        .and_then(|u| u.as_str())
-        .unwrap_or("")
-        .to_string();
-    let title = track
+    // Whose song this is: the label-supplied artist when SoundCloud has one,
+    // the "Artist - Title" upload convention next, the uploader last.
+    let raw_title = track
         .get("title")
         .and_then(|t| t.as_str())
         .unwrap_or("")
         .to_string();
+    let uploader = track
+        .pointer("/user/username")
+        .and_then(|u| u.as_str())
+        .unwrap_or("")
+        .to_string();
+    let (artist, title) = match track
+        .pointer("/publisher_metadata/artist")
+        .and_then(|a| a.as_str())
+        .filter(|a| !a.trim().is_empty())
+    {
+        Some(a) => (a.to_string(), raw_title.clone()),
+        None => crate::matching::split_dash(&raw_title).unwrap_or((uploader.clone(), raw_title.clone())),
+    };
+    /* A "SNIP" track is a 30-second preview for listeners outside the rights
+       holder's territory or without Go+. Its transcodings answer fine — with
+       the preview — so it used to play half a minute and stop, or advance as if
+       the song had ended. Those go straight to the rescue below. */
+    let snipped = track.get("policy").and_then(|p| p.as_str()) == Some("SNIP")
+        || track
+            .pointer("/media/transcodings")
+            .and_then(|t| t.as_array())
+            .is_some_and(|ts| !ts.is_empty() && ts.iter().all(|t| t.get("snipped").and_then(|s| s.as_bool()) == Some(true)));
+    let full_ms = track
+        .get("full_duration")
+        .and_then(|d| d.as_u64())
+        .or_else(|| track.get("duration").and_then(|d| d.as_u64()))
+        .unwrap_or(0);
 
     let transcodings = track
         .pointer("/media/transcodings")
@@ -545,7 +683,7 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         }
     });
 
-    for t in playable {
+    for t in playable.into_iter().filter(|_| !snipped) {
         if let Some(url) = t.get("url").and_then(|u| u.as_str()) {
             if let Ok(rb) = sc_req(&c, url, token).await {
                 if let Ok(res) = rb.send().await {
@@ -561,34 +699,29 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         }
     }
 
-    // If unencrypted SoundCloud streams are 404 or DRM-restricted, transparently rescue via YouTube Music
+    // No full stream on SoundCloud (404, DRM-only, or a 30-second snippet):
+    // look for the same recording on YouTube Music. Only a strict match is
+    // accepted — a different song is worse than an honest failure.
     if !title.is_empty() {
-        let query = if !artist.is_empty() && artist != "—" {
-            format!("{artist} {title}")
-        } else {
-            title.clone()
-        };
-        if let Ok(hits) = ytm_search(&query).await {
-            let orig_dur = track.get("duration").and_then(|d| d.as_u64()).map(|ms| (ms / 1000) as u32).unwrap_or(0);
-            /* Prefer the hit that is the same recording, then one that is at
-               least the same kind of thing. Falling back to `hits.first()`
-               whenever nothing matched made the length check decorative: a
-               three-minute song could be silently replaced by a forty-minute
-               mix, which is exactly what the check was written to prevent. */
-            let pick = hits
-                .iter()
-                .find(|h| duration_ok(h.d, orig_dur, 15))
-                .or_else(|| hits.iter().find(|h| duration_ok(h.d, orig_dur, 60)));
-
-            if let Some(ytm_track) = pick {
-                if let Ok(stream_res) = crate::ytm::stream(&ytm_track.id, true, "best").await {
+        let orig_dur = (full_ms / 1000) as u32;
+        let mut queries = vec![format!("{artist} {title}")];
+        if artist != uploader && !uploader.is_empty() {
+            queries.push(format!("{uploader} {title}"));
+        }
+        for query in queries {
+            let Ok(hits) = ytm_search(&query).await else { continue };
+            if let Some(hit) = crate::matching::best(&hits, &title, &artist, orig_dur) {
+                if let Ok(stream_res) = crate::ytm::stream(&hit.id, true, "best").await {
                     eprintln!(
-                        "[meowave] sc_stream_url: track '{}' id={} unencrypted stream unavailable; rescued via YTM id={}",
-                        title, id, ytm_track.id
+                        "[meowave] sc_stream_url: '{}' id={} has no full stream (snipped={snipped}); same recording on YTM id={}",
+                        raw_title, id, hit.id
                     );
-                    return Ok(stream_res.url);
+                    return Ok(format!("{}#mwua={}", stream_res.url, stream_res.client));
                 }
             }
+        }
+        if snipped {
+            return Err("SoundCloud отдаёт только 30-секундный фрагмент, а точной копии трека на других сервисах не нашлось".into());
         }
     }
 
@@ -690,6 +823,7 @@ pub async fn api_search(query: String, services: Vec<String>) -> Result<SearchRe
                 "sc" => sc_search(&token, &q).await,
                 "ytm" => ytm_search(&q).await,
                 "sp" => crate::spotify::spotify_search(&q).await,
+                "dz" => crate::dz::search(&q).await,
                 other => Err(format!("unknown service: {other}")),
             };
             (s, res)
@@ -723,6 +857,7 @@ pub async fn api_check_token(service: String, token: String) -> Result<bool, Str
         "sc" => sc_search(t, "test").await.map(|_| true),
         "ytm" => ytm_search("test").await.map(|_| true),
         "sp" => crate::spotify::access_token().await.map(|_| true),
+        "dz" => crate::dz::search("test").await.map(|_| true),
         other => Err(format!("unknown service: {other}")),
     }
 }
@@ -736,22 +871,32 @@ pub async fn api_probe_service(service: String) -> Result<bool, String> {
         "ytm" => ytm_search("test").await.map(|_| true),
         "ym" => Err("Yandex Music needs your token".into()),
         "sp" => Ok(crate::spotify::configured()),
+        "dz" => crate::dz::search("test").await.map(|_| true),
         other => Err(format!("unknown service: {other}")),
     }
 }
 
-/// Radio / related recommendations for a track from connected streaming services.
+/// Radio for a track, from the service the track belongs to — its own
+/// recommender, not ours: YouTube Music's song radio, SoundCloud's station,
+/// Yandex's rotor for the track, Deezer's artist radio.
 #[tauri::command]
 pub async fn api_radio(service: String, id: String) -> Result<Vec<Track>, String> {
     match service.as_str() {
         "ytm" => crate::ytm::radio(&id).await,
         "sc" => {
+            if let Ok(list) = crate::feeds::sc_station(&id).await {
+                if list.len() >= 5 {
+                    return Ok(list);
+                }
+            }
             let token = match crate::tokens::read_token("sc") {
                 Ok(t) => t.unwrap_or_default(),
                 Err(_) => String::new(),
             };
             sc_related(&token, &id).await
         }
+        "ym" => crate::feeds::ym_track_radio(&id).await,
+        "dz" => crate::dz::radio_for(&id).await,
         _ => Ok(vec![]),
     }
 }
@@ -1018,7 +1163,29 @@ pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Tra
     } else if embed_type == "track" {
         let title = entity.get("title").or_else(|| entity.get("name")).and_then(|t| t.as_str()).unwrap_or("").trim();
         if !title.is_empty() {
-            let artist = entity.get("subtitle").or_else(|| entity.get("artist")).and_then(|s| s.as_str()).unwrap_or("—").trim();
+            // Track embeds carry `artists: [{name, uri}]` rather than the
+            // `subtitle` string that playlist rows have.
+            let joined = entity
+                .get("artists")
+                .and_then(|a| a.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.get("name").and_then(|n| n.as_str()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+                .unwrap_or_default();
+            let artist = if !joined.trim().is_empty() {
+                joined
+            } else {
+                entity
+                    .get("subtitle")
+                    .or_else(|| entity.get("artist"))
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("—")
+                    .trim()
+                    .to_string()
+            };
             let duration_ms = entity.get("duration").or_else(|| entity.get("duration_ms")).and_then(|d| d.as_u64()).unwrap_or(0);
             let uri = entity.get("uri").and_then(|u| u.as_str()).unwrap_or("");
             let track_id = uri.strip_prefix("spotify:track:").unwrap_or(id);
@@ -1026,8 +1193,9 @@ pub async fn spotify_public_playlist_tracks(url_or_id: String) -> Result<Vec<Tra
                 id: track_id.to_string(),
                 s: "sp".into(),
                 t: title.to_string(),
-                a: artist.to_string(),
-                al: album_title,
+                a: artist,
+                // `name` of a track entity is the song itself, not its album.
+                al: String::new(),
                 d: (duration_ms / 1000) as u32,
                 art: default_art,
                 mode: "web".into(),

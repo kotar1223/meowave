@@ -42,6 +42,13 @@ function bootFinish(){
 const I18N={
 ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа","nav.settings":"Настройки","nav.more":"Ещё","nav.back":"Назад","srv.title":"Сервисы поиска","srv.btn":"Сервисы","srv.active":"Сервисы","eq.title":"Эквалайзер и Звук","set.sp.t":"3D Пространственный звук","import.ph":"Spotify, YouTube Music, music.yandex.ru/users/.../playlists/... или SoundCloud","import.name":"Название плейлиста",
 "top.ph":"Поиск по всем сервисам",
+"wv.tune":"Настроить","wv.src":"Откуда волна","wv.src.auto":"Авто","wv.div":"Характер","wv.div.favorite":"Любимое","wv.div.discover":"Незнакомое","wv.div.popular":"Популярное","wv.mood":"Настроение","wv.mood.active":"Бодрое","wv.mood.fun":"Весёлое","wv.mood.calm":"Спокойное","wv.mood.sad":"Грустное","wv.lang":"Язык","wv.lang.russian":"Русский","wv.lang.not-russian":"Иностранный","wv.lang.without-words":"Без слов","wv.restart":"Волна перестроена","wv.ym.fail":"Моя волна Яндекса не ответила — собираем волну из ваших треков","wv.none":"Подключите сервис, чтобы запустить волну","wv.from":"Моя волна · {s}",
+"hs.t":"Подборки","hs.load":"Загружаем подборки…","hs.err":"Не удалось загрузить подборки","hs.retry":"Повторить","hs.empty":"Здесь пока пусто","hs.ymtok":"Для подборок Яндекса нужен токен (Настройки → Аккаунты)",
+"dv.back":"Назад","dv.play":"Слушать","dv.shuffle":"Перемешать","dv.save":"В медиатеку","dv.saved":"Сохранено в плейлисты","dv.load":"Открываем…","dv.err":"Не удалось открыть","dv.tracks":"Треки","dv.top":"Популярные треки","dv.albums":"Альбомы","dv.singles":"Синглы и EP","dv.related":"Похожие артисты","dv.about":"Об артисте","dv.monthly":"{n} слушателей в месяц","dv.followers":"{n} подписчиков","dv.cities":"Где слушают","dv.follow":"Отслеживать","dv.following":"Вы отслеживаете","dv.lib":"В вашей медиатеке","dv.radio":"Радио артиста","dv.plays":"{n} прослушиваний","dv.src":"Данные: {s}",
+"fps.align.r":"Справа","set.wall":"Обои приложения","set.wall.s":"Картинка, GIF или видео за всем интерфейсом","wall.none":"Не выбраны","wall.file":"Файл","wall.url":"По ссылке","wall.clear":"Убрать","wall.dim":"Затемнение","wall.blur":"Размытие","wall.url.ask":"Ссылка на картинку, GIF или видео (https://…)","wall.url.bad":"Нужна ссылка https:// на картинку или видео",
+"wv.any":"Любое","wv.lang.any":"Любой","wv.cap":"Волна","wv.mix":"Из ваших треков · {s}","dv.verified":"Подтверждённый артист","dv.rank":"#{n} в мире","dv.gallery":"Галерея","dv.popular":"Популярные релизы","dv.more":"Ещё","wall.set":"Обои установлены","drop.files":"Добавлено файлов: {n}",
+"set.covf":"Обложка следует за курсором","set.covf.s":"Лёгкий наклон обложки в полноэкранном плеере",
+"drop.t":"Отпустите, чтобы включить","drop.s":"Ссылка на трек, альбом или плейлист: YouTube Music, Spotify, Яндекс Музыка, SoundCloud, Deezer","drop.busy":"Открываем ссылку…","drop.bad":"Эту ссылку не получилось открыть","drop.list":"«{n}»: {c} треков в очереди","drop.one":"Играет: {n}",
 "home.t":"Тишина. Поле ждёт.","home.s":"Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.","home.start":"Запустить волну",
 "lib.pl":"Плейлисты","lib.fav":"Избранное","lib.rec":"Недавнее",
 "set.t":"Настройки","set.acc":"Аккаунты","set.acc.s":"Authorization Code + PKCE, без сервера. Spotify — схема meowave://callback, Google/YouTube — localhost-редирект.",
@@ -169,6 +176,13 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "nologin":"Без входа","ready":"Готов"},
 en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings":"Settings","nav.more":"More","nav.back":"Back","srv.title":"Search Services","srv.btn":"Services","srv.active":"Services","eq.title":"Equalizer & Sound","set.sp.t":"3D Spatial Audio","import.ph":"Spotify, YouTube Music, music.yandex.ru or SoundCloud playlist link","import.name":"Playlist name",
 "top.ph":"Search across services",
+"wv.tune":"Tune","wv.src":"Wave source","wv.src.auto":"Auto","wv.div":"Character","wv.div.favorite":"Favourite","wv.div.discover":"Unfamiliar","wv.div.popular":"Popular","wv.mood":"Mood","wv.mood.active":"Energetic","wv.mood.fun":"Upbeat","wv.mood.calm":"Calm","wv.mood.sad":"Sad","wv.lang":"Language","wv.lang.russian":"Russian","wv.lang.not-russian":"Foreign","wv.lang.without-words":"No vocals","wv.restart":"Wave rebuilt","wv.ym.fail":"Yandex My Wave did not answer — building the wave from your tracks","wv.none":"Connect a service to start the wave","wv.from":"My Wave · {s}",
+"hs.t":"Collections","hs.load":"Loading collections…","hs.err":"Could not load collections","hs.retry":"Retry","hs.empty":"Nothing here yet","hs.ymtok":"Yandex collections need a token (Settings → Accounts)",
+"dv.back":"Back","dv.play":"Play","dv.shuffle":"Shuffle","dv.save":"Add to library","dv.saved":"Saved to playlists","dv.load":"Opening…","dv.err":"Could not open","dv.tracks":"Tracks","dv.top":"Popular tracks","dv.albums":"Albums","dv.singles":"Singles & EPs","dv.related":"Fans also like","dv.about":"About","dv.monthly":"{n} monthly listeners","dv.followers":"{n} followers","dv.cities":"Where people listen","dv.follow":"Follow","dv.following":"Following","dv.lib":"In your library","dv.radio":"Artist radio","dv.plays":"{n} plays","dv.src":"Data: {s}",
+"fps.align.r":"Right","set.wall":"App wallpaper","set.wall.s":"An image, GIF or video behind the whole interface","wall.none":"None","wall.file":"File","wall.url":"From link","wall.clear":"Remove","wall.dim":"Dim","wall.blur":"Blur","wall.url.ask":"Link to an image, GIF or video (https://…)","wall.url.bad":"Needs an https:// link to an image or video",
+"wv.any":"Any","wv.lang.any":"Any","wv.cap":"Wave","wv.mix":"From your tracks · {s}","dv.verified":"Verified artist","dv.rank":"#{n} in the world","dv.gallery":"Gallery","dv.popular":"Popular releases","dv.more":"More","wall.set":"Wallpaper set","drop.files":"Files added: {n}",
+"set.covf":"Cover follows the cursor","set.covf.s":"A slight tilt of the cover in the fullscreen player",
+"drop.t":"Drop to play","drop.s":"A track, album or playlist link: YouTube Music, Spotify, Yandex Music, SoundCloud, Deezer","drop.busy":"Opening the link…","drop.bad":"Could not open this link","drop.list":"“{n}”: {c} tracks queued","drop.one":"Playing: {n}",
 "home.t":"Silence. The field waits.","home.s":"Start the wave: the stream builds from your artists, cover and queue open fullscreen.","home.start":"Start the wave",
 "lib.pl":"Playlists","lib.fav":"Favorites","lib.rec":"Recent",
 "set.t":"Settings","set.acc":"Accounts","set.acc.s":"Authorization Code + PKCE, no server. Spotify uses meowave://callback, Google/YouTube a localhost redirect.",
@@ -432,6 +446,9 @@ function applyI18n(){
 const SERVICES=[
  {id:"ytm",name:"YouTube Music",conn:true,free:true,lossless:false,redir:"guest",lat:[360,880]},
  {id:"sc",name:"SoundCloud",conn:true,free:true,lossless:false,redir:"public client_id",lat:[280,640]},
+ /* Deezer's catalogue and charts are public; a full track is matched on
+    Yandex / YouTube Music / SoundCloud, the 30 s preview is the last resort. */
+ {id:"dz",name:"Deezer",conn:true,free:true,lossless:false,redir:"public API",lat:[300,720]},
  {id:"ym",name:"Yandex Music",conn:false,free:false,lossless:true,redir:"meowave://callback",lat:[400,1020]},
  {id:"sp",name:"Spotify",conn:false,free:false,lossless:false,redir:"http://localhost:8080/callback",lat:[250,500]},
  /* Local files are one more service to the UI, minus network and search. */
@@ -446,6 +463,11 @@ const svc=id=>{
  if(!s)return {id,name:id||"—",conn:false,free:false,lossless:false,redir:"",lat:[300,700]};
  /* Translated lazily so switching language relabels it without a reload. */
  return s.nameKey?{...s,name:t(s.nameKey),redir:s.redirKey?t(s.redirKey):s.redir}:s};
+/* Can a track from this service be played right now? Spotify is metadata only
+   (sprPlay finds the sound elsewhere), so its tracks — artist top tracks,
+   public albums — stay playable without a Spotify login. A connected Spotify
+   switched off in the header is still honoured. */
+const playOn=id=>id==="sp"?(svc("sp").on||!svc("sp").conn):!!svc(id).on;
 
 /* The player starts empty: TRACKS only holds real search results and restored
    favorites. Demo tracks, demo playlists and hardcoded lyrics are gone — they
@@ -520,7 +542,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
     font family. Applied as CSS variables by applyLyVars(). */
  ly:{size:44,weight:640,glow:1,cov:320,gap:14,font:""},
  fpBgMode:"dynamic",fpGlow:100,fpBlur:75,lyKaraoke:"karaoke",fpWobble:true,fpZoom:"normal",fpDrift:true,profileTrack:null,avatar:null,banner:null,
- glow:0,blur:14,theme:"dark",accent:"none",dens:2200,pspeed:.35,
+ glow:0,blur:14,theme:"dark",accent:"none",dens:3200,pspeed:.35,
  /* One explicit switch for weak machines. No auto-detection: the automatic
    tier system misjudged real hardware and its cuts looked like breakage, so
    this is the user's call, applied and reverted in one click. */
@@ -795,7 +817,16 @@ function initAudio(){
     the equaliser output, before the volume, so it measures the track. */
  A.norm=ctx.createGain();A.fade=ctx.createGain();A.out=out;
  A.lvl=ctx.createAnalyser();A.lvl.fftSize=2048;out.connect(A.lvl);
- A.gain.connect(A.norm);A.norm.connect(A.fade);A.fade.connect(A.boost);A.boost.connect(A.lim);A.lim.connect(A.an);A.an.connect(ctx.destination);
+ A.gain.connect(A.norm);A.norm.connect(A.fade);A.fade.connect(A.boost);
+ /* The limiter is a DynamicsCompressor: even at threshold -1.5 dB it adds its
+    own make-up gain and squashes every peak of a modern master, which is
+    exactly where a lossless file differs from a lossy one — "lossless sounds
+    worse" was this node. It now sits on a parallel path that is only faded in
+    when something can actually push the signal past full scale. */
+ A.limWet=ctx.createGain();A.limDry=ctx.createGain();A.limWet.gain.value=0;A.limDry.gain.value=1;
+ A.boost.connect(A.lim);A.lim.connect(A.limWet);A.limWet.connect(A.an);
+ A.boost.connect(A.limDry);A.limDry.connect(A.an);
+ A.an.connect(ctx.destination);
  if(ctx.listener.positionZ){ctx.listener.positionX.value=0;ctx.listener.positionY.value=0;ctx.listener.positionZ.value=0}
  A.gain.gain.value=S.muted?0:(S.vol??0.8);
  const au=ensureAudioEl();
@@ -863,6 +894,9 @@ function load(tr,auto,resumePos=0){
     const sEnd=au.seekable.end(au.seekable.length-1);
     if(Number.isFinite(sEnd)&&sEnd>0)S.dur=sEnd;
    }
+   if(tr.s==="dz"&&Number.isFinite(metaDur)&&metaDur>0&&metaDur<=31&&trDur>45&&!tr._pvWarned){
+    tr._pvWarned=true;
+    toast(LANG==="ru"?"Полной версии не нашлось ни на одном сервисе — Deezer отдал только 30-секундный фрагмент":"No full version was found on any service — Deezer only has a 30-second preview",6500)}
    renderNP();paint();
    lyricsDurCheck();
    if(fp.dataset.open==="true")renderFP();
@@ -877,6 +911,7 @@ function load(tr,auto,resumePos=0){
   A.onTime=()=>{
    if(gen!==A.gen)return;
    const now=au.currentTime;
+   prefetchNextSoon(now);
    if(A.watchdog&&now>0.2){
     clearTimeout(A.watchdog);
     A.watchdog=null;
@@ -998,6 +1033,7 @@ function load(tr,auto,resumePos=0){
    the bands move; when "track" the preamp belongs to the preset too. */
 function applyEQ(){
  if(!A.ctx)return;
+ limRoute();
  if(A.ctx.state==="suspended"&&S.playing){A.ctx.resume().catch(()=>{})}
  const preGain=S.eqMode==="track"?Math.pow(10,(S.preamp||0)/20):1;
  if(A.pre){
@@ -1056,15 +1092,26 @@ function applyRate(){
 }
 
 /* Extra loudness above the volume slider's ceiling, limited so it cannot clip. */
+/* Boost, a levelling gain above unity, the 3D mix and the reverb send can
+   all clip; plain playback cannot, so it bypasses the limiter entirely. */
+function limRoute(){
+ if(!A.ctx||!A.limWet)return;
+ const nb=!!S.x.norm&&NORM.db!=null&&(NORM_TARGET-NORM.db)>.1;
+ const need=(S.boost||1)>1.001||nb||!!S.sp.on||(!!S.x.rvOn&&S.x.rvMix>0)||(S.eq||[]).some(g=>g>0.5)||(S.eqMode==="track"&&(S.preamp||0)>0);
+ if(A.limOn===need)return;A.limOn=need;
+ const n=A.ctx.currentTime;
+ A.limWet.gain.setTargetAtTime(need?1:0,n,.04);
+ A.limDry.gain.setTargetAtTime(need?0:1,n,.04)}
 function applyBoost(){
  const b=Math.max(1,Math.min(3,S.boost||1));
  if(A.boost&&A.ctx)try{A.boost.gain.setValueAtTime(b,A.ctx.currentTime)}catch(_){A.boost.gain.value=b}
+ limRoute();
  const el=document.getElementById("boost-v");
  if(el)el.textContent=b<=1?t("snd.boost.off"):"+"+Math.round(20*Math.log10(b))+" dB";
  const sl=document.getElementById("boost");
  if(sl&&+sl.value!==Math.round(b*100)){sl.value=Math.round(b*100);paintRange(sl)}}
 function applySpatial(){
- if(!A.ctx)return;const on=S.sp.on,n=A.ctx.currentTime;
+ if(!A.ctx)return;const on=S.sp.on,n=A.ctx.currentTime;limRoute();
  A.byp.gain.setTargetAtTime(on?0:1,n,.06);
  A.dry.gain.setTargetAtTime(on?.9:0,n,.06);
  A.wet.gain.setTargetAtTime(on?.15+.2*S.sp.rad:0,n,.06);
@@ -1136,6 +1183,105 @@ function sprite(a){
  spriteCache[k]=c;return c}
 
 const cv=document.getElementById("field"),gx=cv.getContext("2d",{alpha:true,desynchronized:true});
+
+/* ── Wave v3: the field is drawn by WebGL ──
+   Canvas 2D drew the field one drawImage per particle, so the particle count
+   was capped at a few hundred on most machines (350 on every Linux box) and
+   the glow had to stay faint to keep the frame rate — the "dim, sparse wave".
+   WebGL draws the whole field as point sprites in one call: thousands of
+   particles, an additive glow and audio-driven size and brightness cost the
+   GPU almost nothing and the CPU only the physics loop it already ran. The
+   2D path stays as the fallback for a webview without WebGL. */
+const GLF={ok:false,c:null,gl:null,buf:null,data:null,cap:0,u:{},colT:0,ck:""};
+function glFieldInit(){
+ const c=document.getElementById("fieldgl");if(!c)return false;
+ let gl=null;
+ try{gl=c.getContext("webgl",{alpha:true,premultipliedAlpha:true,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false,powerPreference:"high-performance"})}catch(_){}
+ if(!gl)return false;
+ const vs=`attribute vec2 aPos;attribute vec3 aSt;uniform vec2 uRes;uniform float uDpr;varying float vA;varying float vH;
+void main(){vec2 p=aPos/uRes*2.0-1.0;gl_Position=vec4(p.x,-p.y,0.0,1.0);gl_PointSize=aSt.x*uDpr;vA=aSt.y;vH=aSt.z;}`;
+ const fs=`precision mediump float;uniform vec3 uC1;uniform vec3 uC2;uniform float uCore;varying float vA;varying float vH;
+void main(){vec2 d=gl_PointCoord-0.5;float r=dot(d,d)*4.0;if(r>1.0)discard;
+float halo=exp(-r*4.2)*(1.0-r);float core=exp(-r*44.0)*uCore;
+vec3 col=mix(uC1,uC2,vH)*halo*0.95+vec3(1.0)*core;float a=(halo*0.72+core)*vA;
+gl_FragColor=vec4(col*vA,a);}`;
+ const sh=(type,src)=>{const o=gl.createShader(type);gl.shaderSource(o,src);gl.compileShader(o);
+  if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o)||"shader");return o};
+ try{
+  const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr)||"link");
+  gl.useProgram(pr);
+  GLF.buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GLF.buf);
+  const aPos=gl.getAttribLocation(pr,"aPos"),aSt=gl.getAttribLocation(pr,"aSt");
+  gl.enableVertexAttribArray(aPos);gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,20,0);
+  gl.enableVertexAttribArray(aSt);gl.vertexAttribPointer(aSt,3,gl.FLOAT,false,20,8);
+  ["uRes","uDpr","uC1","uC2","uCore"].forEach(k=>GLF.u[k]=gl.getUniformLocation(pr,k));
+  gl.enable(gl.BLEND);gl.disable(gl.DEPTH_TEST);
+ }catch(e){console.warn("[meowave] WebGL field unavailable:",e);return false}
+ GLF.gl=gl;GLF.c=c;GLF.ck="";
+ c.addEventListener("webglcontextlost",e=>{e.preventDefault();GLF.ok=false;document.documentElement.classList.remove("glfield")});
+ c.addEventListener("webglcontextrestored",()=>{GLF.ok=glFieldInit();if(GLF.ok){document.documentElement.classList.add("glfield");resize()}});
+ return true}
+/* Colours follow the accent (and the adaptive cover accent, which rewrites
+   --pr/--pg/--pb on every track), so they are re-read a few times a second
+   rather than once — getComputedStyle is too slow for every frame. */
+function glFieldColors(now){
+ if(now-GLF.colT<600&&GLF.ck)return;
+ GLF.colT=now;
+ const de=document.documentElement,cs=getComputedStyle(de),light=de.dataset.theme==="light";
+ const r=+cs.getPropertyValue("--pr")||220,g=+cs.getPropertyValue("--pg")||220,b=+cs.getPropertyValue("--pb")||235;
+ const key=r+","+g+","+b+(light?"l":"d");if(key===GLF.ck)return;GLF.ck=key;
+ const gl=GLF.gl,c1=[r/255,g/255,b/255];
+ const c2=light?c1.map(v=>v*.55):c1.map(v=>v+(1-v)*.55);
+ gl.uniform3f(GLF.u.uC1,c1[0],c1[1],c1[2]);gl.uniform3f(GLF.u.uC2,c2[0],c2[1],c2[2]);
+ gl.uniform1f(GLF.u.uCore,light?0:1);
+ /* Additive light on the dark theme (glow adds up into neon where the
+    wave is dense); ordinary "over" on the light one, where adding light to
+    white would erase the field. */
+ if(light)gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE)}
+function glFieldDraw(lvl){
+ const gl=GLF.gl;if(!gl)return;
+ const n=F.n;
+ if(GLF.cap<n){GLF.data=new Float32Array(Math.max(n,64)*5);GLF.cap=n}
+ const D=GLF.data,light=document.documentElement.dataset.theme==="light";
+ const gm=(light?.95:1.12)+S.glow*.22,beat=AB.beat,bass=AB.bass;
+ const aMul=(light?.85:1)*(.86+lvl*.6+beat*.36);
+ /* Bigger, softer sprites with a small hot core: the field reads as glowing
+    dust rather than pin-pricks, and where it is dense the additive blend
+    builds up into light. One particle in seventy is a large dim bokeh orb. */
+ for(let i=0,o=0;i<n;i++,o+=5){const p=F.p[i],big=p.r>.986;
+  D[o]=p.x;D[o+1]=p.y;
+  D[o+2]=(7.2+p.s*10.5+bass*7.5*p.s+beat*4.2)*gm*(big?2.6:1);
+  D[o+3]=Math.min(1,p.a*aMul*(big?.4:1));
+  D[o+4]=p.r}
+ gl.viewport(0,0,GLF.c.width,GLF.c.height);
+ gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+ if(!n)return;
+ glFieldColors(performance.now());
+ gl.bindBuffer(gl.ARRAY_BUFFER,GLF.buf);
+ gl.bufferData(gl.ARRAY_BUFFER,D.subarray(0,n*5),gl.DYNAMIC_DRAW);
+ gl.uniform2f(GLF.u.uRes,F.w,F.h);gl.uniform1f(GLF.u.uDpr,F.dpr);
+ gl.drawArrays(gl.POINTS,0,n)}
+
+/* Bass / mid / treble and a beat pulse from the analyser. The wave breathes
+   with the bass, sparkles with the treble and kicks on the beat, instead of
+   following one averaged level that mostly measured the hi-hats. */
+const AB={bass:0,mid:0,high:0,lvl:0,beat:0,avg:0,lastBeat:0,kick:0};
+function audioBands(dt){
+ if(!A.an||!S.playing||!A.data){
+  AB.bass*=.92;AB.mid*=.92;AB.high*=.92;AB.lvl*=.92;AB.beat*=Math.exp(-dt*5);return AB}
+ A.an.getByteFrequencyData(A.data);
+ const d=A.data;let b=0,m=0,h=0;
+ for(let i=1;i<5;i++)b+=d[i];for(let i=5;i<32;i++)m+=d[i];for(let i=32;i<110;i++)h+=d[i];
+ b/=4*255;m/=27*255;h/=78*255;
+ const k=1-Math.exp(-dt*16);
+ AB.bass+=(b-AB.bass)*k;AB.mid+=(m-AB.mid)*k;AB.high+=(h-AB.high)*k;
+ AB.lvl=Math.min(1,(AB.bass*.5+AB.mid*.35+AB.high*.3)*1.5);
+ AB.avg+=(b-AB.avg)*(1-Math.exp(-dt*1.4));
+ const now=performance.now();
+ if(b>AB.avg*1.18+.035&&b>.28&&now-AB.lastBeat>230){AB.beat=1;AB.lastBeat=now;AB.kick=1}
+ else AB.beat*=Math.exp(-dt*5.5);
+ return AB}
 const F={p:[],n:0,w:0,h:0,dpr:1,t:0,mode:"cloud",mx:-1e4,my:-1e4,px:-1e4,py:-1e4,
  /* скорость курсора: частицы увлекаются движением, а не только отталкиваются */
  pvx:0,pvy:0,pt:0,burstT:0};
@@ -1159,8 +1305,17 @@ function build(n){
    straight past the 350 cap this function exists to enforce. */
 function safeParticleDensity(dens=S.dens){
  const mem=Number(navigator.deviceMemory)||4,cores=Number(navigator.hardwareConcurrency)||4;
- if(matchMedia("(pointer:coarse)").matches||mem<=2||cores<=2)return Math.min(dens,150);
- if((navigator.userAgent&&navigator.userAgent.includes("Linux"))||mem<=4||cores<=4)return Math.min(dens,350);
+ const weak=matchMedia("(pointer:coarse)").matches||mem<=2||cores<=2;
+ const mid=(navigator.userAgent&&navigator.userAgent.includes("Linux"))||mem<=4||cores<=4;
+ /* The caps are what the drawing path can afford. Point sprites on the GPU
+    cost next to nothing per particle, so with WebGL the limit is the physics
+    loop; the 2D fallback keeps its old, much lower ceiling. */
+ if(GLF.ok){
+  if(weak)return Math.min(dens,1400);
+  if(mid)return Math.min(dens,3200);
+  return Math.min(dens,6000)}
+ if(weak)return Math.min(dens,150);
+ if(mid)return Math.min(dens,350);
  return Math.min(dens,800)}
 /* стартовая раскладка: частицы приходят из-за краёв экрана и стягиваются в круг */
 function scatterEdges(){
@@ -1185,13 +1340,19 @@ function resize(){
  /* At dpr 2 the field is four times the pixels for a glow that is deliberately
     soft — nothing in it has an edge sharp enough to benefit, and on WebKitGTK
     the canvas rasterises on the CPU: fill rate is the wall, not the sprite
-    count. 1.0 is the ceiling, and lite mode drops to 0.75. */
- F.dpr=Math.min(S.lite?0.75:1.0,window.devicePixelRatio||1);
+    count. 1.0 is the ceiling, and lite mode drops to 0.75. The GPU path can
+    afford a little more resolution, which keeps the sprites round. */
+ F.dpr=Math.min(S.lite?0.75:(GLF.ok?1.25:1.0),window.devicePixelRatio||1);
  F.w=innerWidth;F.h=innerHeight;
- cv.width=F.w*F.dpr;cv.height=F.h*F.dpr;gx.setTransform(F.dpr,0,0,F.dpr,0,0);
+ if(GLF.ok){
+  GLF.c.width=Math.round(F.w*F.dpr);GLF.c.height=Math.round(F.h*F.dpr);
+  if(cv.width!==1){cv.width=cv.height=1}
+ }else{cv.width=F.w*F.dpr;cv.height=F.h*F.dpr;gx.setTransform(F.dpr,0,0,F.dpr,0,0)}
  if(!F.p.length)build(innerWidth<900?Math.round(safeParticleDensity()*.45):safeParticleDensity());
  staticFieldDrawn=false;
 }
+GLF.ok=glFieldInit();
+if(GLF.ok)document.documentElement.classList.add("glfield");
 resize();addEventListener("resize",()=>{resize()});
 addEventListener("pointermove",e=>{
  const now=performance.now(),dt=Math.max(8,now-F.pt)/1000;
@@ -1219,9 +1380,13 @@ function burst(strength=1){
   p.vx+=Math.cos(a)*v;p.vy+=Math.sin(a)*v-42*strength})}
 function ring(){F.mode="ring"}
 function step(dt,lvl){
- const sp=S.pspeed;F.t+=dt*sp;
+ const sp=S.pspeed;F.t+=dt*sp*(1+AB.mid*.7);
  const w=F.w,h=F.h,n=F.n,mode=F.mode;
- const amp=h*(.05+.16*lvl);
+ const amp=h*(.05+.13*lvl+.06*AB.bass+.05*AB.beat);
+ /* A beat nudges the wave outward from its spine; the springs pull it back,
+    so the kick reads as a pulse rather than a scatter. */
+ const kick=AB.kick&&mode==="flow"?AB.kick*(60+120*AB.bass):0;AB.kick=0;
+ const sparkle=AB.high*7;
  /* после burst притяжение к цели плавно восстанавливается за ~3.6с (smoothstep) */
  let hold=1;
  if(F.burstT){const e=(performance.now()-F.burstT)/3600;
@@ -1243,7 +1408,9 @@ function step(dt,lvl){
   }else{
    const ph=i/n;
    p.hx=(((ph*1.2+F.t*.05)%1.2)-.1)*w;
-   p.hy=h*.5+Math.sin(ph*Math.PI*4+F.t*1.1+p.lane*.7)*amp+(p.lane-4)*h*.028+Math.sin(F.t*.5+p.ph)*6;
+   p.hy=h*.5+Math.sin(ph*Math.PI*4+F.t*1.1+p.lane*.7)*amp+(p.lane-4)*h*(.028+.012*AB.bass)+Math.sin(F.t*.5+p.ph)*6
+    +(sparkle?Math.sin(F.t*9+p.ph*7)*sparkle*p.r:0);
+   if(kick){const dy=p.y-h*.5;p.vy+=(dy>0?1:-1)*kick*(.35+p.r);}
   }
   const a = Math.sin(p.y * 0.006 + F.t * 0.5) + Math.cos(p.x * 0.004 - F.t * 0.3);
   p.vx += Math.cos(a) * 0.08 * (p.s || 1);
@@ -1264,12 +1431,13 @@ function step(dt,lvl){
   if (p.x > W + 5) p.x = -5; if (p.x < -5) p.x = W + 5; if (p.y > H + 5) p.y = -5; if (p.y < -5) p.y = H + 5;
  }}
 function draw(lvl){
+ if(GLF.ok)return glFieldDraw(lvl);
  gx.clearRect(0,0,F.w,F.h);
  if(!F.n)return;
  gx.globalCompositeOperation=document.documentElement.dataset.theme==="light"?"source-over":"lighter";
- const gl=.6+S.glow*.5;
- for(let i=0;i<F.n;i++){const p=F.p[i],sz=(2+p.s*2.8+lvl*2.6)*gl;
-  gx.drawImage(sprite(p.a),p.x-sz,p.y-sz,sz*2,sz*2)}
+ const gl=.85+S.glow*.4;
+ for(let i=0;i<F.n;i++){const p=F.p[i],sz=(2.2+p.s*3+lvl*2.6+AB.beat*1.6)*gl;
+  gx.drawImage(sprite(Math.min(1,p.a*(1+lvl*.4))),p.x-sz,p.y-sz,sz*2,sz*2)}
  gx.globalCompositeOperation="source-over"}
 
 /* cover visualiser */
@@ -1452,12 +1620,13 @@ function frame(now){
   if(fp.dataset.open==="true"){
    fpBeat(dt);
   }else{
-   const lvl=level();
+   const lvl=audioBands(dt).lvl;
    /* Glow dust does not need every frame the UI gets: 40 updates a second
       read the same, and every canvas repaint is CPU pixels under WebKitGTK.
-      dt accumulates so the physics keeps its real speed. */
+      dt accumulates so the physics keeps its real speed. The WebGL field
+      draws on the GPU, so it takes every frame and stays fluid. */
    fieldDt+=dt;
-   if(fieldDt>=1/40){step(fieldDt,lvl);draw(lvl);fieldDt=0}
+   if(GLF.ok||fieldDt>=1/40){step(fieldDt,lvl);draw(lvl);fieldDt=0}
   }
  }else if(!staticFieldDrawn&&F.w&&F.h){
   gx.clearRect(0,0,F.w,F.h);
@@ -1475,18 +1644,26 @@ function frame(now){
 
  raf=requestAnimationFrame(frame)
 }
+/* A line lights up this much before its timestamp: the media clock runs a
+   little ahead of what reaches the speakers, and a line that appears exactly
+   on the beat reads as late. */
+const LY_LEAD=.18;
 function syncKaraokeFrame(curPos){
- if(S.lyKaraoke==="line"||S.lyKaraoke==="off")return;
  const L=lyricsFor(S.current);
  if(!L?.lines?.length||!L.synced)return;
  const offset=typeof getLyricOffset==="function"?getLyricOffset(S.current):0;
- const effPos=Math.max(0,curPos+offset);
+ const effPos=Math.max(0,curPos+offset+LY_LEAD);
  let idx=-1;
  for(let i=0;i<L.lines.length;i++){
   const at=L.lines[i].at;
   if(at==null)continue;
   if(effPos>=at)idx=i;else break;
  }
+ /* Line changes are decided on the frame clock. timeupdate fires about four
+    times a second, so a line used to switch up to a quarter-second late —
+    the "lyrics are out of sync" report even with correct timestamps. */
+ if(idx!==lyLast&&((fp.dataset.open==="true"&&S.fpMode==="lyric")||document.getElementById("lyr")))syncLyrics();
+ if(S.lyKaraoke==="line"||S.lyKaraoke==="off")return;
  if(idx<0||idx>=L.lines.length)return;
  const curLine=L.lines[idx];
  const nextLine=L.lines[idx+1];
@@ -1535,6 +1712,7 @@ function setRender(on){
      resize() above when the window comes back — rebuilding costs a few
      milliseconds once, against hundreds of megabytes held indefinitely. */
   cv.width=cv.height=1;
+  if(GLF.ok&&GLF.c){GLF.c.width=GLF.c.height=1}
   spriteCache={};
   vis.c=null;vis.g=null}
 }
@@ -1559,6 +1737,7 @@ const SVC_ICONS={
  sc:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.2 13.8a.8.8 0 0 1 .8.8v1.6a.8.8 0 0 1-1.6 0v-1.6a.8.8 0 0 1 .8-.8zm2.4-2.4a.8.8 0 0 1 .8.8v4a.8.8 0 0 1-1.6 0v-4a.8.8 0 0 1 .8-.8zm2.4-1.2a.8.8 0 0 1 .8.8v5.2a.8.8 0 0 1-1.6 0V11a.8.8 0 0 1 .8-.8zm2.4-1.8a.8.8 0 0 1 .8.8v7a.8.8 0 0 1-1.6 0V10a.8.8 0 0 1 .8-.8zm2.4-1.4a.8.8 0 0 1 .8.8v8.4a.8.8 0 0 1-1.6 0V8.4a.8.8 0 0 1 .8-.8zm9.2 1.6a4.4 4.4 0 0 0-4.2 3.1 3.5 3.5 0 0 0-1.4-.3c-.2 0-.4 0-.6.1V17h6.2a3.5 3.5 0 0 0 0-7z"/></svg>`,
  ym:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.65 10.78 L22.52 12.90 L22.26 13.16 L18.87 12.27 L21.36 16.96 L21.06 17.10 L17.70 14.34 L18.43 19.74 L18.43 20.28 L18.11 20.48 L15.28 14.62 L12.25 21.94 L11.70 22.54 L11.42 22.45 L13.04 13.15 L4.30 17.99 L3.46 18.34 L3.22 17.89 L11.37 11.05 L1.47 9.90 L1.77 9.39 L10.36 8.72 L4.34 4.55 L4.59 4.33 L5.49 4.54 L10.99 6.47 L8.50 1.95 L8.91 1.85 L13.46 5.51 L13.49 1.56 L13.82 1.49 L15.79 6.01 L17.61 3.07 L17.91 3.42 L17.54 6.88 L20.10 5.71 L20.71 5.74 L18.78 8.48 L22.16 9.08 L22.23 9.47 L19.30 10.20 L19.16 10.39 L19.65 10.76 Z"/></svg>`,
  sp:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.58 14.42c-.18.3-.56.4-.86.22-2.35-1.44-5.32-1.76-8.81-.97-.34.08-.68-.14-.76-.48-.08-.34.14-.68.48-.76 3.82-.87 7.1-.51 9.73 1.13.3.18.4.56.22.86zm1.22-2.73c-.23.37-.72.49-1.09.26-2.69-1.66-6.8-2.14-9.99-1.17-.42.13-.86-.11-.99-.53-.13-.42.11-.86.53-.99 3.65-1.11 8.2-.58 11.28 1.34.37.23.49.72.26 1.09zm.11-2.85C14.68 8.87 9.39 8.7 6.3 9.64c-.49.15-1.02-.13-1.17-.62-.15-.49.13-1.02.62-1.17 3.56-1.08 9.42-.88 13.15 1.33.45.27.6.85.33 1.3-.27.45-.85.6-1.33.33z"/></svg>`,
+ dz:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="1.5" y="15" width="4" height="3.2" rx=".6"/><rect x="7" y="12" width="4" height="6.2" rx=".6"/><rect x="12.5" y="8.6" width="4" height="9.6" rx=".6"/><rect x="18" y="5" width="4.5" height="13.2" rx=".6"/></svg>`,
  local:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="11" cy="14" r="2"/><path d="M13 14V10"/></svg>`,
  genius:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.5c-.8 2-2.8 3.5-5.5 3.5-3.6 0-6.5-2.9-6.5-6.5S8.4 5 12 5c2.4 0 4.4 1.3 5.4 3.2l-2.2 1.3c-.6-1.2-1.8-2-3.2-2-2.2 0-4 1.8-4 4s1.8 4 4 4c1.4 0 2.6-.7 3.3-1.8h-3.3v-2.4h5.8v3.2z"/></svg>`
 };
@@ -2250,7 +2429,7 @@ function sprScore(tr,h){
   const diff=Math.abs(d-d0);
   sc+=diff<=2?40:diff<=5?30:diff<=10?14:diff<=25?0:diff<=60?-20:-45;
   if(d<=35)sc-=80}
- sc+=h.s==="ytm"?6:h.s==="ym"?5:h.s==="sc"?-2:0;
+ sc+=h.s==="ytm"?6:h.s==="ym"?5:h.s==="sc"?-2:h.s==="dz"?-12:0;
  return Math.round(sc)}
 const sprKey=tr=>"sp:"+String(tr?._spOrig?.id||tr?.id||"");
 async function sprResolve(tr,force){
@@ -2266,15 +2445,21 @@ async function sprResolve(tr,force){
    const res=await Promise.all(list.map(q=>searchRemote(q).catch(()=>[])));
    for(const hits of res)for(const h of hits||[]){
     if(!h||!h.id||h.s==="sp"||h.s==="local")continue;
-    const kk=h.s+":"+h.id;if(!seen.has(kk))seen.set(kk,{...h,score:sprScore(tr,h)})}};
+    const kk=h.s+":"+h.id;
+    /* The strict matcher (MWM) decides "same song"; the loose score only
+       ranks among those. A candidate MWM rejects needs an otherwise
+       near-perfect loose score to be considered at all. */
+    if(!seen.has(kk)){const m=MWM.of(tr,h);seen.set(kk,{...h,m,score:sprScore(tr,h)+(m!=null?25:-40)})}}};
   const ranked=()=>[...seen.values()].sort((a,b)=>b.score-a.score);
   await run(qs.slice(0,2));
   let best=ranked();
   if(!best.length||best[0].score<75){await run(qs.slice(2));best=ranked()}
   SPR.alts.set(k,best.slice(0,8));
   const top=best[0];if(!top)return null;
+  /* "Not found" beats playing somebody else's song. */
+  if(top.m==null&&top.score<60)return null;
   const rec={s:top.s,id:String(top.id),t:top.t,a:top.a,d:+top.d||0,score:top.score,at:Date.now()};
-  if(top.score>=45){sprMap().set(k,rec);sprSave()}
+  if((top.m!=null&&top.score>=60)||top.score>=90){sprMap().set(k,rec);sprSave()}
   return rec})();
  SPR.inflight.set(k,job);
  try{return await job}finally{SPR.inflight.delete(k)}}
@@ -2393,7 +2578,7 @@ function normApply(sec){
  if(!A.ctx||!A.norm)return;
  let gdb=0;
  if(S.x.norm&&NORM.db!=null)gdb=Math.max(-12,Math.min(6,NORM_TARGET-NORM.db));
- A.norm.gain.setTargetAtTime(Math.pow(10,gdb/20),A.ctx.currentTime,sec??1.2)}
+ A.norm.gain.setTargetAtTime(Math.pow(10,gdb/20),A.ctx.currentTime,sec??1.2);limRoute()}
 function normTrack(tr){
  const k=trackKey(tr);if(NORM.key===k)return;
  NORM.key=k;NORM.n=0;
@@ -2446,7 +2631,7 @@ function applyReverb(){
  const t=ctx.currentTime,mix=Math.max(0,Math.min(1,R.rvMix/100));
  A.rvPre.delayTime.setTargetAtTime((R.rvPre||0)/1000,t,.05);
  A.rvTone.frequency.setTargetAtTime(1800+R.rvTone*140,t,.05);
- A.rvOut.gain.setTargetAtTime(on?mix*1.15:0,t,.08);
+ A.rvOut.gain.setTargetAtTime(on?mix*1.15:0,t,.08);limRoute();
  if(!on&&A.rvLinked){setTimeout(()=>{if(!(S.x.rvOn&&S.x.rvMix>0)&&A.rvLinked){try{A.out.disconnect(A.rvIn)}catch(_){}A.rvLinked=false}},400)}}
 function paintReverb(){
  const R=S.x,on=id=>document.getElementById(id);
@@ -3327,7 +3512,7 @@ function syncLyrics(force){
   ?A.audio.currentTime
   :S.pos;
  const offset=typeof getLyricOffset==="function"?getLyricOffset(S.current):0;
- const effPos=Math.max(0,audioPos+offset);
+ const effPos=Math.max(0,audioPos+offset+LY_LEAD);
 
  let idx=-1;
  for(let i=0;i<L.lines.length;i++){
@@ -3605,6 +3790,7 @@ async function setTrack(tr,play=true,openFull=false,ctx,keepQueue,isBack=false){
  adaptAccent(tr);
  pushHistory(tr);noteTrackStart(tr);
  if(PLAYCTX.key==="wave"&&tr){
+  if(typeof waveNoteStart==="function")waveNoteStart(tr);
   if(typeof WAVE_SESSION_PLAYED!=="undefined")WAVE_SESSION_PLAYED.add(String(tr.s)+":"+String(tr.id));
   if(queue.length<5&&typeof waveExtend==="function")waveExtend().catch(()=>{});
  }
@@ -3644,7 +3830,7 @@ function toggle(){
    panel is the schedule rather than a decoration. */
 function playablePool(){
  const playable=TRACKS.filter(x=>x.mode!=="empty"&&!isDisliked(x));
- return playable.filter(x=>svc(x.s).on);
+ return playable.filter(x=>playOn(x.s));
 }
 
 /* ───────────────────── playback context ─────────────────────
@@ -3666,13 +3852,20 @@ function listFor(key){
  if(k==="loc")return TRACKS.filter(x=>x.s==="local");
  if(k==="rec")return HISTORY.map(h=>h.tr).filter(Boolean);
  if(k==="search")return SEARCH_HITS.slice();
- if(k==="wave")return WAVE.filter(x=>svc(x.s).on);
+ if(k==="wave")return WAVE.filter(x=>playOn(x.s));
  if(k.startsWith("pl:"))return (PLAYLISTS.find(p=>p.id===k.slice(3))?.tracks||[]).slice();
  if(k.startsWith("art:"))return (artistList().find(a=>a.name===k.slice(4))?.list||[]).slice();
  if(k.startsWith("grp:"))return (PL_GROUPS[+k.slice(4)]?.list||[]).slice();
  /* A room's line-up lives server-side, not in a local array like the rest. */
  if(k.startsWith("room:"))return (SOC.roomQueue||[]).map(r=>r.track).slice();
+ /* Collections, charts and artist pages opened from the home sheet. */
+ if(k.startsWith("x:"))return (XLISTS.get(k)?.tracks||[]).slice();
  return null}
+const XLISTS=new Map();
+function xlistSet(key,name,tracks){
+ XLISTS.set(key,{name,tracks:tracks||[]});
+ while(XLISTS.size>40)XLISTS.delete(XLISTS.keys().next().value);
+ (tracks||[]).forEach(x=>{if(x&&!TRACKS.some(y=>sameTrack(y,x)))TRACKS.push(x)})}
 
 /* Shown in the queue panel: "playing from Favorites". */
 function ctxName(key){
@@ -3685,6 +3878,7 @@ function ctxName(key){
  if(k.startsWith("pl:"))return PLAYLISTS.find(p=>p.id===k.slice(3))?.name||t("lib.pl");
  if(k.startsWith("art:"))return k.slice(4);
  if(k.startsWith("grp:"))return PL_GROUPS[+k.slice(4)]?.a||t("lib.art");
+ if(k.startsWith("x:"))return XLISTS.get(k)?.name||t("ctx.all");
  return t("ctx.all")}
 
 /* The pool the queue is built from: the context when it still holds something
@@ -3693,7 +3887,7 @@ function contextPool(){
  const list=listFor(PLAYCTX.key);
  const base=list||playablePool();
  const playable=base.filter(x=>x&&x.mode!=="empty"&&!isDisliked(x));
- return playable.filter(x=>svc(x.s).on);
+ return playable.filter(x=>playOn(x.s));
 }
 
 function setContext(key){
@@ -3750,10 +3944,12 @@ function next(userInitiated){
     restart made "Next" replay the same song whenever repeat was on. */
  if(!userInitiated&&S.repeat&&A.audio&&S.current?.mode==="local"){A.audio.currentTime=0;A.audio.play().catch(console.warn);return}
  /* Take the head of the visible queue — that is the promise the panel made. */
+ /* The wave learns from how a track ended: played out, or skipped. */
+ if(PLAYCTX.key==="wave"&&typeof waveNoteEnd==="function")waveNoteEnd(S.current,!userInitiated);
  let nx=null;
  while(queue.length&&!nx){
   const c=queue.shift();
-  if(c&&!isDisliked(c)&&c.mode!=="empty"&&svc(c.s).on)nx=c}
+  if(c&&!isDisliked(c)&&c.mode!=="empty"&&playOn(c.s))nx=c}
  if(PLAYCTX.key==="wave"&&queue.length<5){
   if(typeof waveExtend==="function")waveExtend().catch(()=>{});
  }
@@ -3787,6 +3983,20 @@ function next(userInitiated){
   nx=S.shuffle?l[Math.floor(Math.random()*l.length)]:l[0]}
  setTrack(nx,true,false,undefined,true)}
 
+/* Resolving a stream (YouTube Music especially) is the slow part of a skip.
+   Twenty seconds before the end, the proxy resolves the next one and keeps
+   the URL in its cache, so the change is instant. Once per track. */
+let prefetchedFor="";
+function prefetchNextSoon(pos){
+ if(!TAURI||!S.current)return;
+ const d=S.dur||+S.current.d||0;if(!(d>30)||d-pos>20)return;
+ const k=trackKey(S.current);if(prefetchedFor===k)return;prefetchedFor=k;
+ const nx=queue.find(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&playOn(x.s));
+ if(!nx||nx.s==="local"||nx.blob)return;
+ const go=x=>inv("stream_prefetch",{service:x.s,id:String(x.id),hq:hqFlag(),fmt:x.s==="ytm"?ytmFmt(x):"best"}).catch(()=>{});
+ if(nx.s==="sp")sprResolve(nx).then(rec=>{if(rec)go({s:rec.s,id:rec.id})}).catch(()=>{});
+ else go(nx)}
+
 function stopAtEnd(){
  S.playing=false;S.pos=S.dur;sync();renderNP();paint()}
 
@@ -3817,6 +4027,7 @@ async function fetchRadioTracks(seed){
    skipping everything played in this session and history. */
 let waveExtendPromise=null;
 function waveExtend(){
+ if(typeof wave2Extend==="function")return wave2Extend();
  if(waveExtendPromise)return waveExtendPromise;
  waveExtendPromise=(async()=>{
   try{
@@ -4080,6 +4291,8 @@ function setVolume(v){
 }
 
 function sync(){
+  /* Friends see play / pause within seconds, not at the next minute tick. */
+  clearTimeout(sync.pt);sync.pt=setTimeout(()=>{if(typeof presBeat==="function")presBeat(false)},2500);
   const name=S.playing?"pause":"play";
   setPlayIcon(document.getElementById("play"),name,18);
   document.getElementById("hero").classList.toggle("fade",S.playing);
@@ -4112,6 +4325,7 @@ function go(v){
   paintRail();
  document.querySelectorAll(".view").forEach(x=>x.dataset.active=(x.id==="v-"+v));
  cv.classList.toggle("dim",v!=="home");
+ document.getElementById("fieldgl")?.classList.toggle("dim",v!=="home");
  if(v==="search")search(document.getElementById("q").value);
  /* Social screens rebuild on entry; leaving one stops its polling so a
     forgotten timer never keeps hitting the API from the background. */
@@ -4503,6 +4717,9 @@ function renderWaveHint(){
 /* Starts the wave: picks seeds, retrieves radio recommendations, mixes 20% anchors
    with 80% discovery, and launches uninterrupted playback. */
 async function startWave(){
+ if(typeof wave2Start==="function")return wave2Start();
+ return startWaveLegacy()}
+async function startWaveLegacy(){
  const favs=favTracks().filter(x=>svc(x.s)?.on);
  const hist=HISTORY.map(h=>h.tr).filter(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on);
  const library=TRACKS.filter(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&svc(x.s)?.on);
@@ -4991,7 +5208,7 @@ function applyFPSettings(){
  d.bgMode=S.fpBgMode||"dynamic";
  d.shrink=String(X.shrink!==false);
  d.beat=String(!!X.beat);
- d.lyAlign=X.lyAlign==="center"?"center":"left";
+ d.lyAlign=["left","center","right"].includes(X.lyAlign)?X.lyAlign:"left";
  d.lyBlur=String(X.lyBlur!==false);
  d.idle=String(X.idle!==false);
  fpEl.style.setProperty("--fp-glow",((S.fpGlow??100)/100).toFixed(2));
@@ -5024,7 +5241,7 @@ function syncFPSettingsUI(){
  fpSegPaint("fp-bg-mode-group","bg",S.fpBgMode||"dynamic");
  fpSegPaint("fp-fill-mode-group","fill",S.lyKaraoke||"karaoke");
  fpSegPaint("fp-zoom-mode-group","zoom",S.fpZoom||"normal");
- fpSegPaint("fp-align-group","align",X.lyAlign==="center"?"center":"left");
+ fpSegPaint("fp-align-group","align",["left","center","right"].includes(X.lyAlign)?X.lyAlign:"left");
  fpRangePaint("fp-speed-range",X.flowSpeed??100,`${X.flowSpeed??100}%`);
  fpRangePaint("fp-blur-range",S.fpBlur??75,`${S.fpBlur??75}px`);
  fpRangePaint("fp-glow-range",S.fpGlow??100,`${S.fpGlow??100}%`);
@@ -5282,7 +5499,7 @@ function scheduleDiskSave(){
 }
 function save(){
  const fullData={
-  lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,pspeed:S.pspeed,
+  lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,dens2:1,pspeed:S.pspeed,
   svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
    ?Object.fromEntries(SERVICES.filter(s=>!s.local).map(s=>[s.id,s.on])):null,
   discord:{on:S.discord.on,tmpl:S.discord.tmpl,cid:S.discord.cid||""},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,x:S.x,profileTrack:S.profileTrack||null,
@@ -5336,6 +5553,8 @@ function restore(){try{
  if(d.glow!=null)S.glow=d.x&&d.x.glow2?d.glow:0;
  if(d.blur!=null)S.blur=d.blur;
  if(d.dens)S.dens=d.dens;
+ /* The GPU field affords more: the old three steps map onto the new ones. */
+ if(!d.dens2){if(S.dens===900)S.dens=1400;else if(S.dens===2200)S.dens=3200;else if(S.dens===4200)S.dens=6000}
  if(d.lite!==undefined){S.lite=!!d.lite;if(d.litePrev)litePrev=d.litePrev}
  if(d.pspeed)S.pspeed=d.pspeed;
  if(d.quality)S.quality=d.quality;
@@ -5389,7 +5608,7 @@ function restore(){try{
  if(d.perf!==undefined&&!d.perfManual){
   if(d.glow===.35||d.glow===.7)S.glow=1;
   if(d.blur===0||d.blur===8)S.blur=14;
-  if(d.dens===260||d.dens===500||d.dens===900||d.dens===1200)S.dens=2200}
+  if(d.dens===260||d.dens===500||d.dens===900||d.dens===1200)S.dens=3200}
  if(d.listen)S.listen=d.listen;
  if(d.avatar)S.avatar=d.avatar;
  if(d.banner)S.banner=d.banner;
@@ -5649,7 +5868,10 @@ async function ensureStreamPort(){
    way down to ytm.rs / api.rs. Both top settings therefore map to 1 — the old
    `quality==="high"` test sent lossless down the low-quality path, so the
    highest setting produced the worst stream. */
-const hqFlag=()=>(S.quality==="high"||S.quality==="lossless")?1:0;
+/* Three levels now: 0 smallest, 1 best lossy, 2 lossless. "lossless" only asks
+   for 2 when this webview decodes FLAC — otherwise the proxy would fetch a
+   file the player cannot open and the track would fall back anyway. */
+const hqFlag=()=>S.quality==="lossless"?(CAN.flac?2:1):(S.quality==="high"?1:0);
 /* Which containers this webview can actually decode.
    A per-platform fact, and for YouTube Music it decides whether anything
    plays at all: the service hands out Opus-in-WebM by default, Chromium
@@ -5660,7 +5882,8 @@ const hqFlag=()=>(S.quality==="high"||S.quality==="lossless")?1:0;
 const CAN=(()=>{
  const el=document.createElement("video");
  const can=s=>{try{const r=el.canPlayType(s);return r==="probably"||r==="maybe"}catch(e){return false}};
- return {webm:can('audio/webm;codecs="opus"'),mp4:can('audio/mp4;codecs="mp4a.40.2"')};
+ return {webm:can('audio/webm;codecs="opus"'),mp4:can('audio/mp4;codecs="mp4a.40.2"'),
+  flac:can("audio/flac")||can("audio/x-flac")||can('audio/mp4;codecs="flac"')};
 })();
 /* One-shot swap to the other container after a codec failure, keyed to the
    track so it exists exactly as long as that track is the failing one. */
@@ -5701,65 +5924,71 @@ async function probeStream(url){
 let fallbackResolving = null;
 const fallbackAttempted = new Set();
 
+/* The same rules as src-tauri/src/matching.rs, so a fallback picked here and
+   one picked by the stream proxy agree on what "the same song" is: both
+   alphabets folded together (Кино = Kino), decorations ignored ("Official
+   Video", "[Remastered 2011]"), a version the original is not (remix, live,
+   sped up…) rejected, and the length within 12 % / 20 s. null = a different
+   song. The old picker took the best of whatever came back — with a +100 for
+   "another service" that outweighed everything else, which is how a fallback
+   could swap a song for a different one. */
+const MWM=(()=>{
+ const VER=new Set("remix live cover karaoke instrumental nightcore sped slowed reverb acoustic mashup tribute 8d bassboosted minus acapella demo orchestral piano lofi edit version rmx vip bootleg flip remake parody remiks kaver lajv akustika".split(" "));
+ const NOISE=new Set("official video audio lyrics lyric music hd hq 4k mv clip visualizer visualiser the a feat ft featuring prod topic full original mix explicit clean single remastered remaster premiere with x and i klip oficialnyj premera tekst pesni ofitsialnyy".split(" "));
+ const DECOR=/\b(remaster(ed)?|version|edit|mix|mono|stereo|deluxe|bonus|live|radio|single|from|soundtrack|anniversary|acoustic|demo|instrumental|remix|\d{4})\b/i;
+ const TR={"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"e","э":"e","ж":"zh","з":"z","и":"i","й":"i","ы":"i","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"c","ч":"ch","ш":"sh","щ":"sch","ъ":"","ь":"","ю":"yu","я":"ya","і":"i","ї":"i","є":"e","ґ":"g"};
+ const fold=s=>{let o="";for(const ch of String(s||"").toLowerCase()){
+   const tr=TR[ch];if(tr!==undefined){o+=tr;continue}
+   if(/[\p{L}\p{N}]/u.test(ch)){o+=ch.normalize("NFKD").replace(/[\u0300-\u036f]/g,"")||ch;continue}
+   if(ch==="'"||ch==="’"||ch==="\u0060")continue;o+=" "}
+  return o.replace(/ and /g," ")};
+ const words=s=>{const all=fold(s).split(/\s+/).filter(Boolean),kept=all.filter(w=>!NOISE.has(w));return kept.length?kept:all};
+ /* What platforms bolt onto a title: "(feat. X)", "[Remastered 2011]",
+    " - Radio Edit". Only used for word coverage; versions are still checked
+    against the full title. A dash is cut only when what follows looks like
+    decoration, so "Кино - Группа крови" keeps its song name. */
+ const core=s=>{let o=String(s||"").replace(/[\(\[\{][^\)\]\}]*[\)\]\}]/g," ");
+  const m=/\s[-–—]\s(.*)$/.exec(o);if(m&&DECOR.test(m[1]))o=o.slice(0,m.index);
+  o=o.replace(/\s(feat\.?|ft\.?|featuring)\s.*$/i,"");
+  return words(o).length?o:String(s||"")};
+ const ver=s=>{const f=fold(s),o=f.split(/\s+/).filter(w=>VER.has(w));if(f.replace(/\s+/g,"").includes("bassboosted")&&!o.includes("bassboosted"))o.push("bassboosted");return o};
+ const cov=(want,got)=>{if(!want.length)return 1;let n=0;for(const w of want)if(got.some(g=>g===w||(w.length>=5&&g.startsWith(w))))n++;return n/want.length};
+ function score(wt0,wa0,wd,gt0,ga0,gd){
+  const full=words(wt0);if(!full.length)return null;
+  const known=!!String(wa0||"").trim()&&String(wa0).trim()!=="—";
+  const wa=known?words(wa0):[],gt=words(gt0),ga=words(ga0),gall=gt.concat(ga);
+  const cw=words(core(wt0));
+  const fc=cov(full,gall),cc=cov(cw,gall);
+  const useCore=cc>fc,wt=useCore?cw:full,tc=Math.max(fc,cc);
+  if(tc<(wt.length<=2?.99:.6))return null;
+  const wv=ver(`${wt0} ${wa0||""}`);for(const v of ver(gt0))if(!wv.includes(v))return null;
+  wd=+wd||0;gd=+gd||0;
+  const gap=wd>30&&gd>0?Math.abs(wd-gd):null;
+  if(gap!=null&&gap>Math.max(20,wd*.12))return null;
+  const ac=wa.length?cov(wa,gall):.7;
+  if(known&&ac<.5&&!(tc>=.99&&gap!=null&&gap<=3&&wt.length>=2))return null;
+  const kn=full.concat(wa),extra=gt.filter(g=>!kn.includes(g)).length;
+  const sc=.55*tc+.35*ac+(gap==null?.03:gap<=3?.15:gap<=8?.08:0)-Math.min(.25,extra*.04);
+  return sc<.6?null:sc}
+ const of=(want,h)=>want&&h?score(want.t,want.a,want.d,h.t,h.a,h.d):null;
+ /* Identity of a song across services, for de-duplicating a wave. */
+ const key=tr=>fold(String(tr?.a||"").split(/[,&]|\sfeat\.?\s/i)[0]).trim()+"|"+words(core(tr?.t)).join(" ");
+ return {fold,words,core,score,of,key}})();
+window.MWM=MWM;
+/* Service preference when several copies match equally well: the ones that
+   stream a whole track anonymously first. Deezer last — on its own it only
+   has a 30-second preview. */
+const SVC_PREF={ytm:.06,ym:.05,sc:.01,dz:-.08};
 function pickFallbackCandidate(hits, tr, attempted = new Set()) {
- if (!hits || !hits.length) return null;
- const origDur = tr.d ? (+tr.d || 0) : 0;
- const origTitleLower = (tr.t || "").toLowerCase();
- const isRemix = /remix|sped\s*up|speed\s*up|slowed|nightcore|reverb|edit|tribute|cover/i.test(origTitleLower);
-
- let best = null;
- let bestScore = -99999;
-
- for (const h of hits) {
-  if (!h || !h.id) continue;
-  const hKey = trackKey(h);
-  if (attempted.has(hKey) || (h.s === tr.s && String(h.id) === String(tr.id))) {
-   continue;
-  }
-  let score = 0;
-  const hTitleLower = (h.t || "").toLowerCase();
-
-  // Strongly prioritize ALTERNATIVE services when current service failed
-  if (h.s !== tr.s) {
-   score += 100;
-  } else {
-   score -= 50;
-  }
-
-  // Service reliability bonus (YouTube Music has universal anonymous streaming without DRM)
-  if (h.s === "ytm") score += 35;
-  else if (h.s === "ym") score += 20;
-  else if (h.s === "sc") score += 5;
-
-  // Title match penalties/bonuses (avoid sped up / slowed when original wasn't)
-  const candidateHasRemix = /remix|sped\s*up|speed\s*up|slowed|nightcore|reverb|edit|tribute|cover/i.test(hTitleLower);
-  if (!isRemix && candidateHasRemix) {
-   score -= 80;
-  } else if (isRemix && candidateHasRemix) {
-   score += 30;
-  }
-
-  // Duration proximity
-  const hDur = h.d ? (+h.d || 0) : 0;
-  if (origDur > 30) {
-   if (hDur > 0 && hDur <= 35) {
-    score -= 100;
-   } else if (hDur > 0) {
-    const diff = Math.abs(hDur - origDur);
-    if (diff <= 5) score += 60;
-    else if (diff <= 15) score += 40;
-    else if (diff <= 35) score += 15;
-    else score -= 30;
-   }
-  }
-
-  if (score > bestScore) {
-   bestScore = score;
-   best = h;
-  }
- }
- return best;
-}
+ if(!hits||!hits.length)return null;
+ let best=null,bs=-1;
+ for(const h of hits){
+  if(!h||!h.id||h.s==="sp"||h.s==="local")continue;
+  if(attempted.has(trackKey(h))||(h.s===tr.s&&String(h.id)===String(tr.id)))continue;
+  const m=MWM.of(tr,h);if(m==null)continue;
+  const sc=m+(h.s!==tr.s?.2:0)+(SVC_PREF[h.s]||0);
+  if(sc>bs){bs=sc;best=h}}
+ return best}
 
 async function fallbackResolveTrack(tr, auto, resumePos=0){
  if(!tr || tr.mode === "empty") return false;
@@ -5853,8 +6082,19 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  if(!sameTrack(tr,S.current))return;
  const why=await probeStream(url);
  S.playing=false;sync();
- toast(why.ok?t("load.err"):`${t("load.err")} — ${why.why}`);
+ toast(why.ok?t("load.err"):`${t("load.err")} — ${humanStreamError(why.why)}`,6500);
 }
+/* The proxy answers with the upstream's own words; these are the ones a user
+   can act on. YouTube's bot check is nearly always a VPN / shared IP. */
+function humanStreamError(why){
+ const w=String(why||""),ru=LANG==="ru";
+ if(/not a bot|LOGIN_REQUIRED|confirm you|bot check|Sign in to confirm/i.test(w))
+  return ru?"YouTube просит подтвердить, что вы не бот. Обычно так бывает с VPN или общим IP — смените сервер VPN или выключите его":"YouTube wants to confirm you are not a bot. This usually happens behind a VPN or a shared IP — switch the VPN server or turn it off";
+ if(/\b429\b|Too Many Requests|rate.?limit/i.test(w))return ru?"Сервис временно ограничил запросы — попробуйте через минуту":"The service is rate-limiting requests — try again in a minute";
+ if(/UNPLAYABLE|not available|unavailable|region|country|geo/i.test(w))return ru?"Трек недоступен в вашем регионе":"This track is not available in your region";
+ if(/timeout|timed out/i.test(w))return ru?"Сервис не ответил вовремя":"The service did not answer in time";
+ if(/no token|token/i.test(w))return ru?"Нужен вход в сервис (Настройки → Аккаунты)":"Sign-in to the service is required (Settings → Accounts)";
+ return w}
 /* Pure fetch: no debounce and no "is this still the newest query" check. Those
    belong to the search box, and keeping them here broke startWave(), which
    calls this in a loop — every iteration but the last cancelled itself against
@@ -6114,6 +6354,7 @@ async function loadProfile(){
  await loadBadgeCatalog();
  await loadOwnedBadges();
  await loadStats();
+ presBeat(true);
  await loadPlaylists();
  /* Merge the account's favorites with whatever this machine has. */
  await pullFavorites();
@@ -6171,7 +6412,12 @@ async function flushListening(force){
   if(sbStats)sbStats.listen_seconds=(Number(sbStats.listen_seconds)||0)+secs;
   if(S.view==="profile")renderProfile();
   syncAchievements();
- }catch(e){console.warn("report_listening:",e.message||e)}}
+ }catch(e){console.warn("report_listening:",e.message||e);
+  /* A failing RPC used to be a console line only, so listening hours just
+     silently stayed at zero. Say it once per session. */
+  if(!REPORT.errShown){REPORT.errShown=true;
+   toast((LANG==="ru"?"Время прослушивания не сохранилось: ":"Listening time was not saved: ")+String(e.message||e).slice(0,140)
+    +(LANG==="ru"?". Выполните новый SQL из supabase/migrations (15_presence_listening.sql)":". Run the new SQL from supabase/migrations (15_presence_listening.sql)"),9000)}}}
 setInterval(()=>flushListening(false),60000);
 /* Presence refresh: the elapsed timestamp has to move even mid-track. */
 setInterval(()=>{if(S.playing)dcPush()},60000);
@@ -7009,7 +7255,7 @@ async function downloadTrack(tr,sub,dirOverride){
   const path=await inv("download_track",{
    service:tr.s,id:String(tr.id),
    name:`${tr.a||"—"} - ${tr.t||"track"}`,
-   folder:dir,hq:hqFlag()===1,fmt:tr.s==="ytm"?ytmFmt(tr):"best"});
+   folder:dir,hq:hqFlag()>=1,fmt:tr.s==="ytm"?ytmFmt(tr):"best"});
   toast(t("dl.ok").replace("{n}",String(path).split(/[\\/]/).pop()),5200);
   return path;
  }catch(e){toast(t("dl.fail")+": "+String(e.message||e),5200);return null}}
@@ -7040,7 +7286,7 @@ async function downloadProcessed(tr,sub,dirOverride){
   const path=await inv("download_processed",{
    service:tr.s,id:String(tr.id),
    name:`${tr.a||"—"} - ${tr.t||"track"}`,
-   folder:dir,hq:hqFlag()===1,
+   folder:dir,hq:hqFlag()>=1,
    fmt:tr.s==="ytm"?ytmFmt(tr):"best",
    gains:S.eq.map(Number),rate,preserve_pitch:false,suffix:tag});
   toast(t("dl.ok").replace("{n}",String(path).split(/[\\/]/).pop()),5200);
@@ -7984,6 +8230,61 @@ const socErrBox=(msg)=>`<div class="panel pane"><p class="ph" style="margin:0;co
    circle (only the status dot was visible). Relayed URLs that the proxy
    refuses (hosts outside its allow-list) retry the direct URL once, then give
    up and leave the initial. See the capture-phase "error" listener below. */
+/* ── Presence ───────────────────────────────────────────────────────
+   Every status dot used to be hardcoded "online". Now each signed-in client
+   writes its own row in public.presence about once a minute (and on play /
+   pause / track change), and a dot is green only when that row is fresh.
+   Friends' rows are readable through RLS; anyone else has no dot at all. */
+const PRES={rows:new Map(),t:0,last:"",loaded:0};
+const PRES_FRESH=150*1000;
+function presStatus(id){
+ id=String(id||"");if(!id)return null;
+ if(sbUser&&id===sbUser.id)return S.playing?"listening":"online";
+ const r=PRES.rows.get(id);if(!r)return null;
+ const age=Date.now()-Date.parse(r.updated_at||0);
+ if(!(age<PRES_FRESH))return "offline";
+ return r.playing&&r.track?"listening":"online"}
+function presTrack(id){
+ const r=PRES.rows.get(String(id||""));
+ if(!r||!r.playing||!r.track||!(Date.now()-Date.parse(r.updated_at||0)<PRES_FRESH))return null;
+ return r.track}
+async function presLoad(ids){
+ ids=[...new Set((ids||[]).map(String).filter(x=>x&&!/^usr_|^g:|^grp/.test(x)))];
+ if(!sb||!sbUser||!ids.length)return;
+ try{
+  const {data,error}=await sb.from("presence").select("user_id,track,playing,updated_at").in("user_id",ids.slice(0,200));
+  if(error)throw error;
+  ids.forEach(id=>PRES.rows.delete(id));
+  (data||[]).forEach(r=>PRES.rows.set(String(r.user_id),r));
+  PRES.loaded=Date.now();presPaint();
+ }catch(e){console.warn("presence read:",e.message||e)}}
+/* Re-colours the dots already on screen instead of re-rendering lists. */
+function presPaint(){
+ document.querySelectorAll(".avat-wrap[data-profile] .status-indicator").forEach(dot=>{
+  const st=presStatus(dot.parentElement.dataset.profile);
+  dot.classList.toggle("listening",st==="listening");
+  dot.classList.toggle("online",st==="online");
+  dot.classList.toggle("offline",st!=="listening"&&st!=="online");
+  dot.hidden=!st})}
+async function presBeat(force){
+ if(!sb||!sbUser)return;
+ const tr=S.current&&S.current.mode!=="empty"?S.current:null;
+ const sig=(tr?trackKey(tr):"")+"|"+S.playing;
+ if(!force&&sig===PRES.last&&Date.now()-PRES.t<55000)return;
+ PRES.last=sig;PRES.t=Date.now();
+ const row={user_id:sbUser.id,playing:!!(S.playing&&tr),position:Math.floor(S.pos||0),
+  track:tr?{id:String(tr.id),s:tr.s,t:tr.t||"",a:tr.a||"",art:/^https?:/.test(tr.art||"")?tr.art:null,d:+tr.d||0}:null,
+  updated_at:new Date().toISOString()};
+ try{const {error}=await sb.from("presence").upsert(row,{onConflict:"user_id"});if(error)throw error}
+ catch(e){console.warn("presence write:",e.message||e)}}
+/* Leaving marks the row stale at once, so friends do not see a green dot
+   for the next two and a half minutes. */
+function presBye(){
+ if(!sb||!sbUser)return;
+ try{sb.from("presence").upsert({user_id:sbUser.id,playing:false,updated_at:new Date(Date.now()-10*60*1000).toISOString()},{onConflict:"user_id"}).then(()=>{},()=>{})}catch(_){}}
+setInterval(()=>{if(!document.hidden||S.playing)presBeat(false)},20000);
+setInterval(()=>{if(S.view==="people"&&!document.hidden&&PRES.rows.size)presLoad([...PRES.rows.keys()])},45000);
+window.addEventListener("pagehide",presBye);
 const avat=(p,size=34,status=null)=>{
  const pid=String(p?.id||p?.user_id||"");
  const link=pid&&!/^(g:|grp)/.test(pid)?` data-profile="${esc(pid)}"`:"";
@@ -8038,229 +8339,20 @@ document.addEventListener("error",e=>{
 const MOCK_STORAGE_KEY_FRIENDS = "mw.social.mock_friends.v3";
 const MOCK_STORAGE_KEY_CHATS = "mw.social.mock_chats.v3";
 
-const MOCK_COMMUNITY_USERS = [
-  {
-    id: "usr_alice",
-    username: "Alice_Wave",
-    avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80",
-    bio: "Lo-Fi producer & ambient sound designer. Daydreaming in synth chords.",
-    status: "listening",
-    listening: { t: "Resonance", a: "HOME" },
-    listen_seconds: 148500,
-    genres: ["Synthwave", "Chillout", "Lo-Fi"],
-    equipped_badge: "cat_dj",
-    mutual: 3,
-    isFriend: false
-  },
-  {
-    id: "usr_marcus",
-    username: "MarcusVibe",
-    avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80",
-    bio: "Vinyl collector, jazz enthusiast, coffee addict",
-    status: "online",
-    listening: null,
-    listen_seconds: 219200,
-    genres: ["Jazz", "Soul", "Funk"],
-    equipped_badge: "audiophile",
-    mutual: 2,
-    isFriend: false
-  },
-  {
-    id: "usr_elena",
-    username: "Elena_Synth",
-    avatar_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",
-    bio: "Retro electro & cyberpunk beats. Neon nights.",
-    status: "listening",
-    listening: { t: "After Dark", a: "Mr.Kitty" },
-    listen_seconds: 312000,
-    genres: ["Darkwave", "Electro", "Cyberpunk"],
-    equipped_badge: "cyber_cat",
-    mutual: 5,
-    isFriend: false
-  },
-  {
-    id: "usr_dmitry",
-    username: "DmitryBeats",
-    avatar_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=800&auto=format&fit=crop&q=80",
-    bio: "Bass guitarist & indie rock curator.",
-    status: "offline",
-    listening: null,
-    listen_seconds: 84300,
-    genres: ["Indie Rock", "Post-Punk"],
-    equipped_badge: "vinyl_lover",
-    mutual: 1,
-    isFriend: false
-  },
-  {
-    id: "usr_yuki",
-    username: "YukiSound",
-    avatar_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80",
-    bio: "J-Rock, anime OSTs & Math Rock explorer",
-    status: "listening",
-    listening: { t: "KICK BACK", a: "Kenshi Yonezu" },
-    listen_seconds: 195000,
-    genres: ["J-Rock", "Math Rock", "Anime OST"],
-    equipped_badge: "cat_dj",
-    mutual: 4,
-    isFriend: false
-  },
-  {
-    id: "usr_nova",
-    username: "NovaStream",
-    avatar_url: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop&q=80",
-    bio: "Electronic music explorer & DJ sets collector. Sound is life.",
-    status: "online",
-    listening: null,
-    listen_seconds: 240000,
-    genres: ["EDM", "House", "Techno"],
-    equipped_badge: "audiophile",
-    mutual: 0,
-    isFriend: false
-  },
-  {
-    id: "usr_kai",
-    username: "Kai_Ambient",
-    avatar_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80",
-    bio: "Deep ambient, drone & meditative modular synth patches",
-    status: "listening",
-    listening: { t: "Stone in Focus", a: "Aphex Twin" },
-    listen_seconds: 172000,
-    genres: ["Ambient", "Drone", "IDM"],
-    equipped_badge: "audiophile",
-    mutual: 2,
-    isFriend: false
-  },
-  {
-    id: "usr_sofia",
-    username: "Sofia_Indie",
-    avatar_url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&auto=format&fit=crop&q=80",
-    bio: "Indie pop, bedroom acoustic & warm autumn playlists",
-    status: "online",
-    listening: null,
-    listen_seconds: 134000,
-    genres: ["Indie Pop", "Acoustic", "Folk"],
-    equipped_badge: "vinyl_lover",
-    mutual: 1,
-    isFriend: false
-  },
-  {
-    id: "usr_artem",
-    username: "Artem_Phonk",
-    avatar_url: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80",
-    bio: "Drift phonk, memphis rap & nighttime bass heavy tracks",
-    status: "listening",
-    listening: { t: "Metamorphosis", a: "INTERWORLD" },
-    listen_seconds: 289000,
-    genres: ["Phonk", "Drift", "Bass"],
-    equipped_badge: "cyber_cat",
-    mutual: 3,
-    isFriend: false
-  },
-  {
-    id: "usr_maya",
-    username: "Maya_Piano",
-    avatar_url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop&q=80",
-    bio: "Neoclassical composer, piano keys & cinema soundtracks",
-    status: "offline",
-    listening: null,
-    listen_seconds: 161000,
-    genres: ["Classical", "Piano", "Cinematic"],
-    equipped_badge: "audiophile",
-    mutual: 0,
-    isFriend: false
-  },
-  {
-    id: "usr_hana",
-    username: "Hana_Retro",
-    avatar_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80",
-    bio: "80s City Pop, Japanese disco & nostalgic summer memories",
-    status: "listening",
-    listening: { t: "Plastic Love", a: "Mariya Takeuchi" },
-    listen_seconds: 224000,
-    genres: ["City Pop", "Disco", "Retro"],
-    equipped_badge: "vinyl_lover",
-    mutual: 4,
-    isFriend: false
-  },
-  {
-    id: "usr_roman",
-    username: "Roman_Metal",
-    avatar_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=160&auto=format&fit=crop&q=80",
-    banner_url: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80",
-    bio: "Prog metal, djent riffs, blast beats & guitar solos",
-    status: "online",
-    listening: null,
-    listen_seconds: 198000,
-    genres: ["Metal", "Prog Rock", "Djent"],
-    equipped_badge: "cat_dj",
-    mutual: 2,
-    isFriend: false
-  }
-];
+/* The demo community (twelve invented people, all permanently "online") is
+   gone: it was the "fake online" report. Guests see an honest empty state,
+   and every status dot comes from the presence table (see PRES below). The
+   names stay as empty stubs because older code paths still look them up. */
+const MOCK_COMMUNITY_USERS = [];
+try{localStorage.removeItem(MOCK_STORAGE_KEY_FRIENDS);localStorage.removeItem(MOCK_STORAGE_KEY_CHATS)}catch(_){}
 
-function getMockFriends(){
-  try{
-    const raw=localStorage.getItem(MOCK_STORAGE_KEY_FRIENDS);
-    if(raw){
-      const list=JSON.parse(raw);
-      if(Array.isArray(list)&&list.length>0){
-        // Sanitize corrupted names or legacy auto-friends
-        const isCorrupt=list.some(x=>!x||!x.username||x.username==="…"||x.username==="..."||x.username.trim()==="");
-        if(!isCorrupt)return list;
-      }
-    }
-  }catch(e){}
-  const fresh=JSON.parse(JSON.stringify(MOCK_COMMUNITY_USERS));
-  saveMockFriends(fresh);
-  return fresh;
-}
+function getMockFriends(){return []}
 
-function saveMockFriends(list){
-  try{
-    localStorage.setItem(MOCK_STORAGE_KEY_FRIENDS,JSON.stringify(list));
-  }catch(e){}
-}
+function saveMockFriends(list){}
 
-function getMockChats(){
-  try{
-    const raw=localStorage.getItem(MOCK_STORAGE_KEY_CHATS);
-    if(raw)return JSON.parse(raw);
-  }catch(e){}
-  const now=Date.now();
-  return [
-    {
-      id: "msg_1",
-      chat_key: "d:usr_alice",
-      sender: "usr_alice",
-      body: "Привет! Зацени этот трек: 🎵 HOME — Resonance, как тебе вайб?",
-      sent_at: new Date(now - 1000 * 60 * 35).toISOString()
-    },
-    {
-      id: "msg_2",
-      chat_key: "d:usr_elena",
-      sender: "usr_elena",
-      body: "Йоу! Слушаю новый альбом 🎵 Mr.Kitty — After Dark",
-      sent_at: new Date(now - 1000 * 60 * 12).toISOString()
-    }
-  ];
-}
+function getMockChats(){return []}
 
-function saveMockChats(list){
-  try{
-    localStorage.setItem(MOCK_STORAGE_KEY_CHATS,JSON.stringify(list));
-  }catch(e){}
-}
+function saveMockChats(list){}
 
 function updatePeopleSummary(friendsCount=0, listeningCount=0){
   const sum=document.getElementById("peoplesum");
@@ -8433,7 +8525,7 @@ async function renderPeopleProfile(id){
     <div class="banner">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
     <div style="padding:var(--sp-6)">
       <div class="profhead">
-        <span class="avatar-holder"><span class="avatar">${avat(view, 104)}</span>${(()=>{const st=p.status||(friend?"online":null);if(!st)return "";const c=st==="listening"?"listening":st==="online"?"online":"offline";return `<span class="status-indicator ${c}"></span>`})()}</span>
+        <span class="avatar-holder"><span class="avatar">${avat(view, 104)}</span>${(()=>{const st=presStatus(p.id)||(friend?"offline":null);if(!st)return "";const c=st==="listening"?"listening":st==="online"?"online":"offline";return `<span class="status-indicator ${c}"></span>`})()}</span>
         <div style="min-width:0;flex:1">
           <div class="uname"><b class="unview">${esc(view.username||t("chat.anon"))}</b></div>
           <div class="pinrow" style="margin-top:4px">${pinHtml}</div>
@@ -8552,7 +8644,7 @@ async function renderPeople(){
 }
 
 function peopleRow(p,sub){
-  return `<button class="people-row" data-person="${esc(p.id)}">${avat(p,42,p.status||"online")}
+  return `<button class="people-row" data-person="${esc(p.id)}">${avat(p,42,presStatus(p.id)||p.status||null)}
     <span class="meta"><b>${esc(p.username||t("chat.anon"))}</b><span>${esc(sub||p.bio||t("people.open"))}</span></span>
     <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`;
 }
@@ -8674,7 +8766,7 @@ async function renderPeopleFind(box){
               <div class="people-find-banner" data-person="${esc(p.id)}" style="${banner?`background-image:url('${cssUrl(banner)}')`:""}"></div>
               <div class="people-find-body">
                 <div class="people-find-top">
-                  ${avat(p, 46, p.status||"online")}
+                  ${avat(p, 46, presStatus(p.id)||p.status||null)}
                   <button class="btn sm ${isFr?"":"primary"}" data-find-action="${esc(p.id)}" style="font-size:0.75rem">
                     <span class="material-symbols-rounded" style="font-size:16px">${isFr?"check":"person_add"}</span> ${isFr?(LANG==="ru"?"В друзьях":"Friends"):(LANG==="ru"?"Добавить":"Add")}
                   </button>
@@ -8799,8 +8891,10 @@ async function renderPeopleFriends(box){
 
         accepted=accRows.map(r=>{
           const p=prof(otherId(r));
-          return {...p, reqData:r, status:p.status||"online", listening:p.listening||null};
+          return {...p, reqData:r};
         });
+        await presLoad(accepted.map(x=>x.id));
+        accepted=accepted.map(x=>({...x,status:presStatus(x.id)||"offline",listening:presTrack(x.id)}));
         pendingIn=inRows.map(r=>({r, p:prof(otherId(r))}));
         pendingOut=outRows.map(r=>({r, p:prof(otherId(r))}));
       }
@@ -8942,7 +9036,7 @@ async function renderPeopleFriends(box){
 
           return `
           <div class="friend-card">
-            ${avat(p, 46, p.status||"online")}
+            ${avat(p, 46, presStatus(p.id)||p.status||null)}
             <div class="friend-info">
               <div class="friend-name-row">
                 <span class="friend-name" data-person="${esc(p.id)}">${esc(p.username)}</span>
@@ -9034,24 +9128,8 @@ async function renderPeopleFriends(box){
     const inp=document.getElementById("fr-add");
     const n=inp?.value.trim();if(!n)return;
     if(isGuest||!sbUser){
-      const mList=getMockFriends();
-      let f=mList.find(x=>x.username.toLowerCase()===n.toLowerCase());
-      if(f){
-        f.isFriend=true;
-      }else{
-        f={
-          id:"usr_"+Date.now(),
-          username:n,
-          bio:"New friend",
-          status:"online",
-          isFriend:true
-        };
-        mList.push(f);
-      }
-      saveMockFriends(mList);
-      toast(LANG==="ru"?`Пользователь ${n} добавлен в друзья!`:`${n} added to friends!`);
-      if(inp)inp.value="";
-      renderPeopleFriends(box);
+      toast(LANG==="ru"?"Войдите в аккаунт, чтобы добавлять друзей":"Sign in to add friends");
+      return;
     }else{
       const {error}=await sb.rpc("add_friend_by_username",{name:n});
       if(error)return toast(error.message);
@@ -9114,7 +9192,7 @@ async function renderChats(){
 
     const dmRows=[...partners.entries()].map(([pid,m])=>{
       const p=profs.find(x=>x.id===pid)||{username:t("chat.anon")};
-      return rowHtml("d:"+pid,p.username,m.image?t("chat.photo"):m.body,avat(p,38,p.status||"online"))}).join("");
+      return rowHtml("d:"+pid,p.username,m.image?t("chat.photo"):m.body,avat(p,38,presStatus(p.id)||null))}).join("");
 
     const grpRows=groups.map(g=>rowHtml("g:"+g.id,g.name,
       t("chat.grpmembers"),avat({avatar_url:g.avatar},38),t("chat.grpmembers"))).join("");
@@ -9327,7 +9405,7 @@ async function paintChatInner(box){
      <div class="msg-body">${chatBodyHtml(m)}</div><time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}});
 
   const hdr=SOC.chat.dm
-    ?`<div class="chat-dm-user" style="display:inline-flex;align-items:center;gap:10px;cursor:pointer" title="${t("people.profile")||"Профиль"}">${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,SOC.chat.targetCache?.status||"online")}<b>${esc(SOC.chat.name)}</b></div>`
+    ?`<div class="chat-dm-user" style="display:inline-flex;align-items:center;gap:10px;cursor:pointer" title="${t("people.profile")||"Профиль"}">${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,presStatus(SOC.chat.targetCache?.id)||null)}<b>${esc(SOC.chat.name)}</b></div>`
     :`<span class="material-symbols-rounded" style="font-size:18px">group</span><b>${esc(SOC.chat.name)}</b>
       <span class="mut" data-togglemembers>${(SOC.chat.membersCache||[]).length}</span>`;
 
@@ -11201,7 +11279,7 @@ async function importRows(rows,svcId,name,asFavorites){
  let ok=0;
  for(const r of take){
   let hit=null;
-  if(r.id&&(r.s==="ytm"||r.s==="sc"||r.s==="ym")){
+  if(r.id&&(r.s==="ytm"||r.s==="sc"||r.s==="ym"||r.s==="dz")){
    hit={id:String(r.id),s:r.s,t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:(r.s==="ym"||r.s==="local")?"local":"local"};
    const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
    if(known)hit=known;else TRACKS.push(hit);
@@ -11219,11 +11297,12 @@ async function importRows(rows,svcId,name,asFavorites){
    const q=`${r.a||""} ${r.t||""}`.trim();
    if(q){
     const hits=await searchRemote(q).catch(()=>[]);
-    hit=(hits||[]).find(x=>x.s==="ytm"&&svc("ytm").on)
-     ||(hits||[]).find(x=>x.s==="sc"&&svc("sc").on)
-     ||(hits||[]).find(x=>x.s==="ym"&&svc("ym").on)
-     ||(hits||[]).find(x=>svc(x.s).on)
-     ||(hits||[])[0];
+    /* The first hit of a search is often a cover or a different song with
+       the same name: only a strict match is taken. */
+    const want={t:r.t,a:r.a,d:r.d};
+    hit=(hits||[]).filter(x=>x&&x.s!=="sp"&&svc(x.s).on)
+     .map(x=>({x,m:MWM.of(want,x)})).filter(o=>o.m!=null)
+     .sort((p,q)=>(q.m+(SVC_PREF[q.x.s]||0))-(p.m+(SVC_PREF[p.x.s]||0)))[0]?.x||null;
    }
    if(!hit){
     hit={id:String(r.id||uid()),s:svcId||"ytm",t:r.t||"—",a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"local"};
@@ -11259,7 +11338,8 @@ const IMPORT_SVC=[
  {id:"sp",name:"Spotify",re:/spotify\.com|^spotify:/i,cmd:"spotify_public_playlist_tracks"},
  {id:"ym",name:"Yandex Music",re:/music\.yandex\.|yandex\.[a-z]+\/music/i,cmd:"ym_public_playlist_tracks"},
  {id:"ytm",name:"YouTube Music",re:/music\.youtube\.com|youtube\.com|youtu\.be|^(PL|OLAK5uy_|RD|VL)[A-Za-z0-9_-]{10,}$/i,cmd:"ytm_playlist_tracks"},
- {id:"sc",name:"SoundCloud",re:/soundcloud\.com|on\.soundcloud\.com/i,cmd:"sc_playlist_tracks"}];
+ {id:"sc",name:"SoundCloud",re:/soundcloud\.com|on\.soundcloud\.com/i,cmd:"sc_playlist_tracks"},
+ {id:"dz",name:"Deezer",re:/deezer\.com|deezer\.page\.link|link\.deezer\.com/i,cmd:"link_resolve"}];
 function importDetect(url){return IMPORT_SVC.find(s=>s.re.test(url))||null}
 function importEl(id){return document.getElementById(id)}
 function importSetState(st,err){
@@ -11303,12 +11383,12 @@ async function fetchImportTracks(){
  const det=importEl("import-detected"),badge=importEl("import-svc-badge"),meta=importEl("import-preview-meta"),runBtn=importEl("import-run-btn");
  if(!url){importSetState("error",t("import.enter_url")||"Введите ссылку");inp?.focus();return}
  const svc=importMarkSvc();
- if(!svc){importSetState("error",LANG==="ru"?"Ссылка не распознана. Поддерживаются Spotify, YouTube Music, Яндекс Музыка и SoundCloud.":"Link not recognised. Supported: Spotify, YouTube Music, Yandex Music and SoundCloud.");return}
+ if(!svc){importSetState("error",LANG==="ru"?"Ссылка не распознана. Поддерживаются Spotify, YouTube Music, Яндекс Музыка, SoundCloud и Deezer.":"Link not recognised. Supported: Spotify, YouTube Music, Yandex Music, SoundCloud and Deezer.");return}
  const req=++importReq;
  importSetState("loading");
  if(runBtn)runBtn.disabled=true;
  try{
-  const tracks=await inv(svc.cmd,{urlOrId:url});
+  const tracks=svc.cmd==="link_resolve"?((await inv("link_resolve",{url}))?.tracks||[]):await inv(svc.cmd,{urlOrId:url});
   if(req!==importReq)return;
   if(!tracks||!tracks.length)throw new Error(LANG==="ru"?"В плейлисте не найдено треков (возможно, он приватный)":"No tracks found (the playlist may be private)");
   importedStagingTracks=tracks;

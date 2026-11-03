@@ -29,7 +29,7 @@ const MUSIC_UA: &str = "com.google.android.apps.youtube.music/6.42.52 (Linux; U;
 /// treadmill: YouTube ties its bot check to how current the client claims to
 /// be, so every entry here will need bumping again eventually.
 pub const VR_UA: &str =
-    "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
+    "com.google.android.apps.youtube.vr.oculus/1.61.48 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
 
 /// The plain Android app, which is what answers today: `status: OK`, several
 /// audio formats and every one of them a plain `url` (verified against a batch
@@ -41,18 +41,37 @@ pub const WEB_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 /// UA for the media fetch itself: googlevideo only serves a stream to a client
 /// that looks like one of Google's own players, so the bytes are pulled with
 /// the identity that asked for the URL.
+#[allow(dead_code)]
 pub const MEDIA_UA: &str = ANDROID_UA;
+#[allow(dead_code)]
 pub const TV_UA: &str = "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/2.2 Chrome/69.0.3497.106 TV Safari/537.36";
 
 /// Clients tried against the player endpoint, first that answers OK wins.
+///
+/// Re-measured for this round: ANDROID, ANDROID_VR 1.61.48 and IOS answer with
+/// plain URLs from a residential connection. ANDROID_VR 1.65.10 answers too,
+/// but its URLs 403 past the first megabytes without a PO token — the song
+/// started and then died, which looked like a network fault. ANDROID_MUSIC has
+/// answered LOGIN_REQUIRED for every id for months and the TV embedded client
+/// only says "page needs to be reloaded", so they cost two round trips each
+/// before anything useful happened and are gone from the list.
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
     ("ANDROID", ANDROID_UA),
-    ("ANDROID_TESTSUITE", "Google-Test-Suite"),
-    ("ANDROID_MUSIC", MUSIC_UA),
-    ("IOS", IOS_UA),
-    ("TVHTML5_SIMPLY_EMBEDDED_PLAYER", TV_UA),
     ("ANDROID_VR", VR_UA),
+    ("IOS", IOS_UA),
+    ("ANDROID_TESTSUITE", "Google-Test-Suite"),
 ];
+
+/// The UA a URL must be fetched with: googlevideo checks that the media
+/// request comes from the same kind of client the URL was minted for.
+pub fn media_ua_for(client: &str) -> &'static str {
+    match client {
+        "ANDROID_VR" => VR_UA,
+        "IOS" => IOS_UA,
+        "ANDROID_TESTSUITE" => "Google-Test-Suite",
+        _ => ANDROID_UA,
+    }
+}
 
 fn web_remix_ctx() -> Value {
     json!({
@@ -97,7 +116,7 @@ fn player_ctx(name: &str, visitor: Option<&str>) -> Value {
         }),
         "ANDROID_VR" => json!({
             "clientName": "ANDROID_VR",
-            "clientVersion": "1.65.10",
+            "clientVersion": "1.61.48",
             "deviceMake": "Oculus",
             "deviceModel": "Quest 3",
             "androidSdkVersion": 32,
@@ -412,24 +431,292 @@ fn parse_item(item: &Value) -> Option<Track> {
 }
 
 /// Radio / related tracks for a video id from the Watch Next queue.
+///
+/// Asked for as the song's own radio playlist (`RDAMVM<id>`), which is what
+/// the YouTube Music app plays after a song: fifty tracks picked by YouTube's
+/// recommender instead of the dozen "up next" rows the bare `next` call gave.
+/// The old request stays as the fallback.
 pub async fn radio(video_id: &str) -> Result<Vec<Track>, String> {
-    let body = json!({
-        "context": music_ctx(),
-        "videoId": video_id,
-        "isAudioOnly": true
+    let mut tracks = watch_playlist(&format!("RDAMVM{video_id}"), Some(video_id)).await.unwrap_or_default();
+    if tracks.len() < 5 {
+        let body = json!({
+            "context": music_ctx(),
+            "videoId": video_id,
+            "isAudioOnly": true
+        });
+        if let Ok(resp) = post(MUSIC_API, "next", MUSIC_UA, None, body).await {
+            let mut renderers = Vec::new();
+            collect(&resp, &mut renderers);
+            for r in renderers {
+                if let Some(tr) = parse_item(r) {
+                    if !tracks.iter().any(|existing: &Track| existing.id == tr.id) {
+                        tracks.push(tr);
+                    }
+                }
+            }
+        }
+    }
+    tracks.retain(|t| t.id != video_id);
+    if tracks.is_empty() {
+        return Err("YouTube Music returned no radio for this track".into());
+    }
+    Ok(tracks)
+}
+
+/// WEB_REMIX calls the way music.youtube.com itself makes them. Browse
+/// answers for the web client only come back complete with the site's Origin.
+async fn post_web(path: &str, body: Value) -> Result<Value, String> {
+    client()?
+        .post(format!("{MUSIC_API}/{path}?key={KEY}&prettyPrint=false"))
+        .header("User-Agent", WEB_UA)
+        .header("Content-Type", "application/json")
+        .header("Origin", "https://music.youtube.com")
+        .header("Referer", "https://music.youtube.com/")
+        .header("X-YouTube-Client-Name", "67")
+        .header("X-YouTube-Client-Version", "1.20240726.01.00")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("network: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("YouTube rejected the request: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("bad response: {e}"))
+}
+
+fn web_ctx_lang(hl: &str) -> Value {
+    json!({
+        "client": {
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20240726.01.00",
+            "hl": hl,
+            "gl": if hl == "ru" { "RU" } else { "US" }
+        }
+    })
+}
+
+/// The queue YouTube Music plays for a playlist id: an album (`OLAK5uy_…`),
+/// a mix (`RD…`) or a song radio (`RDAMVM…`).
+pub async fn watch_playlist(playlist_id: &str, video_id: Option<&str>) -> Result<Vec<Track>, String> {
+    let mut body = json!({
+        "context": web_remix_ctx(),
+        "playlistId": playlist_id,
+        "isAudioOnly": true,
+        "enablePersistentPlaylistPanel": true,
+        "tunerSettingValue": "AUTOMIX_SETTING_NORMAL"
     });
-    let resp = post(MUSIC_API, "next", MUSIC_UA, None, body).await?;
+    if let Some(v) = video_id {
+        body["videoId"] = Value::String(v.to_string());
+    }
+    let resp = post_web("next", body).await?;
     let mut renderers = Vec::new();
     collect(&resp, &mut renderers);
-    let mut tracks = Vec::new();
+    let mut tracks: Vec<Track> = Vec::new();
     for r in renderers {
         if let Some(tr) = parse_item(r) {
-            if tr.id != video_id && !tracks.iter().any(|existing: &Track| existing.id == tr.id) {
+            if !tracks.iter().any(|e| e.id == tr.id) {
                 tracks.push(tr);
             }
         }
     }
     Ok(tracks)
+}
+
+/// Title, artist, length and cover of one video — what a dropped or pasted
+/// link needs to become a queue entry. The `next` answer lists the video
+/// itself first, with the same fields a search row carries.
+pub async fn track_meta(video_id: &str) -> Result<Track, String> {
+    let body = json!({
+        "context": web_remix_ctx(),
+        "videoId": video_id,
+        "isAudioOnly": true
+    });
+    let resp = post_web("next", body).await?;
+    let mut renderers = Vec::new();
+    collect(&resp, &mut renderers);
+    for r in renderers {
+        if let Some(tr) = parse_item(r) {
+            if tr.id == video_id {
+                return Ok(tr);
+            }
+        }
+    }
+    // Not a music video: the player endpoint still knows the basics.
+    let r = player_response(video_id, None, "ANDROID", ANDROID_UA).await?;
+    let d = r.get("videoDetails").ok_or("YouTube does not know this video")?;
+    let title = d.get("title").and_then(|t| t.as_str()).unwrap_or("").to_string();
+    if title.is_empty() {
+        return Err("YouTube does not know this video".into());
+    }
+    let author = d.get("author").and_then(|t| t.as_str()).unwrap_or("—").trim_end_matches(" - Topic").to_string();
+    let secs = d.get("lengthSeconds").and_then(|t| t.as_str()).and_then(|t| t.parse::<u32>().ok()).unwrap_or(0);
+    let art = d
+        .pointer("/thumbnail/thumbnails")
+        .and_then(|t| t.as_array())
+        .and_then(|t| t.last())
+        .and_then(|t| t.get("url"))
+        .and_then(|u| u.as_str())
+        .map(|u| u.to_string());
+    Ok(Track {
+        id: video_id.to_string(),
+        s: "ytm".into(),
+        t: title,
+        a: author,
+        al: String::new(),
+        d: secs,
+        art,
+        mode: "local".into(),
+    })
+}
+
+fn last_thumb(v: Option<&Value>) -> Option<String> {
+    v.and_then(|t| t.as_array())
+        .and_then(|t| t.last())
+        .and_then(|t| t.get("url"))
+        .and_then(|u| u.as_str())
+        .map(|u| u.to_string())
+}
+
+/// One card of a browse shelf.
+fn card_of(item: &Value) -> Option<crate::feeds::Card> {
+    use crate::feeds::Card;
+    if let Some(two) = item.get("musicTwoRowItemRenderer") {
+        let t = runs_text(two.get("title"));
+        if t.is_empty() {
+            return None;
+        }
+        let sub = runs_text(two.get("subtitle"));
+        let art = last_thumb(two.pointer("/thumbnailRenderer/musicThumbnailRenderer/thumbnail/thumbnails"));
+        let nav = two.get("navigationEndpoint");
+        if let Some(vid) = nav.and_then(|n| n.pointer("/watchEndpoint/videoId")).and_then(|v| v.as_str()) {
+            let parts: Vec<&str> = sub.split('•').map(|p| p.trim()).filter(|p| !p.is_empty()).collect();
+            let artist = parts.iter().find(|p| !p.contains(':') && !p.ends_with("просмотров") && !p.ends_with("views")).copied().unwrap_or("—");
+            return Some(Card::track(Track {
+                id: vid.to_string(),
+                s: "ytm".into(),
+                t: t.clone(),
+                a: artist.to_string(),
+                al: String::new(),
+                d: 0,
+                art: art.clone(),
+                mode: "local".into(),
+            }));
+        }
+        let browse = nav.and_then(|n| n.get("browseEndpoint"))?;
+        let bid = browse.get("browseId").and_then(|b| b.as_str())?;
+        let page = browse
+            .pointer("/browseEndpointContextSupportedConfigs/browseEndpointContextMusicConfig/pageType")
+            .and_then(|p| p.as_str())
+            .unwrap_or("");
+        let play = two
+            .pointer("/thumbnailOverlay/musicItemThumbnailOverlayRenderer/content/musicPlayButtonRenderer/playNavigationEndpoint/watchPlaylistEndpoint/playlistId")
+            .and_then(|p| p.as_str());
+        return match page {
+            "MUSIC_PAGE_TYPE_ALBUM" | "MUSIC_PAGE_TYPE_AUDIOBOOK" => {
+                Some(Card::new("album", "ytm", play.unwrap_or(bid), &t, &sub, art))
+            }
+            "MUSIC_PAGE_TYPE_PLAYLIST" => Some(Card::new("playlist", "ytm", bid.trim_start_matches("VL"), &t, &sub, art)),
+            "MUSIC_PAGE_TYPE_ARTIST" => Some(Card::new("artist", "ytm", bid, &t, &sub, art)),
+            _ => None,
+        };
+    }
+    if let Some(btn) = item.get("musicNavigationButtonRenderer") {
+        let t = runs_text(btn.get("buttonText"));
+        let be = btn.pointer("/clickCommand/browseEndpoint")?;
+        let bid = be.get("browseId").and_then(|b| b.as_str())?;
+        let params = be.get("params").and_then(|p| p.as_str()).unwrap_or("");
+        let mut c = Card::new("browse", "ytm", &format!("{bid}|{params}"), &t, "", None);
+        if let Some(argb) = btn.pointer("/solid/leftStripeColor").and_then(|c| c.as_u64()) {
+            c.color = Some(format!("#{:06x}", argb & 0xFF_FFFF));
+        }
+        return Some(c);
+    }
+    if let Some(row) = item.get("musicResponsiveListItemRenderer") {
+        if let Some(tr) = parse_item(row) {
+            return Some(Card::track(tr));
+        }
+        let cols = flex_runs(row);
+        let t = cols.first().cloned().unwrap_or_default();
+        if t.is_empty() {
+            return None;
+        }
+        let sub = cols.get(1).cloned().unwrap_or_default();
+        let art = last_thumb(row.pointer("/thumbnail/musicThumbnailRenderer/thumbnail/thumbnails"));
+        let browse = row.pointer("/navigationEndpoint/browseEndpoint")?;
+        let bid = browse.get("browseId").and_then(|b| b.as_str())?;
+        let page = browse
+            .pointer("/browseEndpointContextSupportedConfigs/browseEndpointContextMusicConfig/pageType")
+            .and_then(|p| p.as_str())
+            .unwrap_or("");
+        let play = row
+            .pointer("/overlay/musicItemThumbnailOverlayRenderer/content/musicPlayButtonRenderer/playNavigationEndpoint/watchPlaylistEndpoint/playlistId")
+            .and_then(|p| p.as_str());
+        return match page {
+            "MUSIC_PAGE_TYPE_ALBUM" => Some(Card::new("album", "ytm", play.unwrap_or(bid), &t, &sub, art)),
+            "MUSIC_PAGE_TYPE_PLAYLIST" => Some(Card::new("playlist", "ytm", bid.trim_start_matches("VL"), &t, &sub, art)),
+            "MUSIC_PAGE_TYPE_ARTIST" => Some(Card::new("artist", "ytm", bid, &t, &sub, art)),
+            _ => None,
+        };
+    }
+    None
+}
+
+/// Shelves of a YouTube Music browse page: explore, charts, new releases, a
+/// mood or genre. Podcasts and episode rows are dropped — this is a music app.
+pub async fn browse_shelves(browse_id: &str, params: Option<&str>, hl: &str) -> Result<Vec<crate::feeds::Shelf>, String> {
+    let mut body = json!({ "context": web_ctx_lang(hl), "browseId": browse_id });
+    if let Some(p) = params.filter(|p| !p.is_empty()) {
+        body["params"] = Value::String(p.to_string());
+    }
+    let resp = post_web("browse", body).await?;
+    let mut raw: Vec<&Value> = Vec::new();
+    fn walk<'a>(v: &'a Value, out: &mut Vec<&'a Value>) {
+        match v {
+            Value::Object(map) => {
+                for key in ["musicCarouselShelfRenderer", "gridRenderer", "musicShelfRenderer"] {
+                    if let Some(s) = map.get(key) {
+                        out.push(s);
+                        return;
+                    }
+                }
+                for c in map.values() {
+                    walk(c, out);
+                }
+            }
+            Value::Array(a) => a.iter().for_each(|i| walk(i, out)),
+            _ => {}
+        }
+    }
+    walk(&resp, &mut raw);
+    let mut shelves = Vec::new();
+    for sh in raw {
+        let title = {
+            let t = runs_text(sh.pointer("/header/musicCarouselShelfBasicHeaderRenderer/title"));
+            if !t.is_empty() {
+                t
+            } else {
+                let g = runs_text(sh.pointer("/header/gridHeaderRenderer/title"));
+                if !g.is_empty() {
+                    g
+                } else {
+                    runs_text(sh.get("title"))
+                }
+            }
+        };
+        let items = sh
+            .get("contents")
+            .or_else(|| sh.get("items"))
+            .and_then(|c| c.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let cards: Vec<crate::feeds::Card> = items.iter().filter_map(card_of).collect();
+        if cards.is_empty() {
+            continue;
+        }
+        shelves.push(crate::feeds::Shelf { title, s: "ytm".into(), cards });
+    }
+    Ok(shelves)
 }
 
 /// Search YouTube Music songs. Tries WEB_REMIX first, falls back to ANDROID_MUSIC.
@@ -548,6 +835,8 @@ pub struct StreamPick {
     pub url: String,
     pub mime: String,
     pub bitrate: u64,
+    /// Player client that answered; the media fetch must use its UA.
+    pub client: String,
 }
 
 async fn player_response(
@@ -600,6 +889,7 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
     let mut visitor = visitor_data().await;
     let mut resp: Option<Value> = None;
     let mut ok = false;
+    let mut answered = "ANDROID";
 
     'clients: for (client, ua) in PLAYER_CLIENTS {
         for attempt in 0..2u8 {
@@ -638,6 +928,7 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
             resp = Some(r);
             if good {
                 ok = true;
+                answered = *client;
                 break 'clients;
             }
             if attempt == 0 {
@@ -713,6 +1004,7 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
             .unwrap_or("audio/mp4")
             .to_string(),
         bitrate: bitrate(pick),
+        client: answered.to_string(),
     })
 }
 

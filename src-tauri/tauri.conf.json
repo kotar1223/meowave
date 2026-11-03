@@ -18,11 +18,13 @@
         "maximized": true,
         "center": true,
         "decorations": false,
+        "dragDropEnabled": false,
+        "backgroundColor": "#0d0d14",
         "additionalBrowserArgs": "--autoplay-policy=no-user-gesture-required --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' http://127.0.0.1:* https: data: blob:; media-src 'self' http://127.0.0.1:* blob:; connect-src 'self' http://127.0.0.1:* https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2 https://huggingface.co https://*.hf.co; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
+      "csp": "default-src 'self'; img-src 'self' http://127.0.0.1:* https: data: blob:; media-src 'self' http://127.0.0.1:* https: blob: data:; connect-src 'self' http://127.0.0.1:* https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2 https://huggingface.co https://*.hf.co; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com;"
     }
   },
   "bundle": {

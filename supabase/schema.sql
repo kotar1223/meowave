@@ -60,6 +60,9 @@
 \echo '== 14_privacy_and_equipped_badge: enforce privacy.hours, add profiles.equipped_badge =='
 \ir migrations/14_privacy_and_equipped_badge.sql
 
+\echo '== 15_presence_listening: listening time survives a failing achievements check, honest presence =='
+\ir migrations/15_presence_listening.sql
+
 \echo ''
 \echo 'Schema applied. Next:'
 \echo '  SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed_badges.mjs'

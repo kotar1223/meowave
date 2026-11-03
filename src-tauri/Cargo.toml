@@ -31,6 +31,11 @@ md5 = "0.7"
 rand = "0.8"
 sha2 = "0.10"
 base64 = "0.22"
+# Yandex Music lossless: get-file-info is signed with HMAC-SHA256 and the file
+# arrives AES-128-CTR encrypted ("encraw"); the stream proxy decrypts it.
+hmac = "0.12"
+aes = "0.8"
+ctr = "0.9"
 # Opens the system browser for the authorisation step.
 open = "5"
 tauri-plugin-dialog = "2.7.2"

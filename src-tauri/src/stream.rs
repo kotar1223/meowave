@@ -95,9 +95,15 @@ enum UpstreamKind {
 /// Supports both direct HTTP chunk streaming (with read timeouts and seamless
 /// reconnect) and sequential HLS playlist segment streaming (e.g. for SoundCloud
 /// tracks with only HLS transcodings).
+type Aes128Ctr = ctr::Ctr128BE<aes::Aes128>;
+
 struct Upstream<'a> {
     // Borrowed from the per-request thread's Arc, which outlives the response.
     rt: &'a tokio::runtime::Runtime,
+    /// Yandex's encrypted lossless ("encraw"): AES-128-CTR, zero IV, keyed per
+    /// file. CTR is a keystream XOR, so a byte range is decrypted by seeking
+    /// the keystream to the range's first byte.
+    cipher: Option<Aes128Ctr>,
     kind: UpstreamKind,
     buf: Vec<u8>,
     pos: usize,
@@ -120,6 +126,7 @@ impl<'a> Upstream<'a> {
     ) -> Self {
         Self {
             rt,
+            cipher: None,
             kind: UpstreamKind::Direct(resp),
             buf: Vec::new(),
             pos: 0,
@@ -143,6 +150,7 @@ impl<'a> Upstream<'a> {
     ) -> Self {
         Self {
             rt,
+            cipher: None,
             kind: UpstreamKind::Hls {
                 segments,
                 seg_idx: start_seg,
@@ -157,6 +165,22 @@ impl<'a> Upstream<'a> {
             initial_offset,
             reconnect_attempts: 0,
         }
+    }
+}
+
+impl<'a> Upstream<'a> {
+    /// Decrypts the body with `key_hex`, starting at byte `offset` of the file.
+    fn with_key(mut self, key_hex: &str, offset: u64) -> Self {
+        use aes::cipher::{KeyIvInit, StreamCipherSeek};
+        let key: Vec<u8> = (0..key_hex.len() / 2)
+            .filter_map(|i| u8::from_str_radix(&key_hex[i * 2..i * 2 + 2], 16).ok())
+            .collect();
+        if key.len() == 16 {
+            let mut c = Aes128Ctr::new(key.as_slice().into(), &[0u8; 16].into());
+            c.seek(offset);
+            self.cipher = Some(c);
+        }
+        self
     }
 }
 
@@ -206,6 +230,10 @@ impl<'a> std::io::Read for Upstream<'a> {
                     match chunk_res {
                         Ok(Ok(Some(chunk))) => {
                             self.buf = chunk.to_vec();
+                            if let Some(c) = self.cipher.as_mut() {
+                                use aes::cipher::StreamCipher;
+                                c.apply_keystream(&mut self.buf);
+                            }
                             self.pos = 0;
                             self.reconnect_attempts = 0;
                         }
@@ -557,7 +585,12 @@ fn handle(
     }
 
     // Parsed as a real parameter: `contains("hq=0")` also matched `xhq=0`.
-    let hq = query_param(query, "hq").as_deref() != Some("0");
+    // 0 = data saver, 1 = high, 2 = lossless (only Yandex has a real one).
+    let hq: u8 = match query_param(query, "hq").as_deref() {
+        Some("0") => 0,
+        Some("2") => 2,
+        _ => 1,
+    };
     // Container the caller's webview can decode ("mp4" / "webm" / "best").
     // Only YouTube Music has more than one, and for it the choice is the
     // difference between playing and silence — see ytm::stream.
@@ -610,7 +643,7 @@ fn handle(
         return serve_local(&id, range.as_deref(), head_only, origin.as_deref(), request);
     }
 
-    let cache_key = format!("{service}/{id}/{}{fmt}", if hq { "hq" } else { "lq" });
+    let cache_key = cache_key_of(&service, &id, hq, &fmt);
 
     // Two attempts. A cached stream URL is signed and short-lived: once it
     // expires the service answers 403, and the old code passed that straight to
@@ -618,12 +651,12 @@ fn handle(
     // that played fine a few minutes earlier. On a bad status the cache entry is
     // dropped and the URL resolved again from scratch.
     let mut attempt = 0u8;
-    let (status, ctype, crange, clen, resp, upstream) = loop {
+    let (status, ctype, crange, clen, resp, secret) = loop {
         attempt += 1;
 
         let upstream = match cache_get(&cache_key) {
             Some(u) => u,
-            None => match rt.block_on(resolve(&service, &id, hq, &fmt)) {
+            None => match rt.block_on(resolve_pub(&service, &id, hq, &fmt)) {
                 Ok(u) => {
                     cache_put(cache_key.clone(), u.clone());
                     u
@@ -639,23 +672,25 @@ fn handle(
             },
         };
 
+        let secret = Secret::of(&upstream);
+        let fetch_url = secret.url.clone();
         let sent = rt.block_on(async {
             // media_client, not client: this body is read for as long as the
             // media element keeps reading it, and client()'s total deadline
             // would sever it mid-track.
             let c = crate::api::media_client()?;
-            let mut req = c.get(&upstream);
+            let mut req = c.get(&fetch_url);
             // googlevideo only serves a media stream to a client that looks like
             // one of Google's own players and always asks for a byte range.
-            let is_google = service == "ytm" || upstream.contains("googlevideo.com");
+            let is_google = service == "ytm" || fetch_url.contains("googlevideo.com");
             if is_google {
-                req = req.header("User-Agent", crate::ytm::MEDIA_UA);
+                req = req.header("User-Agent", secret.ua());
                 if range.is_none() {
                     req = req.header("Range", "bytes=0-");
                 }
             }
             if let Some(r) = &range {
-                if !upstream.contains(".m3u8") {
+                if !fetch_url.contains(".m3u8") {
                     req = req.header("Range", r.clone());
                 }
             }
@@ -693,7 +728,7 @@ fn handle(
                 // instead of chunked encoding, which is what makes <audio>
                 // show a duration and allow seeking immediately.
                 let clen = resp.content_length().map(|v| v as usize);
-                break (status, ctype, crange, clen, resp, upstream);
+                break (status, ctype, crange, clen, resp, secret);
             }
             Err(e) => {
                 if attempt == 1 {
@@ -716,6 +751,7 @@ fn handle(
         status
     };
 
+    let upstream = secret.url.clone();
     let is_hls = upstream.contains(".m3u8") || ctype.contains("mpegurl");
     let (body, final_status, final_clen, final_crange, final_ctype, advertises_ranges) = if is_hls {
         let m3u8_text = rt.block_on(resp.text()).unwrap_or_default();
@@ -747,7 +783,7 @@ fn handle(
             0,
             final_url,
             if is_google {
-                Some(crate::ytm::MEDIA_UA.to_string())
+                Some(secret.ua().to_string())
             } else {
                 None
             },
@@ -776,25 +812,40 @@ fn handle(
     } else {
         let is_google = service == "ytm" || upstream.contains("googlevideo.com");
         let mut normalized = ctype;
-        if normalized == "application/octet-stream" || normalized == "text/plain" {
+        if let Some(c) = secret.ctype() {
+            // An encrypted file is served as octet-stream; the codec from the
+            // file info is the truth.
+            normalized = c.to_string();
+        } else if normalized == "application/octet-stream" || normalized == "text/plain" || normalized == "binary/octet-stream" {
             if is_google {
                 normalized = if fmt == "mp4" { "audio/mp4" } else { "audio/webm" }.to_string();
             } else {
                 normalized = "audio/mpeg".to_string();
             }
         }
-        let body = Upstream::new(
+        // Where the upstream body starts in the file: the keystream has to be
+        // seeked to exactly that byte.
+        let body_start = crange
+            .as_deref()
+            .and_then(|r| r.trim().strip_prefix("bytes "))
+            .and_then(|r| r.split('-').next())
+            .and_then(|n| n.trim().parse::<u64>().ok())
+            .unwrap_or(if status == 206 { initial_offset } else { 0 });
+        let mut body = Upstream::new(
             rt,
             Some(resp),
             upstream.clone(),
             if is_google {
-                Some(crate::ytm::MEDIA_UA.to_string())
+                Some(secret.ua().to_string())
             } else {
                 None
             },
             clen.map(|l| l as u64),
-            initial_offset,
+            body_start,
         );
+        if let Some(k) = &secret.key {
+            body = body.with_key(k, body_start);
+        }
         (body, client_status, clen, crange, normalized, true)
     };
 
@@ -981,7 +1032,57 @@ fn parse_range(range: Option<&str>, total: u64) -> RangeSpec {
     RangeSpec::Bytes(start, end)
 }
 
-async fn resolve(service: &str, id: &str, hq: bool, fmt: &str) -> Result<String, String> {
+fn cache_key_of(service: &str, id: &str, hq: u8, fmt: &str) -> String {
+    let q = match hq {
+        0 => "lq",
+        2 => "ll",
+        _ => "hq",
+    };
+    format!("{service}/{id}/{q}{fmt}")
+}
+
+/// What a resolved URL carries besides the address, in its fragment (which
+/// is never sent anywhere): the decryption key and codec of a Yandex lossless
+/// file, and which YouTube client minted a googlevideo URL.
+struct Secret {
+    url: String,
+    key: Option<String>,
+    codec: Option<String>,
+    client: Option<String>,
+}
+
+impl Secret {
+    fn of(raw: &str) -> Self {
+        let (url, frag) = match raw.split_once('#') {
+            Some((u, f)) if f.starts_with("mw") => (u.to_string(), f),
+            _ => (raw.to_string(), ""),
+        };
+        let mut s = Secret { url, key: None, codec: None, client: None };
+        for kv in frag.split('&') {
+            match kv.split_once('=') {
+                Some(("mwk", v)) if !v.is_empty() => s.key = Some(v.to_string()),
+                Some(("mwc", v)) if !v.is_empty() => s.codec = Some(v.to_string()),
+                Some(("mwua", v)) if !v.is_empty() => s.client = Some(v.to_string()),
+                _ => {}
+            }
+        }
+        s
+    }
+    fn ua(&self) -> &'static str {
+        crate::ytm::media_ua_for(self.client.as_deref().unwrap_or("ANDROID"))
+    }
+    fn ctype(&self) -> Option<&'static str> {
+        Some(match self.codec.as_deref()? {
+            "flac" => "audio/flac",
+            "flac-mp4" | "aac-mp4" | "he-aac-mp4" => "audio/mp4",
+            "mp3" => "audio/mpeg",
+            "aac" | "he-aac" => "audio/aac",
+            _ => return None,
+        })
+    }
+}
+
+pub(crate) async fn resolve_pub(service: &str, id: &str, hq: u8, fmt: &str) -> Result<String, String> {
     // Only Yandex needs credentials; sc/ytm resolve anonymously — and they
     // must not touch the keychain, which on a desktop with no Secret Service
     // errors instead of reporting "no entry" (see api::api_search).
@@ -992,11 +1093,42 @@ async fn resolve(service: &str, id: &str, hq: bool, fmt: &str) -> Result<String,
     };
     match service {
         "ym" if token.is_empty() => Err("Yandex Music is not connected".into()),
-        "ym" => crate::api::ym_stream_url(&token, id, hq).await,
+        "ym" if hq == 2 => match crate::api::ym_lossless_url(&token, id).await {
+            Ok(u) => Ok(u),
+            Err(e) => {
+                // No subscription, a rotated key, a region without lossless:
+                // the 320 kbps file still plays.
+                eprintln!("[meowave] lossless for ym/{id} unavailable, falling back: {e}");
+                crate::api::ym_stream_url(&token, id, true).await
+            }
+        },
+        "ym" => crate::api::ym_stream_url(&token, id, hq > 0).await,
         "sc" => crate::api::sc_stream_url(&token, id).await,
-        "ytm" => crate::ytm::stream(id, hq, fmt).await.map(|p| p.url),
+        "ytm" => crate::ytm::stream(id, hq > 0, fmt)
+            .await
+            .map(|p| format!("{}#mwua={}", p.url, p.client)),
+        "dz" => crate::dz::stream_url(id, hq, fmt).await,
         other => Err(format!("unknown service: {other}")),
     }
+}
+
+/// Resolves the next track's stream while the current one is still playing,
+/// so the switch does not wait for a search + player round trip. The URL
+/// lands in the same short-lived cache a real request reads.
+#[tauri::command]
+pub async fn stream_prefetch(service: String, id: String, hq: Option<u8>, fmt: Option<String>) -> Result<bool, String> {
+    if service == "local" || service == "sp" {
+        return Ok(false);
+    }
+    let hq = hq.unwrap_or(1).min(2);
+    let fmt = fmt.unwrap_or_else(|| "best".into());
+    let key = cache_key_of(&service, &id, hq, &fmt);
+    if cache_get(&key).is_some() {
+        return Ok(true);
+    }
+    let u = resolve_pub(&service, &id, hq, &fmt).await?;
+    cache_put(key, u);
+    Ok(true)
 }
 
 /// Hosts whose artwork may be relayed. A suffix match on label boundaries —

@@ -118,6 +118,62 @@ async fn from_ytm(video_id: &str) -> Result<Option<String>, String> {
 }
 
 /// LRCLIB: artist + title (+ duration, which is what makes the match reliable).
+/// Yandex Music's own lyrics for a Yandex track — timed against the very file
+/// that is playing, which no third-party database can promise.
+async fn from_ym(track_id: &str) -> Result<Option<(bool, Vec<Line>)>, String> {
+    use base64::Engine;
+    use hmac::{Hmac, Mac};
+    let token = crate::tokens::read_token("ym")?.unwrap_or_default();
+    let token = token.trim().trim_start_matches("OAuth ").to_string();
+    if token.is_empty() {
+        return Ok(None);
+    }
+    let tid = track_id.split(':').next().unwrap_or(track_id);
+    let c = client()?;
+    for format in ["LRC", "TEXT"] {
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let mut mac = <Hmac<sha2::Sha256> as Mac>::new_from_slice(b"p93jhgh689SBReK6ghtw62").map_err(|e| e.to_string())?;
+        mac.update(format!("{tid}{ts}").as_bytes());
+        let sign = base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes());
+        let url = format!(
+            "{}/tracks/{tid}/lyrics?format={format}&timeStamp={ts}&sign={}",
+            crate::api::YM_API,
+            urlencoding::encode(&sign)
+        );
+        let Ok(r) = c
+            .get(&url)
+            .header("Authorization", format!("OAuth {token}"))
+            .header("X-Yandex-Music-Client", "YandexMusicAndroid/24023621")
+            .send()
+            .await
+        else {
+            continue;
+        };
+        if !r.status().is_success() {
+            continue;
+        }
+        let v: Value = r.json().await.unwrap_or(Value::Null);
+        let Some(dl) = v.pointer("/result/downloadUrl").and_then(|u| u.as_str()) else { continue };
+        let Ok(body) = c.get(dl).send().await else { continue };
+        let text = body.text().await.unwrap_or_default();
+        if format == "LRC" {
+            let lines = parse_lrc(&text);
+            if !lines.is_empty() {
+                return Ok(Some((true, lines)));
+            }
+        } else {
+            let lines = plain_lines(&text);
+            if !lines.is_empty() {
+                return Ok(Some((false, lines)));
+            }
+        }
+    }
+    Ok(None)
+}
+
 async fn from_lrclib(
     artist: &str,
     title: &str,
@@ -166,34 +222,41 @@ async fn from_lrclib(
         }
 
         list.and_then(|items| {
-            // Prefer a hit whose duration is close: the same title by a
-            // different artist is the usual wrong answer.
-            let mut best: Option<Value> = None;
-            let mut best_gap = u32::MAX;
+            /* Synced lines are only worth showing when they were timed against
+               this recording. The old fallback accepted a hit up to 15 s off
+               and used its timestamps anyway — a radio edit's lyrics running
+               against the album version drift further behind with every
+               verse, which is exactly the "lyrics are out of sync" report.
+               Now: synced only within 4 s and only for the same song (the
+               matcher checks title and artist); a looser hit gives its plain
+               text, unsynced, instead of wrong timings. */
+            let mut best_synced: Option<(u32, Value)> = None;
+            let mut best_plain: Option<(u32, Value)> = None;
             for it in items {
-                let d = it.get("duration").and_then(|d| d.as_f64()).unwrap_or(0.0) as u32;
-                let gap = if duration == 0 {
-                    0
-                } else {
-                    d.abs_diff(duration)
-                };
-                let has_synced = it
-                    .get("syncedLyrics")
-                    .map(|v| !v.is_null())
-                    .unwrap_or(false);
-                // A synced hit beats a plain one at equal distance.
-                let score = gap.saturating_sub(if has_synced { 3 } else { 0 });
-                if score < best_gap {
-                    best_gap = score;
-                    best = Some(it);
+                let d = it.get("duration").and_then(|d| d.as_f64()).unwrap_or(0.0).round() as u32;
+                let tn = it.get("trackName").and_then(|v| v.as_str()).unwrap_or("");
+                let an = it.get("artistName").and_then(|v| v.as_str()).unwrap_or("");
+                if crate::matching::score(title, artist, duration, tn, an, d).is_none() {
+                    continue;
+                }
+                let gap = if duration == 0 { 0 } else { d.abs_diff(duration) };
+                let has_synced = it.get("syncedLyrics").map(|v| v.is_string()).unwrap_or(false);
+                if has_synced && gap <= 4 && best_synced.as_ref().map(|(g, _)| gap < *g).unwrap_or(true) {
+                    best_synced = Some((gap, it.clone()));
+                }
+                if gap <= 15 && best_plain.as_ref().map(|(g, _)| gap < *g).unwrap_or(true) {
+                    best_plain = Some((gap, it));
                 }
             }
-            // More than 15 s apart is a different recording.
-            if duration > 0 && best_gap > 15 {
-                None
-            } else {
-                best
+            if let Some((_, it)) = best_synced {
+                return Some(it);
             }
+            best_plain.map(|(_, mut it)| {
+                if let Some(o) = it.as_object_mut() {
+                    o.remove("syncedLyrics");
+                }
+                it
+            })
         })
     };
 
@@ -478,6 +541,18 @@ pub async fn lyrics_get(
     let album = album.unwrap_or_default();
     let duration = duration.unwrap_or(0);
 
+    // 0. A Yandex track's own synced lyrics.
+    let mut ym_plain: Option<Vec<Line>> = None;
+    if service == "ym" && !id.is_empty() {
+        match from_ym(&id).await {
+            Ok(Some((true, lines))) => {
+                return Ok(Lyrics { source: "ym".into(), synced: true, lines });
+            }
+            Ok(Some((false, lines))) => ym_plain = Some(lines),
+            _ => {}
+        }
+    }
+
     // 1. Synced lyrics from LRCLIB first
     if !artist.trim().is_empty() && !title.trim().is_empty() {
         if let Ok(Some((synced, lines))) =
@@ -489,6 +564,10 @@ pub async fn lyrics_get(
                 lines,
             });
         }
+    }
+
+    if let Some(lines) = ym_plain {
+        return Ok(Lyrics { source: "ym".into(), synced: false, lines });
     }
 
     // 2. Genius search

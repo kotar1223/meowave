@@ -14,6 +14,10 @@ Obsidian-хранилище с памяткой о проекте: как уст
 - [[Roadmap]] — что дальше
 
 ## Функции
+- [[Features/My Wave|Моя волна 2.0]]
+- [[Features/Collections and artists|Подборки и страницы артистов]]
+- [[Features/Drag and drop|Drag & drop ссылок]]
+- [[Features/Deezer]]
 - [[Features/Full-screen player|Полноэкранный плеер]]
 - [[Features/Lyrics|Текст песни]]
 - [[Features/Wave progress|Волна прогресса (M3 Expressive)]]

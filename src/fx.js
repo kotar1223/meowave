@@ -221,7 +221,9 @@ document.addEventListener("visibilitychange",flowKick);
 
 /* ───────────────────────── wallpapers ───────────────────────── */
 const FX_KEY="mw.fx";
-const FXS=Object.assign({wallDim:35,wallBlur:0},(()=>{try{return JSON.parse(localStorage.getItem(FX_KEY)||"{}")}catch(_){return {}}})());
+/* wallDim/wallBlur: the full player. wallApp*: the same picture behind the
+   whole interface. wallLink: an https:// wallpaper instead of a stored file. */
+const FXS=Object.assign({wallDim:35,wallBlur:0,wallApp:false,wallAppDim:55,wallAppBlur:0,wallLink:"",coverFollow:true},(()=>{try{return JSON.parse(localStorage.getItem(FX_KEY)||"{}")}catch(_){return {}}})());
 const saveFx=()=>{try{localStorage.setItem(FX_KEY,JSON.stringify(FXS))}catch(_){}};
 const WALL={url:"",type:"",name:"",loaded:false};
 function idb(){
@@ -240,8 +242,11 @@ const WALL_MAX=200*1024*1024;
 function wallKind(type,name){
  if(/^video\//.test(type)||/\.(mp4|webm|mov|m4v)$/i.test(name))return "video";
  return "image"}
+const linkName=u=>{try{const x=new URL(u);return decodeURIComponent(x.pathname.split("/").filter(Boolean).pop()||x.hostname)}catch(_){return u}};
+const linkKind=u=>/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u)?"video":"image";
 async function wallLoad(){
  if(WALL.loaded)return;WALL.loaded=true;
+ if(FXS.wallLink){WALL.url=FXS.wallLink;WALL.type=linkKind(FXS.wallLink);WALL.name=linkName(FXS.wallLink);wallRender();return}
  try{const rec=await idbGet("wallpaper");
   if(rec&&rec.blob){WALL.url=URL.createObjectURL(rec.blob);WALL.type=wallKind(rec.type||rec.blob.type,rec.name||"");WALL.name=rec.name||""}
  }catch(_){}
@@ -253,20 +258,33 @@ async function wallSetFile(file){
  if(kind==="image"&&!/^image\//.test(file.type)&&!/\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(file.name)){
   toastSafe(lang()==="ru"?"Нужна картинка, GIF или видео":"Pick an image, GIF or video");return false}
  try{await idbSet("wallpaper",{blob:file,type:file.type,name:file.name})}catch(e){console.warn("wallpaper store:",e)}
- if(WALL.url)URL.revokeObjectURL(WALL.url);
+ if(WALL.url&&WALL.url.startsWith("blob:"))URL.revokeObjectURL(WALL.url);
+ if(FXS.wallLink){FXS.wallLink="";saveFx()}
  WALL.url=URL.createObjectURL(file);WALL.type=kind;WALL.name=file.name;WALL.loaded=true;
  wallRender();return true}
 async function wallClear(){
  try{await idbSet("wallpaper",undefined)}catch(_){}
- if(WALL.url)URL.revokeObjectURL(WALL.url);
+ if(WALL.url&&WALL.url.startsWith("blob:"))URL.revokeObjectURL(WALL.url);
+ if(FXS.wallLink){FXS.wallLink="";saveFx()}
  WALL.url="";WALL.type="";WALL.name="";wallRender()}
+/* A wallpaper from the web: only https, only something that looks like a
+   picture or a video. The link is kept instead of a copy of the file. */
+async function wallSetUrl(raw){
+ const u=String(raw||"").trim();
+ let ok=false;try{ok=new URL(u).protocol==="https:"}catch(_){}
+ if(!ok)return false;
+ try{await idbSet("wallpaper",undefined)}catch(_){}
+ if(WALL.url&&WALL.url.startsWith("blob:"))URL.revokeObjectURL(WALL.url);
+ FXS.wallLink=u;saveFx();
+ WALL.url=u;WALL.type=linkKind(u);WALL.name=linkName(u);WALL.loaded=true;
+ wallRender();return true}
 function wallPick(){
  return new Promise(res=>{
   const inp=document.createElement("input");inp.type="file";
   inp.accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm,.mov";
   inp.onchange=async()=>{const f=inp.files&&inp.files[0];res(f?await wallSetFile(f):false)};
   inp.click()})}
-function wallNode(host,cls){
+function wallNode(host,cls,dim,blur){
  let el=host.querySelector(":scope > ."+cls);
  if(!el){el=document.createElement("div");el.className=cls;el.setAttribute("aria-hidden","true");
   if(cls==="app-wall")host.insertBefore(el,host.firstChild);
@@ -279,20 +297,30 @@ function wallNode(host,cls){
     v.src=WALL.url;v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;v.setAttribute("muted","");
     el.appendChild(v)}
    else{const im=document.createElement("img");im.src=WALL.url;im.alt="";im.decoding="async";el.appendChild(im)}}}
- el.style.setProperty("--wall-dim",(FXS.wallDim/100).toFixed(2));
- el.style.setProperty("--wall-blur",FXS.wallBlur+"px");
+ el.style.setProperty("--wall-dim",((dim??FXS.wallDim)/100).toFixed(2));
+ const bl=+(blur??FXS.wallBlur)||0;
+ el.style.setProperty("--wall-blur",bl+"px");
+ /* Blur eats the edges; a matching zoom keeps them off screen. */
+ el.style.setProperty("--wall-zoom",(1+bl/400).toFixed(3));
  return el}
 function wallRender(){
  const fp=document.getElementById("fp");
  const inFp=fp&&(fp.dataset.bgMode||"")==="wallpaper";
  if(fp){const el=wallNode(fp,"fp-wall");el.hidden=!inFp||!WALL.url;playIf(el,inFp&&fp.dataset.open==="true");
   fp.dataset.hasWall=String(!!WALL.url)}
- /* Wallpapers belong to the full player only. */
- document.querySelectorAll("body>.app-wall").forEach(n=>n.remove());
- document.documentElement.removeAttribute("data-wall");
+ /* Behind the whole interface when the user asked for it. The player has a
+    backdrop of its own, so the app copy pauses while the player is open. */
+ if(FXS.wallApp&&WALL.url){
+  const el=wallNode(document.body,"app-wall",FXS.wallAppDim,FXS.wallAppBlur);el.hidden=false;
+  playIf(el,!(fp&&fp.dataset.open==="true"));
+  document.documentElement.dataset.wall=WALL.type||"image"}
+ else{
+  document.querySelectorAll("body>.app-wall").forEach(n=>n.remove());
+  document.documentElement.removeAttribute("data-wall")}
  const st=document.getElementById("fp-wall-name");
  if(st)st.textContent=WALL.url?(WALL.name||(lang()==="ru"?"Обои выбраны":"Wallpaper set")):(lang()==="ru"?"Не выбраны":"None");
- const clr=document.getElementById("fp-wall-clear");if(clr)clr.disabled=!WALL.url}
+ const clr=document.getElementById("fp-wall-clear");if(clr)clr.disabled=!WALL.url;
+ try{dispatchEvent(new CustomEvent("mw:wall"))}catch(_){}}
 function playIf(el,on){
  const v=el.querySelector("video");if(!v)return;
  if(on&&!document.hidden){const p=v.play();p&&p.catch&&p.catch(()=>{})}else v.pause()}
@@ -362,7 +390,7 @@ function coverReset(){
  const el=coverEl();if(el){el.style.translate="";el.style.scale=""}}
 /* Pointer pull: a few pixels towards the cursor, on a soft spring. */
 addEventListener("pointermove",e=>{
- if(RM||e.pointerType==="touch")return;
+ if(RM||e.pointerType==="touch"||FXS.coverFollow===false)return;
  const fp=document.getElementById("fp");if(!fp||fp.dataset.open!=="true")return;
  const el=coverEl();if(!el)return;COV.el=el;
  const r=el.getBoundingClientRect();
@@ -374,8 +402,12 @@ document.addEventListener("pointerleave",()=>{COV.mx.t=0;COV.my.t=0;coverKick()}
 /* ───────────────────────── public API ───────────────────────── */
 window.MWFX={
  flow:{setCover,kick:flowKick,speed:v=>{FLOW.speed=clamp(+v||0,0,3)}},
- wall:{load:wallLoad,pick:wallPick,clear:wallClear,render:wallRender,settings:FXS,save:saveFx,has:()=>!!WALL.url},
+ wall:{load:wallLoad,pick:wallPick,clear:wallClear,render:wallRender,settings:FXS,save:saveFx,has:()=>!!WALL.url,
+  setFile:wallSetFile,setUrl:wallSetUrl,name:()=>WALL.name,kind:()=>WALL.type,isLink:()=>!!FXS.wallLink},
  cover:{el:coverEl,flyFrom:coverFlyFrom,flyTo:coverFlyTo,land:coverLand,reset:coverReset,
-  rect:()=>{const e=coverEl();return e?e.getBoundingClientRect():null}}
+  rect:()=>{const e=coverEl();return e?e.getBoundingClientRect():null},
+  /* The cursor pull can be switched off; the springs settle back to centre. */
+  follow:on=>{FXS.coverFollow=!!on;saveFx();if(!on){COV.mx.t=0;COV.my.t=0;coverKick()}},
+  following:()=>FXS.coverFollow!==false}
 };
 })();

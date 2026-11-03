@@ -16,6 +16,7 @@ const KEYCHAIN_SERVICE: &str = "meowave";
 const KNOWN_SERVICES: &[&str] = &[
     "ytm",
     "sc",
+    "dz",
     "ym",
     "sp",
     "sp_client_id",
@@ -30,7 +31,9 @@ const NON_SERVICE_KEYS: &[&str] = &["sp_client_id", "sp_redirect_port"];
 /// public client_id we scrape ourselves, YouTube Music answers guest
 /// InnerTube requests. They never appear in the keychain, but the UI still
 /// has to show them as usable.
-pub const TOKENLESS_SERVICES: &[&str] = &["sc", "ytm"];
+/// Deezer's catalogue API is public too; its audio comes from the matcher
+/// (see dz.rs), so it never needs a credential either.
+pub const TOKENLESS_SERVICES: &[&str] = &["sc", "ytm", "dz"];
 
 #[cfg(not(target_os = "android"))]
 fn entry(service: &str) -> Result<Entry, String> {
