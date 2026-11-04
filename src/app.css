@@ -723,7 +723,10 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgb(v
   box-shadow:0 0 calc(10px*var(--glow)) rgb(var(--accent-rgb) / .6)}
 
 .plgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--sp-4);padding:0 var(--sp-2)}
-.plc, .card{text-align:left;display:grid;gap:10px;border-radius:var(--r-lg, 24px)}
+/* align-content:start: a tile with a one-line caption is stretched to the row
+   height of its neighbours; stretched rows then grew the aspect-ratio square
+   wider than the tile, so covers in one row came out different sizes. */
+.plc, .card{text-align:left;display:grid;gap:10px;align-content:start;border-radius:var(--r-lg, 24px)}
 .plc .sq{aspect-ratio:1;border-radius:var(--r-lg, 24px);background:linear-gradient(150deg,oklch(var(--l1,54%) 0 0),oklch(var(--l2,22%) 0 0));
   transition:transform .35s var(--e)}
 html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(100% - var(--l1,54%)) 0 0),oklch(calc(100% - var(--l2,22%)) 0 0))}
@@ -799,12 +802,20 @@ html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(1
 /* The dashed outline used to wrap the whole card including its label, which
    looked like a rendering fault. The hint belongs on the artwork square only;
    the caption then matches every other tile. */
-.plc.plnew{border:0;background:none;transition:transform .2s var(--e-q)}
-.plc.plnew:hover{transform:translateY(-2px)}
-.plc.plnew .sq{display:grid;place-items:center;color:var(--mute);
-  background:var(--surf);border:1px dashed var(--line-2);
-  transition:border-color .2s var(--e),color .2s var(--e)}
-.plc.plnew:hover .sq{color:var(--accent);border-color:var(--accent)}
+.plc.plnew,.plc.plimport{border:0;background:none;transition:transform .2s var(--e-q)}
+.plc.plnew:hover,.plc.plimport:hover{transform:translateY(-2px)}
+/* "Import" is the twin of "New playlist": same quiet square, glyph centred.
+   It used to inherit the generic gradient artwork, so its icon sat in the
+   corner of a grey slab and read as a broken cover. html[data-theme] keeps
+   the light theme's gradient rule from winning on specificity. */
+html .plc.plnew .sq,html .plc.plimport .sq{display:grid;place-items:center;color:var(--mute);
+  background:var(--surf);border:1px dashed var(--line-2);box-shadow:none;
+  transition:border-color .2s var(--e),color .2s var(--e),background-color .2s var(--e)}
+html[data-theme] .plc.plnew .sq,html[data-theme] .plc.plimport .sq{background:var(--surf)}
+.plc.plnew .sq .material-symbols-rounded,.plc.plimport .sq .material-symbols-rounded{
+  font-size:30px!important;color:inherit;line-height:1;font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 40}
+.plc.plnew:hover .sq,.plc.plimport:hover .sq{color:var(--accent);border-color:var(--accent);
+  transform:none;box-shadow:none}
 
 /* Context menu. Right-clicking a track used to open the webview's own menu
    ("reload", "view source"), which is meaningless in a player. */
@@ -5575,3 +5586,43 @@ html[data-theme="light"] .e2e-dev{background:oklch(20% 0.01 280 / .04)}
 @media (prefers-reduced-motion: reduce){
   .mrow.mnew,.mrow.flash .mb,.mmenu,.mview,.mview.out,.mdown{animation:none}
 }
+
+/* ── Worn badges: up to three next to a name ── */
+.user-badges{display:inline-flex;align-items:center;gap:4px;margin-left:6px;vertical-align:middle;flex-wrap:wrap}
+.user-badges .user-badge-tag{margin-left:0}
+.user-badge-tag.icon{padding:2px;width:22px;height:22px;justify-content:center}
+.user-badge-tag.icon img{width:15px;height:15px}
+html[data-theme="light"] .user-badge-tag{background:oklch(20% 0.01 280 / .06)}
+.equipped-badge-banner .b-slots{display:flex;gap:8px;flex:none}
+.equipped-badge-banner .b-slot{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:oklch(100% 0 0 / .05);border:1px dashed var(--line-2);color:var(--mute);transition:transform .2s var(--e),background-color .2s var(--e)}
+html[data-theme="light"] .equipped-badge-banner .b-slot{background:oklch(20% 0.01 280 / .04)}
+.equipped-badge-banner .b-slot.on{border-style:solid;border-color:var(--line);background:oklch(100% 0 0 / .08);cursor:pointer}
+.equipped-badge-banner .b-slot.on:hover{transform:scale(1.06)}
+.equipped-badge-banner .b-slot img{width:34px;height:34px;object-fit:contain}
+.equipped-badge-banner .b-slot .material-symbols-rounded{font-size:20px;opacity:.6}
+@media (max-width:560px){
+  .equipped-badge-banner{flex-wrap:wrap}
+  .equipped-badge-banner .b-slot{width:44px;height:44px}
+}
+.pinned-track{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:12px;background:oklch(100% 0 0 / .04);border:1px solid var(--line)}
+/* The small cover in the pinned-song cards: .cover alone is sized by the
+   player column, so inside a flex row it collapsed to nothing. */
+.cover.sm{width:44px;height:44px;flex:none;border-radius:10px;box-shadow:none}
+html[data-theme="light"] .pinned-track{background:oklch(20% 0.01 280 / .035)}
+
+/* ── Avatars with a picture: no pale rim ──────────────────────────────────
+   The placeholder (gradient / letter) and the light border sat under the
+   picture; the circular mask anti-aliases the photo's edge against them, which
+   read as a thin white line, worst on older uploads that carry a transparent
+   feathered rim. With a picture there is nothing under it, and the picture is
+   scaled a hair past the mask so no edge pixel is ever half see-through. */
+.avat.has-img{background:transparent!important}
+.avat.has-img>.avat-l,.avat.has-img>.material-symbols-rounded{visibility:hidden}
+.avat-img{border-radius:0;transform:scale(1.045);transform-origin:50% 50%}
+.avat.has-img{isolation:isolate}
+.avatar.has-img{border-color:transparent;background:transparent;
+  box-shadow:0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb) / .4),0 0 calc(44px*var(--glow)) rgb(var(--accent-rgb) / .16)}
+.profhead .avatar.has-img{box-shadow:0 0 0 4px var(--bg),0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb) / .4)}
+.avatar.has-img>img{transform:scale(1.035)}
+.avatar.has-img .avat{border:0}

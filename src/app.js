@@ -527,6 +527,11 @@ const ACCENTS=[
 const EMPTY_TRACK={id:"empty",s:"ytm",t:"",a:"Meowave",al:"",d:0,mode:"empty",art:null};
 const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,guest:false,
  equippedBadge:localStorage.getItem("meowave_equipped_badge")||null,
+ /* Up to three worn badges, in the order they were put on. The single id
+    above stays as the first of them for older code and older servers. */
+ equippedBadges:(()=>{try{const a=JSON.parse(localStorage.getItem("meowave_equipped_badges")||"null");
+  if(Array.isArray(a))return [...new Set(a.filter(x=>typeof x==="string"&&x))].slice(0,3)}catch(_){}
+  const one=localStorage.getItem("meowave_equipped_badge");return one?[one]:[]})(),
  shuffle:false,repeat:false,vol:.8,muted:false,quality:"high",
  /* Per-service on/off switches, {ytm:true,sc:false,...}. Filled by restore()
     and kept in sync by the header chip clicks; initServices() applies it after
@@ -2208,13 +2213,25 @@ function setCustomAccent(hex){
    capped server-side, so only the most recent keys fit — a dislike list long
    enough to hit the cap has done its job many times over. */
 let prefsTimer=0;
+/* The pinned profile song as other people's clients read it (prefs is the
+   only per-user blob they can see): small, and only a real http cover. */
+function prefsTrack(tr){
+ if(!tr||!tr.t)return null;
+ return {id:String(tr.id??""),s:tr.s||"",t:String(tr.t).slice(0,160),a:String(tr.a||"").slice(0,160),
+  art:/^https?:\/\//i.test(tr.art||"")?String(tr.art).slice(0,400):null}}
 function pushPrefs(){
  if(!sb||!sbUser)return;
  clearTimeout(prefsTimer);
  prefsTimer=setTimeout(async()=>{
-  try{await sb.rpc("set_prefs",{p:{accent:S.accent,customAccent:S.customAccent,
-   theme:S.theme,glow:S.glow,blur:S.blur,dens:S.dens,
-   dislikes:Object.keys(S.dislikes||{}).slice(-200)}})}
+  /* set_prefs replaces the whole blob: keys this build does not write are
+     carried over, and the dislike list gives way first if the result would
+     cross the 8000-character cap (the RPC refuses it outright). */
+  const base={...(sbProfile?.prefs||{}),accent:S.accent,customAccent:S.customAccent,
+   theme:S.theme,glow:S.glow,blur:S.blur,dens:S.dens,profile_track:prefsTrack(S.profileTrack),
+   ...(typeof customPrefs==="function"?customPrefs():{})};
+  let dis=Object.keys(S.dislikes||{}).slice(-200),p;
+  for(;;){p={...base,dislikes:dis};if(JSON.stringify(p).length<=7800||!dis.length)break;dis=dis.slice(Math.ceil(dis.length/4))}
+  try{const {error}=await sb.rpc("set_prefs",{p});if(error)throw error;if(sbProfile)sbProfile.prefs=p}
   catch(e){console.warn("prefs:",e.message||e)}},900)}
 /* A track is identified by (id, service): ids are unique per service only. */
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -2436,8 +2453,8 @@ function renderLib(){
    .filter(g=>g.list.length>1).sort((x,y)=>y.list.length-x.list.length).slice(0,12);
   PL_GROUPS=groups;
 
-  const mkBtn=`<button class="plc plnew" id="plnew"><span class="sq"><span class="material-symbols-rounded" style="font-size:24px">add</span></span><b>${t("pl.new")}</b><span>${t("pl.new.s")}</span></button>
-  <button class="plc plimport" id="plimport"><span class="sq"><span class="material-symbols-rounded" style="font-size:24px">cloud_download</span></span><b>${t("import.btn")||"Импорт"}</b><span>Spotify, YTM, SC</span></button>`;
+  const mkBtn=`<button class="plc plnew" id="plnew"><span class="sq"><span class="material-symbols-rounded">add</span></span><b>${t("pl.new")}</b><span>${t("pl.new.s")}</span></button>
+  <button class="plc plimport" id="plimport"><span class="sq"><span class="material-symbols-rounded">download</span></span><b>${t("import.btn")||"Импорт"}</b><span>Spotify, YTM, SC</span></button>`;
   const mine=PLAYLISTS.map(p=>
    `<button class="plc" data-plid="${esc(p.id)}">${plCover(p)}
     <b>${esc(p.name)}</b><span>${p.tracks.length} ${t("tracks")}</span></button>`).join("");
@@ -2622,7 +2639,8 @@ function renderNP(){
   b.dis.setAttribute("aria-pressed",String(isDisliked(tr)))}
 
  const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d?+tr.d:0);
- dur.textContent=empty?"0:00":(effectiveDur>0?fmt(effectiveDur):"0:00")}
+ dur.textContent=empty?"0:00":(effectiveDur>0?fmt(effectiveDur):"0:00");
+ if(S.view==="profile")paintProfileTrack()}
 function isExplicit(tr){
  if(!tr)return false;
  if(tr.exp||tr.explicit||tr.contentWarning==="explicit")return true;
@@ -4618,6 +4636,10 @@ function go(v){
   if(v==="rooms")SOC.room?paintRoomShell():renderRooms();
   if(v==="top")renderTop();
   if(v==="quests")renderQuestsView();
+  /* The profile is painted once per load; badges can be put on or taken off
+     in Achievements meanwhile, so a stale header is rebuilt on the way in. */
+  if(v==="profile"){const u=document.querySelector("#profbody .uname");
+   if(u&&u.dataset.worn!==myBadges().join(","))renderProfile();else paintProfileTrack()}
   liveRefresh(v)}
 
 /* Keeps the open screen current without a tab bounce.
@@ -6633,9 +6655,18 @@ async function loadProfile(){
   ({data,error}=await sb.from("profiles").select("username,avatar_url,banner_url,bio,accent,card_style,pinned_badges,prefs").eq("id",sbUser.id).maybeSingle())}
  if(error)console.warn("profiles:",error.message);
  sbProfile=data||{username:sbUser.email?.split("@")[0]||"",avatar_url:null,banner_url:null,pinned_badges:[]};
+ loadEquipped().then(()=>{if(S.view==="profile"||S.view==="quests")repaintBadgeViews()}).catch(()=>{});
  /* Dislikes are a union, not an overwrite: hidden on any machine means hidden
     everywhere, and un-hiding stays a local act (there is no timestamp to tell
     which side is newer). */
+ /* The pinned song follows the account: the last explicit pin or unpin on
+    any device is on the server; an account that never synced one takes this
+    machine's. */
+ const rp=sbProfile?.prefs||{};
+ if(rp&&"profile_track" in rp){
+  const remote=rp.profile_track&&rp.profile_track.t?rp.profile_track:null;
+  if(JSON.stringify(prefsTrack(S.profileTrack))!==JSON.stringify(remote)){S.profileTrack=remote;save()}}
+ else if(S.profileTrack)pushPrefs();
  const remoteDislikes=Array.isArray(sbProfile?.prefs?.dislikes)?sbProfile.prefs.dislikes:[];
  if(remoteDislikes.length){
   S.dislikes=S.dislikes||{};
@@ -6866,25 +6897,13 @@ async function cropResult(){
  x.drawImage(CROP.img,CROP.x*k,CROP.y*k,
   CROP.img.width*CROP.scale*k,CROP.img.height*CROP.scale*k);
 
- /* An avatar is a square image that every surface then masks into a circle.
-    The corners it keeps are the bug: JPEG has no alpha, so they were saved as
-    solid white, and anti-aliasing left a pale fringe just inside the CSS mask —
-    the "white pixels on the avatar" that look unfinished on a dark theme.
-
-    Cutting the circle here, in the export, means the stored file already ends
-    where the picture ends. The rim is erased with a feathered ring rather than
-    a hard clip so the edge stays smooth at any display size. */
+ /* An avatar is exported square and every surface masks it into a circle.
+    Cutting the circle into the file (a feathered transparent rim) was the
+    "white line around the avatar": the CSS mask anti-aliases that see-through
+    rim against whatever sits under the picture — a light placeholder
+    gradient and a pale border. A full-bleed square leaves the mask nothing
+    but the picture's own pixels at the edge. */
  const round=CROP.shape==="square";
- if(round){
-  const r=out.w/2;
-  x.globalCompositeOperation="destination-in";
-  const g=x.createRadialGradient(r,r,r-1.5,r,r,r);
-  g.addColorStop(0,"rgba(0,0,0,1)");
-  g.addColorStop(1,"rgba(0,0,0,0)");
-  x.fillStyle=g;
-  x.beginPath();x.arc(r,r,r,0,Math.PI*2);x.fill();
-  x.globalCompositeOperation="source-over"}
-
  /* Transparency has to survive, so a cut-out avatar is never encoded as JPEG:
     that is what filled the corners with white in the first place. WebP keeps
     alpha and is supported by the webview; PNG is the fallback. */
@@ -8036,29 +8055,79 @@ function announceBadge(id){
  const b=badgeById(id);
  toast((b?`${t("bd.new")}: ${b.name[LANG]||b.name.ru}`:t("bd.new")),4200)}
 
-function userBadgeTag(badgeId){
- if(!badgeId)return "";
- const b=badgeById(badgeId);
- if(!b)return "";
- const name=badgeName(b);
- return `<span class="user-badge-tag" title="${esc(name)}"><img src="assets/badges/${esc(b.file)}" alt=""> ${esc(name)}</span>`;
-}
+/* Worn badges of any profile row: the new list, else the old single column. */
+function badgeIds(p){
+ const a=Array.isArray(p?.equipped_badges)&&p.equipped_badges.length?p.equipped_badges:(p?.equipped_badge?[p.equipped_badge]:[]);
+ return [...new Set(a.filter(Boolean))].slice(0,3)}
+function myBadges(){return (S.equippedBadges||[]).slice(0,3)}
+const isWorn=id=>myBadges().includes(id);
+/* One badge: icon and name, as before. Two or three: the first keeps its
+   name, the rest are icons with the name in the tooltip — three full chips
+   next to a name would crowd every list row. {full:true} names all of them
+   (the profile header has the room). */
+function userBadgeTag(ids,opts={}){
+ const list=(Array.isArray(ids)?ids:[ids]).filter(Boolean).map(badgeById).filter(Boolean).slice(0,3);
+ if(!list.length)return "";
+ const tag=(b,named)=>{const name=badgeName(b);
+  return `<span class="user-badge-tag${named?"":" icon"}" title="${esc(name)}"><img src="assets/badges/${esc(b.file)}" alt="">${named?` ${esc(name)}`:""}</span>`};
+ if(list.length===1)return tag(list[0],true);
+ return `<span class="user-badges">${list.map((b,i)=>tag(b,!!opts.full||i===0)).join("")}</span>`}
 
-function equipBadge(id){
- if(id&&!OWNED.has(id)){
-  toast(LANG==="ru"?"Вы еще не открыли этот значок":"Badge not unlocked yet");
-  return;
- }
- S.equippedBadge=id;
- localStorage.setItem("meowave_equipped_badge",id||"");
- if(sb&&sbUser){
-  sb.from("profiles").update({equipped_badge:id}).eq("id",sbUser.id).then(()=>{},()=>{});
- }
- toast(id?(LANG==="ru"?"Значок надет":"Badge equipped"):(LANG==="ru"?"Значок снят":"Badge unequipped"));
+/* badgeDirty: a local change the server has not confirmed yet. A profile
+   read that lands in that window (the sign-in fetch, typically) would put
+   the old set back, so loadEquipped() leaves local state alone until then. */
+let badgeSaveT=0,badgeRev=0,badgeDirty=false;
+function saveEquipped(){
+ badgeRev++;
+ const ids=myBadges();
+ S.equippedBadge=ids[0]||null;
+ localStorage.setItem("meowave_equipped_badges",JSON.stringify(ids));
+ localStorage.setItem("meowave_equipped_badge",ids[0]||"");
+ if(!sb||!sbUser)return;
+ badgeDirty=true;
+ /* Debounced: three quick taps are one write. The RPC checks ownership and
+    keeps equipped_badge in step; a server without migration 16 only has the
+    single column, so it gets the first badge. */
+ clearTimeout(badgeSaveT);
+ badgeSaveT=setTimeout(async()=>{
+  const sent=badgeRev;
+  try{
+   const {data,error}=await sb.rpc("set_equipped_badges",{ids});
+   if(error){
+    if(/set_equipped_badges|function|PGRST20[02]|42883/i.test(error.message||""))
+     await sb.from("profiles").update({equipped_badge:ids[0]||null}).eq("id",sbUser.id).then(()=>{},()=>{});
+    else console.warn("equip:",error.message)}
+   else if(sent===badgeRev&&Array.isArray(data)&&data.join()!==ids.join()){S.equippedBadges=data.slice(0,3);S.equippedBadge=data[0]||null;
+    localStorage.setItem("meowave_equipped_badges",JSON.stringify(S.equippedBadges));repaintBadgeViews()}
+  }catch(e){console.warn("equip:",e?.message||e)}
+  finally{if(sent===badgeRev)badgeDirty=false}},350)}
+function repaintBadgeViews(){
  if(S.view==="quests")renderQuestsView();
  if(S.view==="profile")renderProfile();
- if(S.view==="top")renderTop();
-}
+ if(S.view==="top")renderTop()}
+/* Toggle: wear it, or take it off. null takes everything off. */
+function equipBadge(id){
+ if(id===null){S.equippedBadges=[];saveEquipped();toast(LANG==="ru"?"Значки сняты":"Badges removed");return repaintBadgeViews()}
+ if(isWorn(id)){
+  S.equippedBadges=myBadges().filter(x=>x!==id);saveEquipped();
+  toast(LANG==="ru"?"Значок снят":"Badge removed");return repaintBadgeViews()}
+ if(!OWNED.has(id)){toast(LANG==="ru"?"Вы еще не открыли этот значок":"Badge not unlocked yet");return}
+ if(myBadges().length>=3){toast(LANG==="ru"?"Надеть можно три значка — сначала снимите один":"You can wear three badges — take one off first");return}
+ S.equippedBadges=[...myBadges(),id];saveEquipped();
+ toast((LANG==="ru"?"Значок надет":"Badge equipped")+` · ${myBadges().length}/3`);
+ repaintBadgeViews()}
+/* Server copy wins on sign-in, so every device shows the same three. */
+async function loadEquipped(){
+ if(!sb||!sbUser)return;
+ /* A read that started before a local change must not undo it: the sign-in
+    fetch resolving after a quick tap used to take the badge back off. */
+ const rev=badgeRev;
+ let {data,error}=await sb.from("profiles").select("equipped_badge,equipped_badges").eq("id",sbUser.id).maybeSingle();
+ if(error)({data,error}=await sb.from("profiles").select("equipped_badge").eq("id",sbUser.id).maybeSingle());
+ if(error||!data||rev!==badgeRev||badgeDirty)return;
+ const ids=badgeIds(data);
+ if(ids.length||data.equipped_badges){S.equippedBadges=ids;S.equippedBadge=ids[0]||null;
+  localStorage.setItem("meowave_equipped_badges",JSON.stringify(ids));localStorage.setItem("meowave_equipped_badge",ids[0]||"")}}
 
 const badgeName=b=>b.name?.[LANG]||b.name?.ru||b.id;
 const badgeDesc=b=>b.desc?.[LANG]||b.desc?.ru||"";
@@ -8070,7 +8139,7 @@ function badgeTile(b,owned){
  const secret=b.rarity==="secret"&&!owned;
  const shown=secret?t("bd.secret"):desc;
  const pinned=PINNED.includes(b.id);
- const isEquipped=S.equippedBadge===b.id;
+ const isEquipped=isWorn(b.id);
  return `<div class="bdg" data-owned="${owned}" data-pin="${pinned}" data-badge="${esc(b.id)}"
   title="${esc(name)}${shown?" — "+esc(shown):""}"${owned?` role="button" tabindex="0"`:""}>
   <span class="bdgart" style="--ring:${c}"><img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
@@ -8107,9 +8176,7 @@ function renderBadges(){
  box.querySelectorAll("[data-badge-equip]").forEach(btn=>{
   btn.onclick=e=>{
    e.stopPropagation();
-   const bid=btn.dataset.badgeEquip;
-   if(S.equippedBadge===bid)equipBadge(null);
-   else equipBadge(bid);
+   equipBadge(btn.dataset.badgeEquip);
    renderBadges();
   };
  });
@@ -8173,6 +8240,40 @@ async function redeemCode(){
   say(hit?t(key[hit]):m,"err")}}
 
 let authTab="in", authMethod="standard";
+/* "Profile music": what can be pinned depends on what is playing right now,
+   so this block repaints on its own — on entering the profile and on every
+   track change. It used to be painted once with the profile, which kept
+   saying "nothing is playing" while music played. */
+let PROF_TR_SIG="";
+function profTrackHtml(){
+ const pt=S.profileTrack,cur=S.current&&S.current.mode!=="empty"?S.current:null;
+ if(pt)return `
+      <div class="pinned-track">
+        <span class="cover sm" ${coverStyle(pt.art,pt.l1,pt.l2)}></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(pt.t)}</div>
+          <div style="color:var(--mute);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(pt.a||"—")}</div>
+        </div>
+        ${cur&&!sameTrack(cur,pt)?`<button class="btn sm ghost" id="prof-track-pin-curr" title="${esc(cur.a)} — ${esc(cur.t)}"><span class="material-symbols-rounded" style="font-size:16px">swap_horiz</span>${LANG==="ru"?"Заменить на текущий":"Use current"}</button>`:""}
+        <button class="btn sm primary" id="prof-track-play" title="${t("np.play")}"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span></button>
+      </div>`;
+ return `
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="prof-track-pin-curr"${cur?"":" disabled"}>
+          <span class="material-symbols-rounded" style="font-size:16px">push_pin</span> ${LANG==="ru"?"Закрепить текущий трек":"Pin Current Track"}
+        </button>
+        ${cur?`<small style="color:var(--mute)">${esc(cur.a)} — ${esc(cur.t)}</small>`:`<small style="color:var(--mute)">(${LANG==="ru"?"сейчас ничего не играет":"nothing playing right now"})</small>`}
+      </div>`}
+function paintProfileTrack(force){
+ const box=document.getElementById("prof-track-box");if(!box)return;
+ const cur=S.current&&S.current.mode!=="empty"?S.current:null;
+ const sig=[LANG,S.profileTrack?trackKey(S.profileTrack):"",cur?trackKey(cur):""].join("|");
+ if(!force&&sig===PROF_TR_SIG)return;
+ PROF_TR_SIG=sig;
+ box.innerHTML=profTrackHtml();
+ const act=document.getElementById("prof-track-act");
+ if(act)act.innerHTML=S.profileTrack?`<button class="btn sm ghost" id="prof-track-clear">${LANG==="ru"?"Открепить":"Unpin"}</button>`:"";
+ icons()}
 function renderProfile(savedVals={}){
  const box=document.getElementById("profbody");if(!box)return;
  if(!sb){box.innerHTML=`<div class="panel pane"><p class="ph" style="margin:0">${t("pr.nosupa")}</p></div>`;return}
@@ -8189,13 +8290,13 @@ function renderProfile(savedVals={}){
      </label>
      <div style="padding:var(--sp-6)">
      <div class="profhead">
-      <label class="avatar" title="${t("pr.ava.hint")}">
+      <label class="avatar has-img" title="${t("pr.ava.hint")}">
        <img src="${esc(ava)}" alt="" id="prof-ava-img">
        <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
        <input type="file" id="prof-ava-input" accept="image/*">
       </label>
       <div>
-       <div class="uname"><b class="unview">${esc(S.username||sbProfile?.username||t("pr.auth.guest"))}</b> ${userBadgeTag(S.equippedBadge)} <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
+       <div class="uname" data-worn="${esc(myBadges().join(","))}"><b class="unview">${esc(S.username||sbProfile?.username||t("pr.auth.guest"))}</b> ${userBadgeTag(myBadges())} <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
        <p class="pbio" style="margin-top:4px;color:var(--mute);font-size:0.85rem">${t("pr.auth.guest.desc")||"Локальный профиль Meowave"}</p>
       </div>
      </div>
@@ -8344,13 +8445,13 @@ function renderProfile(savedVals={}){
    </label>
    <div style="padding:var(--sp-6)">
    <div class="profhead">
-    <label class="avatar" title="${t("pr.ava.hint")}">
+    <label class="avatar${ava?" has-img":""}" title="${t("pr.ava.hint")}">
      ${ava?`<img src="${esc(ava)}" alt="" id="prof-ava-img">`:`<span class="avatar-ph">${esc(((p.username||sbUser.email||"M")[0]||"M").toUpperCase())}</span>`}
      <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
      <input type="file" id="prof-ava-input" accept="image/*">
     </label>
     <div>
-     <div class="uname"><b class="unview">${esc(p.username||t("pr.name.ph"))}</b> ${userBadgeTag(S.equippedBadge||p.equipped_badge)}</div>
+     <div class="uname" data-worn="${esc(myBadges().join(","))}"><b class="unview">${esc(p.username||t("pr.name.ph"))}</b> ${userBadgeTag(myBadges(),{full:true})}</div>
      <div class="pinrow" id="pinrow"></div>
      ${sbProfile?.bio?`<p class="pbio">${esc(sbProfile.bio)}</p>`:""}
      <p class="pmail">${esc(sbUser.email||"")}</p>
@@ -8367,28 +8468,10 @@ function renderProfile(savedVals={}){
   <div class="panel pane">
    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
     <h3 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-rounded" style="font-size:20px;color:var(--accent)">music_note</span><span>${LANG==="ru"?"Музыка в профиле":"Profile Music"}</span></h3>
-    ${S.profileTrack?`<button class="btn sm ghost" id="prof-track-clear">${LANG==="ru"?"Открепить":"Unpin"}</button>`:""}
+    <span id="prof-track-act">${S.profileTrack?`<button class="btn sm ghost" id="prof-track-clear">${LANG==="ru"?"Открепить":"Unpin"}</button>`:""}</span>
    </div>
    <p class="ph" style="margin:0 0 12px">${LANG==="ru"?"Закрепите трек, который будет отображаться в вашем профиле Quasar ID":"Pin a featured song displayed on your Quasar ID profile"}</p>
-   <div id="prof-track-box">
-    ${S.profileTrack?`
-      <div class="pinned-track" style="background:rgba(255,255,255,0.04);border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.08)">
-        <span class="cover sm" ${coverStyle(S.profileTrack.art,S.profileTrack.l1,S.profileTrack.l2)}></span>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(S.profileTrack.t)}</div>
-          <div style="color:var(--mute);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(S.profileTrack.a||"—")}</div>
-        </div>
-        <button class="btn sm primary" id="prof-track-play" title="${t("np.play")}"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span></button>
-      </div>
-    `:`
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <button class="btn" id="prof-track-pin-curr"${!S.current||S.current.mode==="empty"?" disabled":""}>
-          <span class="material-symbols-rounded" style="font-size:16px">push_pin</span> ${LANG==="ru"?"Закрепить текущий трек":"Pin Current Track"}
-        </button>
-        ${!S.current||S.current.mode==="empty"?`<small style="color:var(--mute)">(${LANG==="ru"?"сейчас ничего не играет":"nothing playing right now"})</small>`:`<small style="color:var(--mute)">${esc(S.current.a)} — ${esc(S.current.t)}</small>`}
-      </div>
-    `}
-   </div>
+   <div id="prof-track-box">${profTrackHtml()}</div>
   </div>
   <div class="panel pane">
    <div class="quests-profile-card">
@@ -8400,7 +8483,7 @@ function renderProfile(savedVals={}){
      </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
-     ${userBadgeTag(S.equippedBadge)}
+     ${userBadgeTag(myBadges())}
      <button class="quests-profile-btn" id="prof-to-quests"><span class="material-symbols-rounded" style="font-size:18px">auto_awesome</span> ${LANG==="ru"?"Перейти к квестам":"Open Quests"}</button>
     </div>
    </div>
@@ -8411,17 +8494,16 @@ function renderProfile(savedVals={}){
    </div>
   </div>`;
  document.getElementById("prof-to-quests")?.addEventListener("click",()=>go("quests"));
- document.getElementById("prof-track-pin-curr")?.addEventListener("click",()=>{
-  if(!S.current||S.current.mode==="empty")return;
-  S.profileTrack={id:S.current.id,s:S.current.s,t:S.current.t,a:S.current.a,art:S.current.art,l1:S.current.l1,l2:S.current.l2};
-  save();renderProfile();toast(LANG==="ru"?"Трек закреплён в профиле":"Track pinned to profile");
- });
- document.getElementById("prof-track-clear")?.addEventListener("click",()=>{
-  S.profileTrack=null;save();renderProfile();toast(LANG==="ru"?"Закреплённый трек откреплён":"Pinned track removed");
- });
- document.getElementById("prof-track-play")?.addEventListener("click",()=>{
-  if(S.profileTrack)setTrack(S.profileTrack,true,false,"prof");
- });
+ document.getElementById("prof-track-box")?.closest(".panel")?.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.id==="prof-track-pin-curr"){
+   if(!S.current||S.current.mode==="empty")return;
+   S.profileTrack={id:S.current.id,s:S.current.s,t:S.current.t,a:S.current.a,art:S.current.art,l1:S.current.l1,l2:S.current.l2};
+   save();pushPrefs();paintProfileTrack(true);toast(LANG==="ru"?"Трек закреплён в профиле":"Track pinned to profile")}
+  else if(b.id==="prof-track-clear"){
+   S.profileTrack=null;save();pushPrefs();paintProfileTrack(true);toast(LANG==="ru"?"Закреплённый трек откреплён":"Pinned track removed")}
+  else if(b.id==="prof-track-play"){if(S.profileTrack)setTrack(S.profileTrack,true,false,"prof")}});
+ PROF_TR_SIG="";paintProfileTrack();
  renderPinned();
  /* Friends live in the People tab now; a second copy under the player was the
     reported "friends are stuck at the bottom". */
@@ -8832,9 +8914,12 @@ async function renderPeopleProfile(id){
   let isMock=false;
   if(sb&&sbUser){
     try{
-      const {data,error}=await sb.from("profiles")
-        .select("id,username,avatar_url,banner_url,bio,privacy,pinned_badges,prefs")
+      let {data,error}=await sb.from("profiles")
+        .select("id,username,avatar_url,banner_url,bio,privacy,pinned_badges,prefs,equipped_badge,equipped_badges")
         .eq("id",id).maybeSingle();
+      if(error)({data,error}=await sb.from("profiles")
+        .select("id,username,avatar_url,banner_url,bio,privacy,pinned_badges,prefs")
+        .eq("id",id).maybeSingle());
       if(!error&&data)p=data;
     }catch(e){}
   }
@@ -8852,6 +8937,7 @@ async function renderPeopleProfile(id){
         bio:found.bio,
         privacy:{},
         pinned_badges:found.equipped_badge?[found.equipped_badge]:[],
+        equipped_badge:found.equipped_badge||null,
         status:found.status,
         listen_seconds:found.listen_seconds||140000,
         listening:found.listening,
@@ -8891,6 +8977,13 @@ async function renderPeopleProfile(id){
 
   await loadBadgeCatalog();
   const pins=Array.isArray(p.pinned_badges)?p.pinned_badges:[];
+  /* The stat used to print the pinned count, so a friend wearing three
+     badges read "0 badges". user_badges is readable wherever the profile is. */
+  let nBadges=Math.max(pins.length,badgeIds(p).length);
+  if(!isMock&&sb&&sbUser){
+    try{const {count,error}=await sb.from("user_badges").select("badge_id",{count:"exact",head:true}).eq("user_id",p.id);
+     if(!error&&Number.isFinite(count))nBadges=Math.max(nBadges,count)}catch(e){}
+  }
   const pinHtml=pins.map(bid=>{
     const b=(BADGES||[]).find(x=>x.id===bid);if(!b)return "";
     const c=RARITY_COLOR[b.rarity]||RARITY_COLOR.common;
@@ -8903,9 +8996,9 @@ async function renderPeopleProfile(id){
     <div class="banner">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
     <div style="padding:var(--sp-6)">
       <div class="profhead">
-        <span class="avatar-holder"><span class="avatar">${avat(view, 104)}</span>${(()=>{const st=presStatus(p.id)||(friend?"offline":null);if(!st)return "";const c=st==="listening"?"listening":st==="online"?"online":"offline";return `<span class="status-indicator ${c}"></span>`})()}</span>
+        <span class="avatar-holder"><span class="avatar${view.avatar_url?" has-img":""}">${avat(view, 104)}</span>${(()=>{const st=presStatus(p.id)||(friend?"offline":null);if(!st)return "";const c=st==="listening"?"listening":st==="online"?"online":"offline";return `<span class="status-indicator ${c}"></span>`})()}</span>
         <div style="min-width:0;flex:1">
-          <div class="uname"><b class="unview">${esc(view.username||t("chat.anon"))}</b></div>
+          <div class="uname"><b class="unview">${esc(view.username||t("chat.anon"))}</b> ${userBadgeTag(mine?myBadges():badgeIds(p),{full:true})}</div>
           <div class="pinrow" style="margin-top:4px">${pinHtml}</div>
           ${p.bio?`<p class="pbio" style="margin-top:6px">${esc(p.bio)}</p>`:""}
           ${profTr?`
@@ -8921,7 +9014,7 @@ async function renderPeopleProfile(id){
       </div>
       <div class="stats" style="margin-top:16px">
         <div class="stat"><b>${showHours?fmtListen(secs):"—"}</b><span>${t("pr.hours")}</span></div>
-        <div class="stat"><b>${pins.length}</b><span>${t("pr.badges")}</span></div>
+        <div class="stat"><b>${nBadges}</b><span>${t("pr.badges")}</span></div>
         <div class="stat"><b>${friend?t("people.friend"):t("people.notfriend")}</b><span>${t("fr.t")}</span></div>
       </div>
       <div class="public-actions" id="people-actions" style="margin-top:16px"></div>
@@ -9958,24 +10051,28 @@ async function renderTop(){
      let bmap={};
      if(uids.length){
       try{
-       const prf=(await sb.from("profiles").select("id,equipped_badge").in("id",uids)).data||[];
-       prf.forEach(p=>{bmap[p.id]=p.equipped_badge});
+       let pr=await sb.from("profiles").select("id,equipped_badge,equipped_badges").in("id",uids);
+       if(pr.error)pr=await sb.from("profiles").select("id,equipped_badge").in("id",uids);
+       (pr.data||[]).forEach(p=>{bmap[p.id]=p});
       }catch(e){}
      }
      rows=data.map(d=>({
       ...d,
       seconds:Number(d.seconds||d.listen_seconds||0),
-      equipped_badge:d.equipped_badge||bmap[d.user_id]||null
+      equipped_badge:d.equipped_badge||bmap[d.user_id]?.equipped_badge||null,
+      equipped_badges:bmap[d.user_id]?.equipped_badges||null
      }));
     }
    }catch(e){console.warn("RPC leaderboard fallback:",e)}
 
    if(!rows.length){
     try{
-     const {data,error}=await sb.from("user_stats")
-      .select("user_id, listen_seconds, profiles(id, username, avatar_url, privacy, equipped_badge)")
+     const q=cols=>sb.from("user_stats")
+      .select(`user_id, listen_seconds, profiles(${cols})`)
       .order("listen_seconds",{ascending:false})
       .limit(50);
+     let {data,error}=await q("id, username, avatar_url, privacy, equipped_badge, equipped_badges");
+     if(error)({data,error}=await q("id, username, avatar_url, privacy, equipped_badge"));
      if(!error&&data){
       rows=data.map(d=>({
        user_id:d.user_id,
@@ -9983,6 +10080,7 @@ async function renderTop(){
        username:d.profiles?.username||t("chat.anon"),
        avatar_url:d.profiles?.avatar_url,
        equipped_badge:d.profiles?.equipped_badge,
+       equipped_badges:d.profiles?.equipped_badges||null,
        privacy:d.profiles?.privacy
       }));
      }
@@ -9999,7 +10097,8 @@ async function renderTop(){
     seconds:mySecs,
     username:(sbProfile?.username)||(sbUser?.email?.split("@")[0])||(LANG==="ru"?"Вы":"You"),
     avatar_url:sbProfile?.avatar_url||null,
-    equipped_badge:S.equippedBadge||sbProfile?.equipped_badge||null
+    equipped_badge:myBadges()[0]||null,
+    equipped_badges:myBadges()
    });
   }
 
@@ -10032,7 +10131,7 @@ async function renderTop(){
       <span class="podium-rank">${p.medal}</span>
       ${avat(p, 48)}
       <b style="margin-top:8px;font-size:0.95rem">${esc(p.username||t("chat.anon"))}</b>
-      ${p.equipped_badge?userBadgeTag(p.equipped_badge):""}
+      ${userBadgeTag(p.user_id===me?myBadges():badgeIds(p))}
       <span class="mut" style="margin-top:4px;font-size:0.8rem;font-weight:600">${fmtListen(p.seconds)}</span>
      </div>`).join("")}
    </div>`:""}
@@ -10042,7 +10141,7 @@ async function renderTop(){
      <span>${LANG==="ru"?"Ваше время прослушивания":"Your listening time"}</span>
      <b>${fmtListen(mySecs)}</b>
     </div>
-    <div>${userBadgeTag(S.equippedBadge)}</div>
+    <div>${userBadgeTag(myBadges())}</div>
    </div>
 
    <p class="eyebrow" style="margin:16px 0 8px">${LANG==="ru"?"Общий зачёт":"General Ranking"}</p>
@@ -10053,7 +10152,7 @@ async function renderTop(){
       ${avat(r,34)}
       <span class="meta" style="display:flex;align-items:center;gap:6px">
        <b>${esc(r.username||t("chat.anon"))}</b>
-       ${r.equipped_badge?userBadgeTag(r.equipped_badge):""}
+       ${userBadgeTag(r.user_id===me?myBadges():badgeIds(r))}
       </span>
       <span class="mut" style="font-weight:600">${fmtListen(r.seconds)}</span>
      </div>`).join("")||`<p class="ph">${t("top.empty")}</p>`}
@@ -10236,19 +10335,19 @@ async function renderQuestsView(){
   }
  ];
 
- const equippedB=S.equippedBadge?badgeById(S.equippedBadge):null;
+ const worn=myBadges().map(badgeById).filter(Boolean);
  const STAFF=new Set(["owner","admin","developer","moderator"]);
 
  box.innerHTML=`<div class="quests-wrap">
   <div class="equipped-badge-banner">
-   <div class="b-art">
-    ${equippedB?`<img src="assets/badges/${esc(equippedB.file)}" alt="">`:`<span class="material-symbols-rounded" style="font-size:28px;color:var(--mute)">military_tech</span>`}
-   </div>
+   <div class="b-slots">${[0,1,2].map(i=>worn[i]
+     ?`<button class="b-slot on" data-quest-equip="${esc(worn[i].id)}" title="${esc(badgeName(worn[i]))} — ${LANG==="ru"?"снять":"take off"}"><img src="assets/badges/${esc(worn[i].file)}" alt=""></button>`
+     :`<span class="b-slot"><span class="material-symbols-rounded">add</span></span>`).join("")}</div>
    <div class="b-info">
-    <b>${equippedB?esc(badgeName(equippedB)):(LANG==="ru"?"Значок не надет":"No badge equipped")}</b>
-    <span>${equippedB?esc(badgeDesc(equippedB)):(LANG==="ru"?"Выберите любой открытый значок ниже, чтобы надеть его":"Select any unlocked badge below to equip")}</span>
+    <b>${worn.length?worn.map(b=>esc(badgeName(b))).join(" · "):(LANG==="ru"?"Значки не надеты":"No badges worn")}</b>
+    <span>${LANG==="ru"?`Надето ${worn.length} из 3 — их видно рядом с вашим именем в профиле, чатах и топе`:`${worn.length} of 3 worn — shown next to your name on your profile, in chats and in the top`}</span>
    </div>
-   ${equippedB?`<button class="btn sm" id="unequip-btn">${LANG==="ru"?"Снять значок":"Unequip"}</button>`:""}
+   ${worn.length?`<button class="btn sm" id="unequip-btn">${LANG==="ru"?"Снять все":"Take all off"}</button>`:""}
   </div>
 
   <div class="panel pane">
@@ -10261,7 +10360,7 @@ async function renderQuestsView(){
       const isDone=owned(b||{id:q.badge})||q.cur>=q.max;
       const pct=Math.min(100,Math.round((q.cur/q.max)*100));
       const valStr=q.fmtVal?`${q.fmtVal(q.cur)} / ${q.fmtVal(q.max)}`:`${q.cur} / ${q.max} ${q.unit}`;
-      const isEquipped=S.equippedBadge===q.badge;
+      const isEquipped=isWorn(q.badge);
 
       return `<div class="quest-card ${isDone?"completed":""}">
         <div class="quest-icon">
@@ -10300,7 +10399,7 @@ async function renderQuestsView(){
    <div id="quest-badges-grid" class="bdgrid">
     ${cat.filter(b=>(!STAFF.has(b.id)||owned(b))&&(b.source!=="code"||owned(b))).map(b=>{
       const isOwned=owned(b);
-      const isEquipped=S.equippedBadge===b.id;
+      const isEquipped=isWorn(b.id);
       const c=RARITY_COLOR[b.rarity]||RARITY_COLOR.common;
       return `<div class="bdg" data-owned="${isOwned}">
         <span class="bdgart" style="--ring:${c}"><img src="assets/badges/${esc(b.file)}" alt="" loading="lazy"></span>
@@ -10331,9 +10430,7 @@ async function renderQuestsView(){
  document.getElementById("unequip-btn")?.addEventListener("click",()=>equipBadge(null));
  box.querySelectorAll("[data-quest-equip]").forEach(btn=>{
    btn.onclick=()=>{
-     const id=btn.dataset.questEquip;
-     if(S.equippedBadge===id)equipBadge(null);
-     else equipBadge(id);
+     equipBadge(btn.dataset.questEquip);
    };
  });
  icons();
