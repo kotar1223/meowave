@@ -475,6 +475,10 @@ set search_path = public, extensions as $$
   select encode(digest(upper(btrim(raw)), 'sha256'), 'hex')
 $$;
 
+-- Dropped first: 13_security_fix.sql gives it a third OUT column, and
+-- `create or replace` cannot change a function's row type, so a re-run of
+-- the full schema would stop here.
+drop function if exists public.redeem_badge_code(text);
 create or replace function public.redeem_badge_code(raw_code text)
 returns table (badge_id text, already_owned boolean)
 language plpgsql security definer set search_path = public, extensions as $$
@@ -2887,6 +2891,10 @@ alter table public.badge_code_attempts enable row level security;
 create index if not exists badge_code_attempts_user_idx
   on public.badge_code_attempts (user_id, at);
 
+-- The row type gains `error`, which `create or replace` refuses to change:
+-- on every database that ran 03_badges.sql this statement failed and the
+-- rest of the file (server_time() for room sync included) never ran.
+drop function if exists public.redeem_badge_code(text);
 create or replace function public.redeem_badge_code(raw_code text)
 returns table (badge_id text, already_owned boolean, error text)
 language plpgsql security definer set search_path = public, extensions as $$

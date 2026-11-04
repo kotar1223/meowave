@@ -72,6 +72,10 @@ set search_path = public, extensions as $$
   select encode(digest(upper(btrim(raw)), 'sha256'), 'hex')
 $$;
 
+-- Dropped first: 13_security_fix.sql gives it a third OUT column, and
+-- `create or replace` cannot change a function's row type, so a re-run of
+-- the full schema would stop here.
+drop function if exists public.redeem_badge_code(text);
 create or replace function public.redeem_badge_code(raw_code text)
 returns table (badge_id text, already_owned boolean)
 language plpgsql security definer set search_path = public, extensions as $$
