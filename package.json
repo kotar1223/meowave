@@ -13,7 +13,7 @@
     "android:dev": "bash -c 'source scripts/setup-android-env.sh && tauri android dev'",
     "android:emulator": "./scripts/run-emulator.sh",
     "android:run": "./scripts/smart-install.sh",
-    "android:build": "bash -c 'source scripts/setup-android-env.sh && tauri android build --apk && if [ -f src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk ]; then apksigner sign --ks src-tauri/gen/android/keystore.jks --ks-pass pass:meowave123 --key-pass pass:meowave123 --out src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-signed.apk src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk; fi'",
+    "android:build": "bash scripts/android-build.sh",
     "android:build:debug": "bash -c 'source scripts/setup-android-env.sh && tauri android build --apk --debug'",
     "android:build:x86": "bash -c 'source scripts/setup-android-env.sh && tauri android build --apk --target x86_64 --debug'",
     "ffmpeg": "node scripts/fetch-ffmpeg.mjs",
@@ -29,7 +29,7 @@
     "codes": "node supabase/make_codes.mjs",
     "schema": "node supabase/build_sql.mjs",
     "sync:docs": "node scripts/sync-docs-badges.mjs",
- "promo": "node scripts/promo-shots.mjs",
+    "promo": "node scripts/promo-shots.mjs",
     "find-cyrillic": "node scripts/find-cyrillic.mjs"
   },
   "devDependencies": {

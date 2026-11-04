@@ -129,7 +129,8 @@ async function main() {
     console.log(`\n\x1b[90mNote: These failures reflect pre-existing bugs in Meowave awaiting Milestones M1-M5.\x1b[0m\n`);
     process.exit(1);
   } else {
-    console.log("\x1b[1m\x1b[32m✔ ALL 290 TEST CASES PASSED SUCCESSFULLY!\x1b[0m\n");
+    const skipNote = totalSkipped > 0 ? ` (${totalSkipped} skipped, not counted)` : "";
+    console.log(`\x1b[1m\x1b[32m✔ ALL ${totalPassed} EXECUTED TEST CASES PASSED${skipNote}\x1b[0m\n`);
     process.exit(0);
   }
 }

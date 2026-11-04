@@ -22,6 +22,10 @@
 //!   benefit.
 
 /// What the page reports about the current track.
+///
+/// Only `linux::update` reads these fields, so on macOS/Windows the struct is
+/// deserialised and dropped; without this allow, `clippy -D warnings` fails there.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 #[derive(serde::Deserialize)]
 pub struct NowPlaying {
     playing: bool,

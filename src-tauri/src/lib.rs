@@ -590,6 +590,15 @@ pub fn run() {
             _ => {}
         })
         .setup(|app| {
+            #[cfg(mobile)]
+            {
+                // No usable HOME on Android/iOS: keep data in the app's private
+                // directory, then reread the proxy file from its real location.
+                if let Ok(dir) = app.path().app_data_dir() {
+                    paths::set_root(dir);
+                    proxy::load();
+                }
+            }
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.emit("meowave://render", true);
                 taskbar::init_window(&w);

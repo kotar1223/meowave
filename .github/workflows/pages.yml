@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Pages is only configured on the public repo; in meowave-beta this job always failed at Setup Pages.
+    if: github.repository == 'kotar1223/meowave'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

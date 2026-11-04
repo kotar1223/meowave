@@ -16,11 +16,29 @@
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 const APP_DIR: &str = "Meowave";
 
+/// Set once from `setup()` on Android/iOS. The OS hands each app a private data
+/// directory there and `HOME` is usually not set at all, so the desktop rules
+/// below would fail with "no home directory" and nothing — tokens included —
+/// would persist between launches.
+static ROOT_OVERRIDE: OnceLock<PathBuf> = OnceLock::new();
+
+/// Pin the data root to a platform-provided directory (Tauri's `app_data_dir`).
+/// Only the first call counts.
+#[cfg_attr(not(mobile), allow(dead_code))]
+pub fn set_root(dir: PathBuf) {
+    let _ = ROOT_OVERRIDE.set(dir);
+}
+
 /// Root data directory, created on first call.
 pub fn root() -> Result<PathBuf, String> {
+    if let Some(dir) = ROOT_OVERRIDE.get() {
+        fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+        return Ok(dir.clone());
+    }
     let base = if cfg!(windows) {
         std::env::var_os("LOCALAPPDATA")
             .map(PathBuf::from)

@@ -85,3 +85,6 @@ __pycache__/
 .agents/skills/*
 !.agents/skills/meowave-*/
 
+
+# Installers are published as GitHub Release assets, not committed
+installer/
