@@ -9,6 +9,7 @@ mod fsguard;
 mod links;
 mod local;
 mod lyrics;
+mod lyrics_clean;
 mod matching;
 mod mem;
 mod mpris;

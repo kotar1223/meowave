@@ -3715,12 +3715,25 @@ async function searchGeniusPrompt(tr){
    and some plain-text sources. They are not sung, so they are not shown.
    Blank lines collapse to one; in synced lyrics a blank timed line marks an
    instrumental break and is kept. */
+/* The Rust side already strips labels, credits and notices from every fetched
+   source (lyrics_clean.rs); this is the last line for what it never sees —
+   AI transcription and the Genius search box. Section labels in the common
+   plain forms ("Припев:", "(Chorus x2)", "Куплет 2"). */
+const LY_LABEL=/^[({<]?\s*(?:\d+-?[йя]?\s+)?(?:verse|chorus|pre-?chorus|post-?chorus|hook|refrain|bridge|intro|outro|interlude|instrumental|breakdown|coda|куплет|припев|пред-?припев|бридж|интро|вступление|аутро|концовка|проигрыш|кода|приспів|вступ)(?:\s*[-–—#№]?\s*\d+)?(?:\s*[(\[]?\s*(?:[xх×]\s*\d+|\d+\s*[xх×]|\d+\s*раза?)\s*[)\]]?)?\s*[)}>]?\s*[:：.]?\s*$/i;
+/* Whisper was trained on subtitles, and on silence or a long instrumental it
+   "hears" their credits and outros. These are the ones it actually produces. */
+const LY_AI_JUNK=/(?:субтитр|dimatorzok|редактор\s|корректор\s|продолжение следует|спасибо за (?:просмотр|внимание)|подписывайтесь|ставьте лайк|thanks? (?:you )?for watching|please subscribe|subtitles? by|amara\.org|字幕|ご視聴|시청해)/i;
+const LY_AI_TAG=/^[\s[(（【♪♫*-]*(?:music|музыка|музыкальная заставка|instrumental|аплодисменты|applause|смех|laughter|silence|тишина|singing|поёт|вздох|sigh|outro|intro)?[\s\])）】♪♫*.…-]*$/i;
+function cleanAiLines(lines){
+ return (lines||[]).filter(l=>{
+  const tx=String(l?.text||"").trim();
+  return tx&&!LY_AI_JUNK.test(tx)&&!LY_AI_TAG.test(tx)&&!LY_LABEL.test(tx)})}
 function cleanLyricLines(lines,synced){
  const out=[];
  for(const l of lines||[]){
   if(!l||l.text===undefined)continue;
   let tx=String(l.text).replace(/[\u200b\ufeff]/g,"").trim();
-  if(/^\[[^\]]{0,80}\]$/.test(tx))continue;
+  if(/^\[[^\]]{0,80}\]$/.test(tx)||LY_LABEL.test(tx))continue;
   tx=tx.replace(/^\[[^\]]{1,40}\]\s*/,"");
   const prev=out[out.length-1];
   if(!tx&&(!synced||l.at==null)&&(!prev||!prev.text))continue;
@@ -3964,9 +3977,8 @@ async function transcribeLyrics(tr){
    no_repeat_ngram_size:4,
    temperature:0});
   if(my!==lyReq)return;
-  const lines=(res?.chunks||[])
-   .map(c=>({at:Array.isArray(c.timestamp)?c.timestamp[0]:null,text:String(c.text||"").trim()}))
-   .filter(l=>l.text);
+  const lines=cleanAiLines((res?.chunks||[])
+   .map(c=>({at:Array.isArray(c.timestamp)?c.timestamp[0]:null,text:String(c.text||"").trim()})));
   LYRICS.set(key,lines.length
    ?{state:"done",source:"ai",synced:lines.every(l=>l.at!=null),lines:mergeAiLines(lines)}
    :{state:"done",source:"none",synced:false,lines:[]});

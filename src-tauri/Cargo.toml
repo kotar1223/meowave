@@ -48,6 +48,9 @@ tauri-plugin-process = "2.3.1"
 # and macOS), and sysinfo walks that tree through one API on all three
 # platforms — no per-OS unsafe code in this repo.
 sysinfo = "0.39"
+# Lyrics cleanup (section labels, credits, notices); already in the tree via
+# other crates, so this adds no new download.
+regex = "1"
 
 [lib]
 name = "meowave_lib"

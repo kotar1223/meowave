@@ -68,10 +68,13 @@ fn plain_lines(text: &str) -> Vec<Line> {
 }
 
 /// Parses an LRC body: `[mm:ss.xx] text`, possibly several stamps per line.
+/// `[offset:+/-ms]` is honoured: per the LRC convention a positive offset
+/// makes every line appear that much earlier.
 fn parse_lrc(body: &str) -> Vec<Line> {
     let mut out: Vec<Line> = Vec::new();
+    let mut offset = 0.0_f64;
     for raw in body.lines() {
-        let mut rest = raw;
+        let mut rest = raw.trim_start_matches('\u{feff}');
         let mut stamps: Vec<f64> = Vec::new();
 
         // Consume every leading [..] group. Metadata tags like [ar:Artist] do
@@ -81,6 +84,8 @@ fn parse_lrc(body: &str) -> Vec<Line> {
             let inside = &rest[1..close];
             if let Some(secs) = parse_stamp(inside) {
                 stamps.push(secs);
+            } else if let Some(ms) = parse_offset(inside) {
+                offset = ms / 1000.0;
             }
             rest = &rest[close + 1..];
         }
@@ -96,16 +101,70 @@ fn parse_lrc(body: &str) -> Vec<Line> {
             });
         }
     }
+    if offset != 0.0 {
+        for l in &mut out {
+            l.at = l.at.map(|a| ((a - offset) * 1000.0).round().max(0.0) / 1000.0);
+        }
+    }
     out.sort_by(|a, b| a.at.partial_cmp(&b.at).unwrap_or(std::cmp::Ordering::Equal));
     out
 }
 
-/// "mm:ss.xx" or "mm:ss" -> seconds. Anything else is not a timestamp.
+/// "mm:ss", "mm:ss.xx", "mm:ss.xxx" and the "mm:ss:xx" variant some
+/// players write -> seconds. Digits only: `str::parse::<f64>` used to accept
+/// "nan", "inf" and signs, which put lines at NaN or before the start.
 fn parse_stamp(s: &str) -> Option<f64> {
-    let (m, rest) = s.split_once(':')?;
-    let mins: f64 = m.trim().parse().ok()?;
-    let secs: f64 = rest.trim().parse().ok()?;
-    Some(mins * 60.0 + secs)
+    let s = s.trim();
+    let digits = |p: &str, max: usize| !p.is_empty() && p.len() <= max && p.bytes().all(|b| b.is_ascii_digit());
+    let mut parts = s.splitn(3, ':');
+    let m = parts.next()?;
+    let rest = parts.next()?;
+    let (sec, frac) = match parts.next() {
+        Some(f) => (rest, Some(f)),
+        None => match rest.split_once('.') {
+            Some((a, b)) => (a, Some(b)),
+            None => (rest, None),
+        },
+    };
+    if !digits(m, 4) || !digits(sec, 2) || frac.is_some_and(|f| !digits(f, 3)) {
+        return None;
+    }
+    let mins: f64 = m.parse().ok()?;
+    let secs: f64 = sec.parse().ok()?;
+    let frac = match frac {
+        Some(f) => f.parse::<f64>().ok()? / 10f64.powi(f.len() as i32),
+        None => 0.0,
+    };
+    Some(mins * 60.0 + secs + frac)
+}
+
+/// `offset:+250` / `offset: -100` -> milliseconds.
+fn parse_offset(s: &str) -> Option<f64> {
+    let (k, v) = s.split_once(':')?;
+    if !k.trim().eq_ignore_ascii_case("offset") {
+        return None;
+    }
+    let v = v.trim();
+    let (sign, num) = match v.as_bytes().first()? {
+        b'-' => (-1.0, &v[1..]),
+        b'+' => (1.0, &v[1..]),
+        _ => (1.0, v),
+    };
+    if num.is_empty() || num.len() > 7 || !num.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    Some(sign * num.parse::<f64>().ok()?)
+}
+
+/// Runs the cleaner and drops the result when nothing sung is left, so the
+/// caller moves on to the next source instead of showing an empty panel.
+fn finish(source: &str, synced: bool, lines: Vec<Line>, artist: &str, title: &str) -> Option<Lyrics> {
+    let lines = crate::lyrics_clean::clean(lines, synced, artist, title);
+    if lines.iter().all(|l| l.text.is_empty()) {
+        return None;
+    }
+    let synced = synced && lines.iter().all(|l| l.at.is_some());
+    Some(Lyrics { source: source.into(), synced, lines })
 }
 
 /// YouTube Music: video id -> plain lyrics.
@@ -381,6 +440,39 @@ fn find_matching_div_end(html: &str, start: usize, max_end: usize) -> usize {
     limit
 }
 
+/// Genius marks the page furniture inside a lyrics container — contributor
+/// count, the translations menu, "Song Lyrics", the description teaser — with
+/// `data-exclude-from-selection="true"`, the same flag its own copy button
+/// uses to leave them out. Removing those elements here takes all of it out at
+/// the source instead of guessing at the text afterwards.
+fn strip_excluded(chunk: &str) -> String {
+    const FLAG: &str = "data-exclude-from-selection=\"true\"";
+    let mut out = String::with_capacity(chunk.len());
+    let mut i = 0;
+    while let Some(p) = chunk[i..].find(FLAG) {
+        let at = i + p;
+        let Some(open) = chunk[i..at].rfind('<').map(|o| i + o) else { break };
+        let Some(gt) = chunk[at..].find('>').map(|g| at + g + 1) else { break };
+        let name: String = chunk[open + 1..].chars().take_while(|c| c.is_ascii_alphanumeric()).collect();
+        let end = if chunk[open..gt].ends_with("/>") {
+            gt
+        } else if name.eq_ignore_ascii_case("div") {
+            let e = find_matching_div_end(chunk, gt, chunk.len());
+            (e + "</div>".len()).min(chunk.len())
+        } else {
+            let close = format!("</{name}>");
+            chunk[gt..].find(&close).map(|c| gt + c + close.len()).unwrap_or(gt)
+        };
+        out.push_str(&chunk[i..open]);
+        i = end.max(open + 1).min(chunk.len());
+        if !chunk.is_char_boundary(i) {
+            i = char_floor(chunk, i);
+        }
+    }
+    out.push_str(&chunk[i..]);
+    out
+}
+
 /// Extracts lyrics from a full Genius page HTML.
 pub fn extract_genius_lyrics(html: &str) -> String {
     let mut out = Vec::new();
@@ -417,8 +509,8 @@ pub fn extract_genius_lyrics(html: &str) -> String {
 
         let end_slice = find_matching_div_end(html, tag_close, max_bound);
 
-        let chunk = &html[tag_close..end_slice];
-        let cleaned = clean_html_lyrics(chunk);
+        let chunk = strip_excluded(&html[tag_close..end_slice]);
+        let cleaned = clean_html_lyrics(&chunk);
         if !cleaned.trim().is_empty() {
             out.push(cleaned);
         }
@@ -541,56 +633,49 @@ pub async fn lyrics_get(
     let album = album.unwrap_or_default();
     let duration = duration.unwrap_or(0);
 
+    let (a, t) = (artist.trim(), title.trim());
+
     // 0. A Yandex track's own synced lyrics.
-    let mut ym_plain: Option<Vec<Line>> = None;
+    let mut ym_plain: Option<Lyrics> = None;
     if service == "ym" && !id.is_empty() {
         match from_ym(&id).await {
             Ok(Some((true, lines))) => {
-                return Ok(Lyrics { source: "ym".into(), synced: true, lines });
+                if let Some(l) = finish("ym", true, lines, a, t) {
+                    return Ok(l);
+                }
             }
-            Ok(Some((false, lines))) => ym_plain = Some(lines),
+            Ok(Some((false, lines))) => ym_plain = finish("ym", false, lines, a, t),
             _ => {}
         }
     }
 
     // 1. Synced lyrics from LRCLIB first
-    if !artist.trim().is_empty() && !title.trim().is_empty() {
-        if let Ok(Some((synced, lines))) =
-            from_lrclib(artist.trim(), title.trim(), album.trim(), duration).await
-        {
-            return Ok(Lyrics {
-                source: "lrclib".into(),
-                synced,
-                lines,
-            });
+    if !a.is_empty() && !t.is_empty() {
+        if let Ok(Some((synced, lines))) = from_lrclib(a, t, album.trim(), duration).await {
+            if let Some(l) = finish("lrclib", synced, lines, a, t) {
+                return Ok(l);
+            }
         }
     }
 
-    if let Some(lines) = ym_plain {
-        return Ok(Lyrics { source: "ym".into(), synced: false, lines });
+    if let Some(l) = ym_plain {
+        return Ok(l);
     }
 
     // 2. Genius search
-    if !artist.trim().is_empty() && !title.trim().is_empty() {
-        if let Ok(Some(lines)) = from_genius(artist.trim(), title.trim()).await {
-            return Ok(Lyrics {
-                source: "genius".into(),
-                synced: false,
-                lines,
-            });
+    if !a.is_empty() && !t.is_empty() {
+        if let Ok(Some(lines)) = from_genius(a, t).await {
+            if let Some(l) = finish("genius", false, lines, a, t) {
+                return Ok(l);
+            }
         }
     }
 
     // 3. YouTube Music internal lyrics fallback
     if service == "ytm" {
         if let Ok(Some(text)) = from_ytm(&id).await {
-            let lines = plain_lines(&text);
-            if !lines.is_empty() {
-                return Ok(Lyrics {
-                    source: "ytm".into(),
-                    synced: false,
-                    lines,
-                });
+            if let Some(l) = finish("ytm", false, plain_lines(&text), a, t) {
+                return Ok(l);
             }
         }
     }
@@ -648,11 +733,12 @@ pub async fn lyrics_search_genius(
         (artist.as_deref().unwrap_or(""), title.as_deref().unwrap_or(""))
     };
     if let Ok(Some(lines)) = from_genius(a, t).await {
-        return Ok(Lyrics {
-            source: "genius".into(),
-            synced: false,
-            lines,
-        });
+        // A free-text query has no separate title to strip, so only the
+        // catalogue fields are passed when the user did not type one.
+        let (ca, ct) = if q.trim().is_empty() { (a, t) } else { ("", "") };
+        if let Some(l) = finish("genius", false, lines, ca, ct) {
+            return Ok(l);
+        }
     }
     Ok(Lyrics::none())
 }
@@ -668,6 +754,39 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].text, "Hello world");
         assert_eq!(lines[0].at, Some(12.34));
+    }
+
+    #[test]
+    fn parses_stamp_variants_and_rejects_garbage() {
+        assert_eq!(parse_stamp("01:02.5"), Some(62.5));
+        assert_eq!(parse_stamp("01:02.50"), Some(62.5));
+        assert_eq!(parse_stamp("00:05.123"), Some(5.123));
+        assert_eq!(parse_stamp("02:03:45"), Some(123.45));
+        assert_eq!(parse_stamp("3:04"), Some(184.0));
+        for bad in ["nan:00", "00:inf", "-1:00", "+1:00", "00:1e3", "ar:Artist", "00:", ":12", "00:12.", "00:12.3456"] {
+            assert_eq!(parse_stamp(bad), None, "{bad}");
+        }
+    }
+
+    #[test]
+    fn applies_lrc_offset() {
+        let lines = parse_lrc("[offset:+500]\n[00:10.00] a\n[00:00.20] b");
+        assert_eq!(lines[0].at, Some(0.0));
+        assert_eq!(lines[1].at, Some(9.5));
+        let lines = parse_lrc("[offset: -250]\n[00:10.00] a");
+        assert_eq!(lines[0].at, Some(10.25));
+    }
+
+    #[test]
+    fn drops_genius_header_marked_excluded() {
+        let html = r#"<div data-lyrics-container="true"><div data-exclude-from-selection="true" class="LyricsHeader"><div>84 Contributors</div><div>Translations<ul><li>Español</li><li>Русский</li></ul></div><h2>Creep Lyrics</h2><div>“Creep” is the debut single… <span>Read More</span></div></div>[Verse 1]<br/>When you were here before<br/>Couldn't look you in the eye</div>"#;
+        let text = extract_genius_lyrics(html);
+        assert!(!text.contains("Contributors"));
+        assert!(!text.contains("Español"));
+        assert!(!text.contains("Read More"));
+        let lines = crate::lyrics_clean::clean(plain_lines(&text), false, "Radiohead", "Creep");
+        let got: Vec<&str> = lines.iter().map(|l| l.text.as_str()).collect();
+        assert_eq!(got, vec!["When you were here before", "Couldn't look you in the eye"]);
     }
 
     #[test]
@@ -740,4 +859,3 @@ mod tests {
         println!("GENIUS RESULT: {:?}", r.map(|l| (l.source, l.lines.len())));
     }
 }
-
