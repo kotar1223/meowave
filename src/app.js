@@ -20,7 +20,7 @@
   const r=e.reason;paint("promise",r&&r.message||String(r))});
 })();
 
-/* boot: частицы собирают круг -> ударная волна */
+/* boot: the splash dissolves into the interface (app.css, "Splash") */
 const motionMedia = matchMedia("(prefers-reduced-motion: reduce)");
 const BOOT={done:false,reduce:motionMedia.matches};
 motionMedia.addEventListener("change", e => {
@@ -31,12 +31,16 @@ document.documentElement.classList.add("booting");
 function bootFinish(){
  if(BOOT.done)return;BOOT.done=true;
  const sp=document.getElementById("splash");
+ /* One move: the mark and name fade back, the backdrop dissolves (.1 s
+    later), and underneath the interface rises into place in three layers
+    (.app.ready). The field breathes out from the middle as it is uncovered —
+    a soft push, not the old shockwave. With onboarding still ahead, its card
+    takes the stage instead and adds .ready itself when done. */
  sp?.classList.add("done");
- if(!BOOT.reduce)shock(1.45);else F.mode=S.playing?"flow":"cloud";
- /* сначала гасим чёрную подложку, и только потом возвращаем канвас под UI —
-    иначе частицы на секунду пропадают за ещё не исчезнувшим сплэшем */
- setTimeout(()=>sp?.setAttribute("hidden",""),BOOT.reduce?60:420);
- setTimeout(()=>document.documentElement.classList.remove("booting"),BOOT.reduce?120:1050);
+ if(obDone)document.getElementById("app")?.classList.add("ready");
+ if(!BOOT.reduce)shock(.5);else F.mode=S.playing?"flow":"cloud";
+ if(sp){sp.hidden=true;setTimeout(()=>{sp.style.display="none"},BOOT.reduce?80:900)}
+ document.documentElement.classList.remove("booting");
 }
 /* i18n */
 const I18N={
@@ -118,7 +122,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "about.tg":"Канал проекта","about.tgchat":"Чат разработки","about.thanks":"Спасибо чату за тесты, идеи и сообщения об ошибках.",
 "snd.rate":"Скорость","snd.boost":"Громче","snd.boost.off":"выкл","snd.slowed":"slowed","snd.nightcore":"nightcore","snd.normal":"обычно","dlg.ok":"ОК","dlg.cancel":"Отмена","set.icon":"Иконка приложения","set.icon.s":"Значок окна на панели задач и в самом приложении","ico.set":"Иконка изменена","acc.in":"Войти","acc.out":"Выйти","acc.import":"Импорт","acc.paste":"Вставить ключ","acc.token":"Токен","acc.as":"Вы вошли как {u}","acc.stale":"Сессия не подтвердилась — войдите заново","acc.wait":"Ждём входа в отдельном окне…","acc.wait.b":"Ждём входа в браузере…","acc.in.s":"Вход откроется в вашем браузере","acc.in.s2":"Вход на странице сервиса","acc.browser":"Открыт {b} — войдите как обычно. Meowave сам заберёт вход и закроет окно","acc.browser.open":"Окно входа уже открыто в браузере","acc.nobrowser":"Браузер на Chromium не найден — вход в окне {s}","acc.err.closed":"Вход не завершён — браузер закрыт","acc.off.ytm":"Играет без входа · войдите, чтобы перенести библиотеку","acc.off.sc":"Играет без входа · войдите, чтобы перенести библиотеку","acc.off.dz":"Играет без входа · войдите, чтобы перенести библиотеку","acc.off.ym":"Нужен вход: поиск, Моя волна и lossless","acc.off.sp":"Не подключён · звук находится на других площадках","acc.d.ytm":"Лайки, плейлисты и личные миксы в шторке","acc.d.sc":"Лайки, плейлисты и подборки «для вас» в шторке","acc.d.dz":"Любимые треки и плейлисты, ваша полка в шторке","acc.d.ym":"Моя волна, лайки, плейлисты и lossless","acc.d.sp":"Любимые треки и плейлисты · нужен свой Client ID","acc.lib":"Что перенести","acc.all":"Перенести всё","acc.all.t":"Перенести библиотеку {s}?","acc.all.s":"Любимые треки попадут в избранное, плейлисты ({n}) — в библиотеку. Уже перенесённые обновятся, а не задвоятся.","acc.all.ok":"Перенести","acc.liked":"Любимые треки","acc.liked.s":"Попадут в избранное","acc.pl":"Плейлист","acc.tofav":"В избранное","acc.importing":"Переносим…","acc.again":"Ещё раз","acc.note":"Треки играют с родной площадки. Повторный перенос плейлиста обновляет его, а не создаёт копию.","acc.window":"Откроется окно {s} — войдите как обычно, оно закроется само","acc.ok":"{s}: вы вошли как {u}","acc.ok0":"{s} подключён","acc.err.jar":"Вход не отдал сессию — воспользуйтесь «Вставить ключ»","acc.err.time":"Вход не завершён — окно закрыто","acc.out.t":"Выйти из {s}?","acc.out.s":"Перенесённые треки и плейлисты останутся. Пропадёт только ваша полка в шторке.","acc.paste.t":"Ключ сессии {s}","acc.paste.ok":"Подключить","acc.paste.h":"Хранится только в системном keychain","acc.paste.l.ytm":"Заголовок Cookie","acc.paste.l.sc":"oauth_token","acc.paste.l.dz":"arl","acc.paste.s.ytm":"Если вход не получается: откройте music.youtube.com в своём браузере, F12 → «Сеть», обновите страницу, выберите запрос browse и скопируйте значение заголовка Cookie целиком.","acc.paste.s.sc":"Откройте soundcloud.com в своём браузере, F12 → «Приложение» → Cookies → soundcloud.com и скопируйте значение oauth_token.","acc.paste.s.dz":"Откройте deezer.com в своём браузере, F12 → «Приложение» → Cookies → deezer.com и скопируйте значение arl.","acc.paste.bad":"Не похоже на ключ сессии — проверьте, что скопировано целиком","acc.desk":"Вход в аккаунты работает в приложении для компьютера","acc.sp.cid.t":"Spotify Client ID","acc.sp.cid.s":"Создайте приложение на developer.spotify.com/dashboard с Redirect URI http://localhost:8080/callback и вставьте его Client ID.","acc.link":"Импорт по ссылке","acc.link.s":"Плейлист или альбом с любой площадки — без входа","ico.clear-auto":"Авто без фона","ico.clear-light":"Белая без фона","ico.clear-dark":"Тёмная без фона","ico.classic":"Классика","ico.midnight":"Полночь","ico.ocean":"Океан","ico.mint":"Мята","ico.sunset":"Закат","ico.sakura":"Сакура","ico.lavender":"Лаванда","ico.gold":"Золото","ico.paper":"Бумага","set.cbg":"Фон по обложке","set.cbg.s":"Фон приложения мягко принимает цвета текущей обложки","set.cbg.k":"Насыщенность","set.cfade":"Смена цвета","set.cfade.s":"Как быстро акцент и фон переходят к новой обложке","cf.0":"Сразу","cf.1":"Плавно","cf.2":"Очень плавно","dlg.name":"Название","dlg.create":"Создать","dlg.save":"Сохранить","dlg.next":"Далее","dlg.find":"Найти","dlg.add":"Добавить","dlg.link":"Ссылка","dlg.user":"Имя пользователя","dlg.newpl.s":"Соберите свою подборку — треки добавляются из любого списка через правый клик.","dlg.rename.t":"Переименовать плейлист","dlg.pldel.s":"Плейлист исчезнет из библиотеки. Избранное и сами треки останутся.","dlg.genius.t":"Найти текст на Genius","dlg.genius.l":"Исполнитель и название","dlg.quasar.t":"Вход по Quasar ID","dlg.quasar.l":"Quasar ID или почта","dlg.wall.t":"Обои по ссылке","dlg.loc.t":"Очистить локальные треки?","dlg.loc.s":"Все локальные треки уйдут из библиотеки. Файлы на диске не удаляются.","dlg.room.t":"Новая комната","dlg.add.t":"Добавить в группу","dlg.upd.s":"Что нового:",
 "upd.norelease":"Релизов пока нет — это первая версия",
-"pr.ban.hint":"Нажмите, чтобы сменить баннер","pr.ban.cta":"Сменить баннер","pr.badges":"значков","img.big":"Изображение слишком большое","crop.avatar":"Аватар","crop.banner":"Баннер","crop.cover":"Обложка плейлиста","crop.zoom":"Масштаб","crop.reset":"Сброс","crop.save":"Сохранить","crop.hint":"Перетащите изображение, колесо мыши — масштаб.","plctx.cover":"Сменить обложку","plctx.coveroff":"Убрать обложку","plctx.cover.ok":"Обложка обновлена","plctx.cover.off":"Обложка убрана","plctx.rename":"Переименовать","plctx.renamed":"Название изменено","plctx.rmtrack":"Убрать из плейлиста","plctx.eq":"Эквалайзер для плейлиста","eq.pl.pinned":"Пресет закреплён за плейлистом",
+"pr.ban.hint":"Нажмите, чтобы сменить баннер","pr.ban.cta":"Сменить баннер","pr.badges":"Значки","img.big":"Изображение слишком большое","crop.avatar":"Аватар","crop.banner":"Баннер","crop.cover":"Обложка плейлиста","crop.zoom":"Масштаб","crop.reset":"Сброс","crop.save":"Сохранить","crop.hint":"Перетащите изображение, колесо мыши — масштаб.","plctx.cover":"Сменить обложку","plctx.coveroff":"Убрать обложку","plctx.cover.ok":"Обложка обновлена","plctx.cover.off":"Обложка убрана","plctx.rename":"Переименовать","plctx.renamed":"Название изменено","plctx.rmtrack":"Убрать из плейлиста","plctx.eq":"Эквалайзер для плейлиста","eq.pl.pinned":"Пресет закреплён за плейлистом",
 "img.big.gif":"GIF слишком большой","img.fail":"Не удалось обработать изображение","img.up":"Загружаем…","img.ok":"Изображение сохранено",
 "bd.secret":"Секретное достижение","bd.pin.hint":"Нажмите на открытый значок, чтобы закрепить его в профиле (до 5).","bd.pin.auth":"Сначала войдите в аккаунт","bd.pin.max":"Можно закрепить не больше 5 значков","bd.g.status":"Статус","bd.g.ach":"Достижения","bd.g.code":"По коду",
 "pl.auth":"Сначала войдите в аккаунт","pl.made":"Плейлист «{n}» создан","pl.dup":"Этот трек уже в плейлисте","pl.added":"Добавлено в «{n}»","pl.back":"Плейлисты","pl.playall":"Играть всё","pl.del":"Удалить","pl.del.ask":"Удалить плейлист «{n}»?","pl.deleted":"Плейлист удалён","pl.empty.t":"Плейлист пуст","pl.empty.s":"Добавляйте треки через меню правой кнопки мыши.","pl.new":"Новый плейлист","pl.new.s":"Соберите свою подборку","pl.auto":"Автоподборки по артистам",
@@ -252,7 +256,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "about.tg":"Project channel","about.tgchat":"Development chat","about.thanks":"Thanks to the chat for testing, ideas and bug reports.",
 "snd.rate":"Speed","snd.boost":"Louder","snd.boost.off":"off","snd.slowed":"slowed","snd.nightcore":"nightcore","snd.normal":"normal","dlg.ok":"OK","dlg.cancel":"Cancel","set.icon":"App icon","set.icon.s":"The window icon on the taskbar and inside the app","ico.set":"Icon changed","acc.in":"Sign in","acc.out":"Sign out","acc.import":"Import","acc.paste":"Paste key","acc.token":"Token","acc.as":"Signed in as {u}","acc.stale":"The session was not confirmed, sign in again","acc.wait":"Waiting for the sign-in window…","acc.wait.b":"Waiting for the sign-in in your browser…","acc.in.s":"Signs in in your own browser","acc.in.s2":"Signs in on the service’s page","acc.browser":"{b} is open: sign in as usual. Meowave picks the session up and closes the window","acc.browser.open":"The sign-in is already open in your browser","acc.nobrowser":"No Chromium-based browser found, signing in in a {s} window","acc.err.closed":"The sign-in did not finish, the browser was closed","acc.off.ytm":"Plays without an account · sign in to bring your library","acc.off.sc":"Plays without an account · sign in to bring your library","acc.off.dz":"Plays without an account · sign in to bring your library","acc.off.ym":"Needs sign-in: search, My Wave and lossless","acc.off.sp":"Not connected · the sound comes from other services","acc.d.ytm":"Likes, playlists and your own mixes in the sheet","acc.d.sc":"Likes, playlists and picks made for you in the sheet","acc.d.dz":"Favourite tracks and playlists, your shelf in the sheet","acc.d.ym":"My Wave, likes, playlists and lossless","acc.d.sp":"Liked songs and playlists · needs your own Client ID","acc.lib":"What to bring over","acc.all":"Bring everything","acc.all.t":"Bring over your {s} library?","acc.all.s":"Liked tracks go to favourites, playlists ({n}) into the library. Ones already brought over are updated, not duplicated.","acc.all.ok":"Bring over","acc.liked":"Liked songs","acc.liked.s":"Go to favourites","acc.pl":"Playlist","acc.tofav":"To favourites","acc.importing":"Importing…","acc.again":"Again","acc.note":"Tracks play from their home service. Bringing a playlist over again updates it instead of making a copy.","acc.window":"A {s} window opens: sign in as usual, it closes by itself","acc.ok":"{s}: signed in as {u}","acc.ok0":"{s} connected","acc.err.jar":"The sign-in gave no session, use “Paste key”","acc.err.time":"The sign-in did not finish, the window was closed","acc.out.t":"Sign out of {s}?","acc.out.s":"Imported tracks and playlists stay. Only your shelf in the sheet goes away.","acc.paste.t":"{s} session key","acc.paste.ok":"Connect","acc.paste.h":"Kept only in the system keychain","acc.paste.l.ytm":"Cookie header","acc.paste.l.sc":"oauth_token","acc.paste.l.dz":"arl","acc.paste.s.ytm":"If the sign-in does not work: open music.youtube.com in your browser, F12 → Network, reload, pick a browse request and copy the whole Cookie request header.","acc.paste.s.sc":"Open soundcloud.com in your browser, F12 → Application → Cookies → soundcloud.com and copy the oauth_token value.","acc.paste.s.dz":"Open deezer.com in your browser, F12 → Application → Cookies → deezer.com and copy the arl value.","acc.paste.bad":"That does not look like a session key, check that it was copied whole","acc.desk":"Account sign-in works in the desktop app","acc.sp.cid.t":"Spotify Client ID","acc.sp.cid.s":"Create an app at developer.spotify.com/dashboard with the Redirect URI http://localhost:8080/callback and paste its Client ID.","acc.link":"Import by link","acc.link.s":"A playlist or album from any service, no sign-in","ico.clear-auto":"Auto, transparent","ico.clear-light":"White, transparent","ico.clear-dark":"Dark, transparent","ico.classic":"Classic","ico.midnight":"Midnight","ico.ocean":"Ocean","ico.mint":"Mint","ico.sunset":"Sunset","ico.sakura":"Sakura","ico.lavender":"Lavender","ico.gold":"Gold","ico.paper":"Paper","set.cbg":"Background from cover","set.cbg.s":"The app background gently takes on the colours of the current cover","set.cbg.k":"Intensity","set.cfade":"Colour change","set.cfade.s":"How fast the accent and background move to a new cover","cf.0":"Instant","cf.1":"Smooth","cf.2":"Very smooth","dlg.name":"Name","dlg.create":"Create","dlg.save":"Save","dlg.next":"Next","dlg.find":"Find","dlg.add":"Add","dlg.link":"Link","dlg.user":"Username","dlg.newpl.s":"Build your own selection — add tracks from any list with a right-click.","dlg.rename.t":"Rename playlist","dlg.pldel.s":"The playlist disappears from your library. Favourites and the tracks themselves stay.","dlg.genius.t":"Find lyrics on Genius","dlg.genius.l":"Artist and title","dlg.quasar.t":"Sign in with Quasar ID","dlg.quasar.l":"Quasar ID or email","dlg.wall.t":"Wallpaper from a link","dlg.loc.t":"Clear local tracks?","dlg.loc.s":"Every local track leaves the library. Files on disk are kept.","dlg.room.t":"New room","dlg.add.t":"Add to group","dlg.upd.s":"What’s new:",
 "upd.norelease":"No releases published yet — this is the first version",
-"pr.ban.hint":"Click to change the banner","pr.ban.cta":"Change banner","pr.badges":"badges","img.big":"Image is too large","crop.avatar":"Avatar","crop.banner":"Banner","crop.cover":"Playlist cover","crop.zoom":"Zoom","crop.reset":"Reset","crop.save":"Save","crop.hint":"Drag the image, scroll to zoom.","plctx.cover":"Change cover","plctx.coveroff":"Remove cover","plctx.cover.ok":"Cover updated","plctx.cover.off":"Cover removed","plctx.rename":"Rename","plctx.renamed":"Renamed","plctx.rmtrack":"Remove from playlist","plctx.eq":"Equaliser for this playlist","eq.pl.pinned":"Preset pinned to this playlist",
+"pr.ban.hint":"Click to change the banner","pr.ban.cta":"Change banner","pr.badges":"Badges","img.big":"Image is too large","crop.avatar":"Avatar","crop.banner":"Banner","crop.cover":"Playlist cover","crop.zoom":"Zoom","crop.reset":"Reset","crop.save":"Save","crop.hint":"Drag the image, scroll to zoom.","plctx.cover":"Change cover","plctx.coveroff":"Remove cover","plctx.cover.ok":"Cover updated","plctx.cover.off":"Cover removed","plctx.rename":"Rename","plctx.renamed":"Renamed","plctx.rmtrack":"Remove from playlist","plctx.eq":"Equaliser for this playlist","eq.pl.pinned":"Preset pinned to this playlist",
 "img.big.gif":"GIF is too large","img.fail":"Could not process the image","img.up":"Uploading…","img.ok":"Image saved",
 "bd.secret":"Secret achievement","bd.pin.hint":"Click an unlocked badge to pin it to your profile (up to 5).","bd.pin.auth":"Sign in first","bd.pin.max":"You can pin up to 5 badges","bd.g.status":"Status","bd.g.ach":"Achievements","bd.g.code":"By code",
 "pl.auth":"Sign in first","pl.made":"Playlist “{n}” created","pl.dup":"This track is already in the playlist","pl.added":"Added to “{n}”","pl.back":"Playlists","pl.playall":"Play all","pl.del":"Delete","pl.del.ask":"Delete playlist “{n}”?","pl.deleted":"Playlist deleted","pl.empty.t":"Playlist is empty","pl.empty.s":"Add tracks from the right-click menu.","pl.new":"New playlist","pl.new.s":"Build your own selection","pl.auto":"Automatic artist mixes",
@@ -1716,8 +1720,12 @@ function frame(now){
       read the same, and every canvas repaint is CPU pixels under WebKitGTK.
       dt accumulates so the physics keeps its real speed. The WebGL field
       draws on the GPU, so it takes every frame and stays fluid. */
+   /* Behind any other screen the field is dimmed to 30 % (#field.dim): 30
+      updates a second look the same there, and each update also re-blurs
+      every glass panel above it — the expensive part on WebKitGTK/WKWebView. */
+   const hz=S.view!=="home"?30:GLF.ok?0:40;
    fieldDt+=dt;
-   if(GLF.ok||fieldDt>=1/40){step(fieldDt,lvl);draw(lvl);fieldDt=0}
+   if(!hz||fieldDt>=1/hz-.004){step(fieldDt,lvl);draw(lvl);fieldDt=0}
   }
  }else if(!staticFieldDrawn&&F.w&&F.h){
   gx.clearRect(0,0,F.w,F.h);
@@ -4638,7 +4646,7 @@ function sync(){
   const name=S.playing?"pause":"play";
   setPlayIcon(document.getElementById("play"),name,18);
   if(typeof window.paintHero==="function")window.paintHero();
-  F.mode=BOOT.done?(S.playing?"flow":"cloud"):"gather";
+  F.mode=S.playing?"flow":"cloud";
   const fpc=document.getElementById("fpc");
   if(fpc)fpc.dataset.playing=S.playing?"true":"false";
   fpxMorph(S.playing);
@@ -7459,9 +7467,10 @@ function setAccentVars([r,g,b],el){
    Every write to <html> restyles the whole document — with a long library on
    screen that was ~9 000 elements, a dozen times per change. Now the page
    takes the new colour once, and only the places where the accent is large
-   (rail, player bar, hero, full-screen player, mini player) fade into it,
+   (rail, player bar, hero, mini player) fade into it — the full-screen
+   player is white on its backdrop whatever the accent —
    each restyling just its own subtree per step. */
-const ACC_TW_SEL="#rail,footer.bar,#hero,#fp,#mini";
+const ACC_TW_SEL="#rail,footer.bar,#hero,#mini";
 const ACC_TW_VARS=["--accent","--accent-soft","--accent-rgb","--pr","--pg","--pb","--on-acc"];
 function accTweenEnd(){
  for(const el of ACC_TW){ACC_TW_VARS.forEach(p=>el.style.removeProperty(p));delete el.dataset.acctw}
@@ -11047,16 +11056,15 @@ if(TAURI&&LOCAL_PATHS.length)inv("local_rehydrate",{paths:LOCAL_PATHS}).catch(e=
 icons();
 if(obDone){
  document.getElementById("ob").hidden=true;
- const app=document.getElementById("app");app.setAttribute("aria-hidden","false");app.classList.add("ready");
+ /* .ready (the entrance) is added by bootFinish, as the splash leaves. */
+ document.getElementById("app").setAttribute("aria-hidden","false");
 }else obGo(0);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(S.theme==="system")setTheme("system")});
 
-/* частицы стартуют за краями экрана и стягиваются в круг */
-if(!BOOT.reduce){F.mode="gather";scatterEdges()}
-
-/* волна срабатывает, когда бэкенд ответил, но не раньше 1.15с (чтобы круг успел собраться)
-   и не позже 4.5с — иначе медленная сеть завешала бы сплэш навсегда */
-const bootMin=new Promise(r=>setTimeout(r,BOOT.reduce?0:1150));
+/* The splash leaves once the backend has answered, but not before 0.9 s (so
+   the mark has settled — a flicker of a splash reads as a glitch) and not
+   after 4.5 s, or a slow network would hold it forever. */
+const bootMin=new Promise(r=>setTimeout(r,BOOT.reduce?0:900));
 const bootReady=Promise.allSettled([initServices(),initSupabase()]);
 Promise.race([
  Promise.all([bootMin,bootReady]),

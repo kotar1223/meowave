@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark" data-accent="none" data-view="home">
 <head>
+<!-- Theme, platform and splash icon before the first paint (see boot.js). -->
+<script src="./boot.js"></script>
 <!-- Icons and supabase-js are bundled locally, not from a CDN: the CDN is
      blocked on some networks, and when it failed every icon vanished and
      account sign-in died with it.
@@ -54,7 +56,9 @@
 </div>
 
 <!-- onboarding -->
-<div class="splash" id="splash"><div class="splash-glow" aria-hidden="true"></div><div class="splash-ring"></div><div class="splash-mark"><img src="./icons/icon.png" alt="Meowave"></div><span>Meowave</span><div class="splash-bar" aria-hidden="true"><i></i></div></div>
+<!-- Splash: the mark, the name, and a hairline that only appears on a slow
+     start. Same backdrop as the app, so leaving it is a dissolve, not a cut. -->
+<div class="splash" id="splash" role="status" aria-label="Meowave"><div class="splash-core" aria-hidden="true"><div class="splash-mark"><i class="splash-ring"></i></div><span class="splash-word">Meowave</span><div class="splash-bar"><i></i></div></div></div>
 <div class="ob" id="ob">
   <div class="obc pane">
     <section class="obstep" data-on="true" data-step="0">

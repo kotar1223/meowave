@@ -1,44 +1,53 @@
-/* ── Splash. The mark breathes in the middle while the particles gather a
-   ring around it (app.js, F.mode="gather", radius = 17vmin); the word and a
-   thin progress line sit just under that ring. Only opacity and transform
-   animate, so the boot stays on the compositor. */
+/* ── Splash. Round 8, "an elegant splash with a beautiful transition": no
+   glows, no particle ring, no shockwave. The app's own backdrop, the mark, the
+   name and — only when a start is slow — a hairline. It comes up in the saved
+   theme (boot.js, in <head>) and leaves by dissolving into the interface while
+   the interface rises into place (bootFinish + .app.ready). Only opacity and
+   transform animate, so all of it stays on the compositor. */
 .splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;overflow:hidden;
-  background:radial-gradient(130% 95% at 50% 46%,#1c1a2b 0%,#121219 48%,#09090d 100%);
-  transition:opacity .55s ease,visibility .55s ease}
+  background:var(--bg,oklch(13.5% 0.014 278));color:var(--text,oklch(95% 0.006 280));
+  transition:opacity .6s cubic-bezier(.4,0,.2,1) .18s,visibility 0s linear .8s}
 .splash[hidden]{opacity:0;visibility:hidden;pointer-events:none}
-.splash-glow{position:absolute;inset:0;margin:auto;width:min(78vmin,680px);height:min(78vmin,680px);border-radius:50%;pointer-events:none;
-  background:radial-gradient(circle,rgb(150 130 255/.22) 0%,rgb(110 90 230/.10) 34%,rgb(80 60 200/.04) 52%,transparent 70%);
-  animation:splashGlow 3.4s ease-in-out infinite alternate;will-change:transform,opacity}
-.splash-mark{position:absolute;inset:0;margin:auto;width:112px;height:112px;z-index:1;
-  animation:splashMarkIn .9s .05s cubic-bezier(.16,1,.3,1) both}
-.splash-mark::before{content:"";position:absolute;inset:-34px;border-radius:50%;z-index:-1;
-  background:radial-gradient(circle,rgb(255 255 255/.15) 0%,rgb(190 170 255/.07) 45%,transparent 70%)}
-/* The icon is a squircle with transparent margins: drop-shadow follows its
-   alpha, a box-shadow or a round clip would not. */
-.splash-mark img{width:100%;height:100%;display:block;
-  filter:drop-shadow(0 14px 28px rgb(0 0 0/.5)) drop-shadow(0 0 26px rgb(170 150 255/.22));
-  animation:splashFloat 3.6s 1s ease-in-out infinite alternate}
-.splash>span{position:absolute;left:0;right:0;top:calc(50% + 17vmin + 26px);text-align:center;
-  letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:#c8c8d4;font-size:.78rem;font-weight:500;
-  opacity:0;animation:splashWord 1.1s .35s var(--e-io,ease) forwards;will-change:opacity,transform}
-.splash-bar{position:absolute;left:0;right:0;margin-inline:auto;top:calc(50% + 17vmin + 58px);width:112px;height:2px;border-radius:99px;
-  overflow:hidden;background:rgb(255 255 255/.08);opacity:0;animation:splashBarIn .6s .7s ease forwards}
-.splash-bar i{position:absolute;top:0;bottom:0;left:0;width:45%;border-radius:inherit;
-  background:linear-gradient(90deg,transparent,rgb(255 255 255/.75),transparent);
-  transform:translate3d(-110%,0,0);animation:splashBarRun 1.25s .7s cubic-bezier(.65,0,.35,1) infinite}
-.splash-ring{display:none}
-@keyframes splashGlow{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:scale(1.06)}}
-@keyframes splashMarkIn{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
-@keyframes splashFloat{from{transform:translate3d(0,-3px,0) scale(1)}to{transform:translate3d(0,3px,0) scale(1.025)}}
-@keyframes splashWord{from{opacity:0;transform:scale(.92) translate3d(0,6px,0)}to{opacity:.8;transform:scale(1) translate3d(0,0,0)}}
-@keyframes splashBarIn{to{opacity:1}}
-@keyframes splashBarRun{from{transform:translate3d(-110%,0,0)}to{transform:translate3d(260%,0,0)}}
-/* boot: частицы рисуются ПОВЕРХ сплэша и сами собирают круг вокруг знака */
-html.booting #field,html.booting #fieldgl{z-index:101;pointer-events:none}
-.splash.done{background:transparent;transition:background .5s ease,opacity .55s ease,visibility .55s ease}
-.splash.done>span,.splash.done .splash-bar{animation:none;opacity:0;transform:scale(1.05);transition:opacity .35s ease,transform .4s ease}
-.splash.done .splash-mark{animation:none;opacity:0;transform:scale(1.25);transition:opacity .4s ease,transform .55s cubic-bezier(.16,1,.3,1)}
-.splash.done .splash-glow{animation:none;opacity:0;transform:scale(1.3);transition:opacity .45s ease,transform .6s ease}
+.splash-core{position:relative;display:flex;flex-direction:column;align-items:center;
+  transform:translate3d(0,-1.5vh,0);
+  transition:opacity .32s cubic-bezier(.4,0,1,1),transform .6s cubic-bezier(.2,0,0,1)}
+.splash-mark{position:relative;width:88px;height:88px;
+  background:var(--boot-icon,url("./icons/icon.png")) center/contain no-repeat;
+  filter:drop-shadow(0 12px 26px rgb(0 0 0/.3));
+  animation:spMark .95s cubic-bezier(.16,1,.3,1) .04s both}
+.splash-word{margin-top:20px;font:600 1.08rem/1.2 var(--app-font,"Golos Text","Inter Tight",Inter,system-ui,sans-serif);
+  letter-spacing:.015em;opacity:0;animation:spWord .9s cubic-bezier(.16,1,.3,1) .2s forwards}
+.splash-bar{position:relative;margin-top:22px;width:64px;height:2px;border-radius:2px;overflow:hidden;
+  background:color-mix(in oklab,currentColor 10%,transparent);opacity:0;animation:spFade .5s ease 1s forwards}
+.splash-bar i{position:absolute;top:0;bottom:0;left:0;width:42%;border-radius:inherit;
+  background:color-mix(in oklab,currentColor 55%,transparent);
+  transform:translate3d(-100%,0,0);animation:spRun 1.4s cubic-bezier(.65,0,.35,1) 1s infinite}
+/* A slow ripple off the mark — a wave, drawn as one hairline. */
+.splash-ring,.splash-ring::before{position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  border:1px solid color-mix(in oklab,currentColor 16%,transparent);opacity:0;
+  animation:spRipple 2.8s cubic-bezier(.2,.6,.35,1) .75s infinite}
+.splash-ring::before{content:"";inset:-1px;animation-delay:2.15s}
+@keyframes spRipple{0%{opacity:0;transform:scale(.92)}16%{opacity:1}100%{opacity:0;transform:scale(2.7)}}
+@keyframes spMark{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
+@keyframes spWord{from{opacity:0;transform:translate3d(0,6px,0)}to{opacity:.8;transform:none}}
+@keyframes spFade{to{opacity:1}}
+@keyframes spRun{to{transform:translate3d(240%,0,0)}}
+/* Leaving: the mark and name sink back a touch and fade, then the backdrop
+   dissolves (the .1s delay on .splash) over the interface rising in. */
+.splash.done .splash-core{opacity:0;transform:translate3d(0,-1.5vh,0) scale(.95)}
+.splash.done .splash-bar,.splash.done .splash-bar i,.splash.done .splash-ring,.splash.done .splash-ring::before{animation-play-state:paused}
+/* The interface arrives in three soft layers — page, rail, player bar — as
+   the splash dissolves, and again when onboarding hands over. "backwards"
+   fill: once played, no transform is left on these containers (a lingering
+   one would re-anchor every position:fixed child inside them). */
+.app.ready .main{animation:appIn .85s cubic-bezier(.16,1,.3,1) backwards}
+.app.ready .rail{animation:appIn .85s cubic-bezier(.16,1,.3,1) .06s backwards}
+.app.ready>.bar{animation:appIn .85s cubic-bezier(.16,1,.3,1) .12s backwards}
+@keyframes appIn{from{opacity:.2;transform:translate3d(0,14px,0)}}
+/* The titlebar sits above the splash (its window buttons must work during a
+   start); its small brand would only repeat the splash's name, so it waits. */
+.tb-brand{transition:opacity .5s ease .3s}
+html.booting .tb-brand{opacity:0}
 
 :root{
   --bg:oklch(13.5% 0.014 278);
@@ -79,6 +88,7 @@ html[data-theme="light"]{
   --md-sys-color-on-primary:oklch(100% 0 0);
   --on-accent:oklch(100% 0 0);
 }
+html[data-theme="light"] .splash-mark{filter:drop-shadow(0 10px 22px rgb(30 30 60/.14))}
 /* accent colors are applied by setAccent() via inline custom props;
    with a colored accent the primary controls take it — flat, no glow.
    --on-acc (set with the accent) is the label colour that reads on it. */
@@ -446,7 +456,7 @@ html[data-theme="dark"] body{
 .app{position:relative;z-index:2;height:100vh;height:100dvh;display:grid;
   grid-template-columns:74px 1fr;grid-template-rows:1fr auto;
   grid-template-areas:"rail main" "rail bar";gap:var(--sp-2);padding:calc(var(--tb) + var(--sp-2) + env(safe-area-inset-top, 0px)) calc(var(--sp-2) + env(safe-area-inset-right, 0px)) calc(var(--sp-2) + env(safe-area-inset-bottom, 0px)) calc(var(--sp-2) + env(safe-area-inset-left, 0px));
-  opacity:0;transition:opacity .6s var(--e)}
+  opacity:0;transition:opacity .45s var(--e)}
 .app.ready{opacity:1}
 
 .rail{grid-area:rail;display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);padding:var(--sp-4) 0}
@@ -1150,7 +1160,7 @@ html[data-lite] .fp-volumetric{display:none}
 .lyr-big[data-empty="true"],
 .lyr-big:has(.lyr-empty){padding:0;overflow:hidden;justify-content:center}
 .lyr-header{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:540px;margin:0 auto 16px;padding:0 8px}
-.lyr-badge{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.65);background:oklch(100% 0 0/.08);padding:3px 10px;border-radius:999px;backdrop-filter:blur(6px)}
+.lyr-badge{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.65);background:oklch(100% 0 0/.08);padding:3px 10px;border-radius:999px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .lyr-big p{margin:0;font-size:calc(var(--ly-size,44)*1px);line-height:1.32;
   font-weight:var(--ly-weight,700);letter-spacing:-.02em;color:rgba(255,255,255,.88);opacity:.28;
   transform:scale(.94);
@@ -1476,7 +1486,11 @@ html[data-lite] *{-webkit-backdrop-filter:none!important;backdrop-filter:none!im
   background:var(--m3-inv-surf);color:var(--m3-inv-on);
   box-shadow:0 3px 5px -1px rgb(0 0 0/.2),0 6px 10px rgb(0 0 0/.14),0 1px 18px rgb(0 0 0/.12);
   max-width:100%;text-align:left;overflow-wrap:anywhere;animation:toastIn .32s var(--md-sys-motion-easing-emphasized) both}
-.toast-msg{flex:1 1 220px;min-width:0;padding:8px 0}
+/* The icon and the text always share the first line: the text's flex basis is its own width
+   capped at "line minus icon and gap", so a short message no longer drops under its icon
+   (a 220px basis made every short toast wrap) and a long one wraps inside its box while
+   the actions move to their own line, as in the MD3 snackbar. */
+.toast-msg{flex:1 1 auto;min-width:0;max-width:calc(100% - 32px);padding:8px 0}
 .toast.has-acts{pointer-events:auto;padding-right:6px}
 .toast-acts{display:flex;align-items:center;gap:2px;margin-left:auto}
 .toast-act{height:36px;padding:0 12px;border-radius:999px;font-size:.875rem;font-weight:500;letter-spacing:.01em;
@@ -4210,7 +4224,7 @@ html[data-wall] body{background:#000}
 .fpx-side>.lyr-header{position:absolute;left:2%;right:8%;bottom:2px;z-index:2;width:auto;margin:0;max-width:none;padding:0;
   display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .fp[data-ly-align="center"] .fpx-side>.lyr-header{left:6%;right:6%;justify-content:center}
-.fpx-side>.lyr-header .lyr-badge{height:28px;padding:0 11px;background:rgb(255 255 255/.08);color:var(--t2);backdrop-filter:none;font-size:.68rem}
+.fpx-side>.lyr-header .lyr-badge{height:28px;padding:0 11px;background:rgb(255 255 255/.08);color:var(--t2);-webkit-backdrop-filter:none;backdrop-filter:none;font-size:.68rem}
 .fpx-side>.lyr-header .lyr-offset-ctrl{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:999px;background:rgb(255 255 255/.06)}
 .fpx-side>.lyr-header .lyr-offset-ctrl .btn{height:28px;padding:0 9px;background:none}
 .fpx-side>.lyr-header .ly-off-val{min-width:46px;text-align:center;font-size:.74rem;color:var(--t2);font-variant-numeric:tabular-nums}
@@ -4507,12 +4521,6 @@ html[data-lite] #fplyr.lyr-big{-webkit-mask-image:none;mask-image:none}
   .fpx-art,.fpx-play,.fpx-top,#v-settings.setov-box,#fp-settings-popover.fpset,#fplyr p{transition:none!important}
 }
 
-/* Light theme: the boot particles are dark there, so the splash is light. */
-html[data-theme="light"] .splash{background:radial-gradient(130% 95% at 50% 46%,#ffffff 0%,#f2f1f6 50%,#e6e5ec 100%)}
-html[data-theme="light"] .splash-glow{background:radial-gradient(circle,rgb(120 100 230/.13) 0%,rgb(120 100 230/.05) 40%,transparent 70%)}
-html[data-theme="light"] .splash>span{color:#5a5a6c}
-html[data-theme="light"] .splash-bar{background:rgb(20 20 30/.08)}
-html[data-theme="light"] .splash-bar i{background:linear-gradient(90deg,transparent,rgb(30 30 40/.55),transparent)}
 
 /* ═══════════════ My Wave 2.0: hero kicker and source badge ═══════════════ */
 #start[aria-busy="true"]{opacity:.72;pointer-events:none}
@@ -4752,11 +4760,12 @@ html[data-wall] .haze{display:none}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .splash-glow,.splash-mark,.splash-mark img,.splash>span,.splash-bar,.splash-bar i,.dc-hero-img img,.hs-state.is-load .material-symbols-rounded,
+  .splash-mark,.splash-word,.splash-bar,.splash-bar i,.splash-ring::before,.dc-hero-img img,.hs-state.is-load .material-symbols-rounded,
   #start[aria-busy="true"] .material-symbols-rounded,.dz-card,.hero-eq b,.mini-eq b,.m3-spin{animation:none!important}
-  .splash-mark,.splash>span{opacity:1}
+  .splash-mark{opacity:1}
+  .splash-word{opacity:.8}
   .splash-bar{display:none}
-  .splash-ring{display:block;position:absolute;inset:0;margin:auto;width:34vmin;height:34vmin;border-radius:50%;border:1px solid rgb(255 255 255/.16)}
+  .splash-core,.app.ready .main,.app.ready .rail,.app.ready>.bar{transition:none!important;animation:none!important}
   .hsheet,.hs-chev,.hs-body,.hs-art,.hs-go,.dropzone,.wvs,.wvs-scrim,.mdd,.mdd-wrap,.mini{transition:none!important}
 }
 
@@ -5317,13 +5326,10 @@ html[data-theme="light"] .acc-row.is-liked .acc-row-art{background:oklch(0% 0 0 
 .quests-profile-icon,.quests-profile-btn,.quests-profile-btn:hover{box-shadow:none}
 .equipped-badge-banner .b-art{box-shadow:none}
 .podium-card.first{box-shadow:none}
-.splash-mark img{filter:drop-shadow(0 14px 28px rgb(0 0 0/.5))}
 /* a dialog opens focused on itself, not on a button: no ring at its foot
    until the keyboard asks for one (m3.js, showModal) */
 .mdd:focus,.modalbox:focus{outline:none}
 .auth-orb-1,.auth-orb-2{display:none}
-.splash-glow{background:radial-gradient(circle,rgb(255 255 255/.05) 0%,rgb(255 255 255/.018) 40%,transparent 70%)}
-html[data-theme="light"] .splash-glow{background:radial-gradient(circle,rgb(0 0 0/.045) 0%,transparent 70%)}
 
 /* No glare: the dialog and settings surfaces lose the accent-tinted sheen
    at the top and the bright inner edge; they are one flat tone. */
@@ -5662,3 +5668,27 @@ html[data-theme="light"] .pinned-track{background:oklch(20% 0.01 280 / .035)}
 .profhead .avatar.has-img{box-shadow:0 0 0 4px var(--bg),0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb) / .4)}
 .avatar.has-img>img{transform:scale(1.035)}
 .avatar.has-img .avat{border:0}
+
+/* ═══ Per-platform tuning (data-os / data-shell come from boot.js) ═════════
+   Linux renders through WebKitGTK. There every blurred surface is blurred
+   again on each frame the particle field moves behind it, and on many driver
+   setups that blur runs on the CPU — the main reason the app ran slower on
+   Linux than on Windows on the same machine. The always-on surfaces keep a
+   light blur, popups a moderate one; the full-screen scrims, the page-switch
+   blur and the drifting haze go. Lite mode still removes blur everywhere. */
+html[data-os="linux"] :is(.pane,.search,.seg,.msgr-side,.msgr-main){
+  -webkit-backdrop-filter:blur(min(var(--blur),8px));backdrop-filter:blur(min(var(--blur),8px))}
+html[data-os="linux"][data-theme] :is(.bar,.hsheet){
+  -webkit-backdrop-filter:blur(min(var(--blur),10px)) saturate(1.2);backdrop-filter:blur(min(var(--blur),10px)) saturate(1.2)}
+html[data-os="linux"] :is(.modalbox,.mdd,.mw-pop,.dock,.importbox,.fp-settings-popover,#fp-settings-popover.fpset,#v-settings.setov-box,.srv-dropdown-sheet,.ctx.pane,.mmenu,.note,.dropzone){
+  -webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2)}
+html[data-os="linux"] :is(.modalwrap[data-open="true"],.mdd-wrap,.setov-scrim,.srv-dd-backdrop,.dock-backdrop:not([hidden]),.mday>span,.mdown,.msg-actions){
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+html[data-os="linux"] .view{filter:none}
+html[data-os="linux"] .haze i{animation:none}
+/* macOS (WKWebView): grayscale antialiasing — subpixel smoothing makes light
+   text on the dark theme look heavy and blurry there. */
+html[data-os="mac"] body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* An app window does not rubber-band as a whole page (WebKit on macOS and on
+   Linux touchpads did); lists inside still scroll and bounce on their own. */
+html[data-shell="tauri"],html[data-shell="tauri"] body{overscroll-behavior:none}
