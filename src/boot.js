@@ -8,7 +8,8 @@
      (Linux WebKitGTK pays far more for blur than WebView2 does, macOS has
      overlay scrollbars and the traffic-light inset).
    - The splash shows the icon the user picked instead of swapping it in
-     after the scripts at the end of <body> have run. */
+     after the scripts at the end of <body> have run.
+   - The interface designer's look is applied before anything paints. */
 (function(){
  var de=document.documentElement,st={};
  try{st=JSON.parse(localStorage.getItem("meowave")||"{}")||{}}catch(_){}
@@ -31,4 +32,12 @@
  var ic=st.x&&icons.indexOf(st.x.appIcon)>=0?st.x.appIcon:"classic";
  if(ic==="clear-auto")ic=th==="light"?"clear-dark":"clear-light";
  de.style.setProperty("--boot-icon",'url("./icons/app/'+ic+'.png")');
+ /* The interface designer's stylesheet (custom.js keeps a copy of the last
+    one it generated): in place before the first paint, so a custom
+    background is never preceded by the stock one. All of it is !important,
+    so it wins over app.css even though it comes first. */
+ try{
+  var cz=localStorage.getItem("meowave_cz_css");
+  if(cz){var el=document.createElement("style");el.id="cz-style";el.textContent=cz;document.head.appendChild(el)}
+ }catch(_){}
 })();

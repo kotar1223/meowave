@@ -1312,6 +1312,8 @@ gl_FragColor=vec4(col*vA,a);}`;
 /* The field's accent: the in-between colour while a fade runs (the root
    already holds the final one, see applyAccentRgb), else the root's. */
 function fieldAccent(){
+ /* a particle colour picked in the interface designer (custom.js) */
+ if(window.CZ_FIELD)return window.CZ_FIELD;
  if(ACC_RAF&&ACC_NOW)return ACC_NOW;
  const cs=getComputedStyle(document.documentElement);
  return [+cs.getPropertyValue("--pr")||220,+cs.getPropertyValue("--pg")||220,+cs.getPropertyValue("--pb")||235]}
@@ -1622,7 +1624,8 @@ function m3WaveDraw(st,p,amp){
  st.stop.style.opacity=(w-pad)-restStart>st.stroke*2?"1":"0";
  st.thumb.style.transform=`translate3d(${x.toFixed(1)}px,0,0)`}
 function updateWavyProgress(dt, curPos, dur) {
- const playing=!!S.playing&&!RM;
+ /* CZ_FLAT: the designer's "wavy progress bar" switched off */
+ const playing=!!S.playing&&!RM&&!window.CZ_FLAT;
  const target=playing?1:0;
  M3W.amp+=(target-M3W.amp)*Math.min(1,dt*6);
  if(Math.abs(M3W.amp-target)<.01)M3W.amp=target;
@@ -6730,6 +6733,8 @@ async function loadProfile(){
     any device is on the server; an account that never synced one takes this
     machine's. */
  const rp=sbProfile?.prefs||{};
+ /* the designer's look (custom.js) comes along to a machine without one */
+ if(typeof czAdopt==="function")czAdopt(rp.cz);
  if(rp&&"profile_track" in rp){
   const remote=rp.profile_track&&rp.profile_track.t?rp.profile_track:null;
   if(JSON.stringify(prefsTrack(S.profileTrack))!==JSON.stringify(remote)){S.profileTrack=remote;save()}}

@@ -383,11 +383,11 @@ button{background:none;border:0;cursor:pointer}
 
 /* field + haze */
 #field,#fieldgl{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%;
-  opacity:1;transition:opacity .6s var(--e);pointer-events:none;
+  opacity:var(--cz-fa,1);transition:opacity .6s var(--e);pointer-events:none;
   /* Promote the field to its own compositor layer. Without it every frame of
      the canvas repainted the stacking context underneath it. */
   will-change:transform;transform:translateZ(0)}
-#field.dim,#fieldgl.dim{opacity:.3}
+#field.dim,#fieldgl.dim{opacity:calc(.3 * var(--cz-fa,1))}
 /* Only one of the two canvases draws: WebGL when the webview has it. */
 #fieldgl{display:none}
 html.glfield #fieldgl{display:block}
@@ -611,7 +611,7 @@ html[data-theme="light"] .s:hover{background:oklch(0% 0 0 / .06)}
 .hero[data-state="wave"] .hero-k{color:var(--md-sys-color-primary)}
 .hero-tags{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:8px;font-size:.75rem;font-weight:500;
   color:var(--m3-on-sec-c);background:var(--m3-sec-c)}
-.hero h1{font-size:clamp(2rem,3.6vw,3.05rem);line-height:1.06;letter-spacing:-.02em;margin:0 0 10px;
+.hero h1{font-size:calc(clamp(2rem,3.6vw,3.05rem) * var(--cz-hero,1));line-height:1.06;letter-spacing:-.02em;margin:0 0 10px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;text-wrap:balance}
 .hero p{color:var(--mute);font-size:1rem;line-height:1.5;margin:0;max-width:44ch;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -4576,7 +4576,7 @@ html[data-lite] #fplyr.lyr-big{-webkit-mask-image:none;mask-image:none}
 .hs-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 0 32px;overscroll-behavior:contain;
   opacity:0;pointer-events:none;transition:opacity .3s var(--e)}
 .hsheet[data-open="true"] .hs-body,.hsheet[data-drag="1"] .hs-body{opacity:1;pointer-events:auto}
-html[data-hs="open"] #field,html[data-hs="open"] #fieldgl{opacity:.35}
+html[data-hs="open"] #field,html[data-hs="open"] #fieldgl{opacity:calc(.35 * var(--cz-fa,1))}
 .hs-shelf{padding:12px 0 4px}
 .hs-shelf.is-pills{padding-top:6px}
 .hs-head{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 18px 10px}
@@ -5668,6 +5668,77 @@ html[data-theme="light"] .pinned-track{background:oklch(20% 0.01 280 / .035)}
 .profhead .avatar.has-img{box-shadow:0 0 0 4px var(--bg),0 0 calc(16px*var(--glow)) rgb(var(--accent-rgb) / .4)}
 .avatar.has-img>img{transform:scale(1.035)}
 .avatar.has-img .avat{border:0}
+
+/* ═══ Interface designer (custom.js, Settings → Appearance) ═════════════════
+   Thirteen sections, each a disclosure row; inside, the ordinary settings
+   rows. A colour is a swatch over a checkerboard (so translucent stock
+   colours read as such) wrapping the native picker. */
+.cz-presets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:14px 0 2px}
+.cz-pl{font-size:.75rem;color:var(--mute);margin-right:4px}
+.cz-chip{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--line-2);font-size:.8rem;font-weight:500;color:var(--mute);
+  transition:color .2s var(--e),border-color .2s var(--e),background-color .2s var(--e)}
+.cz-chip:hover{color:var(--text);border-color:color-mix(in srgb,var(--text) 40%,transparent)}
+.cz-chip[aria-pressed="true"]{color:var(--text);background:rgb(var(--accent-rgb) / .13);border-color:rgb(var(--accent-rgb) / .55)}
+.cz-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cz-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0}
+.cz-top .btn{display:inline-flex;align-items:center;gap:7px}
+.cz-top .btn .material-symbols-rounded{font-size:17px}
+.cz-find{position:relative;flex:1 1 220px;min-width:0;display:block}
+#cz-panel #cz-q{width:100%;height:38px;box-sizing:border-box;margin:0;padding:0 14px 0 38px;border-radius:8px;border:1px solid var(--line);
+  background:color-mix(in srgb,var(--text) 4%,transparent);color:var(--text);font:inherit;font-size:.85rem;outline:none;
+  transition:border-color .2s var(--e),background-color .2s var(--e)}
+#cz-panel #cz-q:focus{border-color:rgb(var(--accent-rgb) / .55);background:color-mix(in srgb,var(--text) 6%,transparent)}
+.cz-find input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+.cz-find>.material-symbols-rounded{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--mute);pointer-events:none}
+.cz-note{display:flex;align-items:center;gap:7px;margin:12px 0 0;font-size:.75rem;color:var(--mute)}
+.cz-note .material-symbols-rounded{font-size:16px}
+.cz-groups{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.cz-g{border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--text) 2.5%,transparent);overflow:hidden}
+.cz-g[hidden]{display:none}
+.cz-g>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 10px;cursor:pointer;border-radius:11px;
+  -webkit-user-select:none;user-select:none;transition:background-color .2s var(--e)}
+.cz-g>summary::-webkit-details-marker{display:none}
+.cz-g>summary:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}
+.cz-g>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cz-gi{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:9px;background:color-mix(in srgb,var(--text) 7%,transparent);color:var(--text)}
+.cz-gi .material-symbols-rounded{font-size:20px}
+.cz-gt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.cz-gt b{font-size:.9rem;font-weight:550}
+.cz-gt small{font-size:.72rem;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cz-n{flex:none;min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:99px;background:rgb(var(--accent-rgb) / .16);
+  color:var(--text);font-size:.68rem;font-weight:650;line-height:20px;text-align:center}
+.cz-n:empty{display:none}
+.cz-chev{flex:none;color:var(--mute);transition:transform .25s var(--e)}
+.cz-g[open]>summary .cz-chev{transform:rotate(180deg)}
+.cz-body{padding:0 14px 6px}
+.cz-body>.cz-it.field{padding:10px 0;gap:10px 18px}
+.cz-body>.cz-it.field>div:first-child{flex:1 1 200px}
+.cz-it[hidden]{display:none}
+.cz-c{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.cz-c input[type=range]{width:170px}
+.cz-c .seg button{padding:6px 12px}
+.cz-sw{position:relative;display:block;flex:none;width:34px;height:34px;border-radius:50%;cursor:pointer;
+  background:repeating-conic-gradient(oklch(60% 0 0 / .2) 0 25%,transparent 0 50%) 0 0/10px 10px;box-shadow:inset 0 0 0 1px var(--line-2)}
+.cz-sw i{position:absolute;inset:3px;border-radius:50%;background:var(--c,transparent);box-shadow:inset 0 0 0 1px oklch(0% 0 0 / .14);pointer-events:none}
+.cz-sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
+.cz-sw:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.cz-hex,.cz-v{min-width:56px;text-align:right;font-size:.74rem;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cz-hex{font-family:"JetBrains Mono",ui-monospace,monospace;letter-spacing:.02em}
+.cz-it[data-set="1"] :is(.cz-hex,.cz-v){color:var(--text)}
+.cz-rs{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;color:var(--mute);visibility:hidden;
+  transition:color .2s var(--e),background-color .2s var(--e)}
+.cz-rs .material-symbols-rounded{font-size:18px}
+.cz-rs:hover{color:var(--text);background:color-mix(in srgb,var(--text) 8%,transparent)}
+.cz-rs:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cz-it[data-set="1"] .cz-rs{visibility:visible}
+.cz-gfoot{display:flex;justify-content:flex-end;padding:8px 0 4px;border-top:1px solid var(--line)}
+.cz-empty{margin:6px 0 0;padding:18px 4px;text-align:center;font-size:.85rem;color:var(--mute)}
+.cz-probe{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+.cz{position:relative}
+@media (max-width:560px){
+  .cz-c{width:100%;justify-content:flex-end}
+  .cz-c input[type=range]{flex:1;width:auto;min-width:0}
+}
 
 /* ═══ Per-platform tuning (data-os / data-shell come from boot.js) ═════════
    Linux renders through WebKitGTK. There every blurred surface is blurred
