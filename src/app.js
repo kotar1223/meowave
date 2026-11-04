@@ -4594,7 +4594,7 @@ function go(v){
   if(v==="settings"){openSettings();return}
   if(settingsIsOpen())closeSettings(true);
   S.view=v;
-  const extraTabs = ["people", "rooms", "top", "profile", "settings"];
+  const extraTabs = ["people", "chats", "rooms", "top", "profile", "settings"];
   const rail = document.getElementById("rail");
   if(rail){
     if(extraTabs.includes(v)) rail.dataset.stage = "extra";
@@ -4612,7 +4612,9 @@ function go(v){
      never matches, so this used to wipe SOC.chat on the way in from openChat
      and the chat opened into nothing. */
   if(v!=="people"&&SOC.chat){SOC.chat=null;socClear("chat")}
+  if(v!=="chats")socClear("msgr");
   if(v==="people")renderPeople();
+  if(v==="chats"&&typeof renderMessenger==="function")renderMessenger();
   if(v==="rooms")SOC.room?paintRoomShell():renderRooms();
   if(v==="top")renderTop();
   if(v==="quests")renderQuestsView();
@@ -4636,9 +4638,9 @@ function liveRefresh(v){
    if(document.hidden||!sbUser)return;
    /* Never repaint under the user: an open conversation, an open profile card,
       the chat list, or a half-typed search would be destroyed by a blind
-      re-render. The chat list has its own 5 s poll via socTimer("chat",…). */
+      re-render. Messages have their own poll via socTimer("msgr",…). */
    if(v==="people"){
-    if(SOC.chat||isProfileCard()||PEOPLE_TAB==="chats")return;
+    if(isProfileCard())return;
     if(PEOPLE_TAB==="find")return;
     renderPeople();
     return}
@@ -4848,6 +4850,7 @@ function showSettingsTab(id){
  if(id==="acc")accRefreshAll();
  if(id==="net"){pxLoad();paintDiscord()}
  if(id==="look")paintLyPanel();
+ if(id==="priv"&&typeof paintE2EDevices==="function")paintE2EDevices();
  /* Widths are only measurable once the panel is displayed. */
  requestAnimationFrame(()=>{paintAllSegs();paintAllRanges()})}
 document.body.addEventListener("click",e=>{
@@ -8696,7 +8699,7 @@ document.addEventListener("click",e=>{
  if(!id||isMe(id))return;
  /* The chat list: the row opens the conversation. The profile header: it is
     already the profile. A control inside the block does its own thing. */
- if(!el.hasAttribute("data-person")&&el.closest("[data-openchat],.chat-dm-user,.profhead,.avatar-holder"))return;
+ if(!el.hasAttribute("data-person")&&el.closest("[data-openchat],.chat-dm-user,.mli,.profhead,.avatar-holder"))return;
  const ctl=tg.closest("button,a,input,select,textarea");
  if(ctl&&ctl!==el&&el.contains(ctl))return;
  e.preventDefault();e.stopPropagation();
@@ -9011,7 +9014,7 @@ function animIn(el,cls){
 async function renderPeople(){
   const box=document.getElementById("peoplebody");if(!box)return;
   if(PEOPLE_PENDING){const id=PEOPLE_PENDING;PEOPLE_PENDING=null;return renderPeopleProfile(id)}
-  if(PEOPLE_TAB==="chats")return renderChats();
+  if(PEOPLE_TAB!=="find")PEOPLE_TAB="friends";
   hideChatPane();
   if(PEOPLE_TAB==="find")await renderPeopleFind(box);
   else await renderPeopleFriends(box);
@@ -9521,606 +9524,18 @@ async function renderPeopleFriends(box){
   icons();
 }
 
-/* ── Chats list ─────────────────────────────────────────── */
+/* The old "Чаты" tab (DM list + groups) is gone: direct messages live in
+   their own Messages screen now (messenger.js). These two stay because the
+   profile card, friend rows and room member lists still call them. */
 function hideChatPane(){
   const c=document.getElementById("chatbody");
   if(c){c.innerHTML=""; c.classList.remove("chat-open");}
 }
-
-async function renderChats(){
-  SOC.chat=null;socClear("chat");
-  hideChatPane();
-  const box=document.getElementById("peoplebody");if(!box)return;
-  const isGuest=!sb||!sbUser;
-
-  try{
-    let groups=[], partners=new Map(), profs=[];
-
-    if(!isGuest){
-      const me=sbUser.id;
-      const mem=await sb.from("chat_members").select("chat_id,role").eq("user_id",me);
-      const gids=(mem.data||[]).map(m=>m.chat_id);
-      groups=gids.length?(await sb.from("chats").select("*").in("id",gids)).data||[]:[];
-      const dms=await sb.from("messages").select("sender,recipient,body,image,sent_at")
-        .or(`recipient.eq.${me},sender.eq.${me}`).is("room_id",null).is("chat_id",null)
-        .order("id",{ascending:false}).limit(120);
-      (dms.data||[]).forEach(m=>{const p=m.sender===me?m.recipient:m.sender;
-        if(p&&!partners.has(p))partners.set(p,m)});
-      const pids=[...partners.keys()];
-      profs=pids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",pids)).data?.map(maskProf)||[]:[];
-    }else{
-      // Mock chats for guests
-      const mockChats=getMockChats();
-      const mockFriends=getMockFriends();
-      mockChats.forEach(m=>{
-        const dm=m.chat_key.slice(2);
-        if(!partners.has(dm)) partners.set(dm, m);
-      });
-      profs=mockFriends;
-    }
-
-    const rowHtml=(key,name,last,img,extra="",status="online")=>`
-     <button class="chatrow" data-openchat="${esc(key)}">
-      ${img}
-      <span class="meta"><b>${esc(name)}</b><span>${last?esc(String(last).slice(0,64)):extra}</span></span>
-      <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`;
-
-    const dmRows=[...partners.entries()].map(([pid,m])=>{
-      const p=profs.find(x=>x.id===pid)||{username:t("chat.anon")};
-      return rowHtml("d:"+pid,p.username,m.image?t("chat.photo"):m.body,avat(p,38,presStatus(p.id)||null))}).join("");
-
-    const grpRows=groups.map(g=>rowHtml("g:"+g.id,g.name,
-      t("chat.grpmembers"),avat({avatar_url:g.avatar},38),t("chat.grpmembers"))).join("");
-
-    const totalChats=groups.length+partners.size;
-
-    box.innerHTML=`<div class="panel pane people-search chats-container">
-      <div class="chats-header-row">
-       <div class="chats-title-group">
-        <h3>${LANG==="ru"?"Сообщения и чаты":"Messages & Chats"}</h3>
-        <span class="chats-count-badge">${totalChats}</span>
-       </div>
-       <div class="chats-actions-row">
-        ${!isGuest?`<button class="btn" id="newgrp"><span class="material-symbols-rounded" style="font-size:16px">group</span> ${t("chat.newgrp")}</button>`:""}
-        <button class="btn primary sm" id="newdm"><span class="material-symbols-rounded" style="font-size:16px">add_comment</span> ${t("chat.newdm")}</button>
-       </div>
-      </div>
-      <div class="chats-list">
-       ${grpRows}${dmRows||(!grpRows?`<div class="chats-empty"><span class="material-symbols-rounded" style="font-size:32px">chat_bubble_outline</span><p class="ph" style="margin:0">${t("chat.empty")}</p></div>`:"")}
-      </div>
-     </div>`;
-
-    document.getElementById("newdm").onclick=async()=>{
-      const n=await askText(t("dlg.add.t"),"",{icon:"person_add",label:t("dlg.user"),confirm:t("dlg.add"),required:true});
-      if(!n)return;
-      if(isGuest||!sbUser){
-        const mockList=getMockFriends();
-        const p=mockList.find(x=>x.username.toLowerCase()===n.trim().toLowerCase());
-        if(!p)return toast(t("soc.nouser"));
-        openChat("d:"+p.id);
-      }else{
-        /* Same wildcard trap as the group-chat lookup further down: `%` and `_`
-           are ILIKE metacharacters, so `kot_yar` also matches `kotXyar` and the
-           second row makes maybeSingle() fail. Backslash is PostgreSQL's default
-           LIKE escape and the vendored client's ilike() has no escape option, so
-           it has to be applied here for the pattern to read as literal. */
-        const lit=n.trim().replace(/([\\%_])/g,"\\$1");
-        const {data:p}=await sb.from("profiles").select("id").ilike("username",lit).maybeSingle();
-        if(!p)return toast(t("soc.nouser"));
-        openChat("d:"+p.id);
-      }
-    };
-
-    if(!isGuest){
-      document.getElementById("newgrp")?.addEventListener("click",async()=>{
-        const n=await askText(t("chat.newgrp"),"",{icon:"group_add",label:t("dlg.name"),confirm:t("dlg.create"),required:true});
-        if(!n)return;
-        let data=null,error=null;
-        try{({data,error}=await sb.rpc("create_group_chat",{name:n}))}
-        catch(e){error=e}
-        if(error){
-          const m=String(error.message||error);
-          toast(/does not exist|404/i.test(m)?t("soc.needsql"):m,5200);
-          return}
-        openChat("g:"+data.id);
-      });
-    }
-
-    box.querySelectorAll("[data-openchat]").forEach(b=>b.onclick=()=>openChat(b.dataset.openchat));
-    icons();
-    animIn(box,"peo-enter");
-  }catch(e){box.innerHTML=socErrBox(socialFail(e))}
-}
-
-/* ── Open single conversation ───────────────────────────── */
-function chatKeyParts(key){return key.startsWith("d:")?{dm:key.slice(2)}:{chat:key.slice(2)}}
-
-async function openChat(key){
-  const isGuest=!sb||!sbUser;
-  const {dm,chat}=chatKeyParts(key);
-  let name=t("chat.anon");
-
-  if(isGuest){
-    const mockList=getMockFriends();
-    const target=mockList.find(m=>m.id===dm)||MOCK_COMMUNITY_USERS.find(m=>m.id===dm)||{username:t("chat.anon")};
-    name=target.username||name;
-    SOC.chat={key,name,dm,chat:null,targetCache:target,isOwner:false,isMock:true};
-  }else{
-    const me=sbUser.id;
-    if(dm){
-      let target=null;
-      try{
-        target=maskProf((await sb.from("profiles").select("id,username,avatar_url,privacy").eq("id",dm).maybeSingle()).data);
-      }catch(e){}
-      name=target?.username||name;
-      SOC.chat={key,name,dm,chat:null,targetCache:target,isOwner:false,isMock:false};
-    }else{
-      const group=(await sb.from("chats").select("*").eq("id",chat).maybeSingle()).data;
-      if(!group)return toast(t("chat.gone"));
-      SOC.chat={key,name:group.name,dm:null,chat,group,isOwner:group.created_by===me,showMembers:false,isMock:false};
-      await loadChatMembers();
-    }
-  }
-
-  if(SOC.chat)SOC.chat._painted=false;
-  go("people");
-  PEOPLE_TAB="chats";
-  document.querySelectorAll("#peopletabs [data-ptab]").forEach(b=>
-    b.setAttribute("aria-selected",String(b.dataset.ptab==="chats")));
-  const list=document.getElementById("peoplebody");if(list)list.innerHTML="";
-  const box=document.getElementById("chatbody");
-  if(box)box.classList.add("chat-open");
-  await paintChat();
-  animIn(box,"chat-enter");
-  socTimer("chat",paintChat,5000);
-}
-
-function msgClock(ts){
- const d=new Date(ts);
- if(isNaN(d))return "";
- return d.toLocaleTimeString(LANG==="ru"?"ru-RU":"en-GB",{hour:"2-digit",minute:"2-digit"});
-}
-
-/* Polling, realtime and the user's own sends all repaint the chat. Overlapping
-   repaints used to race: a slow older response could land last and roll the
-   log back. Only the newest request is allowed to paint; one in flight plus
-   one queued is the most that ever runs. */
-let chatPaintBusy=false,chatPaintAgain=false;
-async function paintChat(){
-  const box=document.getElementById("chatbody");if(!box||!SOC.chat)return;
-  if(chatPaintBusy){chatPaintAgain=true;return}
-  chatPaintBusy=true;
-  try{await paintChatInner(box)}
-  catch(e){console.warn("paintChat:",e?.message||e)}
-  finally{chatPaintBusy=false}
-  if(chatPaintAgain){chatPaintAgain=false;return paintChat()}
-}
-/* Brings the log in line with `items` node by node: unchanged messages keep
-   their DOM (no image reload, no lost selection or hover), edited ones are
-   swapped in place, new ones are appended. The old code compared innerHTML
-   against freshly built markup — the browser normalises innerHTML, so the two
-   never matched and the whole log was rebuilt on every 5 s poll. */
-function chatLogSync(log,items,initial=false){
-  if(!log)return;
-  const stick=initial||log.scrollHeight-log.scrollTop-log.clientHeight<80;
-  if(!items.length){
-    if(!log.querySelector(".ph"))log.innerHTML=`<p class="ph">${t("chat.nomsgs")}</p>`;
-    return}
-  log.querySelector(":scope > .ph")?.remove();
-  const have=new Map();
-  log.querySelectorAll(":scope > .msg").forEach(n=>have.set(n.dataset.msgId,n));
-  const keep=new Set(items.map(i=>i.id));
-  have.forEach((n,id)=>{if(!keep.has(id))n.remove()});
-  const tpl=document.createElement("template");
-  const fresh=[];
-  let prev=null;
-  for(const it of items){
-    let node=have.get(it.id);
-    if(!node||node.dataset.sig!==it.sig){
-      tpl.innerHTML=it.html.trim();
-      const nn=tpl.content.firstElementChild;nn.dataset.sig=it.sig;
-      if(!initial&&!node)nn.classList.add("msg-new");
-      if(node)node.replaceWith(nn);
-      node=nn;fresh.push(nn)}
-    const want=prev?prev.nextElementSibling:log.firstElementChild;
-    if(want!==node)log.insertBefore(node,want);
-    prev=node}
-  for(const n of fresh){
-    wireChatTracks(n);wireChatActions(n);
-    n.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join))}
-  if(fresh.length)icons();
-  if(stick)log.scrollTop=log.scrollHeight;
-}
-
-let editingChatMsgId=null;
-
-async function paintChatInner(box){
-  if(!SOC.chat)return;
-  const list0=document.getElementById("peoplebody");if(list0)list0.innerHTML="";
-  const {dm,chat,isMock}=SOC.chat;
-  let msgs=[];
-
-  if(isMock||!sbUser){
-    const allMock=getMockChats();
-    msgs=allMock.filter(m=>m.chat_key===SOC.chat.key);
-  }else{
-    const me=sbUser.id;
-    const {data}=dm
-      ?await sb.from("messages").select("*")
-          .or(`and(recipient.eq.${dm},sender.eq.${me}),and(recipient.eq.${me},sender.eq.${dm})`)
-          .order("id",{ascending:false}).limit(100)
-      :await sb.from("messages").select("*").eq("chat_id",chat).order("id",{ascending:false}).limit(100);
-    msgs=(data||[]).reverse();
-  }
-
-  SOC.chat.msgsCache=msgs;
-  const meId=sbUser?sbUser.id:"me";
-
-  const theirLast=dm?msgs.filter(m=>m.sender===dm).slice(-1)[0]:null;
-  const seenUpTo=theirLast?theirLast.id:0;
-
-  const items=msgs.map(m=>{
-    const mine=m.sender===meId||m.sender==="me";
-    const who=SOC.chat.dm?null:(SOC.chat.membersCache||[]).find(x=>x.user_id===m.sender);
-    const read=mine&&dm&&(isMock||m.id<seenUpTo);
-    const tick=mine&&dm?`<i class="tick ${read?"read":""}" title="${read?t("chat.read"):t("chat.sent")}"><span class="material-symbols-rounded" style="font-size:14px">${read?"done_all":"check"}</span></i>`:"";
-    const badgeHtml=who?.profile?.equipped_badge?userBadgeTag(who.profile.equipped_badge):(mine?userBadgeTag(S.equippedBadge):"");
-    const editedHtml=m.edited_at?`<span class="msg-edited">(${LANG==='ru'?'ред.':'edited'})</span>`:"";
-    const sig=[m.id,m.edited_at||"",m.body||"",m.image?1:0,read?1:0,who?.profile?.username||"",LANG].join("\u0001");
-    return {id:String(m.id),sig,html:`<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
-     <div class="msg-actions">
-      <button class="msg-act-btn" data-act="copy" title="${LANG==='ru'?'Копировать':'Copy'}"><span class="material-symbols-rounded" style="font-size:16px">content_copy</span></button>
-      <button class="msg-act-btn" data-act="reply" title="${LANG==='ru'?'Ответить':'Reply'}"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button>
-      ${mine?`
-       <button class="msg-act-btn" data-act="edit" title="${LANG==='ru'?'Редактировать':'Edit'}"><span class="material-symbols-rounded" style="font-size:16px">edit</span></button>
-       <button class="msg-act-btn danger" data-act="delete" title="${LANG==='ru'?'Удалить':'Delete'}"><span class="material-symbols-rounded" style="font-size:16px">delete</span></button>
-      `:""}
-     </div>
-     ${!mine&&SOC.chat.chat?`<span class="who"${who?.user_id?` data-person="${esc(who.user_id)}"`:""}>${esc(who?.profile?.username||"…")}${badgeHtml}</span>`:""}
-     <div class="msg-body">${chatBodyHtml(m)}</div><time>${editedHtml}${esc(msgClock(m.sent_at))}${tick}</time></div>`}});
-
-  const hdr=SOC.chat.dm
-    ?`<div class="chat-dm-user" style="display:inline-flex;align-items:center;gap:10px;cursor:pointer" title="${t("people.profile")||"Профиль"}">${avat(SOC.chat.targetCache||{username:SOC.chat.name},34,presStatus(SOC.chat.targetCache?.id)||null)}<b>${esc(SOC.chat.name)}</b></div>`
-    :`<span class="material-symbols-rounded" style="font-size:18px">group</span><b>${esc(SOC.chat.name)}</b>
-      <span class="mut" data-togglemembers>${(SOC.chat.membersCache||[]).length}</span>`;
-
-  const memberList=SOC.chat.chat&&SOC.chat.showMembers
-    ?`<div class="memstrip">${(SOC.chat.membersCache||[]).map(m=>
-        `${avat(m.profile,24)}<span>${esc(m.profile?.username||"")}</span>${m.role==="owner"?`<span class="material-symbols-rounded" style="font-size:14px">crown</span>`:""}`).join("")}
-        <button class="btn sm" id="addmem"><span class="material-symbols-rounded" style="font-size:16px">person_add</span></button></div>`:"";
-
-  const existingPane=box.querySelector(".chatpane");
-  if(existingPane&&SOC.chat._painted){
-    chatLogSync(existingPane.querySelector(".chatlog"),items);
-    wireChatMembers(existingPane);
-    return;
-  }
-
-  const firstPaint=!SOC.chat._painted;SOC.chat._painted=true;
-  box.innerHTML=`<div class="panel pane chatpane">
-   <div class="chathdr"><button class="ic" data-back>${'<span class="material-symbols-rounded" style="font-size:18px">arrow_back</span>'}</button>
-    ${hdr}
-    <span class="grow"></span>
-    <button class="ic" id="chat-invite" title="${t("chat.invite")}"><span class="material-symbols-rounded" style="font-size:18px">podcasts</span></button>
-    ${SOC.chat.chat&&SOC.chat.isOwner?`<button class="ic" id="chat-cfg" title="${t("chat.custom")}"><span class="material-symbols-rounded" style="font-size:18px">edit</span></button>`:""}
-   </div>
-   ${memberList}
-   <div class="chatlog${firstPaint?" first":""}"></div>
-   <div id="chat-edit-wrap"></div>
-   <div class="chatrow-input">
-    <button class="ic" id="chat-img" title="${t("chat.photo")}"><span class="material-symbols-rounded" style="font-size:18px">image</span></button>
-    <button class="ic" id="chat-share-np" title="${t("chat.share_np")||"Поделиться текущим треком"}"><span class="material-symbols-rounded" style="font-size:18px">music_note</span></button>
-    <input id="chat-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
-    <button class="primary sm" id="chat-send"><span class="material-symbols-rounded" style="font-size:18px">send</span></button>
-    <input type="file" id="chat-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
-   </div></div>`;
-
-  const log=box.querySelector(".chatlog");
-  chatLogSync(log,items,true);
-  box.querySelector("[data-back]").onclick=()=>{SOC.chat=null;socClear("chat");box.classList.remove("chat-open");renderChats()};
-  box.querySelector(".chat-dm-user")?.addEventListener("click",()=>{
-    if(SOC.chat?.dm){
-      const dmId=SOC.chat.dm;
-      renderPeopleProfile(dmId);
-    }
-  });
-
-  let sendingChat=false;
-  const send=async(image=null)=>{
-    if(sendingChat)return;
-    const inp=document.getElementById("chat-inp");
-    const body=inp?.value.trim()||"";
-    if(!body&&!image)return;
-    sendingChat=true;
-    const btn=document.getElementById("chat-send");
-    if(btn)btn.disabled=true;
-    if(inp&&!image)inp.value="";
-
-    try{
-      if(isMock||!sbUser){
-        const allMock=getMockChats();
-        if(editingChatMsgId){
-          const m=allMock.find(x=>x.id===editingChatMsgId);
-          if(m){m.body=body;m.edited_at=new Date().toISOString()}
-          saveMockChats(allMock);
-          editingChatMsgId=null;
-          const ew=document.getElementById("chat-edit-wrap");
-          if(ew)ew.innerHTML="";
-          await paintChat();
-          return;
-        }
-        const newMsg={
-          id:"msg_"+Date.now(),
-          chat_key:SOC.chat.key,
-          sender:"me",
-          body,
-          image,
-          sent_at:new Date().toISOString()
-        };
-        allMock.push(newMsg);
-        saveMockChats(allMock);
-        await paintChat();
-        const l=box.querySelector(".chatlog");
-        if(l)l.scrollTop=l.scrollHeight;
-
-        // Interactive simulated response from mock friend
-        if(body&&!image){
-          setTimeout(()=>{
-            if(SOC.chat&&SOC.chat.key===newMsg.chat_key){
-              const repliesRu=[
-                "Отличный трек! Добавил к себе в плейлист",
-                "Звучит очень круто, спасибо за рекомендацию",
-                "Вайб супер, слушаю прямо сейчас",
-                "Класс! Очень нравится такая музыка!"
-              ];
-              const repliesEn=[
-                "Awesome track! Added to my playlist",
-                "Sounds amazing, thanks for sharing",
-                "Great vibes, listening right now",
-                "Love this style, right up my alley!"
-              ];
-              const text=(LANG==="ru"?repliesRu:repliesEn)[Math.floor(Math.random()*4)];
-              const cur=getMockChats();
-              cur.push({
-                id:"msg_"+Date.now(),
-                chat_key:SOC.chat.key,
-                sender:SOC.chat.dm,
-                body:text,
-                sent_at:new Date().toISOString()
-              });
-              saveMockChats(cur);
-              if(SOC.chat&&SOC.chat.key===newMsg.chat_key)paintChat();
-            }
-          }, 1200);
-        }
-        return;
-      }
-
-      if(editingChatMsgId){
-        const {error}=await sb.from("messages").update({body,edited_at:new Date().toISOString()}).eq("id",editingChatMsgId);
-        if(error){if(inp&&!image)inp.value=body;toast(error.message);return}
-        editingChatMsgId=null;
-        const ew=document.getElementById("chat-edit-wrap");
-        if(ew)ew.innerHTML="";
-        if(inp)inp.value="";
-        await paintChat();
-        return;
-      }
-      const row=dm?{recipient:dm,sender:meId,body,image}:{chat_id:chat,sender:meId,body,image};
-      const {error}=await sb.from("messages").insert(row);
-      if(error){
-        if(inp&&!image)inp.value=body;
-        toast(error.message);
-        return;
-      }
-      if(inp)inp.focus();
-      await paintChat();
-      const l=box.querySelector(".chatlog");
-      if(l)l.scrollTop=l.scrollHeight;
-    }finally{
-      sendingChat=false;
-      if(btn)btn.disabled=false;
-    }
-  };
-
-  document.getElementById("chat-send").onclick=()=>send();
-  document.getElementById("chat-share-np")?.addEventListener("click",()=>{
-    if(!S.current||S.current.mode==="empty")return toast(t("q.none")||"Сейчас ничего не играет");
-    const inp=document.getElementById("chat-inp");
-    if(inp){
-      const text=`🎵 ${S.current.a} — ${S.current.t}`;
-      inp.value=inp.value?`${inp.value} ${text}`:text;
-      inp.focus();
-    }
-  });
-
-  document.getElementById("chat-inp").addEventListener("keydown",e=>{
-    if(e.key==="Escape"&&editingChatMsgId){
-      e.preventDefault();
-      editingChatMsgId=null;
-      const ew=document.getElementById("chat-edit-wrap");
-      if(ew)ew.innerHTML="";
-      e.target.value="";
-      return;
-    }
-    if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}
-  });
-
-  document.getElementById("chat-img").onclick=()=>document.getElementById("chat-file").click();
-  document.getElementById("chat-file").onchange=async e=>{
-    const f=e.target.files?.[0];e.target.value="";if(!f)return;
-    const img=await compressChatImage(f);
-    if(img)send(img);
-  };
-
-  document.getElementById("chat-invite").onclick=async()=>{
-    if(!SOC.room)return toast(t("chat.noroom"));
-    const {error}=await sb.from("messages").insert(dm
-      ?{recipient:dm,sender:meId,body:`${SOC.room.name} — ${SOC.room.join_code}`}
-      :{chat_id:chat,sender:meId,body:`${SOC.room.name} — ${SOC.room.join_code}`});
-    toast(error?error.message:t("chat.invited"));if(!error)paintChat();
-  };
-
-  document.getElementById("chat-cfg")?.addEventListener("click",customizeGroup);
-  box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
-  wireChatTracks(box);
-  wireChatActions(box);
-  wireChatMembers(box);
-  icons();
-}
-
-function wireChatMembers(root){
-  if(!root)return;
-  const btn=root.querySelector("#addmem");
-  if(btn){
-    btn.onclick=async()=>{
-      if(!SOC.chat?.chat)return;
-      const un=prompt(LANG==="ru"?"Введите имя пользователя для добавления в чат:":"Enter username to add to chat:");
-      if(!un||!un.trim())return;
-      try{
-        /* `%` and `_` are ILIKE wildcards: searching `kot_yar` matched
-           `kotXyar` too, and the extra row made maybeSingle() fail — an existing
-           account read as "user not found". Backslash is the default LIKE
-           escape in PostgreSQL and reaches the pattern verbatim (the vendored
-           client's ilike() takes only column+pattern, no escape option), so
-           escaping the reserved characters here is what makes it literal. */
-        const pat=un.trim().replace(/([\\%_])/g,"\\$1");
-        const {data,error}=await sb.from("profiles").select("id,username").ilike("username",pat).maybeSingle();
-        if(error||!data)return toast(LANG==="ru"?"Пользователь не найден":"User not found");
-        const {error:memErr}=await sb.from("chat_members").insert({chat_id:SOC.chat.chat,user_id:data.id,role:"member"});
-        if(memErr)return toast(memErr.message);
-        toast(LANG==="ru"?`Участник ${data.username} добавлен`:`Member ${data.username} added`);
-        await loadChatMembers();
-        paintChat();
-      }catch(e){toast(e.message||String(e))}
-    };
-  }
-}
-
-function wireChatActions(root){
- if(!root)return;
- root.querySelectorAll(".msg-act-btn").forEach(btn=>{
-  btn.onclick=async e=>{
-   e.stopPropagation();
-   const msgEl=btn.closest(".msg");
-   const msgId=msgEl?.dataset.msgId;
-   const act=btn.dataset.act;
-   const msgObj=(SOC.chat?.msgsCache||[]).find(m=>String(m.id)===String(msgId));
-   if(!msgObj&&act!=="copy")return;
-
-   if(act==="copy"){
-    const txt=msgObj?.body||msgEl?.querySelector(".chatimg")?.src||"";
-    navigator.clipboard?.writeText(txt).then(()=>toast(LANG==="ru"?"Текст скопирован":"Text copied"));
-   }else if(act==="reply"){
-    const inp=document.getElementById("chat-inp");
-    if(inp){
-     const quote=msgObj?.body?`> ${msgObj.body.slice(0,45)}...\n`:"";
-     inp.value=quote+inp.value;
-     inp.focus();
-    }
-   }else if(act==="edit"){
-    editingChatMsgId=msgObj.id;
-    const inp=document.getElementById("chat-inp");
-    if(inp){
-     inp.value=msgObj.body||"";
-     inp.focus();
-    }
-    const ew=document.getElementById("chat-edit-wrap");
-    if(ew){
-     ew.innerHTML=`<div class="chat-edit-bar" id="chat-edit-bar">
-      <span class="material-symbols-rounded" style="font-size:16px">edit</span>
-      <span class="edit-body">${esc(msgObj.body||"")}</span>
-      <button class="cancel-edit" id="cancel-edit" title="Отмена"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>
-     </div>`;
-     icons();
-     ew.querySelector("#cancel-edit")?.addEventListener("click",()=>{
-      editingChatMsgId=null;
-      ew.innerHTML="";
-      if(inp)inp.value="";
-     });
-    }
-   }else if(act==="delete"){
-    const ok=confirm(LANG==="ru"?"Удалить сообщение?":"Delete message?");
-    if(!ok)return;
-    if(SOC.chat?.isMock||!sbUser){
-      const allMock=getMockChats();
-      const filtered=allMock.filter(m=>String(m.id)!==String(msgObj.id));
-      saveMockChats(filtered);
-      if(SOC.chat?.msgsCache){
-        SOC.chat.msgsCache=SOC.chat.msgsCache.filter(m=>String(m.id)!==String(msgObj.id));
-      }
-      msgEl?.remove();
-      toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
-    }else{
-      const {error}=await sb.from("messages").delete().eq("id",msgObj.id);
-      if(error){
-       toast(error.message);
-      }else{
-       if(SOC.chat?.msgsCache){
-        SOC.chat.msgsCache=SOC.chat.msgsCache.filter(m=>String(m.id)!==String(msgObj.id));
-       }
-       msgEl?.remove();
-       toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
-      }
-    }
-   }
-  };
- });
-}
-
-function wireChatTracks(root){
- if(!root)return;
- root.querySelectorAll("[data-chat-play]").forEach(chip=>{
-  chip.onclick=async e=>{
-   e.stopPropagation();
-   const q=chip.dataset.chatPlay;
-   if(q){
-    toast((LANG==="ru"?"Поиск и запуск: ":"Playing: ")+q);
-    try{
-     const hits=await searchRemote(q);
-     if(hits&&hits.length>0){
-      await setTrack(hits[0],true,false,"chat");
-      return;
-     }
-    }catch(_){}
-    go("search");
-    const inp=document.getElementById("q");
-    if(inp){inp.value=q;search(q)}
-   }
-  };
- });
-}
-
-
-async function loadChatMembers(){
- const c=SOC.chat;if(!c||!c.chat)return;
- try{
-  const rows=(await sb.from("chat_members").select("user_id,role").eq("chat_id",c.chat)).data||[];
-  const ids=rows.map(r=>r.user_id);
-  const ps=ids.length?(await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",ids)).data?.map(maskProf)||[]:[];
-  c.membersCache=rows.map(r=>({...r,profile:ps.find(p=>p.id===r.user_id)}))
- }catch(e){console.warn("chat members:",e?.message||e)}}
-
-async function customizeGroup(){
- const c=SOC.chat;if(!c||!c.chat)return;
- const name=await askText(t("chat.custom"),c.name,{icon:"edit",label:t("chat.rename"),confirm:t("dlg.save")});
- if(name&&name!==c.name){
-  const {error}=await sb.from("chats").update({name}).eq("id",c.chat);
-  if(!error){c.name=name;SOC.chat.name=name}}
-  const about=await askText(t("chat.custom"),c.group?.about||"",{icon:"notes",label:t("chat.about.ph"),confirm:t("dlg.save")});
-  /* Cancel (null) must leave the description alone, not wipe it. */
-  if(about!=null&&about!==(c.group?.about||"")){
-   const {error}=await sb.from("chats").update({about:about||null}).eq("id",c.chat);
-   if(!error)c.group={...(c.group||{}),about:about||null}}
- const wantPic=await askConfirm(t("chat.avatar.q"),t("dlg.ok"),false,{icon:"image"});
- if(wantPic){
-  const f=document.createElement("input");f.type="file";f.accept="image/png,image/jpeg,image/webp";
-  const picked=new Promise(r=>{f.onchange=()=>r(f.files?.[0]||null);f.oncancel=()=>r(null)});
-  f.click();
-  const file=await picked;
-  if(file){const img=await compressChatImage(file,96,14000);
-   if(img)await sb.from("chats").update({avatar:img}).eq("id",c.chat)}}
- openChat("g:"+c.chat)}
+function openChat(key){
+ const k=String(key||"");
+ if(!k.startsWith("d:"))return;
+ if(typeof msgrOpen==="function")msgrOpen(k.slice(2));
+ else go("chats")}
 
 /* Chat pictures are compressed hard before they ever leave the machine:
    720 px max side, webp, and a retry ladder if the result is still fat. The
@@ -10304,8 +9719,8 @@ async function refreshRoomState(){
   });
   SOC.roomQueue=(await sb.from("room_queue").select("*").eq("room_id",data.id).order("position")).data||[];
   SOC.requests=(await sb.from("room_requests").select("*").eq("room_id",data.id).eq("status","pending").order("id",{ascending:false}).limit(20)).data||[];
-  const roomChat=((await sb.from("messages").select("*").eq("room_id",data.id).order("id",{ascending:false}).limit(80)).data||[]).reverse();
-  SOC.roomChat=roomChat
+  /* The room chat is not fetched here any more: msRoomMount (messenger.js)
+     polls only the rows it has not seen, decrypts them and patches the log. */
   }catch(e){console.warn("room state:",e?.message||e)}}
 
 /* The listener side of sync: called after every refresh. */
@@ -10361,7 +9776,6 @@ function paintRoomShell(){
  const isOwner=SOC.roomRole==="owner";
  const isDj=isOwner||SOC.roomRole==="dj";
  const me=sbUser?.id;
- const chat=SOC.roomChat||[];
  const members=SOC.roomMembers||[];
  const memberHtml=members.map(m=>{
   const name=m.profile?.username||(m.user_id===me?(S.username||"Я"):(m.role==="owner"?(LANG==="ru"?"Владелец":"Owner"):(LANG==="ru"?"Слушатель":"Listener")));
@@ -10378,23 +9792,7 @@ function paintRoomShell(){
   const mem=existing.querySelector(".memstrip");if(mem)mem.innerHTML=memberHtml;
   paintRoomNow();
   paintRoomLists();
-  const log=existing.querySelector("#roomlog");
-  if(log){
-   const stick=log.scrollHeight-log.scrollTop-log.clientHeight<80;
-   const newChatHtml=chat.map(m=>{
-    const mine=m.sender===me;
-    const who=members.find(x=>x.user_id===m.sender)?.profile;
-    return `<div class="msg ${mine?"mine":""}">
-     ${!mine?`<span class="who">${esc(who?.username||"…")}</span>`:""}
-     <div class="msg-body">${chatBodyHtml(m)}</div><time>${esc(ago(m.sent_at))}</time></div>`;
-   }).join("");
-   if(log.innerHTML!==newChatHtml){
-    log.innerHTML=newChatHtml;
-    if(stick)log.scrollTop=log.scrollHeight;
-    existing.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
-    icons();
-   }
-  }
+  if(typeof msRoomMount==="function")msRoomMount(existing.querySelector("#roomchat"),r);
   return;
  }
 
@@ -10419,29 +9817,9 @@ function paintRoomShell(){
     ${isDj?`<p class="eyebrow" style="margin-top:12px">${t("room.reqs")}</p>
       <div id="roomreqs"></div>`:""}
    </div>
-   <div>
+   <div class="roomchatcol">
     <p class="eyebrow">${t("room.chat")}</p>
-    <div class="chatlog roomlog" id="roomlog">${chat.map(m=>{
-     const mine=m.sender===me;
-     const who=members.find(x=>x.user_id===m.sender)?.profile;
-     const badgeHtml=who?.equipped_badge?userBadgeTag(who.equipped_badge):(mine?userBadgeTag(S.equippedBadge):"");
-     const editedHtml=m.edited_at?`<span class="msg-edited">(${LANG==='ru'?'ред.':'edited'})</span>`:"";
-     return `<div class="msg ${mine?"mine":""}" data-msg-id="${esc(m.id)}">
-      <div class="msg-actions">
-       <button class="msg-act-btn" data-act="copy" title="${LANG==='ru'?'Копировать':'Copy'}"><span class="material-symbols-rounded" style="font-size:16px">content_copy</span></button>
-       <button class="msg-act-btn" data-act="reply" title="${LANG==='ru'?'Ответить':'Reply'}"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button>
-       ${mine?`
-        <button class="msg-act-btn" data-act="edit" title="${LANG==='ru'?'Редактировать':'Edit'}"><span class="material-symbols-rounded" style="font-size:16px">edit</span></button>
-        <button class="msg-act-btn danger" data-act="delete" title="${LANG==='ru'?'Удалить':'Delete'}"><span class="material-symbols-rounded" style="font-size:16px">delete</span></button>
-       `:""}
-      </div>
-      ${!mine?`<span class="who">${esc(who?.username||"…")}${badgeHtml}</span>`:""}
-      <div class="msg-body">${chatBodyHtml(m)}</div><time>${editedHtml}${esc(ago(m.sent_at))}</time></div>`}).join("")}</div>
-    <div id="room-edit-wrap"></div>
-    <div class="chatrow-input">
-     <input id="room-inp" placeholder="${t("chat.ph")}" maxlength="2000" autocomplete="off">
-     <button class="primary sm" id="room-send"><span class="material-symbols-rounded" style="font-size:18px">send</span></button>
-    </div>
+    <div class="roomchat" id="roomchat"></div>
    </div>
   </div></div>`;
  document.getElementById("leaveroom").onclick=async()=>{
@@ -10460,8 +9838,6 @@ function paintRoomShell(){
   await sb.from("room_members").delete().eq("room_id",r.id).eq("user_id",b.dataset.kick);
   toast(t("room.kicked"));
   refreshRoomState().then(paintRoomShell)});
- document.getElementById("room-send").onclick=sendRoomMsg;
- document.getElementById("room-inp").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();sendRoomMsg()}});
  /* One search box, two behaviours: DJs put the track straight into the queue,
     listeners propose it and wait for a ✓. The queue only moves when a DJ is
     playing the room context, so a listener search can never seize playback. */
@@ -10488,101 +9864,8 @@ function paintRoomShell(){
     if(!error)host.innerHTML=""}})});
  paintRoomNow();
  paintRoomLists();
- const log=document.getElementById("roomlog");
- if(log)log.scrollTop=log.scrollHeight;
- box.querySelectorAll("[data-join]").forEach(b=>b.onclick=()=>joinRoomByCode(b.dataset.join));
- wireRoomChatActions(box);
+ if(typeof msRoomMount==="function")msRoomMount(document.getElementById("roomchat"),r);
  icons()}
-
-let editingRoomMsgId=null;
-let sendingRoomMsg=false;
-async function sendRoomMsg(){
- if(sendingRoomMsg)return;
- const inp=document.getElementById("room-inp");
- const body=inp?.value.trim();if(!body)return;
- sendingRoomMsg=true;
- try{
-  if(editingRoomMsgId){
-   const {error}=await sb.from("messages").update({body,edited_at:new Date().toISOString()}).eq("id",editingRoomMsgId);
-   if(error){toast(error.message);return;}
-   editingRoomMsgId=null;
-   const ew=document.getElementById("room-edit-wrap");
-   if(ew)ew.innerHTML="";
-   inp.value="";
-   await refreshRoomState();
-   paintRoomShell();
-   return;
-  }
-  const {error}=await sb.from("messages").insert({room_id:SOC.room.id,sender:sbUser.id,body});
-  if(error){inp.value=body;if(inp)inp.focus();return toast(error.message)}
-  inp.value="";
-  await refreshRoomState();
-  paintRoomShell();
-  const inp2=document.getElementById("room-inp");
-  if(inp2)inp2.focus();
- }finally{
-  sendingRoomMsg=false;
- }
-}
-
-function wireRoomChatActions(root){
- if(!root)return;
- root.querySelectorAll("#roomlog .msg-act-btn").forEach(btn=>{
-  btn.onclick=async e=>{
-   e.stopPropagation();
-   const msgEl=btn.closest(".msg");
-   const msgId=msgEl?.dataset.msgId;
-   const act=btn.dataset.act;
-   const r=SOC.room;
-   const chatList=r?.chat||[];
-   const msgObj=chatList.find(m=>String(m.id)===String(msgId));
-   if(!msgObj&&act!=="copy")return;
-
-   if(act==="copy"){
-    const txt=msgObj?.body||"";
-    navigator.clipboard?.writeText(txt).then(()=>toast(LANG==="ru"?"Текст скопирован":"Text copied"));
-   }else if(act==="reply"){
-    const inp=document.getElementById("room-inp");
-    if(inp){
-     const quote=msgObj?.body?`> ${msgObj.body.slice(0,40)}...\n`:"";
-     inp.value=quote+inp.value;
-     inp.focus();
-    }
-   }else if(act==="edit"){
-    editingRoomMsgId=msgObj.id;
-    const inp=document.getElementById("room-inp");
-    if(inp){
-     inp.value=msgObj.body||"";
-     inp.focus();
-    }
-    const ew=document.getElementById("room-edit-wrap");
-    if(ew){
-     ew.innerHTML=`<div class="chat-edit-bar" id="room-edit-bar">
-      <span class="material-symbols-rounded" style="font-size:16px">edit</span>
-      <span class="edit-body">${esc(msgObj.body||"")}</span>
-      <button class="cancel-edit" id="room-cancel-edit" title="Отмена"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>
-     </div>`;
-     icons();
-     ew.querySelector("#room-cancel-edit")?.addEventListener("click",()=>{
-      editingRoomMsgId=null;
-      ew.innerHTML="";
-      if(inp)inp.value="";
-     });
-    }
-   }else if(act==="delete"){
-    const ok=confirm(LANG==="ru"?"Удалить сообщение?":"Delete message?");
-    if(!ok)return;
-    const {error}=await sb.from("messages").delete().eq("id",msgObj.id);
-    if(error){
-     toast(error.message);
-    }else{
-     msgEl?.remove();
-     toast(LANG==="ru"?"Сообщение удалено":"Message deleted");
-    }
-   }
-  };
- });
-}
 
 function paintRoomNow(){
  const el=document.getElementById("roomnow");if(!el)return;

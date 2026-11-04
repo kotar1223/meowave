@@ -63,6 +63,9 @@
 \echo '== 15_presence_listening: listening time survives a failing achievements check, honest presence =='
 \ir migrations/15_presence_listening.sql
 
+\echo '== 16_messenger_e2e: edits, read receipts, replies, end-to-end encryption, three badges =='
+\ir migrations/16_messenger_e2e.sql
+
 \echo ''
 \echo 'Schema applied. Next:'
 \echo '  SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed_badges.mjs'

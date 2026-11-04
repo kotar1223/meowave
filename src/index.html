@@ -110,6 +110,7 @@
     <div class="rail-group rail-group-extra">
       <button class="navbtn navbtn-back" id="nav-back-btn" aria-label="Назад к основным" title="Назад"><span class="nav-icon-box"><span class="material-symbols-rounded">arrow_back</span></span><span data-i18n="nav.back">Назад</span></button>
       <button class="navbtn" data-nav="people"><span class="nav-icon-box"><span class="material-symbols-rounded">group</span></span><span data-i18n="nav.people">Люди</span><b class="navbadge" id="friend-badge" hidden></b></button>
+      <button class="navbtn" data-nav="chats"><span class="nav-icon-box"><span class="material-symbols-rounded">chat</span></span><span data-i18n="nav.msgs">Чаты</span><b class="navbadge" id="msg-badge" hidden></b></button>
       <button class="navbtn" data-nav="rooms"><span class="nav-icon-box"><span class="material-symbols-rounded">podcasts</span></span><span data-i18n="nav.rooms">Комнаты</span></button>
       <button class="navbtn" data-nav="top"><span class="nav-icon-box"><span class="material-symbols-rounded">trophy</span></span><span data-i18n="nav.top">Топ</span></button>
       <button class="navbtn railend" data-nav="profile"><span class="nav-icon-box"><span class="material-symbols-rounded">account_circle</span></span><span data-i18n="nav.profile">Профиль</span></button>
@@ -199,10 +200,12 @@
         <div class="tabs" role="tablist" id="peopletabs">
           <button role="tab" aria-selected="true" data-ptab="friends"><span class="material-symbols-rounded">group</span><span data-i18n="fr.t">Друзья</span></button>
           <button role="tab" aria-selected="false" data-ptab="find"><span class="material-symbols-rounded">person_search</span><span data-i18n="people.search">Найти людей</span></button>
-          <button role="tab" aria-selected="false" data-ptab="chats"><span class="material-symbols-rounded">chat</span><span data-i18n="nav.chats">Чаты</span></button>
         </div>
         <div id="peoplebody"></div>
-        <div id="chatbody"></div>
+      </div>
+
+      <div class="view" id="v-chats">
+        <div class="msgr" id="msgr"></div>
       </div>
 
       <div class="view" id="v-rooms">
@@ -601,6 +604,11 @@
               <div><label data-i18n="pv.board">Участвовать в топе</label><small data-i18n="pv.board.s">Иначе вас не будет в лидерборде часов</small></div>
               <button class="sw" id="pv-board" aria-pressed="true" aria-label="leaderboard"></button>
             </div>
+          </div>
+          <div class="panel pane">
+            <h3 data-i18n="ms.devs">Устройства шифрования</h3>
+            <p class="ph" data-i18n="ms.devs.s">Ключи для сквозного шифрования личных сообщений.</p>
+            <div id="e2e-devs" class="e2e-devs"></div>
           </div>
         </div>
 
@@ -1134,8 +1142,10 @@
 </div>
 
 <script src="./fx.js" defer></script>
+<script src="./e2e.js" defer></script>
 <script src="./app.js" defer></script>
 <script src="./m3.js" defer></script>
 <script src="./discover.js" defer></script>
+<script src="./messenger.js" defer></script>
 </body>
 </html>

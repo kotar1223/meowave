@@ -1,5 +1,7 @@
 // tests/tier1-features.mjs - Tier 1: Feature Coverage Tests (125 tests, 5 per feature)
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { 
   TestSuite, 
   loadSources, 
@@ -11,7 +13,8 @@ import {
   domHasElement,
   domCount,
   getContrastRatio,
-  createMockEnvironment
+  createMockEnvironment,
+  PATHS
 } from "./helpers.mjs";
 
 export function buildTier1Suite() {
@@ -819,6 +822,40 @@ export function buildTier1Suite() {
   suite.test("F25-05: [Happy Path] Active view transitions use data-active attribute", () => {
     assert.match(css, /\.view\[data-active="true"\]/, ".view[data-active='true'] rule must exist in CSS");
     assert.ok(domHasElement(html, 'data-active="true"'), "Default active view must declare data-active='true'");
+  });
+
+  // ─── Messenger + E2EE wiring (round 7) ───────────────────────────────────
+  const readSrc = rel => fs.readFileSync(path.join(PATHS.root, rel), "utf-8");
+  suite.test("F26-01: [Happy Path] Chats view, rail entry and unread badge exist; the old People › Chats tab is gone", () => {
+    assert.ok(domHasElement(html, "#v-chats"), "#v-chats view must exist");
+    assert.ok(domHasElement(html, "#msgr"), "#msgr root must exist");
+    assert.match(html, /data-nav="chats"/);
+    assert.ok(domHasElement(html, "#msg-badge"));
+    assert.doesNotMatch(html, /data-ptab="chats"/, "the broken People › Chats tab must not come back");
+    assert.match(js, /extraTabs = \[[^\]]*"chats"/, "chats belongs to the extra rail group");
+  });
+  suite.test("F26-02: [Happy Path] e2e.js loads before app.js and messenger.js after it", () => {
+    const order = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
+    assert.ok(order.indexOf("e2e") > -1 && order.indexOf("e2e") < order.indexOf("app"));
+    assert.ok(order.indexOf("messenger") > order.indexOf("app"));
+  });
+  suite.test("F26-03: [Happy Path] Encryption uses ECDH P-256 + HKDF + AES-GCM with conversation-bound AAD", () => {
+    const e2e = readSrc("src/e2e.js");
+    assert.match(e2e, /P-256/);
+    assert.match(e2e, /HKDF/);
+    assert.match(e2e, /AES-GCM/);
+    assert.match(e2e, /additionalData/);
+  });
+  suite.test("F26-04: [Happy Path] Messenger supports reply, edit, read receipts and room chat", () => {
+    const m = readSrc("src/messenger.js");
+    for (const fn of ["function msgrOpen", "function msRoomMount", "function msMarkRead", "function msCtx", "function paintE2EDevices"]) assert.ok(m.includes(fn), fn);
+    assert.match(m, /reply_to/);
+    assert.match(m, /rpc\("mark_read"/);
+    assert.doesNotMatch(js, /function renderChats\b/, "old chat list code must stay removed");
+  });
+  suite.test("F26-05: [Happy Path] FULL_SCHEMA carries migration 16 (messenger, E2EE, three badges)", () => {
+    const full = readSrc("supabase/FULL_SCHEMA.sql");
+    for (const s of ["create table if not exists public.e2e_devices", "function public.mark_read", "function public.dm_threads", "function public.e2e_add_keys", "function public.set_equipped_badges", "equipped_badges"]) assert.ok(full.toLowerCase().includes(s.toLowerCase()), s);
   });
 
   return suite;
