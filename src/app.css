@@ -80,10 +80,26 @@ html[data-theme="light"]{
   --on-accent:oklch(100% 0 0);
 }
 /* accent colors are applied by setAccent() via inline custom props;
-   with a colored accent the primary controls take it — flat, no glow */
+   with a colored accent the primary controls take it — flat, no glow.
+   --on-acc (set with the accent) is the label colour that reads on it. */
+html[data-theme]:not([data-accent="none"]){
+  --md-sys-color-on-primary:var(--on-acc,oklch(14% 0.015 280));
+  --on-accent:var(--on-acc,oklch(14% 0.015 280))}
+/* During an accent fade (applyAccentRgb) a few containers carry the in-between
+   colour inline. Tokens derived from the accent are computed where they are
+   declared, so they are re-derived here or they would jump to the new colour
+   while the rest of the container is still fading. */
+html:not([data-accent="none"]) [data-acctw]{
+  --md-sys-color-primary:var(--accent);--md-sys-color-primary-container:var(--accent-soft);
+  --md-sys-color-on-primary:var(--on-acc,oklch(14% 0.015 280));--on-accent:var(--on-acc,oklch(14% 0.015 280));
+  --m3-sec-c:color-mix(in oklab,var(--accent) 17%,oklch(22% 0.016 278));
+  --m3-inv-primary:color-mix(in oklch,var(--accent) 52%,black)}
+html[data-theme="light"]:not([data-accent="none"]) [data-acctw]{
+  --m3-sec-c:color-mix(in oklab,var(--accent) 12%,oklch(95% 0.004 280));
+  --m3-inv-primary:color-mix(in oklch,var(--accent) 36%,white)}
 html:not([data-accent="none"]) .primary,
 html:not([data-accent="none"]) .play{
-  background:var(--accent);color:oklch(14% 0.015 280);
+  background:var(--accent);color:var(--on-acc,oklch(14% 0.015 280));
   box-shadow:0 2px 8px rgb(0 0 0 / .18);
 }
 
@@ -557,19 +573,28 @@ html[data-theme="light"] .s:hover{background:oklch(0% 0 0 / .06)}
 .view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:0 var(--sp-2) var(--sp-4);
   scrollbar-gutter:stable;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;
   opacity:0;transform:translateY(16px) scale(.986);filter:blur(7px);pointer-events:none;
-  transition:opacity .3s var(--e),transform .44s var(--e),filter .36s var(--e)}
-.view[data-active="true"]{opacity:1;transform:none;filter:none;pointer-events:auto}
+  visibility:hidden;content-visibility:hidden;
+  transition:opacity .3s var(--e),transform .44s var(--e),filter .36s var(--e),
+    visibility 0s linear .44s,content-visibility 0s linear .44s;
+  transition-behavior:allow-discrete}
+/* Round 7: a view that has faded out is skipped by style, layout and paint
+   (content-visibility:hidden keeps its DOM and scroll state). Hidden views
+   used to stay live under opacity 0, so one root colour change — the accent
+   following a new cover — restyled every hidden list too: ~100 ms a frame
+   with 600 favourites in Media, measured. Entering is immediate. */
+.view[data-active="true"]{opacity:1;transform:none;filter:none;pointer-events:auto;
+  visibility:visible;content-visibility:visible;
+  transition:opacity .3s var(--e),transform .44s var(--e),filter .36s var(--e),visibility 0s,content-visibility 0s}
 .view::-webkit-scrollbar{width:8px}
 .view::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px;border:3px solid transparent;background-clip:content-box}
 
 /* home */
 /* The bottom padding leaves room for the peek of the collections sheet. */
 #v-home{display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:calc(var(--sp-8) + 76px);overflow:hidden}
-/* The hero reads over the particle field, so it carries its own scrim: a soft
-   pool of the background colour behind the text, never a box. */
+/* Round 7: no scrim behind the hero. The dark pool of background colour that
+   kept the text readable over the particles read as a smudge of shadow on
+   the wave; the calmer field no longer needs it. */
 .hero{position:relative;isolation:isolate;max-width:min(44ch,100%);padding-left:var(--sp-4)}
-.hero::before{content:"";position:absolute;z-index:-1;inset:-140px -55% -70px -90px;pointer-events:none;
-  background:radial-gradient(closest-side,color-mix(in oklab,var(--bg) 86%,transparent) 0%,color-mix(in oklab,var(--bg) 62%,transparent) 52%,transparent 100%)}
 .hero-k{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;min-height:28px;margin-bottom:14px;
   font-size:.875rem;font-weight:500;letter-spacing:.01em;color:var(--mute)}
 .hero-k[data-ready="false"]{color:var(--mute)}
@@ -624,7 +649,13 @@ html[data-theme="light"] .s:hover{background:oklch(0% 0 0 / .06)}
 .vh span{color:var(--mute);font-size:.8rem;display:inline-flex;align-items:center;min-height:22px;line-height:22px}
 .rows{display:flex;flex-direction:column}
 .row{display:flex;align-items:center;gap:var(--sp-4);
-  padding:10px var(--sp-3);border-radius:12px;cursor:pointer;border-top:1px solid var(--line);transition:background .18s var(--e)}
+  padding:10px var(--sp-3);border-radius:12px;cursor:pointer;border-top:1px solid var(--line);transition:background .18s var(--e);
+  content-visibility:auto;contain-intrinsic-size:auto 63px}
+/* content-visibility:auto above: rows outside the scrollport are skipped by
+   the style engine. A library of 600 favourites is ~7 000 nodes, and every
+   track change rewrites the accent on the root — which restyled all of them
+   on each step of the colour fade (100+ ms a frame on a slow machine). Now
+   only the rows on screen are restyled; the rest catch up when scrolled to. */
 /* Flex, not a five-column grid. The row can carry six or seven children —
    the heart plus a remove button on local files, or plus a remove button in a
    playlist — and a grid with five tracks dropped every extra button into an
@@ -909,8 +940,8 @@ html[data-theme] .plc.plnew .sq,html[data-theme] .plc.plimport .sq{background:va
    that void filled half the window. An empty banner is a slim strip — enough
    for the avatar overlap and the change-banner hint, nothing more. A real
    image gets the full 3:1 area back. */
-.banner:not(:has(img)){aspect-ratio:auto;height:104px;min-height:0}
-.banner:not(:has(img)) .cam{opacity:.75;transform:none}
+.banner.noimg{aspect-ratio:auto;height:104px;min-height:0}
+.banner.noimg .cam{opacity:.75;transform:none}
 /* The banner image is positioned rather than merely sized. width/height 100%
    on a plain child depends on the parent having a resolved height, and with
    aspect-ratio + max-height that resolution arrives too late in some webview
@@ -1615,7 +1646,6 @@ html[data-theme="light"] .chatrow:hover{background:oklch(0% 0 0 / .04)}
 @keyframes peoIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 .peo-enter{animation:peoIn .28s var(--e) both}
 #v-people{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable}
-#v-people:has(#chatbody.chat-open){overflow:hidden}
 #peoplebody{min-height:0;padding-bottom:120px}
 
 /* smooth tab underline */
@@ -3865,10 +3895,6 @@ html[data-wall] body{background:#000}
 .msg .tick .material-symbols-rounded{font-size:14px}
 .msg .tick.read{color:var(--accent)}
 /* The open chat sits under the page title and tabs instead of covering them. */
-#chatbody.chat-open{position:relative;inset:auto;height:auto;flex:1;min-height:0;padding:0}
-#v-people:has(#chatbody.chat-open) #peoplebody{display:none}
-#v-people:has(#chatbody.chat-open){display:flex;flex-direction:column}
-#chatbody.chat-open>.chatpane{height:calc(100dvh - var(--chat-top,300px));min-height:360px}
 /* Active filter chip: readable text on the filled pill. */
 .people-filter-chip.active{color:var(--bg,#0b0b0f)!important}
 .people-filter-chip.active .material-symbols-rounded{color:inherit}
@@ -3944,7 +3970,7 @@ html[data-wall] body{background:#000}
 .import-target-selector label .material-symbols-rounded{font-size:20px;color:var(--mute)}
 .import-target-selector input{position:absolute;opacity:0;pointer-events:none}
 .import-target-selector label:has(input:checked){border-color:rgb(var(--accent-rgb,167 139 250) / .6);background:rgb(var(--accent-rgb,167 139 250) / .12)}
-.import-target-selector label:has(input:checked) .material-symbols-rounded{color:var(--accent)}
+.import-target-selector input:checked~.material-symbols-rounded{color:var(--accent)}
 .import-target-selector label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:520px){.import-target-selector{grid-template-columns:1fr}}
 .importbox .modal-head .ph{font-size:.8rem;line-height:1.45;color:var(--mute)}
@@ -3966,7 +3992,7 @@ html[data-wall] body{background:#000}
 .dc-prev-wrap>small{color:var(--mute);font-size:.74rem}
 .dc-prev{display:flex;gap:14px;align-items:center;max-width:420px;padding:14px;border-radius:16px;background:#232428;color:#dbdee1;border:1px solid rgb(255 255 255 / .06)}
 .dc-prev-art{width:64px;height:64px;border-radius:10px;flex:none;background:#313338 center/cover no-repeat;display:grid;place-items:center;color:#80848e}
-.dc-prev-art[style*="url"] .material-symbols-rounded{display:none}
+.dc-prev-art.has-art .material-symbols-rounded{display:none}
 .dc-prev-txt{display:grid;gap:2px;min-width:0;flex:1}
 .dc-prev-txt small{font-size:.7rem;font-weight:600;color:#b5bac1}
 .dc-prev-txt b{font-size:.86rem;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3994,8 +4020,12 @@ html[data-wall] body{background:#000}
 .dcp-adv summary::-webkit-details-marker{display:none}
 .dcp-adv summary::before{content:"chevron_right";font-family:"Material Symbols Rounded";font-size:18px;transition:transform .2s ease}
 .dcp-adv[open] summary::before{transform:rotate(90deg)}
-.field[style*="flex-direction:column"]{gap:10px}
-.field[style*="flex-direction:column"]>div:first-child{flex:0 0 auto}
+/* Classes, not [style*=…]: an attribute selector on "style" with a part after
+   it made every inline-style write re-check the element's whole subtree —
+   and the accent is written as inline style on <html> on every track change,
+   so the entire document (9 000 divs) was restyled per step of the fade. */
+.field.fcol{gap:10px}
+.field.fcol>div:first-child{flex:0 0 auto}
 
 /* ═════════════════════════════════════════════════════════════════════════
    FULL PLAYER v2 (fpxShell in app.js)
@@ -4299,8 +4329,8 @@ html[data-wall] body{background:#000}
    The wave is one periodic path slid sideways by the compositor; only the
    box widths and the handle position are written from script. */
 #btrack{height:24px}
-.track:has(.m3w){background:none!important;box-shadow:none!important}
-.track:has(.m3w) .f,.track:has(.m3w) .h{display:none!important}
+.track.has-m3w{background:none!important;box-shadow:none!important}
+.track.has-m3w .f,.track.has-m3w .h{display:none!important}
 .m3w{position:absolute;inset:0;pointer-events:none;color:var(--accent)}
 .m3w-played{position:absolute;left:0;top:0;bottom:0;width:0;overflow:hidden;
   -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 2px,#000 calc(100% - 2px),transparent);
@@ -4562,7 +4592,7 @@ html[data-hs="open"] #field,html[data-hs="open"] #fieldgl{opacity:.35}
   color:var(--bg);background:var(--text);box-shadow:0 6px 18px rgb(0 0 0/.35);
   opacity:0;transform:translate3d(0,6px,0) scale(.9);transition:opacity .22s var(--e),transform .3s cubic-bezier(.16,1,.3,1)}
 .hs-card:hover .hs-go,.hs-card:focus-visible .hs-go{opacity:1;transform:none}
-html:not([data-accent="none"]) .hs-go{background:var(--accent);color:oklch(14% 0.015 280)}
+html:not([data-accent="none"]) .hs-go{background:var(--accent);color:var(--on-acc,oklch(14% 0.015 280))}
 .hs-card b{font-size:.85rem;font-weight:560;line-height:1.28;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .hs-card small{font-size:.75rem;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hs-card.is-artist{align-items:center;text-align:center}
@@ -4778,7 +4808,7 @@ html[data-theme="light"]{
 .m3b:focus-visible{outline:2px solid var(--md-sys-color-primary);outline-offset:2px}
 .m3b:disabled{opacity:.38;pointer-events:none}
 .m3b-filled{background:var(--accent);color:var(--md-sys-color-on-primary)}
-html:not([data-accent="none"]) .m3b-filled{color:oklch(14% 0.015 280)}
+html:not([data-accent="none"]) .m3b-filled{color:var(--on-acc,oklch(14% 0.015 280))}
 .m3b-filled:hover{box-shadow:0 1px 2px rgb(0 0 0/.3),0 1px 3px 1px rgb(0 0 0/.15)}
 .m3b-tonal{background:var(--m3-sec-c);color:var(--m3-on-sec-c)}
 .m3b-outlined{border:1px solid var(--line-2);color:var(--text)}
@@ -4917,10 +4947,10 @@ html[data-mini="on"] body>*:not(.mini):not(.toasts):not(.mdd-wrap){display:none!
 html[data-mini="on"] body{background:transparent}
 html[data-mini="on"] .toasts{bottom:8px;width:calc(100vw - 16px)}
 /* On the home screen snackbars sit above the collections card, not on it. */
-html:not([data-hs="open"]):not([data-mini="on"]):not([data-setov="open"]):not([data-wvs="open"]) body:has(#v-home[data-active="true"]) .toasts{bottom:192px}
+html[data-view="home"]:not([data-hs="open"]):not([data-mini="on"]):not([data-setov="open"]):not([data-wvs="open"]) .toasts{bottom:192px}
 /* … and on a wide window beside the hero rather than over its buttons. */
 @media (min-width:1000px){
-  html:not([data-hs="open"]):not([data-mini="on"]):not([data-setov="open"]):not([data-wvs="open"]) body:has(#v-home[data-active="true"]) .toasts{left:auto;right:28px;transform:none;width:min(560px,calc(100vw - 640px));align-items:flex-end}
+  html[data-view="home"]:not([data-hs="open"]):not([data-mini="on"]):not([data-setov="open"]):not([data-wvs="open"]) .toasts{left:auto;right:28px;transform:none;width:min(560px,calc(100vw - 640px));align-items:flex-end}
 }
 /* While the wave side sheet is open, snackbars move beside it instead of covering the list. */
 html[data-wvs="open"]:not([data-mini="on"]) body .toasts{left:auto;right:416px;bottom:104px;transform:none;width:min(520px,calc(100vw - 440px));align-items:flex-end}
@@ -5014,10 +5044,9 @@ html[data-wvs="open"]:not([data-mini="on"]) body .toasts{left:auto;right:416px;b
   .hero{padding-left:var(--sp-2)}
   .hero .row2{gap:8px}
   .hero .row2 .primary,.hero .row2 .m3b{height:44px;padding:0 18px 0 16px}
-  .hero::before{inset:-100px -30% -50px -40px}
   .toasts{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   /* The wave sheet becomes a bottom sheet here, so snackbars go to the top. */
-  html:not([data-hs="open"]):not([data-mini="on"]):not([data-setov="open"]):not([data-wvs="open"]) body:has(#v-home[data-active="true"]) .toasts{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  html[data-view="home"]:not([data-hs="open"]):not([data-mini="on"]):not([data-setov="open"]):not([data-wvs="open"]) .toasts{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   html[data-wvs="open"]:not([data-mini="on"]) body .toasts{top:calc(var(--tb,0px) + 12px);bottom:auto;left:50%;right:auto;transform:translateX(-50%);width:calc(100vw - 24px);align-items:stretch}
   .mdd{padding:20px}
   .mdd-t{font-size:1.3rem}
@@ -5086,22 +5115,29 @@ html[data-theme="light"]{
   .mdd{width:100%;border-radius:28px 28px 0 0;border-bottom:0;transform:translate3d(0,48px,0)}
 }
 
-/* ── Фон по обложке: two registered colours the browser cross-fades ── */
-@property --cv-a{syntax:'<color>';inherits:true;initial-value:rgb(0 0 0 / 0)}
-@property --cv-b{syntax:'<color>';inherits:true;initial-value:rgb(0 0 0 / 0)}
-:root{--cv-k:0;--cv-fade:1100ms}
-html{transition:--cv-a var(--cv-fade) cubic-bezier(.45,0,.25,1),--cv-b var(--cv-fade) cubic-bezier(.45,0,.25,1)}
+/* ── Фон по обложке ──
+   Round 7: the two cover glows live on their own fixed layers and a new
+   cover cross-fades them by opacity — compositor work only. They used to be
+   registered, inherited colours (@property --cv-a/--cv-b) transitioned on
+   <html>: every element of the document restyled on every frame of the
+   1.1 s fade, which is where a track change dropped the frame rate (a
+   library of a few hundred songs is thousands of nodes). --cv-a/--cv-b stay
+   as plain colours for the faint glass tint and switch in one step. */
+:root{--cv-k:0;--cv-fade:1100ms;--cv-a:rgb(0 0 0 / 0);--cv-b:rgb(0 0 0 / 0)}
+.cvbg{position:fixed;inset:0;z-index:0;pointer-events:none;display:none}
+html[data-coverbg="on"]:not([data-wall]) .cvbg{display:block}
+.cvbg i{position:absolute;inset:0;opacity:0;will-change:opacity;
+  transition:opacity var(--cv-fade) cubic-bezier(.45,0,.25,1);
+  background:
+    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--c1,rgb(0 0 0 / 0)) calc(var(--cv-k) * 24%),transparent) 0%,transparent 76%),
+    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--c2,rgb(0 0 0 / 0)) calc(var(--cv-k) * 19%),transparent) 0%,transparent 76%)}
+html[data-theme="light"] .cvbg i{background:
+    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--c1,rgb(0 0 0 / 0)) calc(var(--cv-k) * 18%),transparent) 0%,transparent 76%),
+    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--c2,rgb(0 0 0 / 0)) calc(var(--cv-k) * 14%),transparent) 0%,transparent 76%)}
+.cvbg i[data-on="true"]{opacity:1}
 html[data-theme="dark"][data-coverbg="on"]:not([data-wall]) body{
-  background:
-    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 24%),transparent) 0%,transparent 76%),
-    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 19%),transparent) 0%,transparent 76%),
-    radial-gradient(130% 85% at 50% -25%,oklch(21% 0.03 275 / .5) 0%,transparent 62%),
-    var(--bg)}
-html[data-theme="light"][data-coverbg="on"]:not([data-wall]) body{
-  background:
-    radial-gradient(70% 62% at 6% -8%,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 18%),transparent) 0%,transparent 76%),
-    radial-gradient(64% 60% at 102% 104%,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 14%),transparent) 0%,transparent 76%),
-    var(--bg)}
+  background:radial-gradient(130% 85% at 50% -25%,oklch(21% 0.03 275 / .5) 0%,transparent 62%),var(--bg)}
+html[data-theme="light"][data-coverbg="on"]:not([data-wall]) body{background:var(--bg)}
 html[data-coverbg="on"] .haze i:nth-child(1){background:radial-gradient(circle,color-mix(in oklch,var(--cv-a) calc(var(--cv-k) * 14%),transparent) 0%,transparent 70%)}
 html[data-coverbg="on"] .haze i:nth-child(2){background:radial-gradient(circle,color-mix(in oklch,var(--cv-b) calc(var(--cv-k) * 11%),transparent) 0%,transparent 70%)}
 

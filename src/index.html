@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark" data-accent="none">
+<html lang="ru" data-theme="dark" data-accent="none" data-view="home">
 <head>
 <!-- Icons and supabase-js are bundled locally, not from a CDN: the CDN is
      blocked on some networks, and when it failed every icon vanished and
@@ -268,7 +268,7 @@
             <div><label data-i18n="pr.name">Имя</label></div>
             <input id="set-un" maxlength="24" style="width:200px" autocomplete="off">
           </div>
-          <div class="field" style="align-items:flex-start;flex-direction:column">
+          <div class="field fcol" style="align-items:flex-start;flex-direction:column">
             <div><label data-i18n="pr.bio">О себе</label></div>
             <textarea id="set-bio" class="bioinp" maxlength="200" data-i18n-ph="pr.bio.ph"></textarea>
             <button class="btn" id="set-bio-save" style="margin-top:10px" data-i18n="pr.bio.save">Сохранить</button>
@@ -723,7 +723,7 @@
             </div>
             <details class="dcp-adv">
               <summary data-i18n="dc.adv">Для разработчиков</summary>
-              <div class="field" style="align-items:flex-start;flex-direction:column">
+              <div class="field fcol" style="align-items:flex-start;flex-direction:column">
                 <div><label for="dc-client" data-i18n="dc.cid">Своё приложение Discord</label><small data-i18n="dc.cid.s">Необязательно. Application ID с discord.com/developers — тогда вместо «Meowave» Discord покажет название вашего приложения. Пусто — встроенное.</small></div>
                 <input id="dc-client" inputmode="numeric" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="1234567890123456789">
               </div>

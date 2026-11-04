@@ -1245,8 +1245,7 @@ function sprite(a){
  const q=Math.round(a*50);
  const k=q+(dark?"d":"l")+(de.dataset.accent||"n");
  if(spriteCache[k])return spriteCache[k];
- const cs=getComputedStyle(de);
- const r=cs.getPropertyValue("--pr").trim(),g=cs.getPropertyValue("--pg").trim(),b=cs.getPropertyValue("--pb").trim();
+ const [r,g,b]=particleTone(fieldAccent(),!dark);
  const qa=q/50;
  const c=document.createElement("canvas");c.width=c.height=32;const x=c.getContext("2d");
  /* цветное гало */
@@ -1255,10 +1254,11 @@ function sprite(a){
  halo.addColorStop(.3,`rgba(${r},${g},${b},${qa*.3})`);
  halo.addColorStop(1,`rgba(${r},${g},${b},0)`);
  x.fillStyle=halo;x.fillRect(0,0,32,32);
- /* белое раскалённое ядро — только на тёмной теме, где additive-режим даёт неон */
+ /* a faint light centre on the dark theme — the old hot white core summed
+    into neon under "lighter" */
  if(dark){
   const core=x.createRadialGradient(16,16,0,16,16,4.5);
-  core.addColorStop(0,`rgba(255,255,255,${qa*.45})`);core.addColorStop(1,"rgba(255,255,255,0)");
+  core.addColorStop(0,`rgba(255,255,255,${qa*.16})`);core.addColorStop(1,"rgba(255,255,255,0)");
   x.fillStyle=core;x.beginPath();x.arc(16,16,4.5,0,7);x.fill()}
  spriteCache[k]=c;return c}
 
@@ -1305,22 +1305,30 @@ gl_FragColor=vec4(col*vA,a);}`;
 /* Colours follow the accent (and the adaptive cover accent, which rewrites
    --pr/--pg/--pb on every track), so they are re-read a few times a second
    rather than once — getComputedStyle is too slow for every frame. */
+/* The field's accent: the in-between colour while a fade runs (the root
+   already holds the final one, see applyAccentRgb), else the root's. */
+function fieldAccent(){
+ if(ACC_RAF&&ACC_NOW)return ACC_NOW;
+ const cs=getComputedStyle(document.documentElement);
+ return [+cs.getPropertyValue("--pr")||220,+cs.getPropertyValue("--pg")||220,+cs.getPropertyValue("--pb")||235]}
 function glFieldColors(now){
- if(now-GLF.colT<600&&GLF.ck)return;
+ if(now-GLF.colT<(ACC_RAF?66:600)&&GLF.ck)return;
  GLF.colT=now;
- const de=document.documentElement,cs=getComputedStyle(de),light=de.dataset.theme==="light";
- const r=+cs.getPropertyValue("--pr")||220,g=+cs.getPropertyValue("--pg")||220,b=+cs.getPropertyValue("--pb")||235;
+ const de=document.documentElement,light=de.dataset.theme==="light";
+ const [r,g,b]=fieldAccent();
  const key=r+","+g+","+b+(light?"l":"d");if(key===GLF.ck)return;GLF.ck=key;
- const gl=GLF.gl,c1=[r/255,g/255,b/255];
+ const gl=GLF.gl,c1=particleTone([r,g,b],light).map(v=>v/255);
  const c2=light?c1.map(v=>v*.55):c1.map(v=>v+(1-v)*.55);
  gl.uniform3f(GLF.u.uC1,c1[0],c1[1],c1[2]);gl.uniform3f(GLF.u.uC2,c2[0],c2[1],c2[2]);
- /* Round 6, "softer, not so bright a glow": the hot white core is half
-    what it was and the dark theme's light adds up more slowly (aMul). */
- gl.uniform1f(GLF.u.uCore,light?0:.5);
- /* Additive light on the dark theme (glow adds up into neon where the
-    wave is dense); ordinary "over" on the light one, where adding light to
-    white would erase the field. */
- if(light)gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.ONE,gl.ONE)}
+ /* Round 7, "no neon anywhere": no hot white core, and ordinary "over"
+    blending on both themes. Additive light summed dense parts of the wave
+    into glowing blobs of the accent colour — the green neon cloud. Now a
+    dense patch is as bright as one particle, never brighter. */
+ gl.uniform1f(GLF.u.uCore,light?0:.16);
+ gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA)}
+/* The wave's own colour: the accent's hue, little chroma, a fixed light
+   level per theme. */
+function particleTone(rgb,light){return calmRgb(rgb,.065,light?[.42,.6]:[.76,.9])}
 function glFieldDraw(lvl){
  const gl=GLF.gl;if(!gl)return;
  const n=F.n;
@@ -1516,7 +1524,7 @@ function draw(lvl){
  if(GLF.ok)return glFieldDraw(lvl);
  gx.clearRect(0,0,F.w,F.h);
  if(!F.n)return;
- gx.globalCompositeOperation=document.documentElement.dataset.theme==="light"?"source-over":"lighter";
+ gx.globalCompositeOperation="source-over";
  const gl=.85+S.glow*.4;
  for(let i=0;i<F.n;i++){const p=F.p[i],sz=(2.2+p.s*3+lvl*2.6+AB.beat*1.6)*gl;
   gx.drawImage(sprite(Math.min(1,p.a*(1+lvl*.4))),p.x-sz,p.y-sz,sz*2,sz*2)}
@@ -1567,6 +1575,7 @@ function m3WaveTrack(track){
  let st=M3W.tracks.get(track);
  if(st&&st.root.isConnected)return st;
  track.querySelectorAll(".m3w,.m3-wave-svg").forEach(n=>n.remove());
+ track.classList.add("has-m3w");
  track.insertAdjacentHTML("afterbegin",`<div class="m3w" aria-hidden="true"><div class="m3w-played"><svg class="m3w-svg"><path class="m3w-path"/></svg></div><i class="m3w-rest"></i><i class="m3w-stop"></i><i class="m3w-thumbpos"><b class="m3w-thumb"></b></i></div>`);
  const root=track.querySelector(".m3w");
  const big=track.id==="fptrack";
@@ -2177,6 +2186,41 @@ function renderSwatches(){
    long before ensureStreamPort() would otherwise initialise these. Binding to
    127.0.0.1 alone is not access control — every request carries the token. */
 let STREAM_PORT=null,STREAM_KEY="";
+/* No neon (round 7). Every colour the app derives by itself — the cover
+   accent, the wave's particles, the cover glow — passes through OKLCH with
+   its chroma capped, so a green or magenta cover gives a calm tone of the
+   same hue instead of a highlighter. A colour picked by hand stays as picked
+   in the interface; only the particle field softens it. */
+function oklchOf([r,g,b]){
+ const lin=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+ const R=lin(r),G=lin(g),B=lin(b);
+ const l=Math.cbrt(.4122214708*R+.5363325363*G+.0514459929*B),
+       m=Math.cbrt(.2119034982*R+.6806995451*G+.1073969566*B),
+       s=Math.cbrt(.0883024619*R+.2817188376*G+.6299787005*B);
+ const L=.2104542553*l+.793617785*m-.0040720468*s,
+       A=1.9779984951*l-2.428592205*m+.4505937099*s,
+       Bb=.0259040371*l+.7827717662*m-.808675766*s;
+ return [L,Math.hypot(A,Bb),Math.atan2(Bb,A)]}
+function oklchLin(L,C,H){
+ const A=C*Math.cos(H),Bb=C*Math.sin(H);
+ const l=(L+.3963377774*A+.2158037573*Bb)**3,m=(L-.1055613458*A-.0638541728*Bb)**3,s=(L-.0894841775*A-1.291485548*Bb)**3;
+ return [4.0767416621*l-3.3077115913*m+.2309699292*s,-1.2684380046*l+2.6097574011*m-.3413193965*s,-.0041960863*l-.7034186147*m+1.707614701*s]}
+/* calmRgb(rgb, maxChroma, lightness | [min,max]) → [r,g,b]. Chroma is
+   reduced further until the colour fits sRGB, so the hue never skews. */
+function calmRgb(rgb,maxC=.1,L=null){
+ let [l,c,h]=oklchOf(rgb);
+ if(Array.isArray(L))l=Math.max(L[0],Math.min(L[1],l));else if(L!=null)l=L;
+ c=Math.min(c,maxC);
+ let lin=oklchLin(l,c,h);
+ for(let i=0;i<12&&lin.some(v=>v<-1e-4||v>1+1e-4);i++){c*=.82;lin=oklchLin(l,c,h)}
+ return lin.map(v=>{v=Math.max(0,Math.min(1,v));v=v<=.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-.055;return Math.round(v*255)})}
+/* Text on accent-filled controls: dark on a light accent, white on a deep
+   one. A fixed dark label left the light theme's cover accents (a mid green)
+   with grey-on-green buttons. */
+function setOnAccent(rgb,el){
+ const st=(el||document.documentElement).style;
+ if(!rgb){st.removeProperty("--on-acc");return}
+ st.setProperty("--on-acc",oklchOf(rgb)[0]<.68?"oklch(100% 0 0)":"oklch(14% 0.015 280)")}
 /* hex -> "r g b", the space-separated form the CSS variables expect. */
 function hexRgb(hex){
  const h=String(hex||"").replace("#","");
@@ -2199,6 +2243,7 @@ function applyCustomAccent(hex){
  st.setProperty("--accent-rgb",rgb);
  const [r,g,b]=rgb.split(" ");
  st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b);
+ setOnAccent([+r,+g,+b]);
  spriteCache={}}
 
 /* Full commit: apply + rebuild the swatch row. Safe to call at boot or from
@@ -4612,6 +4657,10 @@ function go(v){
   if(v==="settings"){openSettings();return}
   if(settingsIsOpen())closeSettings(true);
   S.view=v;
+  /* The screen name on <html> lets CSS place things per screen without
+     body:has(#v-home[data-active]) — a :has() over the whole document that
+     made every DOM change anywhere re-check hundreds of icons. */
+  document.documentElement.dataset.view=v;
   const extraTabs = ["people", "chats", "rooms", "top", "profile", "settings"];
   const rail = document.getElementById("rail");
   if(rail){
@@ -4620,7 +4669,14 @@ function go(v){
   }
   document.querySelectorAll(".navbtn").forEach(b=>b.setAttribute("aria-current",b.dataset.nav===v));
   paintRail();
+ /* Hidden views are skipped by the renderer (content-visibility). Chromium
+    keeps their scroll offset; WebKit may not, so it is noted on the way out
+    and put back on the way in if the engine dropped it. */
+ const was=document.querySelector('.view[data-active="true"]');
+ if(was)was.dataset.st=String(Math.round(was.scrollTop));
  document.querySelectorAll(".view").forEach(x=>x.dataset.active=(x.id==="v-"+v));
+ const now=document.getElementById("v-"+v);
+ if(now&&now!==was&&+now.dataset.st>0&&now.scrollTop===0)now.scrollTop=+now.dataset.st;
  cv.classList.toggle("dim",v!=="home");
  document.getElementById("fieldgl")?.classList.toggle("dim",v!=="home");
  if(v==="search")search(document.getElementById("q").value);
@@ -5746,8 +5802,11 @@ seg("theme",v=>setTheme(v));
 seg("lang",v=>{LANG=v;applyI18n()});
 function setTheme(v){S.theme=v;
  const d=matchMedia("(prefers-color-scheme: dark)").matches;
+ const was=document.documentElement.dataset.theme;
  document.documentElement.dataset.theme=v==="system"?(d?"dark":"light"):v;
- spriteCache={}}
+ spriteCache={};
+ /* A cover accent is tuned per theme (light needs a deeper tone). */
+ if(was&&was!==document.documentElement.dataset.theme&&S.accent==="adaptive"&&S.current?.art)adaptAccent(S.current)}
 function setAccent(id){
  stopAccentTween();
  S.accent=id;document.documentElement.dataset.accent=id;
@@ -5763,10 +5822,10 @@ function setAccent(id){
   renderSwatches();save();pushPrefs();
   return}
  if(id==="none"||!a||!a[2]){
-  ["--accent","--accent-soft","--accent-rgb","--pr","--pg","--pb"].forEach(p=>st.removeProperty(p))}
+  ["--accent","--accent-soft","--accent-rgb","--pr","--pg","--pb"].forEach(p=>st.removeProperty(p));setOnAccent(null)}
  else{const[r,g,b]=a[2].split(" ");
   st.setProperty("--accent",a[1]);st.setProperty("--accent-soft",`rgb(${a[2]} / .16)`);st.setProperty("--accent-rgb",a[2]);
-  st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b)}
+  st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b);setOnAccent([+r,+g,+b])}
  spriteCache={};renderSwatches();save();pushPrefs()}
 
 /* Lite mode: one switch that applies the whole weak-PC profile at once and
@@ -7324,7 +7383,8 @@ function adaptAccent(tr){
   document.documentElement.style.setProperty("--fp-tint",hit.raw.join(" "));
   if(hit.raw2)document.documentElement.style.setProperty("--fp-tint-2",hit.raw2.join(" "));
   coverTint(hit.raw,hit.raw2);
-  if(S.accent==="adaptive")applyAccentRgb(hit.ui);
+  /* The UI tone depends on the theme, so it is derived on use, not cached. */
+  if(S.accent==="adaptive")applyAccentRgb(liftForUi(hit.raw));
   return}
  const img=new Image();
  img.crossOrigin="anonymous";
@@ -7375,34 +7435,37 @@ function adaptAccent(tr){
 /* Pushes a colour towards a lightness that works as an accent on either theme,
    keeping its hue. A muted album cover otherwise produces an accent too dim to
    read against the panel background. */
-function liftForUi([r,g,b]){
+function liftForUi(rgb){
+ /* One lightness for every cover (readable on its theme) and a chroma cap:
+    the old lift only scaled brightness, so a saturated cover produced a
+    neon accent — the green "Start the wave" button. */
  const light=document.documentElement.dataset.theme==="light";
- const mx=Math.max(r,g,b)/255;
- const want=light?.72:.82;
- if(mx<.05)return [r,g,b];
- let k=want/mx;
- /* Never darken a bright colour by much, and never over-brighten past white. */
- k=Math.max(light?.55:1,Math.min(k,2.6));
- const out=[r,g,b].map(v=>Math.round(Math.max(0,Math.min(255,v*k))));
- /* Guarantee some saturation survives the lift, or the accent turns grey. */
- const omx=Math.max(...out),omn=Math.min(...out);
- if(omx-omn<28){
-  const i=out.indexOf(omx);
-  out[i]=Math.min(255,out[i]+28)}
- return out}
+ return calmRgb(rgb,light?.11:.1,light?.56:.79)}
 
 /* Round 5: a new cover no longer cuts the accent over in one frame. The
    colour is tweened (ease-in-out, 0.7 s by default — "Смена цвета" in Вид)
    from whatever is on screen now; the particle sprites are re-tinted a few
    times during the tween instead of on every frame, and once at the end. */
-let ACC_NOW=null,ACC_RAF=0;
+let ACC_NOW=null,ACC_RAF=0,ACC_TW=[];
 function colorFadeMs(){const v=+(S.x?.cfade??1);return v<=0?0:v>=2?1600:700}
-function setAccentVars([r,g,b]){
- const st=document.documentElement.style;
+function setAccentVars([r,g,b],el){
+ const st=(el||document.documentElement).style;
  st.setProperty("--accent",`rgb(${r} ${g} ${b})`);
  st.setProperty("--accent-soft",`rgb(${r} ${g} ${b} / .16)`);
  st.setProperty("--accent-rgb",`${r} ${g} ${b}`);
- st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b)}
+ st.setProperty("--pr",r);st.setProperty("--pg",g);st.setProperty("--pb",b);
+ setOnAccent([r,g,b],el)}
+/* Round 8, "FPS drops on a track change": the fade no longer runs on the root.
+   Every write to <html> restyles the whole document — with a long library on
+   screen that was ~9 000 elements, a dozen times per change. Now the page
+   takes the new colour once, and only the places where the accent is large
+   (rail, player bar, hero, full-screen player, mini player) fade into it,
+   each restyling just its own subtree per step. */
+const ACC_TW_SEL="#rail,footer.bar,#hero,#fp,#mini";
+const ACC_TW_VARS=["--accent","--accent-soft","--accent-rgb","--pr","--pg","--pb","--on-acc"];
+function accTweenEnd(){
+ for(const el of ACC_TW){ACC_TW_VARS.forEach(p=>el.style.removeProperty(p));delete el.dataset.acctw}
+ ACC_TW=[]}
 function applyAccentRgb(rgb){
  const de=document.documentElement;
  de.dataset.accent="adaptive";
@@ -7414,21 +7477,30 @@ function applyAccentRgb(rgb){
   from=cur.length===3&&cur.every(Number.isFinite)?cur:null}
  const still=matchMedia("(prefers-reduced-motion: reduce)").matches||document.hidden;
  if(!from||ms<=0||still||from.every((v,i)=>Math.abs(v-rgb[i])<3)){
-  setAccentVars(rgb);ACC_NOW=rgb.slice();spriteCache={};return}
- const t0=performance.now();let lastSprite=t0;
+  accTweenEnd();setAccentVars(rgb);ACC_NOW=rgb.slice();spriteCache={};return}
+ const t0=performance.now();let lastSprite=t0,lastStep=0;
+ accTweenEnd();
+ setAccentVars(rgb);
+ ACC_TW=[...document.querySelectorAll(ACC_TW_SEL)];
+ for(const el of ACC_TW){el.dataset.acctw="";setAccentVars(from,el)}
+ ACC_NOW=from.slice();
  const step=now=>{
   const k=Math.min(1,(now-t0)/ms),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+  /* ~30 steps a second: each one restyles only the small faded subtrees. */
+  if(k<1&&now-lastStep<33){ACC_RAF=requestAnimationFrame(step);return}
+  lastStep=now;
   const cur=from.map((v,i)=>Math.round(v+(rgb[i]-v)*e));
-  setAccentVars(cur);ACC_NOW=cur;
+  if(k<1){for(const el of ACC_TW)setAccentVars(cur,el)}
+  ACC_NOW=cur;
   /* The 2D field caches pre-tinted sprites; re-tint ~5×/s, not 60×. */
   if(now-lastSprite>200){spriteCache={};lastSprite=now}
-  if(k<1)ACC_RAF=requestAnimationFrame(step);else{ACC_RAF=0;spriteCache={}}};
+  if(k<1)ACC_RAF=requestAnimationFrame(step);else{ACC_RAF=0;accTweenEnd();spriteCache={}}};
  ACC_RAF=requestAnimationFrame(step)}
-function stopAccentTween(){cancelAnimationFrame(ACC_RAF);ACC_RAF=0;ACC_NOW=null}
+function stopAccentTween(){cancelAnimationFrame(ACC_RAF);ACC_RAF=0;ACC_NOW=null;accTweenEnd()}
 
 /* "Фон по обложке": two glows behind the whole interface take the cover's
-   colours. They are registered CSS colours (@property --cv-a/--cv-b in
-   app.css), so the browser itself cross-fades them — no script per frame.
+   colours. They sit on two stacked layers that cross-fade by opacity
+   (coverTint), so the compositor does the fade — no restyle per frame.
    The sampled pixel is normalised to a mid lightness first: a near-black
    cover would otherwise tint nothing and a neon one would shout. Greys stay
    neutral instead of turning into an arbitrary hue. */
@@ -7438,10 +7510,7 @@ function bgTone([r,g,b]){
  if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
   h=(mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4)/6}
  if(s<.12)return [150,148,168];
- const L=.48,Sa=Math.min(.62,Math.max(.32,s));
- const q=L<.5?L*(1+Sa):L+Sa-L*Sa,p=2*L-q;
- const f=t=>{t=(t%1+1)%1;return t<1/6?p+(q-p)*6*t:t<.5?q:t<2/3?p+(q-p)*(2/3-t)*6:p};
- return [f(h+1/3),f(h),f(h-1/3)].map(v=>Math.round(v*255))}
+ return calmRgb([r*255,g*255,b*255],.085,.52)}
 let CV_LAST=null;
 /* Round 6: "make the background glow softer, not so bright" — a lower
    default strength and a calmer tone (bgTone caps the saturation). */
@@ -7452,12 +7521,26 @@ function coverBgPrefs(){
  const k=Math.max(0,Math.min(100,+(S.x?.cbgK??CBG_K)))/100;
  de.style.setProperty("--cv-k",String(on?k:0));
  de.style.setProperty("--cv-fade",Math.round(colorFadeMs()*1.6)+"ms")}
+/* Two stacked glow layers (.cvbg i): the new colours go on the hidden one,
+   which then fades in over the other — an opacity transition the compositor
+   runs alone. */
+let CV_FRONT=0,CV_KEY="";
+function cvLayers(){
+ let box=document.getElementById("cvbg");
+ if(!box){box=document.createElement("div");box.id="cvbg";box.className="cvbg";box.setAttribute("aria-hidden","true");
+  box.innerHTML="<i></i><i></i>";document.body.prepend(box)}
+ return box.children}
 function coverTint(a,b){
  CV_LAST=a?[a,b||a]:null;
  const st=document.documentElement.style;
- if(!a){st.setProperty("--cv-a","rgb(0 0 0 / 0)");st.setProperty("--cv-b","rgb(0 0 0 / 0)");return}
- st.setProperty("--cv-a",`rgb(${bgTone(a).join(" ")})`);
- st.setProperty("--cv-b",`rgb(${bgTone(b||a).join(" ")})`)}
+ const ca=a?`rgb(${bgTone(a).join(" ")})`:"rgb(0 0 0 / 0)",cb=a?`rgb(${bgTone(b||a).join(" ")})`:"rgb(0 0 0 / 0)";
+ const key=ca+cb;if(key===CV_KEY)return;CV_KEY=key;
+ /* The glass tint is a few percent of these: switched in one step. */
+ st.setProperty("--cv-a",ca);st.setProperty("--cv-b",cb);
+ const L=cvLayers();if(L.length<2)return;
+ const next=L[CV_FRONT^1],cur=L[CV_FRONT];
+ next.style.setProperty("--c1",ca);next.style.setProperty("--c2",cb);
+ next.dataset.on="true";cur.dataset.on="false";CV_FRONT^=1}
 function coverBgUI(){
  const sw=document.getElementById("cbg"),box=document.getElementById("cbg-box");
  const on=S.x?.cbg!==false,k=Math.round(+(S.x?.cbgK??CBG_K));
@@ -8283,7 +8366,7 @@ function renderProfile(savedVals={}){
    const ava=S.avatar||sbProfile?.avatar_url||"./icons/app/classic.png";
    const ban=S.banner||sbProfile?.banner_url||"";
    box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
-     <label class="banner" title="${t("pr.ban.hint")}" style="${!ban?'background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))':''}">
+     <label class="banner${ban?"":" noimg"}" title="${t("pr.ban.hint")}" style="${!ban?'background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))':''}">
       ${ban?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
       <span class="cam"><span class="material-symbols-rounded" style="font-size:16px">photo_camera</span> <span>${t("pr.ban.cta")}</span></span>
       <input type="file" id="prof-ban-input" accept="image/*">
@@ -8438,7 +8521,7 @@ function renderProfile(savedVals={}){
  const ava=p.avatar_url||S.avatar||"";
  const ban=p.banner_url||S.banner||"";
  box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
-   <label class="banner" title="${t("pr.ban.hint")}">
+   <label class="banner${ban?"":" noimg"}" title="${t("pr.ban.hint")}">
     ${ban?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
     <span class="cam"><span class="material-symbols-rounded" style="font-size:16px">photo_camera</span> <span>${t("pr.ban.cta")}</span></span>
     <input type="file" id="prof-ban-input" accept="image/*">
@@ -8993,7 +9076,7 @@ async function renderPeopleProfile(id){
   const profTr=mine?S.profileTrack:(p.prefs?.profile_track||p.profile_track||(p.listening?{t:p.listening.t,a:p.listening.a,art:p.listening.art}:null));
 
   box.innerHTML=`<div class="panel pane public-profile" style="padding:0;overflow:hidden">
-    <div class="banner">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
+    <div class="banner${view.banner_url?"":" noimg"}">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
     <div style="padding:var(--sp-6)">
       <div class="profhead">
         <span class="avatar-holder"><span class="avatar${view.avatar_url?" has-img":""}">${avat(view, 104)}</span>${(()=>{const st=presStatus(p.id)||(friend?"offline":null);if(!st)return "";const c=st==="listening"?"listening":st==="online"?"online":"offline";return `<span class="status-indicator ${c}"></span>`})()}</span>
@@ -10480,9 +10563,21 @@ function initSearchReveal(){
  let lastTime=performance.now();
  let rafId=0;
 
+ /* Both spans are made once; a frame only moves the wipe's clip-path, and
+    the text changes only with the phrase. This used to rebuild the spans with
+    innerHTML on every frame — sixty DOM insertions a second for as long as the
+    app was open, each one sending the style engine over the whole page. */
+ flow.innerHTML='<span class="search-fill-base"></span><span class="search-fill-wipe" style="width:100%"></span>';
+ const fBase=flow.firstElementChild, fWipe=flow.lastElementChild;
+ let shownPhrase=null, shownPct=-1, vis=null;
  function setFlowContent(phrase, pct){
-  flow.innerHTML=`<span class="search-fill-base">${esc(phrase)}</span>`+
-   `<span class="search-fill-wipe" style="clip-path:inset(0 ${(100-pct).toFixed(2)}% 0 0);width:100%">${esc(phrase)}</span>`;
+  if(phrase!==shownPhrase){shownPhrase=phrase;fBase.textContent=phrase;fWipe.textContent=phrase}
+  const p=Math.round(pct*4)/4;
+  if(p!==shownPct){shownPct=p;fWipe.style.clipPath=`inset(0 ${(100-p).toFixed(2)}% 0 0)`}
+ }
+ function setVis(on){
+  if(vis===on)return;
+  vis=on;flow.style.opacity=on?"1":"0";flow.style.visibility=on?"visible":"hidden";
  }
 
  function stopFlowAnimation(){
@@ -10491,8 +10586,7 @@ function initSearchReveal(){
    rafId=0;
   }
   setFlowContent(phrasesNow()[0], 100);
-  flow.style.opacity="1";
-  flow.style.visibility="visible";
+  vis=null;setVis(!(document.activeElement===q||q.value.length>0));
  }
 
  function startFlowAnimation(){
@@ -10510,13 +10604,11 @@ function initSearchReveal(){
   lastTime=now;
 
   if(document.activeElement===q || q.value.length>0){
-   flow.style.opacity="0";
-   flow.style.visibility="hidden";
+   setVis(false);
    rafId=requestAnimationFrame(frame);
    return;
   }
-  flow.style.opacity="1";
-  flow.style.visibility="visible";
+  setVis(true);
 
   const phrases=phrasesNow();const phrase=phrases[phraseIdx%phrases.length];
 
@@ -10545,23 +10637,15 @@ function initSearchReveal(){
     progress=0;
     state="filling";
     setFlowContent(phrasesNow()[phraseIdx%phrasesNow().length], 0);
-    flow.style.opacity="1";
+    flow.style.opacity=vis===false?"0":"1";
    }
   }
 
   rafId=requestAnimationFrame(frame);
  }
 
- q.addEventListener("focus",()=>{
-  flow.style.opacity="0";
-  flow.style.visibility="hidden";
- });
- q.addEventListener("blur",()=>{
-  if(!q.value){
-   flow.style.opacity="1";
-   flow.style.visibility="visible";
-  }
- });
+ q.addEventListener("focus",()=>setVis(false));
+ q.addEventListener("blur",()=>{if(!q.value)setVis(true)});
  q.addEventListener("input",()=>{
   if(clearBtn)clearBtn.classList.toggle("visible",q.value.length>0);
  });
@@ -10692,7 +10776,8 @@ function paintDiscordPreview(){
  const l2el=prev.querySelector(".dc-prev-l2");l2el.textContent=l2;l2el.hidden=!l2;
  const img=prev.querySelector(".dc-prev-art");
  img.hidden=!S.discord.art;
- img.style.backgroundImage=cur.art&&/^https:/.test(cur.art)?`url("${String(cur.art).replace(/"/g,"%22")}")`:"";
+ const artUrl=cur.art&&/^https:/.test(cur.art)?`url("${String(cur.art).replace(/"/g,"%22")}")`:"";
+ img.style.backgroundImage=artUrl;img.classList.toggle("has-art",!!artUrl);
  prev.querySelector(".dc-prev-time").hidden=!S.discord.time;
  prev.querySelector(".dc-prev-btn").hidden=!S.discord.btn;
  const list=document.getElementById("dc-prev-list");
@@ -11018,7 +11103,7 @@ async function renderSpotify(){
   return;
  }
  body.innerHTML=`<p class="ph" style="margin:0 0 10px">${t("sp.desc")}</p>
-  <div class="field" style="margin:10px 0;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;gap:8px">
+  <div class="field fcol" style="margin:10px 0;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;gap:8px">
    <div>
     <label style="font-size:.85rem;font-weight:600">Spotify Client ID</label>
     <small style="display:block;color:var(--mute);font-size:.72rem">${LANG==="ru"?"Получите в developer.spotify.com/dashboard (Redirect URI: http://localhost:8080/callback)":"Get from developer.spotify.com/dashboard (Redirect URI: http://localhost:8080/callback)"}</small>
