@@ -29,11 +29,13 @@ Obsidian-хранилище с памяткой о проекте: как уст
 - [[Features/Services dropdown|Список сервисов]]
 - [[Features/Spotify without Premium|Spotify без Premium]]
 - [[Features/People and profiles|Люди и профили]]
+- [[Features/Chats and encryption|Чаты и сквозное шифрование]]
 - [[Features/Discord RPC]]
 - [[Features/Streaming|Стриминг]]
 - [[Features/Import|Импорт плейлистов]]
 - [[Features/Accounts|Аккаунты площадок]]
 - [[Features/Design|Дизайн и диалоги]]
+- [[Features/Interface designer|Конструктор интерфейса]]
 - [[Features/App icon|Иконка приложения]]
 - [[Features/Keyboard shortcuts|Горячие клавиши]]
 

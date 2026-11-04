@@ -14,7 +14,7 @@
 - **Unified Multi-Service Library**: SoundCloud, Yandex Music, Spotify playlist import, YouTube Music, and local disk files (FLAC, MP3, WAV, AAC, OGG) behind a single queue and search bar.
 - **🎨 Material You & Material Expressive**:
   - Dynamic palette adapting in real-time to the current track's album art.
-  - 11 built-in expressive color themes (Adaptive, Monochrome, Material Purple, Electric Indigo, Ocean Sky, Cyber Cyan, Nordic Teal, Neon Emerald, Solar Amber, Sunset Coral, Vibrant Rose, Custom HEX).
+  - Calm accents: monochrome, ten soft pastel tones, the colour of the album art (kept muted in OKLCH, never neon) or your own HEX.
   - Concentric corner radii, ambient particle canvas, and fluid spring motion tokens.
 - **🪟 Windows 11 Taskbar Thumbnail Controls**:
   - Hover over the taskbar icon to play/pause, skip, and go back right from the Windows thumbnail toolbar (native Win32 `ITaskbarList3`), just like Spotify.
@@ -31,8 +31,13 @@
 - **🚀 Ultra-Lightweight & Private**:
   - Powered by Rust & Tauri 2: uses less than 15 MB of RAM in background (10× less than Electron).
   - Zero telemetry or third-party ads. Tokens are saved securely in the native OS Keychain (Windows Credential Manager).
+- **🎛️ Interface designer** (Settings → Appearance):
+  - Colour, shape and visibility of every part of the interface — 13 sections, 56 controls, separate colours for the dark and light theme.
+  - Presets (Standard, Compact, Soft, Sharp, Solid, OLED, Paper), per-item reset, theme export/import as JSON, synced with your account.
 - **👥 Social & Rooms**:
-  - Listening rooms with live playback synchronization, direct/group chat, custom badges and user profiles.
+  - Listening rooms with live playback synchronization and room chat.
+  - Telegram-style direct messages with end-to-end encryption (per-device P-256 keys, AES-GCM): replies with quotes, edits, deletes, read receipts, photos, track cards and room invites.
+  - User profiles with up to three worn badges and a profile song.
 
 ---
 

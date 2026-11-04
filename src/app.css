@@ -4785,9 +4785,11 @@ html[data-wall] .haze{display:none}
   --m3-inv-on:oklch(23% 0.01 280);
   --m3-inv-primary:color-mix(in oklch,var(--accent) 52%,black);
   --m3-inv-err:oklch(52% 0.19 25);
-  --m3-err:oklch(72% 0.16 22);
-  --m3-ok:oklch(78% 0.15 150);
-  --m3-warn:oklch(80% 0.14 80);
+  /* Status tones for the diagnostics lists: muted (sage, sand, clay) rather
+     than signal-bright, so a column of "Works" pills does not glow. */
+  --m3-err:oklch(74% 0.12 22);
+  --m3-ok:oklch(82% 0.085 158);
+  --m3-warn:oklch(84% 0.09 82);
   --m3-scrim:rgb(0 0 0/.42);
 }
 html[data-theme="light"]{
@@ -4800,9 +4802,9 @@ html[data-theme="light"]{
   --m3-inv-on:oklch(95% 0.004 280);
   --m3-inv-primary:color-mix(in oklch,var(--accent) 36%,white);
   --m3-inv-err:oklch(78% 0.13 22);
-  --m3-err:oklch(52% 0.2 25);
-  --m3-ok:oklch(52% 0.14 150);
-  --m3-warn:oklch(58% 0.14 70);
+  --m3-err:oklch(52% 0.17 25);
+  --m3-ok:oklch(48% 0.09 155);
+  --m3-warn:oklch(55% 0.1 70);
   --m3-scrim:rgb(10 10 20/.32);
 }
 
