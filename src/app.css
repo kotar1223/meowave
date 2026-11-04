@@ -3960,7 +3960,29 @@ html[data-wall] body{background:#000}
 .dc-prev-txt small{font-size:.7rem;font-weight:600;color:#b5bac1}
 .dc-prev-txt b{font-size:.86rem;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dc-prev-txt span{font-size:.78rem;color:#b5bac1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dc-prev-bar{display:block;height:4px;border-radius:4px;margin-top:6px;background:linear-gradient(90deg,#f2f3f5 38%,#4e5058 38%)}
+.dc-prev-bar{display:block;height:4px;border-radius:4px;background:linear-gradient(90deg,#f2f3f5 38%,#4e5058 38%)}
+.dc-prev{align-items:flex-start}
+.dc-prev-art[hidden]{display:none}
+.dc-prev-h{display:flex;gap:4px;align-items:baseline}
+.dc-prev-h b{font-size:.7rem;color:#f2f3f5}
+.dc-prev-time{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-top:6px}
+.dc-prev-time .dc-prev-bar{grid-column:2;grid-row:1}
+.dc-prev-time em{font-style:normal;font-size:.66rem;color:#b5bac1;font-variant-numeric:tabular-nums}
+.dc-prev-t0{grid-column:1;grid-row:1}.dc-prev-t1{grid-column:3;grid-row:1}
+.dc-prev-time[hidden],.dc-prev-btn[hidden],.dc-prev-l2[hidden]{display:none}
+.dc-prev-btn{display:block;margin-top:8px;padding:6px 10px;border-radius:6px;background:#4e5058;color:#f2f3f5;font-size:.76rem;font-weight:600;text-align:center}
+.dc-prev-list{color:var(--mute);font-size:.74rem}
+.dc-prev-list b{color:var(--text);font-weight:600}
+.dcp-opts{display:grid;margin-top:6px;transition:opacity .2s ease}
+.dcp-opts.off{opacity:.55}
+.dcp-opts .field{flex-wrap:wrap;gap:10px}
+.dcp-tmpl{flex-direction:column;align-items:stretch!important}
+.dcp-tmpl input{width:100%;max-width:420px}
+.dcp-adv{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.dcp-adv summary{cursor:pointer;color:var(--mute);font-size:.82rem;list-style:none;display:flex;align-items:center;gap:6px}
+.dcp-adv summary::-webkit-details-marker{display:none}
+.dcp-adv summary::before{content:"chevron_right";font-family:"Material Symbols Rounded";font-size:18px;transition:transform .2s ease}
+.dcp-adv[open] summary::before{transform:rotate(90deg)}
 .field[style*="flex-direction:column"]{gap:10px}
 .field[style*="flex-direction:column"]>div:first-child{flex:0 0 auto}
 

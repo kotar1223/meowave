@@ -110,7 +110,8 @@ impl Ipc {
         Ok((opcode, v))
     }
 
-    fn handshake(&mut self, client_id: &str) -> Result<(), String> {
+    /// Returns the Discord account the client is signed in to, from READY.
+    fn handshake(&mut self, client_id: &str) -> Result<String, String> {
         self.write_frame(
             OPCODE_HANDSHAKE,
             &json!({
@@ -118,11 +119,21 @@ impl Ipc {
                 "client_id": client_id,
             }),
         )?;
+        #[cfg(unix)]
+        let _ = self.stream.set_read_timeout(Some(std::time::Duration::from_secs(3)));
         let (op, v) = self.read_frame()?;
         if op == OPCODE_CLOSE {
-            return Err(format!("handshake refused: {v}"));
+            // 4000 "Invalid Client ID" is the one users can act on.
+            let code = v.get("code").and_then(|c| c.as_i64()).unwrap_or(0);
+            return Err(if code == 4000 { "bad_id".into() } else { format!("Discord: {}", v.get("message").and_then(|m| m.as_str()).unwrap_or("handshake refused")) });
         }
-        Ok(())
+        let user = v.pointer("/data/user");
+        let name = user
+            .and_then(|u| u.get("global_name").and_then(|n| n.as_str()).filter(|n| !n.is_empty()))
+            .or_else(|| user.and_then(|u| u.get("username").and_then(|n| n.as_str())))
+            .unwrap_or("")
+            .to_string();
+        Ok(name)
     }
 }
 
@@ -137,8 +148,11 @@ struct State {
     client_id: String,
     pending: Option<(serde_json::Value, String)>,
     debounce_active: bool,
-    /// Last error reported by Discord or the socket, for the settings panel.
+    /// Last error reported by Discord or the socket, for the settings panel:
+    /// a short code ("no_id", "not_running", "bad_id") or Discord's own text.
     last_error: String,
+    /// Display name of the Discord account, from the handshake.
+    user: String,
 }
 
 impl State {
@@ -155,17 +169,24 @@ impl State {
             pending: None,
             debounce_active: false,
             last_error: String::new(),
+            user: String::new(),
         }
     }
 }
 
 static STATE: Mutex<Option<State>> = Mutex::new(None);
 
-/// Application id from the Discord Developer Portal. Order: the id typed in
-/// Settings, then DISCORD_CLIENT_ID from the environment at runtime, then the
-/// same variable baked in at build time (`DISCORD_CLIENT_ID=... npm run build`).
-/// A presence belongs to *a* registered app; its name is what Discord shows as
-/// "Listening to <name>".
+/// Meowave's own application in the Discord Developer Portal. Discord's IPC
+/// handshake cannot be made without *some* application id — the presence
+/// belongs to it and its name is what Discord shows as "Listening to …" — but
+/// the id is public (anyone can read it off a presence), so it ships with the
+/// app and users never see it. Release builds can also bake one in with
+/// `DISCORD_CLIENT_ID` (repository secret, see release.yml).
+const MEOWAVE_APP_ID: &str = "";
+
+/// Order: a developer override from Settings → Discord → Advanced, then
+/// DISCORD_CLIENT_ID at runtime, then the same variable at build time, then
+/// the built-in id above.
 fn client_id(st: &State) -> Option<String> {
     let valid = |s: &str| s.len() >= 15 && s.len() <= 22 && s.chars().all(|c| c.is_ascii_digit());
     let from_state = st.client_id.trim().to_string();
@@ -181,6 +202,7 @@ fn client_id(st: &State) -> Option<String> {
     option_env!("DISCORD_CLIENT_ID")
         .map(|s| s.trim().to_string())
         .filter(|s| valid(s))
+        .or_else(|| Some(MEOWAVE_APP_ID.to_string()).filter(|s| valid(s)))
 }
 
 /// Mints the nonce Discord echoes back. Not security, just frame matching.
@@ -279,26 +301,37 @@ fn presence_payload(d: &serde_json::Value, rendered: &str) -> serde_json::Value 
         timestamps.insert("end".into(), json!(e * 1000));
     }
 
+    // What the user chose to share (Settings → Discord). Absent = everything.
+    let opt = |k: &str| d.pointer(&format!("/opts/{k}")).and_then(|v| v.as_bool()).unwrap_or(true);
+
     let mut activity = serde_json::Map::new();
     // 2 = "Listening to …" — the music-player look (progress bar on profile).
     activity.insert("type".into(), json!(2));
+    // Which line the member list shows after "Listening to": 0 = the app
+    // name, 1 = state (artist), 2 = details (the track). Default: the track.
+    let display = d.pointer("/opts/display").and_then(|v| v.as_u64()).filter(|v| *v <= 2).unwrap_or(2);
+    activity.insert("status_display_type".into(), json!(display));
     let title = d.get("title").and_then(|v| v.as_str()).unwrap_or("");
     let details = fit(rendered).or_else(|| fit(title)).unwrap_or_else(|| "Meowave".into());
     activity.insert("details".into(), json!(details));
-    if let Some(state) = d
-        .get("artist")
-        .and_then(|v| v.as_str())
-        .and_then(fit)
-        .filter(|a| a != &details)
-        .or_else(|| d.get("status").and_then(|v| v.as_str()).and_then(fit))
-    {
+    // Second line: an explicit `state` from the settings wins (empty = none),
+    // otherwise the artist.
+    let state = match d.get("state") {
+        Some(serde_json::Value::String(s)) => fit(s),
+        _ => d
+            .get("artist")
+            .and_then(|v| v.as_str())
+            .and_then(fit)
+            .or_else(|| d.get("status").and_then(|v| v.as_str()).and_then(fit)),
+    };
+    if let Some(state) = state.filter(|a| a != &details) {
         activity.insert("state".into(), json!(state));
     }
-    if !timestamps.is_empty() {
+    if !timestamps.is_empty() && opt("time") {
         activity.insert("timestamps".into(), serde_json::Value::Object(timestamps));
     }
     let mut assets = serde_json::Map::new();
-    if let Some(img) = image_url(d.get("art")) {
+    if let Some(img) = image_url(d.get("art")).filter(|_| opt("art")) {
         assets.insert("large_image".into(), json!(img));
         if let Some(t) = d
             .get("album")
@@ -309,7 +342,7 @@ fn presence_payload(d: &serde_json::Value, rendered: &str) -> serde_json::Value 
             assets.insert("large_text".into(), json!(t));
         }
     }
-    if let Some(img) = image_url(d.get("service_icon")) {
+    if let Some(img) = image_url(d.get("service_icon")).filter(|_| opt("service")) {
         assets.insert("small_image".into(), json!(img));
         if let Some(t) = d.get("service").and_then(|v| v.as_str()).and_then(fit) {
             assets.insert("small_text".into(), json!(t));
@@ -318,7 +351,7 @@ fn presence_payload(d: &serde_json::Value, rendered: &str) -> serde_json::Value 
     if !assets.is_empty() {
         activity.insert("assets".into(), serde_json::Value::Object(assets));
     }
-    if let Some(url) = image_url(d.get("url")) {
+    if let Some(url) = image_url(d.get("url")).filter(|_| opt("button")) {
         activity.insert(
             "buttons".into(),
             json!([{ "label": d.get("url_label").and_then(|v| v.as_str()).and_then(fit).unwrap_or_else(|| "Open".into()), "url": url }]),
@@ -344,7 +377,7 @@ fn read_reply(conn: &mut Ipc) -> Result<(), String> {
         .set_read_timeout(Some(std::time::Duration::from_secs(3)));
     let (op, v) = conn.read_frame()?;
     if op == OPCODE_CLOSE {
-        return Err(format!("Discord закрыл соединение: {v}"));
+        return Err(format!("closed: {}", v.get("message").and_then(|m| m.as_str()).unwrap_or("")));
     }
     if v.get("evt").and_then(|e| e.as_str()) == Some("ERROR") {
         let msg = v
@@ -363,7 +396,7 @@ fn send_now(state: &mut State, payload: &serde_json::Value, raw: &str) -> Result
 }
 
 fn send_inner(state: &mut State, payload: &serde_json::Value, raw: &str) -> Result<(), String> {
-    let cid = client_id(state).ok_or("Не задан Application ID Discord (Настройки → Discord)")?;
+    let cid = client_id(state).ok_or("no_id")?;
     let fresh = state.conn.is_none();
     // Reconnect lazily; drop a dead socket so the next try reconnects.
     if fresh {
@@ -371,13 +404,16 @@ fn send_inner(state: &mut State, payload: &serde_json::Value, raw: &str) -> Resu
     }
     let conn = match state.conn.as_mut() {
         Some(c) => c,
-        None => return Err("Discord не запущен — обновление пропущено".into()),
+        None => return Err("not_running".into()),
     };
     if fresh {
-        if let Err(e) = conn.handshake(&cid) {
-            state.conn = None;
-            state.last_payload.clear();
-            return Err(e);
+        match conn.handshake(&cid) {
+            Ok(user) => state.user = user,
+            Err(e) => {
+                state.conn = None;
+                state.last_payload.clear();
+                return Err(e);
+            }
         }
     }
     if let Err(e) = conn.write_frame(OPCODE_FRAME, payload).and_then(|_| read_reply(conn)) {
@@ -565,15 +601,16 @@ pub async fn discord_status() -> Result<serde_json::Value, String> {
     off_main(|| {
         let running = Ipc::connect().is_some();
         let guard = STATE.lock().map_err(|e| e.to_string())?;
-        let (has_id, connected, err) = match guard.as_ref() {
-            Some(st) => (client_id(st).is_some(), st.conn.is_some(), st.last_error.clone()),
-            None => (
-                client_id(&State::new()).is_some(),
-                false,
-                String::new(),
-            ),
-        };
-        Ok(json!({ "running": running, "hasId": has_id, "connected": connected, "error": err }))
+        let fresh = State::new();
+        let st = guard.as_ref().unwrap_or(&fresh);
+        Ok(json!({
+            "running": running,
+            "hasId": client_id(st).is_some(),
+            "custom": !st.client_id.trim().is_empty(),
+            "connected": st.conn.is_some(),
+            "user": st.user,
+            "error": st.last_error,
+        }))
     })
     .await?
 }
@@ -614,6 +651,29 @@ mod tests {
         let payload = presence_payload(&d, "Song");
         let start = payload.pointer("/args/activity/timestamps/start").and_then(|v| v.as_i64());
         assert_eq!(start, Some(1740000000000i64));
+    }
+
+    #[test]
+    fn options_hide_what_the_user_turned_off() {
+        let d = json!({
+            "start": 1740000000i64, "end": 1740000200i64,
+            "title": "Song", "artist": "Artist", "state": "",
+            "art": "https://lh3.googleusercontent.com/cover", "url": "https://music.youtube.com/watch?v=abc",
+            "opts": {"art": false, "time": false, "button": false, "display": 1}
+        });
+        let p = presence_payload(&d, "Song");
+        let a = p.pointer("/args/activity").unwrap();
+        assert!(a.get("assets").is_none());
+        assert!(a.get("timestamps").is_none());
+        assert!(a.get("buttons").is_none());
+        assert!(a.get("state").is_none(), "empty state = no second line");
+        assert_eq!(a.get("status_display_type").and_then(|v| v.as_u64()), Some(1));
+
+        let p = presence_payload(&json!({"title": "Song", "artist": "Artist", "art": "https://x.y/c.jpg"}), "Song");
+        let a = p.pointer("/args/activity").unwrap();
+        assert_eq!(a.get("state").and_then(|v| v.as_str()), Some("Artist"));
+        assert_eq!(a.get("status_display_type").and_then(|v| v.as_u64()), Some(2));
+        assert!(a.pointer("/assets/large_image").is_some());
     }
 
     #[test]

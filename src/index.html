@@ -644,30 +644,84 @@
             <div class="m3-list ytc-out" id="ytc-out" role="list"></div>
           </div>
           <div class="panel pane dc-panel">
-            <h3 data-i18n="dc.t">Discord Rich Presence</h3>
-            <p class="ph" data-i18n="dc.s">Показывает в профиле Discord, что сейчас играет: обложку, название и время. Нужен запущенный Discord (приложение, не браузер).</p>
+            <h3 data-i18n="dc.t">Discord</h3>
+            <p class="ph" data-i18n="dc.s">Друзья в Discord увидят, что вы слушаете: трек, исполнителя, обложку и время. Нужно только запущенное приложение Discord на этом компьютере.</p>
             <div class="field">
-              <div><label data-i18n="dc.on">Показывать в Discord</label><small class="dc-status"><i id="dc-dot" data-s="off"></i><span id="dc-state">—</span></small></div>
+              <div><label data-i18n="dc.on">Показывать в Discord, что я слушаю</label><small class="dc-status"><i id="dc-dot" data-s="off"></i><span id="dc-state">—</span></small></div>
               <button class="sw" id="dc-on" aria-pressed="false" aria-label="discord"></button>
-            </div>
-            <div class="field" style="align-items:flex-start;flex-direction:column">
-              <div><label for="dc-client" data-i18n="dc.cid">Application ID</label><small data-i18n="dc.cid.s">Создайте приложение на discord.com/developers/applications — его название Discord покажет как «Слушает …». Скопируйте Application ID сюда.</small></div>
-              <input id="dc-client" inputmode="numeric" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="1234567890123456789">
-            </div>
-            <div class="field" style="align-items:flex-start;flex-direction:column">
-              <div><label for="dc-template" data-i18n="dc.tmpl">Шаблон статуса</label><small data-i18n="dc.tmpl.s">Первая строка статуса. Подстановки: {title} {artist} {album} {service} {status}. Вторая строка — исполнитель.</small></div>
-              <input id="dc-template" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="{title}">
             </div>
             <div class="dc-prev-wrap">
               <small data-i18n="dc.prev">Так это увидят друзья</small>
               <div class="dc-prev" id="dc-prev">
                 <div class="dc-prev-art"><span class="material-symbols-rounded">music_note</span></div>
-                <div class="dc-prev-txt"><small data-i18n="dc.listen">Слушает</small><b class="dc-prev-l1">—</b><span class="dc-prev-l2">—</span><i class="dc-prev-bar"></i></div>
+                <div class="dc-prev-txt">
+                  <small class="dc-prev-h"><span data-i18n="dc.listen">Слушает</span> <b class="dc-prev-app">Meowave</b></small>
+                  <b class="dc-prev-l1">—</b><span class="dc-prev-l2">—</span>
+                  <span class="dc-prev-time"><i class="dc-prev-bar"></i><em class="dc-prev-t0">1:24</em><em class="dc-prev-t1">3:41</em></span>
+                  <span class="dc-prev-btn" data-i18n="dc.btn">Слушать</span>
+                </div>
+              </div>
+              <small class="dc-prev-list"><span data-i18n="dc.inlist">В списке участников:</span> <b id="dc-prev-list">—</b></small>
+            </div>
+            <div class="dcp-opts" id="dc-opts">
+              <div class="field">
+                <div><label data-i18n="dc.l1">Первая строка</label></div>
+                <div class="seg" id="dc-l1" role="group">
+                  <button data-v="title" aria-pressed="true" data-i18n="dc.l1.title">Название</button>
+                  <button data-v="artist-title" data-i18n="dc.l1.at">Исполнитель — название</button>
+                  <button data-v="custom" data-i18n="dc.l1.custom">Свой текст</button>
+                </div>
+              </div>
+              <div class="field dcp-tmpl" id="dc-tmpl-row" hidden>
+                <div><label for="dc-template" data-i18n="dc.tmpl">Свой текст</label><small data-i18n="dc.tmpl.s">Можно вставить: {title} — название, {artist} — исполнитель, {album} — альбом, {service} — площадка</small></div>
+                <input id="dc-template" autocomplete="off" spellcheck="false" placeholder="{title}">
+              </div>
+              <div class="field">
+                <div><label data-i18n="dc.l2">Вторая строка</label></div>
+                <div class="seg" id="dc-l2" role="group">
+                  <button data-v="artist" aria-pressed="true" data-i18n="dc.l2.artist">Исполнитель</button>
+                  <button data-v="album" data-i18n="dc.l2.album">Альбом</button>
+                  <button data-v="service" data-i18n="dc.l2.service">Площадка</button>
+                  <button data-v="none" data-i18n="dc.l2.none">Ничего</button>
+                </div>
+              </div>
+              <div class="field">
+                <div><label data-i18n="dc.disp">В списке участников</label><small data-i18n="dc.disp.s">Что видно рядом с вашим именем на сервере</small></div>
+                <div class="seg" id="dc-disp" role="group">
+                  <button data-v="2" aria-pressed="true" data-i18n="dc.disp.track">Трек</button>
+                  <button data-v="1" data-i18n="dc.disp.artist">Исполнитель</button>
+                  <button data-v="0" data-i18n="dc.disp.app">Meowave</button>
+                </div>
+              </div>
+              <div class="field">
+                <div><label data-i18n="dc.o.art">Обложка трека</label></div>
+                <button class="sw" id="dc-o-art" aria-pressed="true" aria-label="cover"></button>
+              </div>
+              <div class="field">
+                <div><label data-i18n="dc.o.time">Время и полоса прогресса</label></div>
+                <button class="sw" id="dc-o-time" aria-pressed="true" aria-label="time"></button>
+              </div>
+              <div class="field">
+                <div><label data-i18n="dc.o.btn">Кнопка «Слушать»</label><small data-i18n="dc.o.btn.s">Открывает трек на его площадке</small></div>
+                <button class="sw" id="dc-o-btn" aria-pressed="true" aria-label="button"></button>
+              </div>
+              <div class="field">
+                <div><label data-i18n="dc.pause">На паузе</label></div>
+                <div class="seg" id="dc-pause" role="group">
+                  <button data-v="show" aria-pressed="true" data-i18n="dc.pause.show">Писать «На паузе»</button>
+                  <button data-v="hide" data-i18n="dc.pause.hide">Скрывать статус</button>
+                </div>
               </div>
             </div>
+            <details class="dcp-adv">
+              <summary data-i18n="dc.adv">Для разработчиков</summary>
+              <div class="field" style="align-items:flex-start;flex-direction:column">
+                <div><label for="dc-client" data-i18n="dc.cid">Своё приложение Discord</label><small data-i18n="dc.cid.s">Необязательно. Application ID с discord.com/developers — тогда вместо «Meowave» Discord покажет название вашего приложения. Пусто — встроенное.</small></div>
+                <input id="dc-client" inputmode="numeric" autocomplete="off" spellcheck="false" style="width:100%;max-width:420px" placeholder="1234567890123456789">
+              </div>
+            </details>
             <div class="grow" style="margin-top:12px">
-              <button class="btn" id="dc-save" data-i18n="dc.save">Сохранить</button>
-              <button class="btn" id="dc-test" data-i18n="dc.test">Проверить</button>
+              <button class="btn" id="dc-test"><span class="material-symbols-rounded" style="font-size:18px">send</span> <span data-i18n="dc.test">Отправить сейчас</span></button>
             </div>
           </div>
           <div class="panel pane">

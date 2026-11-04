@@ -13,6 +13,7 @@ name: Release
 # Required repository secrets (Settings -> Secrets and variables -> Actions):
 #   TAURI_SIGNING_PRIVATE_KEY           contents of ~/.meowave-keys/meowave.key
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  empty string if the key has no password
+#   DISCORD_CLIENT_ID                   optional, Discord application id for Rich Presence
 #
 # The public half lives in tauri.conf.json and is not a secret: it only lets
 # clients verify a signature, never create one.
@@ -94,6 +95,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Optional: Discord application id baked into the binary (discord.rs
+          # falls back to its built-in MEOWAVE_APP_ID when this is unset).
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Meowave ${{ github.ref_name }}"

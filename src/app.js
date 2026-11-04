@@ -145,10 +145,10 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "ym.open":"Открыть Яндекс Музыку","ym.docs":"Документация",
 "ym.acc.desc":"Вход по аккаунту: откроется страница Яндекса, войдите — и библиотека подключится. Токен хранится в системном keychain.",
 "ym.acc.login":"Войти через аккаунт Яндекса","ym.acc.browser":"Открываю браузер для входа…","ym.acc.wait":"После входа на странице-помощнике вернитесь в Meowave — библиотека подтянется сама", "ym.acc.library":"Синхронизировать библиотеку (лайки и плейлисты)","ym.acc.open":"Открыть страницу вставки токена:",
- "dc.t":"Discord Rich Presence","dc.s":"Показывает в профиле Discord, что сейчас играет: обложку, название и время. Нужен запущенный Discord (приложение, не браузер).","dc.cid":"Application ID","dc.cid.s":"Создайте приложение на discord.com/developers/applications — его название Discord покажет как «Слушает …». Скопируйте Application ID сюда.","dc.noid":"Укажите Application ID","dc.live":"Подключено — статус транслируется","dc.desktop":"Работает только в настольном приложении","dc.prev":"Так это увидят друзья","dc.listen":"Слушает",
- "dc.on":"Показывать в Discord","dc.on.ok":"Discord найден","dc.on.no":"Discord не запущен (обновится, когда появится)",
- "dc.tmpl":"Шаблон статуса","dc.tmpl.s":"Первая строка статуса. Подстановки: {title} {artist} {album} {service} {status}. Вторая строка — исполнитель.",
- "dc.save":"Сохранить","dc.test":"Проверить","dc.saved":"Шаблон сохранён","dc.sent":"Отправлено в Discord","dc.fail":"Discord не отвечает — проверь, что он запущен",
+ "dc.t":"Discord","dc.s":"Друзья в Discord увидят, что вы слушаете: трек, исполнителя, обложку и время. Нужно только запущенное приложение Discord на этом компьютере.","dc.cid":"Своё приложение Discord","dc.cid.s":"Необязательно. Application ID с discord.com/developers — тогда вместо «Meowave» Discord покажет название вашего приложения. Пусто — встроенное.","dc.noid":"Discord-приложение не задано","dc.live":"Подключено — друзья видят, что вы слушаете","dc.desktop":"Работает только в приложении для компьютера","dc.prev":"Так это увидят друзья","dc.listen":"Слушает",
+ "dc.on":"Показывать в Discord, что я слушаю","dc.on.ok":"Discord найден","dc.on.no":"Discord не запущен — статус появится, когда вы его откроете",
+ "dc.tmpl":"Свой текст","dc.tmpl.s":"Можно вставить: {title} — название, {artist} — исполнитель, {album} — альбом, {service} — площадка",
+ "dc.save":"Сохранить","dc.test":"Отправить сейчас","dc.saved":"Сохранено","dc.sent":"Отправлено в Discord","dc.fail":"Discord не отвечает — проверьте, что он запущен","dc.st.as":"Подключено как {u} — друзья видят, что вы слушаете","dc.st.closed":"Discord закрыл соединение:","dc.st.badid":"Discord не принял ID приложения — проверьте его в «Для разработчиков»","dc.st.noapp":"В этой сборке нет встроенного приложения Discord — укажите своё в разделе «Для разработчиков»","dc.st.off":"Выключено","dc.adv":"Для разработчиков","dc.pause.hide":"Скрывать статус","dc.pause.show":"Писать «На паузе»","dc.pause":"На паузе","dc.o.btn.s":"Открывает трек на его площадке","dc.o.btn":"Кнопка «Слушать»","dc.o.time":"Время и полоса прогресса","dc.o.art":"Обложка трека","dc.disp.app":"Meowave","dc.disp.artist":"Исполнитель","dc.disp.track":"Трек","dc.disp.s":"Что видно рядом с вашим именем на сервере","dc.disp":"В списке участников","dc.l2.none":"Ничего","dc.l2.service":"Площадка","dc.l2.album":"Альбом","dc.l2.artist":"Исполнитель","dc.l2":"Вторая строка","dc.l1.custom":"Свой текст","dc.l1.at":"Исполнитель — название","dc.l1.title":"Название","dc.l1":"Первая строка","dc.inlist":"В списке участников:","dc.btn":"Слушать",
  "fp.mode":"Переключить вид плеера","ly.custom.t":"Крупная лирика","ly.custom.s":"Размер и вес строк влияют на режим большой лирики","ly.size":"Размер строк","ly.weight":"Жирность","ly.glow":"Свечение активной строки","ly.cov":"Обложка (режим лирики)","ly.gap":"Междустрочный зазор","ly.font":"Шрифт",
 "loc.t":"Локальные треки","loc.s":"Файлы не копируются и никуда не отправляются — читаются с диска напрямую. Теги берутся из имени файла.",
 "loc.add":"Добавить файлы","loc.folder":"Добавить папку","loc.folder.s":"Со всеми вложенными",
@@ -279,10 +279,10 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "ym.open":"Open Yandex Music","ym.docs":"Documentation",
 "ym.acc.desc":"Sign in with your Yandex account: a Yandex page opens, you sign in, and the library connects. The token lives in the OS keychain.",
 "ym.acc.login":"Sign in with your Yandex account","ym.acc.browser":"Opening the browser for sign-in…","ym.acc.wait":"Once signed in on the helper page, come back to Meowave — the library will sync automatically", "ym.acc.library":"Sync library (likes and playlists)","ym.acc.open":"Open the token paste page:",
- "dc.t":"Discord Rich Presence","dc.s":"Shows what is playing on your Discord profile: cover, title and time. Needs the Discord desktop app running.","dc.cid":"Application ID","dc.cid.s":"Create an application at discord.com/developers/applications — Discord shows its name as “Listening to …”. Paste its Application ID here.","dc.noid":"Set the Application ID","dc.live":"Connected — presence is live","dc.desktop":"Works in the desktop app only","dc.prev":"How friends will see it","dc.listen":"Listening to",
- "dc.on":"Show in Discord","dc.on.ok":"Discord detected","dc.on.no":"Discord is not running (updates will resume when it starts)",
- "dc.tmpl":"Status template","dc.tmpl.s":"Placeholders: {title} {artist} {album} {service} {status} {elapsed} {remaining}",
- "dc.save":"Save","dc.test":"Test","dc.saved":"Template saved","dc.sent":"Sent to Discord","dc.fail":"Discord is not responding — check that it is running",
+ "dc.t":"Discord","dc.s":"Friends on Discord see what you are listening to: track, artist, cover and time. All it needs is the Discord app running on this computer.","dc.cid":"Your own Discord application","dc.cid.s":"Optional. An Application ID from discord.com/developers — Discord then shows your app’s name instead of “Meowave”. Empty means the built-in one.","dc.noid":"No Discord application set","dc.live":"Connected — friends can see what you are listening to","dc.desktop":"Works in the desktop app only","dc.prev":"How friends will see it","dc.listen":"Listening to",
+ "dc.on":"Show what I’m listening to on Discord","dc.on.ok":"Discord detected","dc.on.no":"Discord is not running — the status appears once you open it",
+ "dc.tmpl":"Custom text","dc.tmpl.s":"You can use {title}, {artist}, {album} and {service}",
+ "dc.save":"Save","dc.test":"Send now","dc.saved":"Saved","dc.sent":"Sent to Discord","dc.fail":"Discord is not responding — check that it is running","dc.st.as":"Connected as {u} — friends can see what you are listening to","dc.st.closed":"Discord closed the connection:","dc.st.badid":"Discord rejected the application ID — check it under “For developers”","dc.st.noapp":"This build has no built-in Discord application — set your own under “For developers”","dc.st.off":"Off","dc.adv":"For developers","dc.pause.hide":"Hide the status","dc.pause.show":"Say “Paused”","dc.pause":"When paused","dc.o.btn.s":"Opens the track on its service","dc.o.btn":"“Listen” button","dc.o.time":"Time and progress bar","dc.o.art":"Track cover","dc.disp.app":"Meowave","dc.disp.artist":"Artist","dc.disp.track":"Track","dc.disp.s":"What shows next to your name on a server","dc.disp":"In the member list","dc.l2.none":"Nothing","dc.l2.service":"Service","dc.l2.album":"Album","dc.l2.artist":"Artist","dc.l2":"Second line","dc.l1.custom":"Custom","dc.l1.at":"Artist — title","dc.l1.title":"Title","dc.l1":"First line","dc.inlist":"In the member list:","dc.btn":"Listen",
  "fp.mode":"Switch the player view","ly.custom.t":"Large lyrics","ly.custom.s":"Line size and weight drive the large-lyrics mode","ly.size":"Line size","ly.weight":"Weight","ly.glow":"Active line glow","ly.cov":"Cover size (lyric mode)","ly.gap":"Line gap","ly.font":"Font",
 "loc.t":"Local tracks","loc.s":"Files are never copied or uploaded — they are read straight off the disk. Tags come from the file name.",
 "loc.add":"Add files","loc.folder":"Add folder","loc.folder.s":"Including subfolders",
@@ -534,7 +534,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
  svcOn:null,
  /* Discord Rich Presence: on/off + the user's status template. Sent to Rust
     on change; discord_update fires from track events and the minute timer. */
- discord:{on:false,tmpl:"{title}",cid:""},
+ discord:{on:false,tmpl:"{title}",cid:"",l1:"title",l2:"artist",disp:2,art:true,time:true,btn:true,pause:"show"},
  /* Fullscreen player layout: "stage" (centered cover, mockup 1) or "lyric"
     (cover left, oversized lyrics right, mockup 2). */
  fpMode:"stage",
@@ -5787,7 +5787,7 @@ function save(){
   lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,dens2:1,pspeed:S.pspeed,
   svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
    ?Object.fromEntries(SERVICES.filter(s=>!s.local).map(s=>[s.id,s.on])):null,
-  discord:{on:S.discord.on,tmpl:S.discord.tmpl,cid:S.discord.cid||""},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,x:S.x,profileTrack:S.profileTrack||null,
+  discord:{...S.discord,cid:S.discord.cid||""},fpMode:S.fpMode,ly:S.ly,fpBgMode:S.fpBgMode,fpGlow:S.fpGlow,fpBlur:S.fpBlur,lyKaraoke:S.lyKaraoke,fpWobble:S.fpWobble,fpZoom:S.fpZoom||"normal",fpDrift:S.fpDrift!==false,x:S.x,profileTrack:S.profileTrack||null,
   avatar:S.avatar||null,banner:S.banner||null,username:S.username||null,
   lite:S.lite,litePrev,quality:S.quality,vol:S.vol,eq:S.eq,preset:S.preset,custom:S.custom,
   sp:{on:S.sp.on,speed:S.sp.speed,rad:S.sp.rad,elev:S.sp.elev},ob:obDone,listen:Math.round(S.listen),
@@ -5904,7 +5904,13 @@ function restore(){try{
   S.discord.on=!!d.discord.on;
   if(typeof d.discord.tmpl==="string"&&d.discord.tmpl)S.discord.tmpl=d.discord.tmpl;
   if(S.discord.tmpl==="{artist} — {title} · {service}")S.discord.tmpl="{title}";
-  if(typeof d.discord.cid==="string")S.discord.cid=d.discord.cid}
+  if(typeof d.discord.cid==="string")S.discord.cid=d.discord.cid;
+  for(const k of ["art","time","btn"])if(typeof d.discord[k]==="boolean")S.discord[k]=d.discord[k];
+  if(["title","artist-title","custom"].includes(d.discord.l1))S.discord.l1=d.discord.l1;
+  else if(S.discord.tmpl&&S.discord.tmpl!=="{title}")S.discord.l1=S.discord.tmpl==="{artist} — {title}"?"artist-title":"custom";
+  if(["artist","album","service","none"].includes(d.discord.l2))S.discord.l2=d.discord.l2;
+  if([0,1,2].includes(d.discord.disp))S.discord.disp=d.discord.disp;
+  if(d.discord.pause==="hide")S.discord.pause="hide"}
  if(d.fpMode)S.fpMode=d.fpMode==="lyric"?"lyric":"stage";
  /* Typo-proof: unknown values fall back to the centered stage. */
  if(d.ly&&typeof d.ly==="object")Object.assign(S.ly,d.ly);
@@ -11244,7 +11250,11 @@ function paintLyPanel(){
 /* ── Discord Rich Presence ─────────────────────────────────
    Rust owns the IPC connection and the 15 s throttle; here only the settings
    and the "what is playing right now" snapshot live. dcPush is intentionally
-   chatty: Rust de-duplicates and rate-limits, so extra calls are free. */
+   chatty: Rust de-duplicates and rate-limits, so extra calls are free.
+   Nothing here asks for an application id: the app ships with its own, and
+   the field under "For developers" is only an override. */
+const DC_L1={title:"{title}","artist-title":"{artist} — {title}"};
+function dcTemplate(){return S.discord.l1==="custom"?(S.discord.tmpl||"{title}"):(DC_L1[S.discord.l1]||"{title}")}
 function dcVars(tr){
  const now=Math.floor(S.pos),rem=Math.max(0,Math.floor(S.dur-S.pos));
  const mm=x=>Math.floor(x/60)+":"+String(x%60).padStart(2,"0");
@@ -11254,80 +11264,121 @@ function dcVars(tr){
   /* Raw unix times for Discord's timestamps block. */
   _start:Math.floor(Date.now()/1000-now),_end:Math.floor(Date.now()/1000+rem)};
 }
+/* A public page for the "Listen" button: Discord only accepts https links,
+   and a local file or a stream URL would be useless to a friend anyway. */
+function dcTrackUrl(tr){
+ if(!tr)return null;
+ const id=String(tr._spOrig?.id||tr.id||"");
+ if(tr._spOrig&&id)return "https://open.spotify.com/track/"+encodeURIComponent(id);
+ if(tr.s==="ytm"&&/^[\w-]{11}$/.test(id))return "https://music.youtube.com/watch?v="+id;
+ if(tr.s==="ym"&&/^\d+/.test(id))return "https://music.yandex.ru/track/"+id.split(":")[0];
+ if(tr.s==="dz"&&/^\d+$/.test(id))return "https://www.deezer.com/track/"+id;
+ if(tr.s==="sp"&&id)return "https://open.spotify.com/track/"+encodeURIComponent(id);
+ const u=String(tr.permalink||tr.url||"");
+ if(tr.s==="sc"&&/^https:\/\/soundcloud\.com\//.test(u))return u;
+ return null}
+function dcLine2(v){
+ const k=S.discord.l2;
+ return k==="album"?v.album:k==="service"?v.service:k==="none"?"":v.artist}
 function dcData(){
  const v=dcVars(S.current);
  return {...v,
   start:S.playing?v._start:undefined,
   end:S.playing&&S.dur>0?v._end:undefined,
-  art:S.current?.art||null};
+  /* On pause the second line says so — the timer is gone, the reason should not be. */
+  state:S.playing?dcLine2(v):[dcLine2(v),t("np.paused")].filter(Boolean).join(" · "),
+  art:S.current?.art||null,
+  url:dcTrackUrl(S.current),url_label:t("dc.btn"),
+  opts:{art:S.discord.art,time:S.discord.time,button:S.discord.btn,display:S.discord.disp}};
 }
-function dcCfg(on){return {enabled:on??S.discord.on,template:S.discord.tmpl,clientId:S.discord.cid||""}}
+function dcCfg(on){return {enabled:on??S.discord.on,template:dcTemplate(),clientId:S.discord.cid||""}}
 function dcPush(){
  if(!TAURI||!S.discord.on||!S.current||S.current.mode==="empty")return;
+ if(!S.playing&&S.discord.pause==="hide"){inv("discord_clear").catch(()=>{});return}
  inv("discord_update",{data:dcData()}).catch(()=>{})}
 /* Play/pause and seeks change the timer Discord shows — push on those too,
    not only on track start (Rust de-duplicates and rate-limits). */
 let dcLastPlaying=null;
 setInterval(()=>{if(S.playing!==dcLastPlaying){dcLastPlaying=S.playing;if(S.discord.on)dcPush()}},1200);
 document.addEventListener("seeked",e=>{if(e.target===A?.audio&&S.discord.on)dcPush()},true);
+function dcSeg(id,val){document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(val))))}
+function paintDiscordPreview(){
+ const prev=document.getElementById("dc-prev");if(!prev)return;
+ const cur=S.current&&S.current.mode!=="empty"&&S.current.t?S.current:{t:"Haiiro no sora",a:"DJ UNIVXRSEL",al:"Haiiro",s:"ytm"};
+ const v=dcVars(cur);
+ const l1=dcTemplate().replace(/\{(\w+)\}/g,(m,k)=>v[k]!=null?String(v[k]):m).replace(/\s{2,}/g," ").replace(/^[\s—·-]+|[\s—·-]+$/g,"").trim()||cur.t;
+ const l2=dcLine2(v);
+ prev.querySelector(".dc-prev-l1").textContent=l1;
+ const l2el=prev.querySelector(".dc-prev-l2");l2el.textContent=l2;l2el.hidden=!l2;
+ const img=prev.querySelector(".dc-prev-art");
+ img.hidden=!S.discord.art;
+ img.style.backgroundImage=cur.art&&/^https:/.test(cur.art)?`url("${String(cur.art).replace(/"/g,"%22")}")`:"";
+ prev.querySelector(".dc-prev-time").hidden=!S.discord.time;
+ prev.querySelector(".dc-prev-btn").hidden=!S.discord.btn;
+ const list=document.getElementById("dc-prev-list");
+ if(list)list.textContent=t("dc.listen")+" "+(S.discord.disp===2?l1:S.discord.disp===1?(v.artist||l1):"Meowave")}
 async function paintDiscord(){
  const sw=document.getElementById("dc-on"),inp=document.getElementById("dc-template"),
   st=document.getElementById("dc-state"),cid=document.getElementById("dc-client"),dot=document.getElementById("dc-dot");
  if(!sw)return;
- inp.value=S.discord.tmpl;
+ if(document.activeElement!==inp)inp.value=S.discord.tmpl;
  if(cid&&document.activeElement!==cid)cid.value=S.discord.cid||"";
  sw.setAttribute("aria-pressed",S.discord.on);
- const prev=document.getElementById("dc-prev");
- if(prev){
-  const cur=S.current&&S.current.mode!=="empty"&&S.current.t?S.current:{t:"Haiiro no sora",a:"DJ UNIVXRSEL",al:"Haiiro",s:"ytm"};
-  const v=dcVars(cur);
-  const tpl=(S.discord.tmpl||"").replace(/\{(\w+)\}/g,(m,k)=>v[k]!=null?String(v[k]):m).replace(/\s{2,}/g," ").trim();
-  prev.querySelector(".dc-prev-l1").textContent=tpl||cur.t;
-  prev.querySelector(".dc-prev-l2").textContent=cur.a||"";
-  const img=prev.querySelector(".dc-prev-art");
-  if(img)img.style.backgroundImage=cur.art?`url("${String(cur.art).replace(/"/g,"%22")}")`:"";
- }
- let state="off",text="—";
+ dcSeg("dc-l1",S.discord.l1);dcSeg("dc-l2",S.discord.l2);dcSeg("dc-disp",S.discord.disp);dcSeg("dc-pause",S.discord.pause);
+ for(const [id,k] of [["dc-o-art","art"],["dc-o-time","time"],["dc-o-btn","btn"]])document.getElementById(id)?.setAttribute("aria-pressed",String(!!S.discord[k]));
+ document.getElementById("dc-tmpl-row").hidden=S.discord.l1!=="custom";
+ document.getElementById("dc-opts")?.classList.toggle("off",!S.discord.on);
+ paintDiscordPreview();
+ let state="off",text=t("dc.st.off");
  if(TAURI){
   const r=await inv("discord_status").catch(()=>null);
-  if(r){
-   if(!r.hasId){state="warn";text=t("dc.noid")}
+  if(!S.discord.on){state="off";text=t("dc.st.off")}
+  else if(r){
+   const e=String(r.error||"");
+   if(!r.hasId){state="warn";text=t("dc.st.noapp")}
    else if(!r.running){state="warn";text=t("dc.on.no")}
-   else if(r.error){state="err";text=r.error}
-   else{state="ok";text=r.connected?t("dc.live"):t("dc.on.ok")}
-  }else{
-   const ok=await inv("discord_available").catch(()=>false);
-   state=ok?"ok":"warn";text=ok?t("dc.on.ok"):t("dc.on.no")}
+   else if(e==="bad_id"){state="err";text=t("dc.st.badid")}
+   else if(e&&e!=="not_running"){state="err";text=e.replace(/^closed:\s*/,t("dc.st.closed")+" ")}
+   else{state="ok";text=r.connected?(r.user?t("dc.st.as").replace("{u}",r.user):t("dc.live")):t("dc.on.ok")}
+  }
  }else text=t("dc.desktop");
  st.textContent=text;if(dot)dot.dataset.s=state}
+async function dcApply(){
+ save();
+ try{await inv("discord_configure",dcCfg())}catch(e){}
+ if(S.discord.on)dcPush();
+ paintDiscord()}
 document.getElementById("dc-on")?.addEventListener("click",async()=>{
  S.discord.on=!S.discord.on;save();
  const sw=document.getElementById("dc-on");sw.setAttribute("aria-pressed",S.discord.on);
  try{await inv("discord_configure",dcCfg())}catch(e){}
  if(S.discord.on)dcPush();else inv("discord_clear").catch(()=>{});
- setTimeout(paintDiscord,600)});
-document.getElementById("dc-save")?.addEventListener("click",async()=>{
- S.discord.tmpl=document.getElementById("dc-template").value.trim()||S.discord.tmpl;
- const cid=document.getElementById("dc-client");
- if(cid)S.discord.cid=cid.value.replace(/\D/g,"");
- save();toast(t("dc.saved"));
- try{await inv("discord_configure",dcCfg())}catch(e){}
- if(S.discord.on)dcPush();
- paintDiscord()});
-document.getElementById("dc-template")?.addEventListener("input",()=>{
- const tm=S.discord.tmpl;S.discord.tmpl=document.getElementById("dc-template").value;paintDiscord();S.discord.tmpl=tm});
+ paintDiscord();setTimeout(paintDiscord,1500)});
+for(const [id,key,num] of [["dc-l1","l1"],["dc-l2","l2"],["dc-disp","disp",true],["dc-pause","pause"]])
+ document.getElementById(id)?.addEventListener("click",e=>{
+  const b=e.target.closest("button[data-v]");if(!b)return;
+  S.discord[key]=num?+b.dataset.v:b.dataset.v;
+  if(key==="pause"&&S.discord.on&&S.playing===false&&S.discord.pause==="hide")inv("discord_clear").catch(()=>{});
+  dcApply();
+  if(key==="l1"&&S.discord.l1==="custom")setTimeout(()=>document.getElementById("dc-template")?.focus(),0)});
+for(const [id,key] of [["dc-o-art","art"],["dc-o-time","time"],["dc-o-btn","btn"]])
+ document.getElementById(id)?.addEventListener("click",()=>{S.discord[key]=!S.discord[key];dcApply()});
+let dcTmplTimer=0;
+document.getElementById("dc-template")?.addEventListener("input",e=>{
+ S.discord.tmpl=e.target.value.trim()||"{title}";paintDiscordPreview();
+ clearTimeout(dcTmplTimer);dcTmplTimer=setTimeout(dcApply,700)});
+document.getElementById("dc-client")?.addEventListener("change",e=>{
+ S.discord.cid=e.target.value.replace(/\D/g,"");e.target.value=S.discord.cid;dcApply()});
 document.getElementById("dc-test")?.addEventListener("click",async()=>{
  if(!TAURI)return toast(t("dc.desktop"));
- S.discord.tmpl=document.getElementById("dc-template").value.trim()||S.discord.tmpl;
- const cid=document.getElementById("dc-client");
- if(cid)S.discord.cid=cid.value.replace(/\D/g,"");
- if(!S.discord.cid&&!(await inv("discord_status").catch(()=>({hasId:false}))).hasId){toast(t("dc.noid"),5000);paintDiscord();return}
  try{
-  await inv("discord_configure",dcCfg(true));
   S.discord.on=true;save();
-  await inv("discord_test",{data:S.current?dcData():{title:"Meowave",artist:"Meowave",status:t("np.paused")}});
+  await inv("discord_configure",dcCfg(true));
+  await inv("discord_test",{data:S.current&&S.current.mode!=="empty"?dcData():{title:"Meowave",artist:"Meowave",status:t("np.paused")}});
   toast(t("dc.sent"))}
- catch(e){toast(String(e?.message||e||t("dc.fail")),6000)}
+ catch(e){
+  const m=String(e?.message||e||"");
+  toast(m==="no_id"?t("dc.st.noapp"):m==="not_running"?t("dc.on.no"):m==="bad_id"?t("dc.st.badid"):(m||t("dc.fail")),6000)}
  paintDiscord()});
 if(TAURI)setTimeout(()=>{
  inv("discord_configure",dcCfg()).catch(()=>{});
