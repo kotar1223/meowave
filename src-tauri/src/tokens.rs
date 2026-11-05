@@ -94,7 +94,9 @@ fn join_parts(service: &str, head: String) -> Result<String, String> {
 /// has to show them as usable.
 /// Deezer's catalogue API is public too; its audio comes from the matcher
 /// (see dz.rs), so it never needs a credential either.
-pub const TOKENLESS_SERVICES: &[&str] = &["sc", "ytm", "dz"];
+/// Spotify is listed since search and metadata work anonymously (spanon.rs);
+/// its account session is read by spotify.rs itself, never through here.
+pub const TOKENLESS_SERVICES: &[&str] = &["sc", "ytm", "dz", "sp"];
 
 #[cfg(not(target_os = "android"))]
 fn entry(service: &str) -> Result<Entry, String> {

@@ -977,7 +977,7 @@ pub async fn api_probe_service(service: String) -> Result<bool, String> {
         "sc" => sc_search("", "test").await.map(|_| true),
         "ytm" => ytm_search("test").await.map(|_| true),
         "ym" => Err("Yandex Music needs your token".into()),
-        "sp" => Ok(crate::spotify::configured()),
+        "sp" => crate::spanon::search_tracks("test").await.map(|_| true),
         "dz" => crate::dz::search("test").await.map(|_| true),
         other => Err(format!("unknown service: {other}")),
     }

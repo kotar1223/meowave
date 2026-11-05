@@ -6846,9 +6846,10 @@ async function initServices(){
  try{
   let ids=TAURI?await inv("list_connected_services")
    :SERVICES.map(s=>s.id).filter(id=>localStorage.getItem("mw.tok."+id));
+  let spMe=null;
   if(TAURI){
    try{
-    const spMe=await inv("spotify_me").catch(()=>null);
+    spMe=await inv("spotify_me").catch(()=>null);
     if(spMe&&!ids.includes("sp"))ids.push("sp");
    }catch(_){}
   }
@@ -6859,10 +6860,15 @@ async function initServices(){
   /* The user's on/off choices win over the default "connected = on": restore()
      fills SVC_ON from storage, and a service that was deliberately switched
      off stays off across restarts (a first run has no stored map yet). */
+  /* Spotify answers searches without an account now (spanon.rs), so it is
+     always available — but its sound comes from matching on the other
+     services, so it is not switched on behind the user's back: off until
+     they turn it on or sign in. */
   SERVICES.forEach(s=>{
    if(s.local)return;
    s.conn=ids.includes(s.id);
-   s.on=S.svcOn&&s.id in S.svcOn?!!S.svcOn[s.id]&&s.conn:s.conn});
+   const dflt=s.conn&&(s.id!=="sp"||!!spMe);
+   s.on=S.svcOn&&s.id in S.svcOn?!!S.svcOn[s.id]&&s.conn:dflt});
   renderSrv();renderAccounts();icons();
  }catch(e){console.warn("keychain unavailable:",e)}}
 
@@ -11432,7 +11438,10 @@ async function renderSpotify(){
   icons();
   return;
  }
- body.innerHTML=`<p class="ph" style="margin:0 0 10px">${t("sp.desc")}</p>
+ body.innerHTML=`<p class="ph" style="margin:0 0 10px">${LANG==="ru"
+   ?"Без входа и без Client ID: поиск, обложки и страницы артистов Spotify работают сразу — включите Spotify в «Сервисах», звук подбирается на Яндекс Музыке, SoundCloud или YouTube Music. Вход нужен только для ваших плейлистов и «Любимых»."
+   :"No sign-in and no Client ID needed for Spotify search, covers and artist pages — switch Spotify on under Services; the sound is matched on Yandex Music, SoundCloud or YouTube Music. Sign in only to bring over your playlists and Liked Songs."}</p>
+  <p class="ph" style="margin:0 0 10px">${t("sp.desc")}</p>
   <div class="field fcol" style="margin:10px 0;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;gap:8px">
    <div>
     <label style="font-size:.85rem;font-weight:600">Spotify Client ID</label>

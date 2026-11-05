@@ -719,8 +719,21 @@ pub async fn spotify_liked_tracks() -> Result<Vec<serde_json::Value>, String> {
     spotify_playlist_tracks("__liked__".to_string()).await
 }
 
-/// Search Spotify for tracks using the authenticated access token.
+/// Search Spotify: with the account's own Web API quota when signed in, the
+/// anonymous web-player search otherwise — or when the account path fails —
+/// so Spotify works without a Client ID (spanon.rs).
 pub async fn spotify_search(query: &str) -> Result<Vec<crate::api::Track>, String> {
+    if load_stored().is_some() {
+        match spotify_search_account(query).await {
+            Ok(v) => return Ok(v),
+            Err(e) => eprintln!("[meowave] spotify search (account): {e}; anonymous search instead"),
+        }
+    }
+    crate::spanon::search_tracks(query).await
+}
+
+/// Search Spotify for tracks using the authenticated access token.
+async fn spotify_search_account(query: &str) -> Result<Vec<crate::api::Track>, String> {
     let tok = access_token().await?;
     let path = format!("/v1/search?q={}&type=track&limit=20", urlencoding::encode(query));
     let resp = sp_get(&path, &tok)?
