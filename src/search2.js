@@ -138,9 +138,10 @@ function recentHTML(){
 /* ─────────── artists, playlists, albums for a query ─────────── */
 const CARDS=new Map();
 function cardsFor(q){
- const k=LANG+"|"+q;
+ const sc=window.searchScope?.()||"";
+ const k=LANG+"|"+sc+"|"+q;
  if(CARDS.has(k))return CARDS.get(k);
- const services=SERVICES.filter(s=>s.on&&!s.local).map(s=>s.id);
+ const services=SERVICES.filter(s=>s.on&&!s.local&&(!sc||s.id===sc)).map(s=>s.id);
  const p=TAURI&&services.length&&q.length>=2
   ?Promise.resolve(inv("search_cards",{query:q,services,lang:LANG})).then(x=>Array.isArray(x)?x:[]).catch(e=>{console.warn("search cards:",e);CARDS.delete(k);return []})
   :Promise.resolve([]);

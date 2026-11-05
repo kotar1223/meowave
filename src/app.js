@@ -104,7 +104,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "ly.decode":"Готовим звук…","ly.listen":"Слушаем трек…","ly.seek":"Нажмите на строку, чтобы перейти",
 "ly.src.ytm":"YouTube Music","ly.src.lrc":"LRCLIB","ly.src.ai":"Распознано нейросетью",
 "ly.plain":"Без тайм-кодов","ly.retry":"Попробовать ещё раз","ly.err":"Не удалось получить текст",
-"s.nosvc":"Все сервисы выключены — включите их в шапке",
+"s.nosvc":"Все сервисы выключены — включите их в шапке","s.scope":"Где искать","s.scope.all":"Все","s.scope.only":"Искать только в {s}",
 "wave.need":"Волна собирается из ваших любимых треков. Пока отмечено {n} — добавьте ещё, и она заиграет.",
 "wave.ready":"В избранном {n} треков — волна подберёт похожее и запустится сразу.",
 "wave.need.toast":"Отметьте сердцем ещё {n} трека — по ним волна и подбирает музыку",
@@ -238,7 +238,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "ly.decode":"Preparing audio…","ly.listen":"Listening to the track…","ly.seek":"Click a line to jump there",
 "ly.src.ytm":"YouTube Music","ly.src.lrc":"LRCLIB","ly.src.ai":"Transcribed by AI",
 "ly.plain":"No timings","ly.retry":"Try again","ly.err":"Could not fetch lyrics",
-"s.nosvc":"All services are off — enable them in the header",
+"s.nosvc":"All services are off — enable them in the header","s.scope":"Where to search","s.scope.all":"All","s.scope.only":"Search {s} only",
 "wave.need":"The wave is built from your favorite tracks. {n} so far — add a few more and it will play.",
 "wave.ready":"{n} favorites — the wave will find similar music and start right away.",
 "wave.need.toast":"Heart {n} more track(s) — the wave builds its picks from them",
@@ -1927,6 +1927,27 @@ const SVC_ICONS={
  local:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="11" cy="14" r="2"/><path d="M13 14V10"/></svg>`,
  genius:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.5c-.8 2-2.8 3.5-5.5 3.5-3.6 0-6.5-2.9-6.5-6.5S8.4 5 12 5c2.4 0 4.4 1.3 5.4 3.2l-2.2 1.3c-.6-1.2-1.8-2-3.2-2-2.2 0-4 1.8-4 4s1.8 4 4 4c1.4 0 2.6-.7 3.3-1.8h-3.3v-2.4h5.8v3.2z"/></svg>`
 };
+/* Search scope: «Все» or exactly one of the connected, switched-on services.
+   The pick is kept while that service is off and simply not applied, so it
+   comes back on its own once the service is enabled again. */
+function searchScope(){
+ const v=S.x?.sScope||"";
+ return v&&SERVICES.some(s=>s.id===v&&(s.conn||s.local)&&s.on)?v:""}
+window.searchScope=searchScope;
+function renderScope(){
+ const el=document.getElementById("s-scope");if(!el)return;
+ const list=SERVICES.filter(s=>(s.conn||s.local)&&s.on);
+ if(list.length<2){el.hidden=true;el.innerHTML="";return}
+ const cur=searchScope();
+ el.hidden=false;
+ el.setAttribute("aria-label",t("s.scope"));
+ el.innerHTML=`<button data-scope="" aria-pressed="${!cur}">${esc(t("s.scope.all"))}</button>`+
+  list.map(s=>`<button data-scope="${s.id}" aria-pressed="${cur===s.id}" title="${esc(t("s.scope.only").replace("{s}",svc(s.id).name))}">${SVC_ICONS[s.id]||""}<span>${esc(svc(s.id).name)}</span></button>`).join("")}
+document.addEventListener("click",e=>{
+ const b=e.target instanceof Element&&e.target.closest("#s-scope [data-scope]");if(!b)return;
+ S.x.sScope=b.dataset.scope||"";save();renderScope();
+ const q=document.getElementById("q")?.value||"";
+ if(q.trim())search(q)});
 function renderSrv(){
  /* Names go through svc() so the localised ones resolve. */
  const srvEl = document.getElementById("srv");
@@ -1935,6 +1956,7 @@ function renderSrv(){
    `<button class="s" data-svc="${s.id}" data-conn="${s.conn}" data-on="${!!(s.conn&&s.on)}" title="${esc(svc(s.id).name)}">${SVC_ICONS[s.id]||""}<span class="d"></span>${esc(svc(s.id).name)}</button>`).join("");
  }
  renderSrvDropdown();
+ renderScope();
 }
 
 function renderSrvDropdown(){
@@ -2734,12 +2756,15 @@ async function search(v,silent){
  const linkQ=/^https?:|spotify\.com\/|youtube\.com\/|youtu\.be\/|soundcloud\.com\//i.test(q);
  if(!linkQ)window.MWSearch?.start(q);
 
- const act=SERVICES.filter(s=>s.conn&&s.on&&!s.local);
- cnt.innerHTML=act.length?`<span class="search-spinner"></span>${t("s.ing")}: ${esc(act.map(s=>svc(s.id).name).join(", "))}`:t("s.nosvc");
+ /* A pasted link is an import and ignores the scope; otherwise a picked
+    service narrows both the tracks and the artist/album/playlist cards. */
+ const scope=linkQ?"":searchScope();
+ const act=SERVICES.filter(s=>s.conn&&s.on&&!s.local&&(!scope||s.id===scope));
+ cnt.innerHTML=act.length?`<span class="search-spinner"></span>${t("s.ing")}: ${esc(act.map(s=>svc(s.id).name).join(", "))}`:(scope==="local"?"":t("s.nosvc"));
  box.classList.add("searching");
 
  /* Local files resolve instantly */
- const localHits=SERVICES.find(s=>s.id==="local")?.on
+ const localHits=SERVICES.find(s=>s.id==="local")?.on&&(!scope||scope==="local")
   ?TRACKS.filter(x=>x.s==="local"&&(x.t+" "+x.a+" "+x.al).toLowerCase().includes(q))
   :[];
 
@@ -2754,8 +2779,8 @@ async function search(v,silent){
   }else if(/soundcloud\.com/i.test(q)){
    cnt.innerHTML=`<span class="search-spinner"></span>SoundCloud: ${t("ly.load")||"..."}`;
    remote=await inv("sc_playlist_tracks",{urlOrId:q}).catch(()=>[]);
-  }else{
-   remote=await searchRemote(q);
+  }else if(scope!=="local"){
+   remote=await searchRemote(q,scope?[scope]:null);
   }
  if(my!==tok)return;
  if(!linkQ&&window.MWSearch){await MWSearch.settle(q,700);if(my!==tok)return}
@@ -2771,7 +2796,7 @@ async function search(v,silent){
  SEARCH_HITS=allHits;
  box.classList.remove("searching");
  const found=allHits.length;
- cnt.textContent=`${t("s.found")}: ${found}`;
+ cnt.textContent=(scope?svc(scope).name+" · ":"")+`${t("s.found")}: ${found}`;
  if(!found){
   box.innerHTML=empty("circle-slash",t("s.none.t"),t("s.none.s"));
  }else{
@@ -6726,10 +6751,11 @@ function humanStreamError(why){
    calls this in a loop — every iteration but the last cancelled itself against
    the shared counter and returned [], so the wave was built from favorites
    only. */
-async function searchRemote(query){
+async function searchRemote(query,only){
  if(!TAURI||!query.trim())return [];
- /* local is excluded: those files live on disk and the frontend filters them. */
- const services=SERVICES.filter(s=>s.on&&!s.local).map(s=>s.id);
+ /* local is excluded: those files live on disk and the frontend filters them.
+    `only` is the search box's scope; the wave always asks every service. */
+ const services=SERVICES.filter(s=>s.on&&!s.local&&(!only||only.includes(s.id))).map(s=>s.id);
  if(!services.length)return [];
  try{
   const r=await inv("api_search",{query:query.trim(),services});

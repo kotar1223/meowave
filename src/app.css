@@ -6056,3 +6056,13 @@ html:not([data-accent="none"]) .s2-rank .row:nth-child(-n+3)::before{color:var(-
 .pb-row{display:flex;flex-wrap:wrap;gap:8px}
 .pf2 .banner .cam{z-index:1}
 .pb-prev{position:static}
+/* E2 — search scope: «Все» or exactly one service. */
+.s-scope{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 var(--sp-2,8px) var(--sp-4,16px);margin-top:calc(-1 * var(--sp-3,12px))}
+.s-scope::-webkit-scrollbar{display:none}
+.s-scope[hidden]{display:none}
+.s-scope button{flex:none;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:999px;font-size:.8rem;font-weight:540;
+ color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent);border:1px solid var(--line);transition:background .18s,border-color .18s,color .18s,scale .12s}
+.s-scope button .sic{width:15px;height:15px;opacity:.85}
+.s-scope button:hover{border-color:var(--line-2)}
+.s-scope button[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:transparent}
+.s-scope button[aria-pressed="true"] .sic{opacity:1}
