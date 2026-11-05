@@ -838,16 +838,23 @@ export function buildTier1Suite() {
     assert.doesNotMatch(html, /data-ptab="chats"/, "the broken People › Chats tab must not come back");
     assert.match(js, /extraTabs = \[[^\]]*"chats"/, "chats belongs to the extra rail group");
   });
-  suite.test("F26-02: [Happy Path] The encryption module is there before the messenger needs it; messenger.js loads after app.js", () => {
+  suite.test("F26-02: [Happy Path] The encryption module is there before the messenger needs it; the messenger starts after app.js", () => {
     // src/ts/e2e.ts (was the classic e2e.js) waits for nothing: main.ts imports it, so window.MWE2E is set
-    // while the module graph runs — before DOMContentLoaded, long before messenger.js seals anything.
+    // while the module graph runs — before DOMContentLoaded, long before the messenger seals anything.
+    // src/ts/messenger.ts (was the classic messenger.js) needs app.js's globals: it starts in afterLegacy(),
+    // after search and before chat, where the old script stood.
     const order = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
     assert.equal(order.indexOf("e2e"), -1, "e2e.js moved to src/ts/e2e.ts — no classic copy may come back");
     assert.match(readSrc("src/ts/main.ts"), /^import "\.\/e2e";$/m);
     const mod = readSrc("src/ts/e2e.ts");
     assert.match(mod, /^if \(typeof window !== "undefined"\) window\.MWE2E = MWE2E;$/m);
     assert.doesNotMatch(mod, /afterLegacy|^import /m, "nothing to wait for: no DOM, no app state");
-    assert.ok(order.indexOf("messenger") > order.indexOf("app"));
+    assert.equal(order.indexOf("messenger"), -1, "messenger.js moved to src/ts/messenger.ts — no classic copy may come back");
+    const main = readSrc("src/ts/main.ts");
+    assert.match(main, /^import \{ initMessenger \} from "\.\/messenger";$/m);
+    const at = s => main.indexOf(`afterLegacy(${s});`);
+    assert.ok(at("initSearch") > 0 && at("initMessenger") > at("initSearch") && at("initChat") > at("initMessenger"), "initMessenger() starts after initSearch() and before initChat()");
+    assert.match(readSrc("src/ts/messenger.ts"), /^import \{ MWE2E\b[^}]*\} from "\.\/e2e";$/m);
   });
   suite.test("F26-03: [Happy Path] Encryption uses ECDH P-256 + HKDF + AES-GCM with conversation-bound AAD", () => {
     const e2e = readSrc("src/ts/e2e.ts");
@@ -857,7 +864,7 @@ export function buildTier1Suite() {
     assert.match(e2e, /additionalData/);
   });
   suite.test("F26-04: [Happy Path] Messenger supports reply, edit, read receipts and room chat", () => {
-    const m = readSrc("src/messenger.js");
+    const m = readSrc("src/ts/messenger.ts");
     for (const fn of ["function msgrOpen", "function msRoomMount", "function msMarkRead", "function msCtx", "function paintE2EDevices"]) assert.ok(m.includes(fn), fn);
     assert.match(m, /reply_to/);
     assert.match(m, /rpc\("mark_read"/);
@@ -868,7 +875,7 @@ export function buildTier1Suite() {
     for (const s of ["create table if not exists public.e2e_devices", "function public.mark_read", "function public.dm_threads", "function public.e2e_add_keys", "function public.set_equipped_badges", "equipped_badges"]) assert.ok(full.toLowerCase().includes(s.toLowerCase()), s);
   });
   // F26-06 — the real primitives, not their text: Node imports src/ts/e2e.ts (type stripping, Node 22.18+ / 23.6+)
-  // and round-trips real P-256 keys the way messenger.js uses them.
+  // and round-trips real P-256 keys the way messenger.ts uses them.
   if (!process.features?.typescript) suite.skip("F26-06: [Happy Path] E2E primitives round-trip: seal for two devices, open, reject the wrong chat, rewrap", "this Node cannot import .ts (needs 22.18+ or 23.6+)");
   else suite.test("F26-06: [Happy Path] E2E primitives round-trip: seal for two devices, open, reject the wrong chat, rewrap", async () => {
     const { MWE2E: E } = await import(new URL("../src/ts/e2e.ts", import.meta.url).href);
@@ -970,7 +977,7 @@ export function buildTier1Suite() {
     const classic = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
     assert.equal(classic[classic.length - 1], "ready", "ready.js must be the last classic script — the modules wait for it");
     const main = fs.readFileSync(path.join(tsDir, "main.ts"), "utf-8");
-    for (const m of ["naudio", "e2e", "fx", "m3", "discover", "search", "chat", "profile", "custom", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
+    for (const m of ["naudio", "e2e", "fx", "m3", "discover", "search", "messenger", "chat", "profile", "custom", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
   });
 
   // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────

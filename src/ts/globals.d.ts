@@ -1,4 +1,4 @@
-/* Globals of the classic scripts (app.js, messenger.js, …) that the TypeScript
+/* Globals of the classic scripts (app.js, boot.js, …) that the TypeScript
    modules read. Top-level const/let/function of a classic script live in the
    page's global scope, and a module sees them by name — so these are only
    types, nothing is imported. tests/tier1-features.mjs (F27-02) checks that
@@ -157,13 +157,55 @@ interface MwUser {
 /** A row of the profiles table: your own (app.js sbProfile) or someone else's. */
 interface MwProfile {
   id?: string;
+  username?: string;
+  avatar_url?: string | null;
   banner_url?: string | null;
   prefs?: { banner?: unknown; [key: string]: unknown } | null;
   [key: string]: unknown;
 }
+/** A PostgREST error as supabase-js hands it over. */
+interface MwSbError {
+  message?: string;
+  code?: string;
+  [key: string]: unknown;
+}
+/** What awaiting a query gives: the rows (or the one row) and the error, if any. */
+interface MwSbResult<T> {
+  data: T | null;
+  error: MwSbError | null;
+}
+/** A query on one table: each filter hands the query back, awaiting it runs it. */
+interface MwSbQuery<R> extends PromiseLike<MwSbResult<R[]>> {
+  select(columns?: string): MwSbQuery<R>;
+  eq(column: string, value: unknown): MwSbQuery<R>;
+  gt(column: string, value: unknown): MwSbQuery<R>;
+  gte(column: string, value: unknown): MwSbQuery<R>;
+  lt(column: string, value: unknown): MwSbQuery<R>;
+  in(column: string, values: readonly unknown[]): MwSbQuery<R>;
+  is(column: string, value: null | boolean): MwSbQuery<R>;
+  not(column: string, operator: string, value: unknown): MwSbQuery<R>;
+  or(filters: string): MwSbQuery<R>;
+  order(column: string, options?: { ascending?: boolean }): MwSbQuery<R>;
+  limit(count: number): MwSbQuery<R>;
+  single(): PromiseLike<MwSbResult<R>>;
+}
+interface MwSbTable<R> {
+  select(columns?: string): MwSbQuery<R>;
+  insert(row: Record<string, unknown>): MwSbQuery<R>;
+  update(fields: Record<string, unknown>): MwSbQuery<R>;
+  upsert(row: Record<string, unknown>, options?: { onConflict?: string }): MwSbQuery<R>;
+  delete(): MwSbQuery<R>;
+}
+/** The row type of each table the modules read; a module adds its own
+    tables here (messenger.ts: messages, e2e_devices, friendships). */
+interface MwSbTables {
+  profiles: MwProfile;
+}
 /** The part of the Supabase client (vendor/supabase.js, app.js sb) the modules use. */
 interface MwSupabase {
-  from(table: string): { upsert(row: Record<string, unknown>): PromiseLike<{ error: { message?: string } | null }> };
+  from<K extends keyof MwSbTables>(table: K): MwSbTable<MwSbTables[K]>;
+  from(table: string): MwSbTable<Record<string, unknown>>;
+  rpc<T = unknown>(fn: string, args?: Record<string, unknown>): PromiseLike<MwSbResult<T>>;
   storage: {
     from(bucket: string): {
       remove(paths: string[]): Promise<unknown>;
@@ -172,29 +214,10 @@ interface MwSupabase {
     };
   };
 }
-/** A chat partner as messenger.js caches them (a profiles row). */
+/** A chat partner as messenger.ts caches them (a profiles row). */
 interface MwPeer {
   id?: string;
   username?: string;
-  [key: string]: unknown;
-}
-/** A conversation (messenger.js msConvNew). */
-interface MwConv {
-  /** "dm" or "room" */
-  kind: string;
-  peer: string | null;
-  /** the log on screen, while it is open */
-  root: HTMLElement | null;
-  /** the message being answered */
-  reply: { id?: string | number } | null;
-  [key: string]: unknown;
-}
-/** messenger.js's state (MS). */
-interface MwMessenger {
-  threads: { peer: string; [key: string]: unknown }[];
-  friends: string[] | null;
-  peers: Map<string, MwPeer>;
-  conv: MwConv | null;
   [key: string]: unknown;
 }
 
@@ -304,7 +327,7 @@ interface MwLyrics {
 /* app.js */
 declare const I18N: Record<string, Record<string, string>> & { ru: Record<string, string>; en: Record<string, string> };
 declare const t: (key: string) => string;
-declare const S: { pspeed?: number | string; view?: string; banner?: string; current?: MwTrack | null; playing: boolean; pos: number; dur: number; x: MwStateX; [key: string]: unknown };
+declare const S: { pspeed?: number | string; view?: string; banner?: string; current?: MwTrack | null; playing: boolean; pos: number; dur: number; x: MwStateX; username?: string; avatar?: string | null; [key: string]: unknown };
 declare const AB: { bass: number; mid: number; high: number; lvl: number; beat: number; [key: string]: number };
 declare const BOOT: { done: boolean; reduce: boolean };
 declare const TAURI: TauriCore | undefined;
@@ -324,6 +347,8 @@ declare function fieldAccent(): [number, number, number];
 declare function oklchOf(rgb: readonly number[]): [number, number, number];
 declare function oklchLin(L: number, C: number, H: number): [number, number, number];
 declare function save(): void;
+/** relabels the page in LANG (window.applyI18n — m3.ts and discover.ts wrap it) */
+declare function applyI18n(): void;
 declare const askText: (title: string, value?: string, o?: Partial<MwModalOptions>) => Promise<string | null>;
 declare const askConfirm: (title: string, confirm: string, danger?: boolean, o?: Partial<MwModalOptions>) => Promise<true | null>;
 declare function paintSeg(seg: Element | null): void;
@@ -340,7 +365,7 @@ declare const cssUrlRaw: (s: unknown) => string;
 declare function row(tr: MwTrack, extra?: string, removable?: boolean, rmPid?: string | null): string;
 declare function xlistSet(key: string, name: string, tracks: MwTrack[]): void;
 declare function listFor(key: string): MwTrack[] | null;
-declare function setTrack(tr: MwTrack, play?: boolean, openFull?: boolean, ctx?: string, keepQueue?: boolean, isBack?: boolean): Promise<unknown>;
+declare function setTrack(tr: MwTrack, play?: boolean, openFull?: boolean, ctx?: string, keepQueue?: boolean, isBack?: boolean): Promise<void>;
 declare function go(view: string): void;
 declare function search(query: string, silent?: boolean): Promise<unknown>;
 declare function artistList(): MwArtist[];
@@ -438,16 +463,38 @@ declare function mergeLocal(added: MwTrack[]): void;
 declare function applyFPSettings(): void;
 declare function importRows(rows: MwTrack[], svcId: string | null, name: string, asFavorites: boolean, src?: unknown): Promise<unknown>;
 
-/* messenger.js */
-declare const MS: MwMessenger;
-declare const msMe: () => string;
-declare const msName: (p: MwPeer | null | undefined) => string;
-declare function msErr(e: unknown): string;
-declare function msCtx(c: MwConv, mode: string | null, row?: unknown): void;
-declare function msPost(c: MwConv, payload: Record<string, unknown>, replyTo: unknown): Promise<unknown>;
-declare function msSend(c: MwConv, payload: Record<string, unknown>, replyTo: unknown): Promise<{ error?: unknown } | null | undefined>;
-declare function msConvNew(kind: string, id: unknown): MwConv;
-declare function msLoadThreads(): Promise<unknown>;
-declare function msPaintList(showFriends?: boolean): void;
-declare function msLoadFriends(force?: boolean): Promise<unknown>;
-declare function msEnsurePeers(ids: string[]): Promise<unknown>;
+/* … read by messenger.ts */
+/** the social screens: the room you are in, its members, their timers */
+declare const SOC: {
+  room: { id: string; join_code: string; name: string; [key: string]: unknown } | null;
+  roomMembers?: { user_id: string; profile?: MwPeer | null; [key: string]: unknown }[];
+  [key: string]: unknown;
+};
+/** an interval by name (one per key), and its end */
+declare const socTimer: (k: string, fn: () => unknown, ms: number) => void;
+declare const socClear: (k: string) => void;
+/** a readable line for a failed social request, and the panel that shows it */
+declare function socialFail(e: unknown): string;
+declare const socErrBox: (msg: string) => string;
+/** the sign-in card in a social screen */
+declare const needAuth: (box: Element | null, saved?: Record<string, unknown>) => unknown;
+declare function notify(title: string, body: string, opts?: { icon?: string; ms?: number; onClick?: () => void }): void;
+/** a profiles row with what its owner hides hidden */
+declare const maskProf: (p: MwProfile) => MwPeer;
+/** presence: "online", "listening", "offline" or null; what is playing; load a batch */
+declare function presStatus(id: unknown): string | null;
+declare function presTrack(id: unknown): MwTrack | null;
+declare function presLoad(ids: (string | null | undefined)[]): Promise<void>;
+/** a chat body with links and the inline picture */
+declare function chatBodyHtml(m: { body?: string | null; image?: string | null }): string;
+/** a room code (MEOW-XXXX) */
+declare const JOIN_RE: RegExp;
+declare function roomTrackOf(tr: MwTrack | null | undefined): MwTrack | null;
+declare function joinRoomByCode(code: string): Promise<boolean>;
+declare function queueNext(tr: MwTrack): void;
+declare function queueLast(tr: MwTrack): void;
+/** a picture for an old-style inline message (a data: URL), null when it cannot be made */
+declare function compressChatImage(file: File, maxSide?: number, budget?: number): Promise<string | null>;
+declare function openProfile(id: unknown): void;
+/** "5 min ago" */
+declare function ago(ts: number): string;

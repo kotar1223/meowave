@@ -10673,7 +10673,7 @@ async function renderPeopleFriends(box){
 }
 
 /* The old "Чаты" tab (DM list + groups) is gone: direct messages live in
-   their own Messages screen now (messenger.js). These two stay because the
+   their own Messages screen now (src/ts/messenger.ts). These two stay because the
    profile card, friend rows and room member lists still call them. */
 function hideChatPane(){
   const c=document.getElementById("chatbody");
@@ -10709,7 +10709,7 @@ async function compressChatImage(file,maxSide=720,budget=150000){
 /* ── rooms ──────────────────────────────────────────────── */
 /* Round 9 rewrite. A room is one row (track / position / playing, written by
    whoever runs the broadcast) plus members, a server queue, listener requests
-   and a chat (messenger.js).
+   and a chat (src/ts/messenger.ts).
 
    Sync, in one place:
    - One client is the clock: a host (owner or DJ) who last did something

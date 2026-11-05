@@ -26,14 +26,11 @@
    app.js and m3.js — and before initSearch(), whose screen renders shelves
    with MWDISC.shelvesHTML.
 
-   The old script ran before messenger.js; a module cannot start between
-   two classic scripts, so messenger.js now runs first. It does not need
-   this module at load, and nothing here needs it. What moves:
-   messenger.js's applyI18n() at load now runs before the wrappers below
-   exist — through them it used to reset the hero and the sheet tabs and
-   paint them again; init() paints them right after, from the same state,
-   and marks the sheet body unread (data-svc="") as that call left it.
-   The applyI18n() wrappers nest as they did before step 2: m3.ts's inside,
+   messenger.ts starts after this module and search.ts, where messenger.js
+   stood (after discover.js and search2.js), so its applyI18n() at start
+   goes through the wrapper below as before step 2: the hero and the sheet
+   tabs are reset and painted again, the sheet body is marked unread
+   (data-svc=""). The applyI18n() wrappers nest as they did: m3.ts's inside,
    this one outside. */
 
 /** S.x.wave once waveCfg() has put every field in range. */
@@ -1053,7 +1050,6 @@ window.hsForget=id=>{
  const b=$("hs-body");if(b&&(!id||b.dataset.svc===id))b.dataset.svc="";
  try{refreshAll()}catch(_){}};
 function init(){
- {const b=$("hs-body");if(b)b.dataset.svc=""}
  waveCfg();paintWaveUI();hsTabs();hsInit();wallInit();dndInit();
  window.renderWaveHint=waveHint;window.paintHero=paintHero;
  /* While the wave plays, the hero's main button pauses it rather than

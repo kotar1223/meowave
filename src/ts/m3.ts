@@ -12,14 +12,12 @@
    every later module finds window.mwDialog in place.
 
    The old script ran right after app.js, before discover.js and
-   messenger.js; a module cannot start between two classic scripts, so this
-   one now starts after messenger.js (discover.ts, a module too, starts
-   right after it, as before). Nothing they do at load needs it — app.js,
-   discover.ts and messenger.js reach mwDialog, MW3, mwCloseLayer and
-   mwFailSnack only from handlers, each behind a guard. What moves:
-   - messenger.js's applyI18n() at load now runs before this wrapper
-     exists; init() below labels the mini button and the icon picker
-     itself, and the mini player is closed at that point;
+   messenger.js; the modules that replaced them start in the same order
+   after it (discover.ts, search.ts, messenger.ts …). app.js, discover.ts
+   and messenger.ts reach mwDialog, MW3, mwCloseLayer and mwFailSnack only
+   from handlers, each behind a guard. What stays as it was:
+   - messenger.ts's applyI18n() at start goes through this wrapper, as
+     messenger.js's did at load;
    - the applyI18n() wrappers nest as before: this one inside,
      discover.ts's outside;
    - the Escape listener (document, capture) still runs before

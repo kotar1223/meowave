@@ -1,8 +1,8 @@
 /* e2e.ts — Meowave end-to-end encryption — the primitives, nothing else.
    Was src/e2e.js until step 2 of the stack rewrite; the algorithm, the wire
-   format and the names messenger.js calls (window.MWE2E) are unchanged.
+   format and the names the messenger calls (window.MWE2E) are unchanged.
 
-   No DOM, no network, no app state: messenger.js decides who a message is for
+   No DOM, no network, no app state: messenger.ts decides who a message is for
    and where it goes; this file only seals and opens. Plain WebCrypto, so it
    runs the same in WebView2, WKWebView, WebKitGTK, Android WebView, a browser
    and Node (F26-06 imports this file and round-trips real keys).
@@ -24,9 +24,10 @@
    message moved into another chat, or attributed to someone else, fails to
    open instead of showing up there.
 
-   Nothing here waits for the classic scripts: messenger.js reaches MWE2E only
-   from inside its functions, long after the page has loaded, so main.ts
-   imports this module first and window.MWE2E is there before DOMContentLoaded. */
+   Nothing here waits for the classic scripts: messenger.ts imports MWE2E and
+   calls it only from inside its functions, long after the page has loaded;
+   main.ts imports this module first, so window.MWE2E is there before
+   DOMContentLoaded. */
 
 /** A public key as published in public.e2e_devices. */
 export interface E2EPub { kty: string; crv: string; x?: string; y?: string }

@@ -5559,7 +5559,7 @@ html[data-theme="light"] .mdd-h .mdd-ic{background:oklch(0% 0 0 / .06)}
 .import-head-icon{border-radius:10px;background:oklch(100% 0 0 / .07);color:var(--text);box-shadow:none}
 @media (max-width:560px){.mdd{border-radius:16px 16px 0 0}}
 
-/* ══ Messages (messenger.js) ═════════════════════════════════════════════
+/* ══ Messages (src/ts/messenger.ts) ══════════════════════════════════════
    Telegram-shaped: a list of conversations on the left, the open one on the
    right; on a phone the two are one pane each. Colours are quiet on purpose —
    bubbles are tinted surfaces, names and quote bars pastel, no glow. The same

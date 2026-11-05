@@ -12,6 +12,7 @@ import { afterLegacy } from "./legacy";
 import { initM3 } from "./m3";
 import { initDiscover } from "./discover";
 import { initSearch } from "./search";
+import { initMessenger } from "./messenger";
 import { initChat } from "./chat";
 import { initProfile } from "./profile";
 import { initCustom } from "./custom";
@@ -20,10 +21,13 @@ import { initCovers } from "./covers";
 import { initAura } from "./aura";
 
 /* m3 first: window.mwDialog is there for every module after it; then
-   discover, as the old scripts stood (search draws its shelves with it). */
+   discover, as the old scripts stood (search draws its shelves with it);
+   the messenger after search and before chat, where messenger.js stood
+   (its applyI18n() at start goes through m3's and discover's wrappers). */
 afterLegacy(initM3);
 afterLegacy(initDiscover);
 afterLegacy(initSearch);
+afterLegacy(initMessenger);
 afterLegacy(initChat);
 afterLegacy(initProfile);
 afterLegacy(initCustom);

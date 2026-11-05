@@ -14,13 +14,14 @@
      pans and saves;
    · more control over a message: forward, save image, play / queue /
      favourite a shared track, «delete for me», copy.
-   messenger.js reaches all of this through window.MWChat — each time behind
+   messenger.ts reaches all of this through window.MWChat — each time behind
    a check that it exists — when a message arrives, a log is painted or a
    composer button is pressed, and app.js's track menu offers «Send to a
    chat» only when it is there. So initChat() runs after the classic scripts
-   (legacy.ts), as chatplus.js ran after messenger.js. Reads messenger.js's
-   globals (MS, msMe, msName, msErr, msCtx, msPost, msSend, msConvNew,
-   msLoadThreads, msPaintList, msLoadFriends, msEnsurePeers) and app.js's
+   (legacy.ts), right after initMessenger(), as chatplus.js ran after
+   messenger.js. Imports what it needs of the messenger (MS, msMe, msName,
+   msErr, msCtx, msPost, msSend, msConvNew, msLoadThreads, msPaintList,
+   msLoadFriends, msEnsurePeers) and reads app.js's globals
    (S, t, esc, toast, sb, avat, svc, queue, coverStyle, cssEsc, stripTrack,
    searchRemote, queueFav, autoDownload, renderWaveHint, save, renderLib,
    TRACKS, HISTORY, PLAYLISTS) — types in globals.d.ts. The HTML it writes is
@@ -28,6 +29,7 @@
    templates. */
 
 import { IC, tf } from "./ui";
+import { MS, msMe, msName, msErr, msCtx, msPost, msSend, msConvNew, msLoadThreads, msPaintList, msLoadFriends, msEnsurePeers, type MwConv, type MsPayload } from "./messenger";
 
 interface ChatCfg {
   on: boolean;
@@ -54,9 +56,9 @@ interface MediaEntry {
   url?: string;
   p?: Promise<string>;
 }
-/** What prepare() hands messenger.js: a payload, null (send the old inline
+/** What prepare() hands messenger.ts: a payload, null (send the old inline
     picture), false (too big) or a fallback with the preview. */
-type Prepared = null | false | { fallback: true; thumb: string } | { type: "image"; image: string; media: ChatMedia };
+type Prepared = null | false | { fallback: true; thumb: string } | { type: "image"; image: string; media: ChatMedia; fallback?: undefined };
 type SoundFn = (c: AudioContext, o: AudioNode, t: number) => void;
 
 interface ChatApi {
@@ -68,7 +70,7 @@ interface ChatApi {
   openSettings(): void;
   pickTrack(): Promise<MwTrack | null>;
   pickChat(title: string): Promise<string | null>;
-  postTo(peer: unknown, payload: Record<string, unknown>): Promise<boolean>;
+  postTo(peer: unknown, payload: MsPayload): Promise<boolean>;
   shareTrack(tr: MwTrack): Promise<unknown>;
   composerTrack(c: MwConv): Promise<void>;
   prepare(file: File | null | undefined): Promise<Prepared>;
@@ -81,7 +83,7 @@ interface ChatApi {
   saveImage(url: string, name?: string): void;
   extOf(m: string): string;
   inlineGif(file: File | null | undefined): Promise<string | null>;
-  favTrack(x: MwTrack | null | undefined): unknown;
+  favTrack(x: MwTrack | null | undefined): void | MwToastHandle | null;
   hide(id: unknown): void;
   hidden(id: unknown): boolean;
   play(kind: string, gain?: number): Promise<void>;
@@ -218,7 +220,7 @@ async function play(kind: string, gain = 1): Promise<void> {
   ((SOUNDS as Record<string, SoundFn | undefined>)[kind] || SOUNDS.drop)(c, out, t0);
 }
 let lastAt = 0;
-/* From messenger.js: a message arrived. `open` — into the chat on screen. */
+/* From messenger.ts: a message arrived. `open` — into the chat on screen. */
 function incoming(peer: unknown, open: boolean): void {
   if (CFG.dnd || !CFG.on || CFG.mute.includes(String(peer))) return;
   const now = Date.now(); if (now - lastAt < 900) return; lastAt = now;
@@ -404,7 +406,7 @@ async function pickChat(title: string): Promise<string | null> {
 }
 
 /* Posts a payload into a direct chat that may not be on screen. */
-async function postTo(who: unknown, payload: Record<string, unknown>): Promise<boolean> {
+async function postTo(who: unknown, payload: MsPayload): Promise<boolean> {
   const peer = String(who);
   const open = MS.conv && MS.conv.kind === "dm" && MS.conv.peer === peer && MS.conv.root?.isConnected;
   if (open) { await msPost(MS.conv as MwConv, payload, null); return true; }
@@ -507,7 +509,7 @@ async function load(media: ChatMedia): Promise<string> {
   MEDIA.set(media.p, { media, p });
   try { return await p; } catch (e) { MEDIA.delete(media.p); throw e; }
 }
-/* messenger.js renders <img data-mpath> and calls hydrate() after painting
+/* messenger.ts renders <img data-mpath> and calls hydrate() after painting
    the log; the real file replaces the preview. */
 function note(media: ChatMedia | null | undefined): string {
   if (media?.p && !MEDIA.has(media.p)) MEDIA.set(media.p, { media });
@@ -621,7 +623,7 @@ async function inlineGif(file: File | null | undefined): Promise<string | null> 
   return await new Promise<string | null>(res => { const r = new FileReader(); r.onload = () => res(String(r.result || "") || null); r.onerror = () => res(null); r.readAsDataURL(file); });
 }
 /* ♥ on a shared track: the same path as the track menu's «Add to favourites». */
-function favTrack(x: MwTrack | null | undefined): unknown {
+function favTrack(x: MwTrack | null | undefined): void | MwToastHandle | null {
   if (!x || !x.id) return;
   let tr = TRACKS.find(y => String(y.id) === String(x.id) && y.s === x.s);
   if (tr?.fav) return toast(t("ms.faved"), 2200, { icon: "favorite" });
