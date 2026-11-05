@@ -16,6 +16,8 @@
    app.js and discover.js. The HTML it writes is byte for byte what
    search2.js wrote, including the whitespace inside the templates. */
 
+import { IC } from "./ui";
+
 declare global {
   interface Window {
     MWSearch?: SearchApi;
@@ -31,8 +33,6 @@ interface SearchApi {
   trending(r: string): Promise<Trend>;
 }
 
-const IC = (n: string, s?: number): string =>
-  `<span class="material-symbols-rounded" aria-hidden="true"${s ? ` style="font-size:${s}px"` : ""}>${n}</span>`;
 const tf = (k: string, v?: Record<string, unknown>): string => {
   let s = t(k);
   for (const [a, b] of Object.entries(v || {})) s = s.split(`{${a}}`).join(String(b));

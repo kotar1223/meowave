@@ -8059,7 +8059,7 @@ async function uploadImage(file,kind){
  const sProp=kind==="avatar"?"avatar":"banner";
 
  // 1. Always save locally immediately so the user's avatar is instantly updated and persisted
- /* profile2.js: a picture replaces a banner colour or gradient at once. */
+ /* profile.ts: a picture replaces a banner colour or gradient at once. */
  if(kind==="banner")window.MWProf?.imageChosen?.();
  S[sProp]=dataUrl;
  if(sbProfile)sbProfile={...sbProfile,[col]:dataUrl};
@@ -8074,7 +8074,7 @@ async function uploadImage(file,kind){
  // 2. Graceful background sync with Supabase Storage and database
  try{
   const bucket=kind==="avatar"?"avatars":"banners";
-  /* Banners get a file each, so the ones kept in «Мои баннеры» (profile2.js)
+  /* Banners get a file each, so the ones kept in «Мои баннеры» (src/ts/profile.ts)
      still exist when you swap back; the avatar keeps its one file. */
   const base=kind==="banner"?`${sbUser.id}/banner-${Date.now().toString(36)}`:`${sbUser.id}/${kind}`;
   const path=`${base}.${ext}`;
@@ -9505,7 +9505,7 @@ function renderProfile(savedVals={}){
    const favs=TRACKS.filter(x=>x.fav).length;
    const ava=S.avatar||sbProfile?.avatar_url||"./icons/app/classic.png";
    const ban=S.banner||sbProfile?.banner_url||"";
-   /* profile2.js: a colour / gradient banner, or the picture. */
+   /* profile.ts: a colour / gradient banner, or the picture. */
    const bs=window.MWProf?MWProf.attrs(MWProf.myStyle()):{cls:"",style:""};
    const useImg=!!ban&&!bs.cls;
    box.innerHTML=`<div class="panel pane pf2" style="overflow:hidden;padding:0">

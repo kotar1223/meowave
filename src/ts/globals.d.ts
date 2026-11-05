@@ -106,10 +106,36 @@ interface MwModalOptions {
   secret?: boolean;
 }
 
+/** What mwDialog() hands back (m3.js). */
+interface MwDialogHandle {
+  el: HTMLElement;
+  body: HTMLElement;
+  closed: boolean;
+  close(): void;
+  setActions(actions: MwDialogAction[]): void;
+}
+/** The signed-in Supabase user (app.js sbUser). */
+interface MwUser {
+  id: string;
+  [key: string]: unknown;
+}
+/** A row of the profiles table: your own (app.js sbProfile) or someone else's. */
+interface MwProfile {
+  id?: string;
+  banner_url?: string | null;
+  prefs?: { banner?: unknown; [key: string]: unknown } | null;
+  [key: string]: unknown;
+}
+/** The part of the Supabase client (vendor/supabase.js, app.js sb) the modules use. */
+interface MwSupabase {
+  from(table: string): { upsert(row: Record<string, unknown>): PromiseLike<{ error: { message?: string } | null }> };
+  storage: { from(bucket: string): { remove(paths: string[]): Promise<unknown> } };
+}
+
 interface Window {
   __TAURI__?: { core?: TauriCore };
   /** m3.js: the one Material 3 dialog every module uses. */
-  mwDialog?: (options: MwDialogOptions) => unknown;
+  mwDialog?: (options: MwDialogOptions) => MwDialogHandle;
   /** custom.js: a particle colour picked in the interface designer. */
   CZ_FIELD?: [number, number, number] | null;
   /** app.js: the service search is narrowed to ("" — all of them). */
@@ -121,7 +147,7 @@ interface Window {
 /* app.js */
 declare const I18N: Record<string, Record<string, string>> & { ru: Record<string, string>; en: Record<string, string> };
 declare const t: (key: string) => string;
-declare const S: { pspeed?: number | string; view?: string; [key: string]: unknown };
+declare const S: { pspeed?: number | string; view?: string; banner?: string; [key: string]: unknown };
 declare const AB: { bass: number; mid: number; high: number; lvl: number; beat: number; [key: string]: number };
 declare const BOOT: { done: boolean; reduce: boolean };
 declare const TAURI: TauriCore | undefined;
@@ -156,3 +182,11 @@ declare function setTrack(tr: MwTrack, play?: boolean, openFull?: boolean, ctx?:
 declare function go(view: string): void;
 declare function search(query: string, silent?: boolean): Promise<unknown>;
 declare function artistList(): MwArtist[];
+declare let sb: MwSupabase | null;
+declare let sbUser: MwUser | null;
+declare let sbProfile: MwProfile | null;
+declare function pushPrefs(): void;
+declare function renderProfile(savedVals?: Record<string, unknown>): void;
+declare const uploadBanner: (f: File) => Promise<unknown>;
+declare function fillProfileSettings(): void;
+declare function openSettings(tab?: string): void;

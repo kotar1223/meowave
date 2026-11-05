@@ -8,11 +8,13 @@
 import "./naudio";
 import { afterLegacy } from "./legacy";
 import { initSearch } from "./search";
+import { initProfile } from "./profile";
 import { initUpdate } from "./update";
 import { initCovers } from "./covers";
 import { initAura } from "./aura";
 
 afterLegacy(initSearch);
+afterLegacy(initProfile);
 afterLegacy(initUpdate);
 afterLegacy(initCovers);
 afterLegacy(initAura);

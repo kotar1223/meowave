@@ -6133,7 +6133,7 @@ html:not([data-accent="none"]) .s2-rank .row:nth-child(-n+3)::before{color:var(-
   grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));row-gap:20px;overflow:visible}
 #sres:is([data-s2f="artists"],[data-s2f="playlists"],[data-s2f="albums"]) .s2-sec .hs-nav{display:none}
 
-/* ═══ profile2.js: one profile layout, banner styles and the banner picker ═══
+/* ═══ profile (src/ts/profile.ts): one profile layout, banner styles and the banner picker ═══
    Avatars: the picture is enlarged by moving its edges out (inset −4 %), not
    with transform: a transformed child is composited on its own layer and the
    round clip of that layer is anti-aliased separately — at 125 / 150 % Windows
