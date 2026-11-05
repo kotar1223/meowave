@@ -56,7 +56,8 @@ _Обновлено: 2026-11-05, сессия «раунд 10: доделка».
 
 ## Сейчас в работе
 
-- [x] **Раунд 10 — доделка** (2026-11-05 вечер): проверки, `brain/` и README, Beta 3.3, слияние в `beta-redesign` и `main`. Результат CI — в журнале сессий ниже.
+- [x] **Раунд 10 — доделка** (2026-11-05 вечер): проверки, `brain/` и README, Beta 3.3, слияние в `beta-redesign` и `main`. CI на `ce39c3b` зелёный: CI на `main`, `beta-redesign`, `wip/round10`; iOS Build на `main`.
+- [ ] **Шаг 2 переписывания стека — Vite + TypeScript** (начат 2026-11-05 ночью): ветка `wip/stack-vite`. Пока не слита — `main` и `beta-redesign` её не содержат. Подробности и что уже готово — в журнале сессий ниже.
 
 ## Очередь задач (не доделано)
 
@@ -112,3 +113,5 @@ _Обновлено: 2026-11-05, сессия «раунд 10: доделка».
 - Проверки `wip/round10`: `cargo clippy --all-targets -- -D warnings` — 0 замечаний; `cargo test` — 133 прошли, 23 пропущены (сеть и тесты движка); тесты движка на файлах из ffmpeg — 10/10 (совпадение с ffmpeg 95–135 дБ, позиция ±30 мс, скорость 1,25× точная, Opus честно отдаётся WebView); `node --check` всех файлов; e2e 309/309 (5 пропущены); необъявленных имён нет.
 - Сделано: этот файл (`6bd8a4b`), `CLAUDE.md`, ссылки в `AGENTS.md`/`GEMINI.md`/`brain/Home.md`; Beta 3.3; найдена и исправлена ошибка таймера сна (выбранный вариант был почти не виден: у кнопок `data-sleep`, а `paintSeg` искал только `data-v`); скриншоты новых настроек и фона во вкладках (1280×800, 390×844); раунд 10 записан в `brain/` (Requests №18–19, Worklog, Decisions, Known issues, Architecture, Roadmap, новая заметка `Features/Native audio engine.md`) и README.
 - Слито в `beta-redesign` и `main`; результат CI — следующей строкой.
+- CI на `ce39c3b`: всё зелёное — CI (clippy и тесты на Windows/macOS/Ubuntu, фронтенд, e2e) на `main`, `beta-redesign` и `wip/round10`, iOS Build на `main`.
+- Дальше в этой же сессии: шаг 2 стека (Vite + TypeScript) в ветке `wip/stack-vite` — отдельная запись ниже.
