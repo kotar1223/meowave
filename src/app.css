@@ -850,6 +850,11 @@ html[data-theme="light"] .plc .sq{background:linear-gradient(150deg,oklch(calc(1
 .plhead b{font-size:1.15rem;font-weight:500}
 .plhead span{color:var(--mute);font-size:.82rem}
 .plhead .btn:last-child{margin-left:auto}
+/* Downloads that play from disk: their own block under the local files, and a
+   small mark beside the service on every downloaded row. */
+.plhead.offhead{margin-top:30px}
+.offnone{color:var(--mute);font-size:.86rem;margin:0;padding:4px var(--sp-3)}
+.src .src-off{font-size:14px;color:var(--accent);opacity:.9}
 .btn.danger{border-color:oklch(58% 0.17 25 / .5);color:oklch(70% 0.17 25)}
 .btn.danger:hover{background:oklch(58% 0.17 25 / .12)}
 /* The dashed outline used to wrap the whole card including its label, which

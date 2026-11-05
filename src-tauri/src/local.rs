@@ -260,6 +260,29 @@ pub fn local_rehydrate(paths: Vec<String>) -> usize {
     n
 }
 
+/// Registers finished downloads so `/stream/local/<id>` can serve them, and
+/// returns the ones that still exist — the player streams the rest.
+///
+/// Async, unlike `local_add`: the whole list is checked at every start, and a
+/// path on an unplugged drive or a sleeping network share can hold a single
+/// `stat` for seconds. In a synchronous command that is seconds of a frozen
+/// window; here it is a thread of the blocking pool.
+#[tauri::command]
+pub async fn local_offline(paths: Vec<String>) -> Vec<LocalTrack> {
+    tokio::task::spawn_blocking(move || local_add(paths))
+        .await
+        .unwrap_or_default()
+}
+
+/// `local_scan` on the blocking pool, for looking through the download folder
+/// (files saved before downloads were remembered) without stalling the window.
+#[tauri::command]
+pub async fn local_scan_bg(folder: String, depth: Option<u8>) -> Result<Vec<LocalTrack>, String> {
+    tokio::task::spawn_blocking(move || local_scan(folder, depth))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Content type from the extension — the proxy has to declare one and there's
 /// no server to ask.
 pub fn mime_of(path: &Path) -> &'static str {

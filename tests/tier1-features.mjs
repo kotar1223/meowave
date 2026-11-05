@@ -1018,5 +1018,52 @@ export function buildTier1Suite() {
     assert.match(lib, /ytm::ytm_clip,/);
   });
 
+  /* F31 — round 9: downloads play from disk */
+  suite.test("F31-01: [Happy Path] A downloaded track streams from its file, before any service URL is built", () => {
+    const su = fnSrc(js, "streamUrl");
+    const iOff = su.indexOf("offId(tr)"), iSvc = su.indexOf("/stream/${encodeURIComponent(tr.s)}");
+    assert.ok(iOff > 0 && iSvc > iOff, "the file must be checked before the service URL");
+    assert.match(su, /\/stream\/local\/\$\{encodeURIComponent\(off\)\}/);
+    assert.match(fnSrc(js, "offId"), /S\.dlPlay===false\|\|tr\?\._net\?null:offLive\(tr\)/);
+    assert.match(fnSrc(js, "load"), /if\(tr\.s==="sp"&&!offId\(tr\)\)\{sprPlay/);
+    assert.match(readSrc("src/m3.js"), /_resolvedSvc:h\.s,_net:true\}/, "an explicit source pick bypasses the file");
+  });
+  suite.test("F31-02: [Happy Path] A plain download is remembered; Spotify downloads take the resolved source", () => {
+    const dl = fnSrc(js, "downloadTrack");
+    assert.match(dl, /const src=await dlSource\(tr\)/);
+    assert.match(dl, /service:src\.s,id:src\.id/);
+    assert.match(dl, /offRemember\(tr,path\)/);
+    assert.doesNotMatch(fnSrc(js, "downloadProcessed"), /offRemember/, "a processed file is a different sound");
+    assert.match(fnSrc(js, "dlSource"), /sprResolve\(tr\)/);
+  });
+  suite.test("F31-03: [Edge Case] A file that will not open falls back to the service; no network skips what is not on disk", () => {
+    assert.match(js, /if\(offFailed\(tr,url\)\)\{toast\(t\("off\.gone"\),4200\);load\(tr,wasPlaying,pos\);return\}/);
+    const ef = fnSrc(js, "explainFailure");
+    assert.match(ef, /navigator\.onLine===false&&tr\?\.s!=="local"&&!offId\(tr\)/);
+    assert.match(ef, /await offBoot\(\)/, "files may be confirmed after the track started");
+    assert.match(fnSrc(js, "next"), /playOn\(c\.s\)&&offOk\(c\)\)nx=c/);
+    assert.match(fnSrc(js, "prefetchNextSoon"), /\|\|offId\(nx\)\)return/);
+  });
+  suite.test("F31-04: [Edge Case] Earlier downloads are matched by the exact download name only", () => {
+    const st = fnSrc(js, "dlStem");
+    assert.match(st, /\.replace\(\/\[<>:"\\\/\\\\\|\?\*\\x00-\\x1f\]\/g,"_"\)/);
+    assert.match(st, /slice\(0,120\)/, "the same 120-character cap as download_track");
+    const f = fnSrc(js, "offFind");
+    assert.match(f, /replace\(\/ \\\(\\d\{1,3\}\\\)\$\/,""\)/, "a ' (2)' copy is still the same download");
+    assert.match(f, /known\.get\(base\.toLowerCase\(\)\)/);
+  });
+  suite.test("F31-05: [Static] Files are confirmed off the main thread, the list is kept apart and capped, texts in both languages", () => {
+    const loc = readSrc("src-tauri/src/local.rs"), lib = readSrc("src-tauri/src/lib.rs");
+    assert.match(loc, /pub async fn local_offline\(paths: Vec<String>\) -> Vec<LocalTrack> \{\s*tokio::task::spawn_blocking\(move \|\| local_add\(paths\)\)/);
+    assert.match(loc, /pub async fn local_scan_bg\(/);
+    assert.match(lib, /local::local_offline,\s*local::local_scan_bg,/);
+    assert.match(fnSrc(js, "offSave"), /m\.size>4000/);
+    assert.match(fnSrc(js, "offMap"), /localStorage\.getItem\("mw\.offline"\)/);
+    for (const k of ["dl.play", "dl.play.s", "dl.nosrc", "off.mark", "off.lib", "off.none", "off.find", "off.find.t", "off.find.s", "off.find.btn", "off.find.nodir", "off.found", "off.found0", "off.forget", "off.gone", "off.nonet", "off.skip"]) {
+      assert.equal(js.split(`"${k}":`).length - 1, 2, k + " must exist in RU and EN");
+    }
+    assert.ok(domHasElement(html, "#dl-play") && domHasElement(html, "#dl-find"));
+  });
+
   return suite;
 }

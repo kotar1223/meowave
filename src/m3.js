@@ -159,7 +159,9 @@ async function pickSource(tr){
 function useSource(tr,h){
  fallbackAttempted.add(trackKey(h));
  if(!sameTrack(tr,S.current)){setTrack(h,true);return}
- const resolved={...tr,id:h.id,s:h.s,mode:"local",_resolved:true,_resolvedId:h.id,_resolvedSvc:h.s};
+ /* _net: the user chose this service, so a downloaded file of the track does
+    not get to stand in for it (see offId in app.js). */
+ const resolved={...tr,id:h.id,s:h.s,mode:"local",_resolved:true,_resolvedId:h.id,_resolvedSvc:h.s,_net:true};
  if(tr._spOrig){
   try{sprMap().set(sprKey(tr),{s:h.s,id:String(h.id),t:h.t,a:h.a,d:+h.d||0,score:0,at:Date.now()});sprSave()}catch(_){}
   S.current._resolvedSvc=h.s}

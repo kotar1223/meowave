@@ -536,6 +536,8 @@ pub fn run() {
             local::local_add,
             local::local_scan,
             local::local_rehydrate,
+            local::local_offline,
+            local::local_scan_bg,
             local::download_track,
             local::download_processed,
             lyrics::lyrics_get,
@@ -688,6 +690,26 @@ mod local_tests {
         assert_eq!(first[0].id, second[0].id);
         assert_eq!(local::path_of(&first[0].id).unwrap(), p);
         assert_eq!(local::local_rehydrate(vec![s]), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Downloads that play from disk: the frontend matches the answer back to
+    /// its entries by path, so the path must come back exactly as sent, and a
+    /// file that is gone must simply be absent (the player streams it).
+    #[tokio::test]
+    async fn offline_downloads_report_what_still_exists() {
+        let dir = std::env::temp_dir().join("meowave_offline_dl");
+        std::fs::create_dir_all(&dir).unwrap();
+        let kept = dir.join("Кино - Группа крови.m4a");
+        std::fs::write(&kept, b"data").unwrap();
+        let kept_s = kept.to_string_lossy().to_string();
+        let gone_s = dir.join("Gone - Away.mp3").to_string_lossy().to_string();
+        let got = local::local_offline(vec![kept_s.clone(), gone_s]).await;
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].path, kept_s);
+        assert_eq!(local::path_of(&got[0].id).unwrap(), kept);
+        let found = local::local_scan_bg(dir.to_string_lossy().to_string(), Some(1)).await.unwrap();
+        assert!(found.iter().any(|t| t.path == kept_s));
         let _ = std::fs::remove_dir_all(&dir);
     }
 

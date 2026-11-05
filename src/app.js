@@ -128,7 +128,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "pl.auth":"Сначала войдите в аккаунт","pl.made":"Плейлист «{n}» создан","pl.dup":"Этот трек уже в плейлисте","pl.added":"Добавлено в «{n}»","pl.back":"Плейлисты","pl.playall":"Играть всё","pl.del":"Удалить","pl.del.ask":"Удалить плейлист «{n}»?","pl.deleted":"Плейлист удалён","pl.empty.t":"Плейлист пуст","pl.empty.s":"Добавляйте треки через меню правой кнопки мыши.","pl.new":"Новый плейлист","pl.new.s":"Соберите свою подборку","pl.auto":"Автоподборки по артистам",
 "ctx.play":"Играть","ctx.qnext":"Играть следующим","ctx.qlast":"В конец очереди","ctx.all":"Вся фонотека","ctx.fav":"В избранное","ctx.unfav":"Убрать из избранного","ctx.addto":"Добавить в плейлист","ctx.nopl":"Плейлистов пока нет","ctx.newpl":"Новый плейлист","ctx.newpl.ask":"Название плейлиста",
 "q.from":"Играет из","q.next.ok":"«{n}» — следующим","q.last.ok":"«{n}» — в конец очереди","q.clear":"Очистить очередь","q.rm":"Убрать из очереди",
-"dl.desktop":"Скачивание доступно только в приложении","dl.already":"Этот файл уже на диске","dl.noport":"Локальный поток недоступен","dl.start":"Скачиваем {n}…","dl.ok":"Сохранено: {n}","dl.fail":"Не удалось скачать",
+"dl.play":"Играть скачанное с диска","dl.play.s":"Скачанный трек играет из файла: сразу, без трафика и без сети","dl.nosrc":"не нашли, откуда скачать звук","off.find.t":"Найти скачанные раньше","off.find.s":"Треки из библиотеки, уже лежащие в папке загрузок","off.find.btn":"Найти","off.find":"Найти скачанные","off.find.nodir":"Сначала выберите папку загрузок в Настройки → Фонотека","off.found":"Нашли скачанных треков: {n} — теперь они играют с диска","off.found0":"В папке загрузок нет треков из библиотеки","off.mark":"Скачан — играет с диска","off.lib":"Скачанные","off.none":"Скачанные треки появятся здесь и будут играть без сети","off.forget":"Не играть с диска","off.gone":"Скачанный файл не открылся — играем из сети","off.nonet":"Нет сети, а этот трек не скачан","off.skip":"Нет сети — пропускаем то, что не скачано","dl.desktop":"Скачивание доступно только в приложении","dl.already":"Этот файл уже на диске","dl.noport":"Локальный поток недоступен","dl.start":"Скачиваем {n}…","dl.ok":"Сохранено: {n}","dl.fail":"Не удалось скачать",
 "set.tab.net":"Сеть",
 "px.t":"Обход блокировок","px.s":"Выключено по умолчанию. Через прокси идут только заблокированные сервисы — Яндекс Музыка всегда напрямую, иначе она отвечает отказом на зарубежные адреса.",
 "px.on":"Использовать прокси","px.off":"Выключено","px.v.on":"Вкл","px.v.off":"Выкл",
@@ -262,7 +262,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "pl.auth":"Sign in first","pl.made":"Playlist “{n}” created","pl.dup":"This track is already in the playlist","pl.added":"Added to “{n}”","pl.back":"Playlists","pl.playall":"Play all","pl.del":"Delete","pl.del.ask":"Delete playlist “{n}”?","pl.deleted":"Playlist deleted","pl.empty.t":"Playlist is empty","pl.empty.s":"Add tracks from the right-click menu.","pl.new":"New playlist","pl.new.s":"Build your own selection","pl.auto":"Automatic artist mixes",
 "ctx.play":"Play","ctx.qnext":"Play next","ctx.qlast":"Add to queue","ctx.all":"Whole library","ctx.fav":"Add to favorites","ctx.unfav":"Remove from favorites","ctx.addto":"Add to playlist","ctx.nopl":"No playlists yet","ctx.newpl":"New playlist","ctx.newpl.ask":"Playlist name",
 "q.from":"Playing from","q.next.ok":"“{n}” plays next","q.last.ok":"“{n}” added to the queue","q.clear":"Clear the queue","q.rm":"Remove from the queue",
-"dl.desktop":"Downloads work in the desktop app only","dl.already":"This file is already on disk","dl.noport":"Local stream unavailable","dl.start":"Downloading {n}…","dl.ok":"Saved: {n}","dl.fail":"Download failed",
+"dl.play":"Play downloads from disk","dl.play.s":"A downloaded track plays from its file: instantly, with no traffic and no network","dl.nosrc":"no source to download the sound from","off.find.t":"Find earlier downloads","off.find.s":"Library tracks already in the download folder","off.find.btn":"Find","off.find":"Find downloads","off.find.nodir":"Pick a download folder first in Settings → Library","off.found":"Downloaded tracks found: {n} — they now play from disk","off.found0":"The download folder has no tracks from the library","off.mark":"Downloaded — plays from disk","off.lib":"Downloaded","off.none":"Downloaded tracks show up here and play with no network","off.forget":"Stop playing from disk","off.gone":"The downloaded file would not open — streaming instead","off.nonet":"No network, and this track is not downloaded","off.skip":"No network — skipping what is not downloaded","dl.desktop":"Downloads work in the desktop app only","dl.already":"This file is already on disk","dl.noport":"Local stream unavailable","dl.start":"Downloading {n}…","dl.ok":"Saved: {n}","dl.fail":"Download failed",
 "set.tab.net":"Network",
 "px.t":"Bypass blocking","px.s":"Off by default. Only blocked services go through the proxy — Yandex Music always goes direct, because it refuses foreign exit addresses.",
 "px.on":"Use a proxy","px.off":"Off","px.v.on":"On","px.v.off":"Off",
@@ -563,7 +563,7 @@ const S={view:"home",tab:"pl",playing:false,current:EMPTY_TRACK,pos:0,dur:0,gues
  rate:1,boost:1,
  /* Downloads: target folder, whether to ask each time, and optional automatic
     copies. All off until the user opts in. */
- dlDir:"",dlAsk:false,dlAutoFav:false,dlAutoPl:false,
+ dlDir:"",dlAsk:false,dlAutoFav:false,dlAutoPl:false,dlPlay:true,
  /* raw | fx — whether a download bakes in the equaliser and the speed. */
  dlMode:"raw",
  /* Any colour, not just the preset swatches. */
@@ -936,8 +936,9 @@ function cleanMusicTitle(artist, title){
 
 function load(tr,auto,resumePos=0){
  if(!tr||tr.mode==="empty")return;
- /* Spotify is metadata only: find the sound elsewhere (see sprResolve). */
- if(tr.s==="sp"){sprPlay(tr,auto,resumePos);return}
+ /* Spotify is metadata only: find the sound elsewhere (see sprResolve) —
+    unless it was downloaded, then the file is the sound. */
+ if(tr.s==="sp"&&!offId(tr)){sprPlay(tr,auto,resumePos);return}
  initAudio();
  if(A.ctx&&A.ctx.state==="suspended"){A.ctx.resume().catch(()=>{})}
  /* Stop a generated source (test tone); the <audio> element keeps living. */
@@ -1080,6 +1081,9 @@ function load(tr,auto,resumePos=0){
    /* Mid-track network/decode drop: the proxy re-resolves a fresh URL on a
       new request, so reconnecting at the same second usually just works. */
    const pos=au.currentTime||0;
+   /* A downloaded file that will not open (moved, deleted, damaged): the
+      service still has the track. */
+   if(offFailed(tr,url)){toast(t("off.gone"),4200);load(tr,wasPlaying,pos);return}
    /* Mid-track every code means the same thing — the bytes stopped — and
       WebKitGTK reports a refused range (the proxy's 409 "source changed") as
       code 4. Only at the very start can 4 mean an unplayable format. */
@@ -2480,7 +2484,8 @@ function findTrack(id,s){
     found here is adopted into TRACKS so next/prev can reach it too. */
  const from=HISTORY.map(h=>h.tr)
   .concat(PLAYLISTS.flatMap(p=>p.tracks||[]))
-  .concat(queue);
+  .concat(queue)
+  .concat(offTracks());
  const found=from.find(x=>x&&String(x.id)===key&&(!s||x.s===s))||from.find(x=>x&&String(x.id)===key);
  if(found&&!TRACKS.some(x=>String(x.id)===String(found.id)&&x.s===found.s))TRACKS.push(found);
  return found||null}
@@ -2491,7 +2496,7 @@ function row(tr,extra="",removable=false,rmPid=null){
  return `<div class="row" data-track="${esc(tr.id)}" data-svc="${esc(tr.s)}" data-playing="${isCur(tr)}">
   <span class="art" ${coverStyle(tr.art,tr.l1,tr.l2)}></span>
   <span class="meta"><b>${esc(tr.t)}</b><span>${tr.a?artistLinksHTML(tr.a,"row-al"):""}${tr.al?" · "+esc(tr.al):""}${extra?" · "+esc(extra):""}</span></span>
-  <span class="src">${SVC_ICONS[tr.s]||""}<span class="src-txt">${esc(svc(tr.s).name)}</span></span><span class="dur">${fmt(tr.d)}</span>
+  <span class="src">${SVC_ICONS[tr.s]||""}<span class="src-txt">${esc(svc(tr.s).name)}</span>${offMarkHTML(tr)}</span><span class="dur">${fmt(tr.d)}</span>
   <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" aria-label="fav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span></button>
   ${removable?`<button class="heart rm" data-rmlocal="${esc(tr.id)}" aria-label="remove"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}
   ${rmPid?`<button class="heart rm" data-rmpl="${esc(rmPid)}" data-rmtrack="${esc(tr.id)}" data-rmsvc="${esc(tr.s)}" aria-label="remove from playlist" title="${esc(t("plctx.rmtrack"))}"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}</div>`}
@@ -2736,6 +2741,9 @@ function renderLib(){
     so there was no way to see what was imported or to remove any of it. */
  else if(S.tab==="loc"){
   const loc=TRACKS.filter(x=>x.s==="local");
+  /* Downloads that play from disk sit beside the local files: both are "my
+     files", and with no network they are the whole library. */
+  const dl=TAURI?offTracks():[];
   b.innerHTML=`<div class="plhead">
     <b>${t("lib.loc")}</b><span>${loc.length} ${t("tracks")}</span>
     <button class="btn" id="loc-add">${t("loc.add")}</button>
@@ -2743,10 +2751,22 @@ function renderLib(){
     ${loc.length?`<button class="btn danger" id="loc-clear">${t("loc.clear")}</button>`:""}</div>`
    +(loc.length
      ?rowsHTML(loc,"loc",x=>row(x,null,true))
-     :empty("folder",t("loc.none.t"),t("loc.none.s")));
+     :dl.length?"":empty("folder",t("loc.none.t"),t("loc.none.s")))
+   +(TAURI?`<div class="plhead offhead">
+     <b>${t("off.lib")}</b><span>${dl.length} ${t("tracks")}</span>
+     ${dl.length?`<button class="btn" id="off-play"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span> ${t("pl.playall")}</button>`:""}
+     <button class="btn" id="off-find"><span class="material-symbols-rounded" style="font-size:16px">manage_search</span> ${t("off.find")}</button></div>`
+     +(dl.length?rowsHTML(dl,"dl"):`<p class="offnone">${esc(t("off.none"))}</p>`):"");
   document.getElementById("loc-add").onclick=pickLocal;
   document.getElementById("loc-addf").onclick=pickLocalFolder;
-  document.getElementById("loc-clear")?.addEventListener("click",clearLocal)}
+  document.getElementById("loc-clear")?.addEventListener("click",clearLocal);
+  document.getElementById("off-play")?.addEventListener("click",()=>{
+   const l=offTracks();if(!l.length)return;
+   l.forEach(x=>{if(!TRACKS.some(y=>sameTrack(y,x)))TRACKS.push(x)});
+   setTrack(l[0],true,true,"dl")});
+  document.getElementById("off-find")?.addEventListener("click",e=>{
+   const btn=e.currentTarget;btn.disabled=true;
+   offFind(true).finally(()=>{btn.disabled=false})})}
  /* Artists, built from what is actually in the library. */
  else if(S.tab==="art"){
   const arts=artistList();
@@ -4446,6 +4466,7 @@ function listFor(key){
  const k=String(key||"all");
  if(k==="fav")return TRACKS.filter(x=>x.fav).sort((a,b)=>(b.favAt||0)-(a.favAt||0));
  if(k==="loc")return TRACKS.filter(x=>x.s==="local");
+ if(k==="dl")return offTracks();
  if(k==="rec")return HISTORY.map(h=>h.tr).filter(Boolean);
  if(k==="search")return SEARCH_HITS.slice();
  if(k==="wave")return WAVE.filter(x=>playOn(x.s));
@@ -4468,6 +4489,7 @@ function ctxName(key){
  const k=String(key||"all");
  if(k==="fav")return t("lib.fav");
  if(k==="loc")return t("lib.loc");
+ if(k==="dl")return t("off.lib");
  if(k==="rec")return t("lib.rec");
  if(k==="search")return t("nav.search");
  if(k==="wave")return t("nav.home");
@@ -4552,7 +4574,7 @@ function next(userInitiated){
  if(SOC.room&&String(PLAYCTX.key||"").startsWith("room:"))queue=[];
  while(queue.length&&!nx){
   const c=queue.shift();
-  if(c&&!isDisliked(c)&&c.mode!=="empty"&&playOn(c.s))nx=c}
+  if(c&&!isDisliked(c)&&c.mode!=="empty"&&playOn(c.s)&&offOk(c))nx=c}
  if(PLAYCTX.key==="wave"&&queue.length<5){
   if(typeof waveExtend==="function")waveExtend().catch(()=>{});
  }
@@ -4597,7 +4619,7 @@ function prefetchNextSoon(pos){
  const d=S.dur||+S.current.d||0;if(!(d>30)||d-pos>20)return;
  const k=trackKey(S.current);if(prefetchedFor===k)return;prefetchedFor=k;
  const nx=queue.find(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&playOn(x.s));
- if(!nx||nx.s==="local"||nx.blob)return;
+ if(!nx||nx.s==="local"||nx.blob||offId(nx))return;
  const go=x=>inv("stream_prefetch",{service:x.s,id:String(x.id),hq:hqFlag(),fmt:x.s==="ytm"?ytmFmt(x):"best"}).catch(()=>{});
  if(nx.s==="sp")sprResolve(nx).then(rec=>{if(rec)go({s:rec.s,id:rec.id})}).catch(()=>{});
  else go(nx)}
@@ -6336,7 +6358,7 @@ function saveNow(){
   favt:TRACKS.filter(x=>x.fav).map(({id,s,t,a,al,d,art,mode,favAt})=>({id,s,t,a,al,d,art,mode,favAt,fav:true})),
   hist:HISTORY.slice(0,50).map(h=>({at:h.at,tr:(({id,s,t,a,al,d,art,mode})=>({id,s,t,a,al,d,art,mode}))(h.tr)})),
   stab:S.stab,rate:S.rate,boost:S.boost,shuffle:S.shuffle,repeat:S.repeat,
-  dlDir:S.dlDir,dlAsk:S.dlAsk,dlAutoFav:S.dlAutoFav,dlAutoPl:S.dlAutoPl,dlMode:S.dlMode,
+  dlDir:S.dlDir,dlAsk:S.dlAsk,dlAutoFav:S.dlAutoFav,dlAutoPl:S.dlAutoPl,dlPlay:S.dlPlay!==false,dlMode:S.dlMode,
   customAccent:S.customAccent,eqByTrack:S.eqByTrack,eqByPl:S.eqByPl,dislikes:S.dislikes,
   plCovers:TAURI?{}:Object.fromEntries(PLAYLISTS.filter(p=>p.cover).map(p=>[p.id,p.cover])),
   pls:TAURI?[]:PLAYLISTS.map(plSerialize),
@@ -6418,7 +6440,7 @@ function restore(){try{
   return {at:h.at,tr:known||h.tr}});
  if(d.stab)S.stab=d.stab;
  if(d.dlDir)S.dlDir=d.dlDir;
- ["dlAsk","dlAutoFav","dlAutoPl"].forEach(k=>{if(d[k]!==undefined)S[k]=!!d[k]});
+ ["dlAsk","dlAutoFav","dlAutoPl","dlPlay"].forEach(k=>{if(d[k]!==undefined)S[k]=!!d[k]});
  if(d.dlMode==="raw"||d.dlMode==="fx")S.dlMode=d.dlMode;
  if(d.customAccent)S.customAccent=d.customAccent;
  if(d.dislikes&&typeof d.dislikes==="object")S.dislikes=d.dislikes;
@@ -6810,6 +6832,10 @@ function streamUrl(tr){
     track never played. No blob means no proxy: callers fall back to tr.url. */
  if(tr?.blob)return null;
  if(!STREAM_PORT||!tr?.id)return null;
+ /* Downloaded: the file on disk, through the same proxy route as local
+    tracks (offId explains when it applies). */
+ const off=offId(tr);
+ if(off)return `http://127.0.0.1:${STREAM_PORT}/stream/local/${encodeURIComponent(off)}?k=${encodeURIComponent(STREAM_KEY)}&hq=${hqFlag()}`;
  const fmt=tr.s==="ytm"?`&fmt=${encodeURIComponent(ytmFmt(tr))}`:"";
  /* Title, artist and length ride along for YouTube: when YouTube refuses the
     track (its bot check behind VPNs), the proxy plays the same recording from
@@ -6981,6 +7007,18 @@ function tryResumeStream(tr,pos,wasPlaying){
 }
 async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  if(!url){S.playing=false;sync();toast(t("load.err"));return}
+ /* No network and no file: say so, and move on to something that is on disk
+    instead of searching services that cannot answer. */
+ if(navigator.onLine===false&&tr?.s!=="local"&&!offId(tr)){
+  /* Started before the files were confirmed: they may be by now. */
+  await offBoot();
+  if(!sameTrack(tr,S.current))return;
+  if(offId(tr)){load(tr,wasPlaying,resumePos);return}
+  S.playing=false;sync();
+  const any=queue.some(x=>x&&x.mode!=="empty"&&(x.s==="local"||offId(x)));
+  toast(any?t("off.skip"):t("off.nonet"),5000);
+  if(any&&wasPlaying)next(true);
+  return}
  const key=trackKey(tr);
  if(codecRetry&&codecRetry.key!==key)codecRetry=null;
 
@@ -8328,7 +8366,7 @@ async function removeFromPlaylist(pid,tr){
 function renderDlSettings(){
  const d=document.getElementById("dl-dir");
  if(d)d.textContent=S.dlDir||t("dl.dir.none");
- [["dl-ask","dlAsk"],["dl-autofav","dlAutoFav"],["dl-autopl","dlAutoPl"]].forEach(([id,key])=>{
+ [["dl-ask","dlAsk"],["dl-autofav","dlAutoFav"],["dl-autopl","dlAutoPl"],["dl-play","dlPlay"]].forEach(([id,key])=>{
   const el=document.getElementById(id);
   if(el)el.setAttribute("aria-pressed",!!S[key])});
  setSeg("dl-mode",S.dlMode);
@@ -8350,8 +8388,11 @@ async function checkFfmpeg(){
  renderDlSettings()}
 
 document.getElementById("dl-pick")?.addEventListener("click",pickDownloadDir);
+document.getElementById("dl-find")?.addEventListener("click",e=>{
+ const btn=e.currentTarget;btn.disabled=true;
+ offFind(true).finally(()=>{btn.disabled=false})});
 seg("dl-mode",v=>{S.dlMode=v});
-[["dl-ask","dlAsk"],["dl-autofav","dlAutoFav"],["dl-autopl","dlAutoPl"]].forEach(([id,key])=>{
+[["dl-ask","dlAsk"],["dl-autofav","dlAutoFav"],["dl-autopl","dlAutoPl"],["dl-play","dlPlay"]].forEach(([id,key])=>{
  document.getElementById(id)?.addEventListener("click",()=>{
   S[key]=!S[key];
   /* Auto-download needs somewhere to write; asking mid-download is worse than
@@ -8408,6 +8449,155 @@ const joinPath=(dir,name)=>{
     containing a backslash on macOS and Linux. */
  const sep=dir.includes("\\")&&!dir.includes("/")?"\\":"/";
  return dir.replace(/[\\/]+$/,"")+sep+name};
+/* ── Downloads play from disk ───────────────────────────────────────
+   A plain download is the very recording the service streams, so once it is
+   on disk there is no reason to fetch it again: it starts at once, costs no
+   traffic, holds no network buffers and plays with no network at all. Each
+   finished download is registered with the proxy's local-file route
+   (/stream/local/<id>, the road local tracks take) and remembered per track —
+   "service:id" → path, plus what is needed to list it with no network. An
+   entry counts only once Rust has confirmed the file this session, so a
+   deleted file or an unplugged drive quietly falls back to the service.
+   Processed downloads (EQ and speed baked in) are a different sound and never
+   stand in for the original. Stored apart from the main state, which is
+   rewritten on every save(); paths are per machine, so nothing here syncs.
+   State hangs off a function, not a const: rows can be drawn before this part
+   of the file has run, and a const would still be in its dead zone. */
+function offSt(){return offSt.s||(offSt.s={map:null,live:new Map(),dead:new Set(),ready:null})}
+function offMap(){
+ const st=offSt();if(st.map)return st.map;
+ st.map=new Map();
+ try{const raw=JSON.parse(localStorage.getItem("mw.offline")||"[]");
+  if(Array.isArray(raw))for(const e of raw)if(e&&typeof e.k==="string"&&typeof e.p==="string")st.map.set(e.k,e)}catch(_){}
+ return st.map}
+function offSave(){
+ const m=offMap();
+ if(m.size>4000)[...m.values()].sort((a,b)=>(a.at||0)-(b.at||0)).slice(0,m.size-4000).forEach(e=>m.delete(e.k));
+ try{localStorage.setItem("mw.offline",JSON.stringify([...m.values()]))}catch(e){console.warn("offline save:",e)}}
+/* The keys a track can have been downloaded under: its own, and for a Spotify
+   track already resolved to another service, the Spotify one. */
+function offKeys(tr){
+ if(!tr||!tr.id||tr.s==="local"||tr.blob)return [];
+ const ks=[trackKey(tr)];
+ if(tr._spOrig?.id)ks.push("sp:"+tr._spOrig.id);
+ return ks}
+/* Local id of the confirmed file, or null. offId is what playback uses: it
+   honours the setting and an explicit "play from that service" (_net). */
+function offLive(tr){
+ const st=offSt();
+ for(const k of offKeys(tr))if(!st.dead.has(k)&&st.live.has(k))return st.live.get(k);
+ return null}
+function offId(tr){return S.dlPlay===false||tr?._net?null:offLive(tr)}
+function offTrackOf(tr){const {id,s,t:ti,a,al,d,art}=tr;return {id:String(id),s,t:ti,a,al,d:+d||0,art:art||null,mode:"local"}}
+async function offRemember(tr,path){
+ if(!TAURI||!path||!tr?.id||tr.s==="local"||tr.blob)return false;
+ try{
+  const got=await inv("local_offline",{paths:[String(path)]});
+  const lt=Array.isArray(got)?got[0]:null;if(!lt?.id)return false;
+  const k=trackKey(tr),now=Date.now(),st=offSt();
+  offMap().set(k,{k,p:String(path),at:now,seen:now,tr:offTrackOf(tr)});
+  st.live.set(k,lt.id);st.dead.delete(k);offSave();offPaint(tr);
+  if(S.view==="library"&&S.tab==="loc")renderLib();
+  return true
+ }catch(e){console.warn("offline register:",e);return false}}
+/* At start: hand every remembered file back to the proxy and keep the ones
+   that are still there. A file missing for two months was deleted on purpose,
+   not left on an unplugged drive, and is forgotten. */
+function offBoot(){
+ const st=offSt();
+ if(st.ready)return st.ready;
+ const m=offMap();
+ if(!TAURI||!m.size)return st.ready=Promise.resolve();
+ const byPath=new Map();
+ for(const e of m.values()){const l=byPath.get(e.p);if(l)l.push(e);else byPath.set(e.p,[e])}
+ st.ready=inv("local_offline",{paths:[...byPath.keys()]}).then(list=>{
+  const now=Date.now();let dirty=false;
+  for(const lt of list||[])for(const e of byPath.get(lt.path)||[]){
+   st.live.set(e.k,lt.id);
+   if(now-(e.seen||0)>864e5){e.seen=now;dirty=true}}
+  for(const e of [...m.values()])if(!st.live.has(e.k)&&now-(e.seen||e.at||0)>60*864e5){m.delete(e.k);dirty=true}
+  if(dirty)offSave();
+  if(st.live.size){
+   if(S.view==="library")renderLib();
+   else document.querySelectorAll(".row[data-track]").forEach(r=>{const tr=findTrack(r.dataset.track,r.dataset.svc);if(tr)offPaint(tr)})}
+ }).catch(e=>console.warn("offline rehydrate:",e));
+ return st.ready}
+/* The file behind a downloaded track would not open or decode: forget it for
+   this session and stream instead. True when the caller should reload. */
+function offFailed(tr,url){
+ if(!tr||tr.s==="local"||!String(url||"").includes("/stream/local/"))return false;
+ const st=offSt();let hit=false;
+ for(const k of offKeys(tr))if(st.live.has(k)&&!st.dead.has(k)){st.dead.add(k);hit=true}
+ if(hit)console.warn("[meowave] downloaded file failed; streaming instead");
+ return hit}
+/* "Stop playing from disk": the mapping goes, the file stays where it is. */
+function offForget(tr){
+ const st=offSt(),m=offMap();
+ for(const k of offKeys(tr)){m.delete(k);st.live.delete(k);st.dead.delete(k)}
+ offSave();offPaint(tr);
+ if(S.view==="library"&&S.tab==="loc")renderLib()}
+/* Downloaded tracks for the library, newest first, one row per file. */
+function offTracks(){
+ const st=offSt(),seen=new Set(),out=[];
+ const idx=new Map();for(const x of TRACKS)if(x?.id)idx.set(trackKey(x),x);
+ const all=[...offMap().values()].filter(e=>e.tr&&st.live.has(e.k)&&!st.dead.has(e.k)).sort((a,b)=>(b.at||0)-(a.at||0));
+ for(const e of all){if(seen.has(e.p))continue;seen.add(e.p);out.push(idx.get(e.k)||e.tr)}
+ return out}
+/* With no network only what is on disk can play. */
+function offOk(x){return navigator.onLine!==false||x?.s==="local"||!!offId(x)}
+function offMarkHTML(tr){
+ if(!offLive(tr))return "";
+ const l=esc(t("off.mark"));
+ return `<span class="material-symbols-rounded src-off" title="${l}" aria-label="${l}">download_done</span>`}
+function offPaint(tr){
+ if(!tr?.id)return;
+ document.querySelectorAll(`.row[data-track="${cssEsc(String(tr.id))}"][data-svc="${cssEsc(tr.s)}"] .src`).forEach(el=>{
+  el.querySelector(".src-off")?.remove();
+  el.insertAdjacentHTML("beforeend",offMarkHTML(tr))})}
+/* The file name a download of this track gets — the same clean-up as
+   download_track in local.rs, so an earlier download can be recognised. */
+function dlStem(tr){
+ const s=`${tr.a||"—"} - ${tr.t||"track"}`.replace(/[<>:"\/\\|?*\x00-\x1f]/g,"_").trim().replace(/\.+$/,"");
+ return [...(s||"track")].slice(0,120).join("")}
+/* Files downloaded before downloads were remembered. A file counts only when
+   its name is exactly the one Meowave gives a download of a track in the
+   library ("Artist - Title", optional " (2)"); a looser match could tie a
+   remix file to the original. */
+async function offFind(manual){
+ if(!TAURI){if(manual)toast(t("dl.desktop"));return 0}
+ const dir=S.dlDir;
+ if(!dir){if(manual)toast(t("off.find.nodir"),4200);return 0}
+ let files=[];
+ try{files=await inv("local_scan_bg",{folder:dir,depth:2})}
+ catch(e){if(manual)toast(t("dl.fail")+": "+String(e.message||e),5200);return 0}
+ const st=offSt(),m=offMap();
+ const taken=new Set([...m.values()].map(e=>e.p));
+ const known=new Map();
+ const add=x=>{
+  if(!x?.id||x.s==="local"||x.blob||x.mode==="empty")return;
+  const k=dlStem(x).toLowerCase(),l=known.get(k);
+  if(!l)known.set(k,[x]);else if(!l.some(y=>sameTrack(y,x)))l.push(x)};
+ TRACKS.forEach(add);HISTORY.forEach(h=>add(h?.tr));PLAYLISTS.forEach(p=>(p.tracks||[]).forEach(add));
+ const now=Date.now();let n=0;
+ for(const f of files||[]){
+  if(!f?.path||!f.id||taken.has(f.path))continue;
+  const base=String(f.path).split(/[\\/]/).pop().replace(/\.[^.]+$/,"").replace(/ \(\d{1,3}\)$/,"");
+  for(const tr of known.get(base.toLowerCase())||[]){
+   const k=trackKey(tr);if(st.live.has(k))continue;
+   m.set(k,{k,p:f.path,at:now,seen:now,tr:offTrackOf(tr)});
+   st.live.set(k,f.id);st.dead.delete(k);n++;offPaint(tr)}}
+ if(n)offSave();
+ if(manual)toast(n?t("off.found").replace("{n}",n):t("off.found0"),4200);
+ if(n&&S.view==="library"&&S.tab==="loc")renderLib();
+ return n}
+/* Spotify is metadata only: a download takes the sound from wherever playback
+   finds it, and is remembered under the Spotify track, which is what the
+   library shows. Asking the proxy for "sp" itself failed every time. */
+async function dlSource(tr){
+ if(tr.s!=="sp")return {s:tr.s,id:String(tr.id)};
+ const rec=await sprResolve(tr).catch(()=>null);
+ return rec?.s&&rec.id?{s:rec.s,id:String(rec.id)}:null}
+
 async function downloadTrack(tr,sub,dirOverride){
   if(!TAURI)return toast(t("dl.desktop"));
   if(tr.s==="local")return toast(t("dl.already"));
@@ -8424,11 +8614,15 @@ async function downloadTrack(tr,sub,dirOverride){
 
  toast(t("dl.start").replace("{n}",tr.t||""));
  try{
+  const src=await dlSource(tr);
+  if(!src){toast(t("dl.fail")+": "+t("dl.nosrc"),5200);return null}
   const path=await inv("download_track",{
-   service:tr.s,id:String(tr.id),
+   service:src.s,id:src.id,
    name:`${tr.a||"—"} - ${tr.t||"track"}`,
-   folder:dir,hq:hqFlag()>=1,fmt:tr.s==="ytm"?ytmFmt(tr):"best"});
+   folder:dir,hq:hqFlag()>=1,fmt:src.s==="ytm"?ytmFmt(src):"best"});
   toast(t("dl.ok").replace("{n}",String(path).split(/[\\/]/).pop()),5200);
+  /* From now on this track plays from the file. */
+  offRemember(tr,path);
   return path;
  }catch(e){toast(t("dl.fail")+": "+String(e.message||e),5200);return null}}
 
@@ -8455,11 +8649,13 @@ async function downloadProcessed(tr,sub,dirOverride){
  const tag=rate>1.02?"speed up":rate<0.98?"slowed":"eq";
  toast(t("dl.fx.busy").replace("{n}",tr.t||""),4000);
  try{
+  const src=await dlSource(tr);
+  if(!src){toast(t("dl.fail")+": "+t("dl.nosrc"),5200);return null}
   const path=await inv("download_processed",{
-   service:tr.s,id:String(tr.id),
+   service:src.s,id:src.id,
    name:`${tr.a||"—"} - ${tr.t||"track"}`,
    folder:dir,hq:hqFlag()>=1,
-   fmt:tr.s==="ytm"?ytmFmt(tr):"best",
+   fmt:src.s==="ytm"?ytmFmt(src):"best",
    gains:S.eq.map(Number),rate,preserve_pitch:false,suffix:tag});
   toast(t("dl.ok").replace("{n}",String(path).split(/[\\/]/).pop()),5200);
   return path;
@@ -8541,7 +8737,8 @@ function openCtx(x,y,tr){
   ${remote?`<div class="sep"></div>
   <span class="lbl">${t("dl.preset.t")}</span>
   <button data-ctx="dl"><span class="material-symbols-rounded" style="font-size:16px">download</span>${t("dl.raw")}</button>
-  <button data-ctx="dlfx"${HAS_FFMPEG?"":" disabled title=\""+esc(t("dl.fx.need"))+"\""}><span class="material-symbols-rounded" style="font-size:16px">tune</span>${t("dl.withfx")}</button>`:""}
+  <button data-ctx="dlfx"${HAS_FFMPEG?"":" disabled title=\""+esc(t("dl.fx.need"))+"\""}><span class="material-symbols-rounded" style="font-size:16px">tune</span>${t("dl.withfx")}</button>
+  ${offLive(tr)?`<button data-ctx="offforget"><span class="material-symbols-rounded" style="font-size:16px">cloud</span>${t("off.forget")}</button>`:""}`:""}
   <div class="sep"></div>
   <span class="lbl">${t("ctx.addto")}</span>
   ${pls||`<span class="lbl dim">${t("ctx.nopl")}</span>`}
@@ -8741,6 +8938,7 @@ addEventListener("click",e=>{
   if(S.view==="library")renderLib()}
  else if(act==="dl")downloadTrack(tr);
  else if(act==="dlfx")downloadProcessed(tr);
+ else if(act==="offforget")offForget(tr);
  else if(act==="rmlocal")removeLocal(tr.id);
  else if(act==="artist")openArtist(b.dataset.artist||splitArtists(tr.a)[0]||tr.a);
  else if(act==="share")window.MWChat?.shareTrack(tr);
@@ -11929,6 +12127,12 @@ if(TAURI)setTimeout(()=>checkUpdate(false),4000);
 requestAnimationFrame(()=>{paintAllSegs();paintAllRanges()});
 /* Hand the local paths back to Rust, or the proxy cannot resolve them. */
 if(TAURI&&LOCAL_PATHS.length)inv("local_rehydrate",{paths:LOCAL_PATHS}).catch(e=>console.warn("rehydrate:",e));
+/* Downloads that play from disk: confirm the files, then — once per download
+   folder, after the library has loaded — look for ones saved before
+   downloads were remembered. */
+if(TAURI)offBoot().then(()=>{
+ if(!S.dlDir||localStorage.getItem("mw.offline.scan")===S.dlDir)return;
+ setTimeout(()=>offFind(false).then(()=>{try{localStorage.setItem("mw.offline.scan",S.dlDir)}catch(_){}}),9000)});
 icons();
 if(obDone){
  document.getElementById("ob").hidden=true;
