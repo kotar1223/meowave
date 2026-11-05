@@ -359,7 +359,7 @@ html[data-theme="light"] .tb-btns{background:oklch(0% 0 0 / .04)}
   border:none;background:transparent;cursor:pointer;
   transition:all .18s var(--md-sys-motion-easing-standard)}
 .tb-btn:hover{background:oklch(100% 0 0 / .12);color:var(--text);transform:scale(1.05)}
-.tb-btn:active{transform:scale(0.95)}
+.tb-btn:active{scale:.95}
 html[data-theme="light"] .tb-btn:hover{background:oklch(0% 0 0 / .08)}
 .tb-btn.tb-close:hover{background:#ef4444 !important;color:#fff !important}
 .tb-btn:focus-visible{outline:none;background:oklch(100% 0 0 / .15)}
@@ -566,7 +566,7 @@ html[data-theme="light"] .search:hover{background:oklch(92% 0.007 280);box-shado
 .search-clear-btn.visible{opacity:1;pointer-events:auto;transform:scale(1)}
 .search-clear-btn:hover{background:oklch(100% 0 0 / .14);color:var(--text);transform:scale(1.1)}
 html[data-theme="light"] .search-clear-btn:hover{background:oklch(0% 0 0 / .08)}
-.search-clear-btn:active{transform:scale(0.92)}
+.search-clear-btn:active{scale:.92}
 
 /* ─── Material 3 Filter Chips ──────────────────────────────── */
 .srv{display:flex;gap:var(--sp-1);margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
@@ -1877,11 +1877,11 @@ html[data-theme="light"] textarea,html[data-theme="light"] select{background:var
 
 /* ── buttons: lift on hover, settle on press ─────────────────────────── */
 .btn:hover{transform:translateY(-1px)}
-.btn:active{transform:translateY(0) scale(0.95)}
+.btn:active{transform:translateY(0);scale:.95}
 .ic:hover svg, .ic:hover .material-symbols-rounded{transform:scale(1.1)}
 .ic svg, .ic .material-symbols-rounded{transition:transform .18s var(--e-q)}
 .ic:active svg, .ic:active .material-symbols-rounded{transform:scale(.94)}
-.primary:active{transform:scale(.98)}
+.primary:active{scale:.98}
 
 /* heart gets a beat when it turns on */
 @keyframes heartBeat{0%{transform:scale(1)}30%{transform:scale(1.35)}55%{transform:scale(.92)}100%{transform:scale(1)}}
@@ -1943,7 +1943,7 @@ html[data-theme="light"] .msg:hover{background:oklch(0% 0 0 / .07)}
 .memchip:hover{border-color:var(--line-2);color:var(--text)}
 .roomnow{transition:border-color .25s var(--e)}
 .roomnow:hover{border-color:var(--line-2)}
-.codechip:active{transform:scale(.97)}
+.codechip:active{scale:.97}
 
 /* chat list rows: slight slide toward the chevron */
 .chatrow{transition:background .18s var(--e),transform .18s var(--e)}
@@ -2051,8 +2051,13 @@ html[data-lite] .row[data-playing="true"] .art{animation:none}
   border-radius:12px;padding:12px 16px;z-index:2}
 
 /* ── Better-UI tactile press & polished elements ── */
-button:active, .ic:active, .chip:active, [role="button"]:active { transform: scale(0.96) !important }
-.play:active { transform: scale(0.94) !important }
+/* Press feedback goes through `scale`, not `transform`. A !important transform
+   replaced each button's own transform while it was held: the full-screen
+   player's source island (centred with translateX(-50%)) jumped half its
+   width aside on mousedown, so the click landed beside it and the source
+   picker never opened. `scale` composes with whatever transform is there. */
+button:active, .ic:active, .chip:active, [role="button"]:active { scale: .96 }
+.play:active { scale: .94 }
 
 /* Titlebar & rail brand marks */
 .tb-icon { width: 16px; height: 16px; border-radius: 4px; margin-right: 6px; vertical-align: middle; display: inline-block }
@@ -2341,7 +2346,7 @@ button:not(:disabled):active,
 .play:not(:disabled):active,
 .navbtn:not(:disabled):active,
 .tb-btn:not(:disabled):active {
-  transform: scale(0.96) !important;
+  scale:.96;
   transition-duration: 70ms !important;
 }
 
@@ -2721,7 +2726,7 @@ html[data-fullscreen="true"] .fp {
   box-shadow: 0 6px 24px rgba(255, 255, 255, 0.3);
 }
 .quasar-sso-btn:active {
-  transform: scale(0.97);
+  scale:.97;
 }
 .quasar-sso-perks {
   margin-top: 12px;
@@ -3052,7 +3057,7 @@ html[data-fullscreen="true"] .fp {
   box-shadow: 0 4px 16px rgb(var(--accent-rgb) / .45);
 }
 .quests-profile-btn:active {
-  transform: scale(0.96);
+  scale:.96;
 }
 
 /* ─── Chats Responsive Layout ──────────────────────────────── */
@@ -3152,7 +3157,7 @@ html[data-fullscreen="true"] .fp {
   background: rgba(255, 255, 255, 0.12);
 }
 .ly-off-btn:active {
-  transform: scale(0.92);
+  scale:.92;
 }
 .ly-off-val {
   font-variant-numeric: tabular-nums;
@@ -3575,7 +3580,7 @@ html[data-fullscreen="true"] .fp {
     -webkit-tap-highlight-color: transparent;
   }
   .srv-dropdown-btn:active {
-    transform: scale(0.96);
+    scale:.96;
   }
   .srv-dd-icon {
     font-size: 20px;
@@ -3863,7 +3868,7 @@ html[data-fullscreen="true"] .fp {
   border-radius: 50% !important;
 }
 .barmain .play:active {
-  transform: scale(0.92) !important;
+  scale:.92;
 }
 
 /* ─── Flow backdrop, wallpapers (fx.js) ───────────────────────────────────── */
@@ -4113,7 +4118,7 @@ html[data-wall] body{background:#000}
 .fpx-ib{position:relative;width:34px;height:34px;flex:none;border-radius:12px;display:grid;place-items:center;color:var(--t2);
   transition:background-color .2s var(--e),color .2s var(--e),transform .25s cubic-bezier(.34,1.56,.64,1)}
 .fpx-ib:hover{background:rgb(255 255 255/.1);color:#fff}
-.fpx-ib:active{transform:scale(.9)}
+.fpx-ib:active{scale:.9}
 .fpx-ib[aria-pressed="true"]{background:#fff;color:#111}
 .fpx-ib[aria-pressed="true"] .material-symbols-rounded{color:inherit}
 .fpx-ib:focus-visible,.fpx-tb:focus-visible,.fpx-play:focus-visible,.fpx-like:focus-visible,.fpx-island:focus-visible,.fpx-cover:focus-visible{outline:2px solid #fff;outline-offset:2px}
@@ -4159,13 +4164,14 @@ html[data-wall] body{background:#000}
 .fpx .fpx-artist .fpx-al:hover,.fpx .fpx-artist .fpx-al:focus-visible{color:#fff;text-decoration:underline;text-underline-offset:3px}
 #np .np-al:hover,#np .np-al:focus-visible{color:var(--t1,#fff);text-decoration:underline;text-underline-offset:2px}
 .row .row-al{cursor:pointer;border-radius:3px}
+.rows-more{flex:none;height:1px;pointer-events:none}
 /* .meta span{display:block} would otherwise stack every name on its own line */
 .meta span .row-al,.meta span .np-al,.fpx-artist .fpx-al{display:inline;font-size:inherit;color:inherit;overflow:visible}
 .row .row-al:hover,.row .row-al:focus-visible{color:var(--t1,#fff);text-decoration:underline;text-underline-offset:2px}
 .fpx-like{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;color:var(--t2);
   transition:color .2s var(--e),background-color .2s var(--e),transform .3s cubic-bezier(.34,1.56,.64,1)}
 .fpx-like:hover{background:rgb(255 255 255/.1);color:#fff}
-.fpx-like:active{transform:scale(.84)}
+.fpx-like:active{scale:.84}
 .fpx-like[aria-pressed="true"]{color:#fff}
 .fpx-like[aria-pressed="true"] .material-symbols-rounded{font-variation-settings:"FILL" 1;animation:fpxLike .5s cubic-bezier(.34,1.56,.64,1)}
 @keyframes fpxLike{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:none}}
@@ -4179,7 +4185,7 @@ html[data-wall] body{background:#000}
 .fpx-tb{position:relative;width:54px;height:54px;flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;
   transition:background-color .2s var(--e),opacity .2s var(--e),transform .3s cubic-bezier(.34,1.56,.64,1)}
 .fpx-tb:hover{background:rgb(255 255 255/.1)}
-.fpx-tb:active{transform:scale(.86)}
+.fpx-tb:active{scale:.86}
 .fpx-tb-sm{width:42px;height:42px;opacity:.55}
 .fpx-tb-sm:hover,.fpx-tb-sm[aria-pressed="true"]{opacity:1}
 .fpx-tb-sm[aria-pressed="true"]::after{content:"";position:absolute;left:50%;bottom:2px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#fff}
@@ -4189,7 +4195,7 @@ html[data-wall] body{background:#000}
 .fpx-play svg{width:32px;height:32px;fill:currentColor;display:block}
 #fpc[data-playing="true"] .fpx-play{border-radius:24px}
 .fpx-play:hover{transform:scale(1.05)}
-.fpx-play:active{transform:scale(.9)}
+.fpx-play:active{scale:.9}
 .fpx-extras{display:flex;align-items:center;justify-content:space-between;gap:12px;transition:opacity .45s var(--e)}
 .fpx-vol{display:flex;align-items:center;gap:6px;flex:1;max-width:230px;min-width:0}
 .fpx-vol .fpx-ib{border-radius:50%}
@@ -4459,7 +4465,7 @@ html[data-wall] body{background:#000}
     transition:background-color .2s var(--e),border-color .2s var(--e)}
   .srv-dropdown-btn:hover{background:color-mix(in srgb,var(--text) 8%,transparent)}
   .srv-dropdown-btn[aria-expanded="true"]{border-color:var(--line-2);background:color-mix(in srgb,var(--text) 9%,transparent)}
-  .srv-dropdown-btn:active{transform:scale(.97)}
+  .srv-dropdown-btn:active{scale:.97}
   .srv-dd-icon{font-size:19px;color:var(--mute)}
   .srv-dd-count{min-width:18px;padding:1px 6px;border-radius:9px;text-align:center;font-size:.68rem;font-weight:700;line-height:1.35;
     background:color-mix(in srgb,var(--text) 14%,transparent);color:var(--text)}
@@ -4630,7 +4636,7 @@ html:not([data-accent="none"]) .hs-go{background:var(--accent);color:var(--on-ac
   transition:background-color .2s var(--e),border-color .2s var(--e),transform .2s var(--e)}
 .hs-pill::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cc,var(--line-2))}
 .hs-pill:hover{border-color:var(--line-2);background:color-mix(in oklab,var(--cc,#888) 14%,var(--surf-2))}
-.hs-pill:active{transform:scale(.97)}
+.hs-pill:active{scale:.97}
 .hs-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:190px;padding:28px 24px;text-align:center;color:var(--mute)}
 .hs-state>.material-symbols-rounded{opacity:.8}
 .hs-state b{color:var(--text);font-weight:560;font-size:.92rem}
@@ -5047,7 +5053,7 @@ html[data-wvs="open"]:not([data-mini="on"]) body .toasts{left:auto;right:416px;b
 .mini[data-playing="false"] .mini-play{border-radius:16px}
 .mini-play::after{content:"";position:absolute;inset:0;border-radius:inherit;background:currentColor;opacity:0;transition:opacity .15s var(--e)}
 .mini-play:hover::after{opacity:.08}
-.mini-play:active{transform:scale(.94)}
+.mini-play:active{scale:.94}
 .mini-play:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .mini[data-empty="true"] .mini-ctrls .m3i,.mini[data-empty="true"] .mini-seekrow{opacity:.38;pointer-events:none}
 /* Narrow or short mini windows drop the extras first. */
@@ -5594,7 +5600,7 @@ html[data-theme="light"] .minp:focus{background:oklch(100% 0 0 / .95)}
   transition:transform .2s var(--e),opacity .2s var(--e),background-color .2s var(--e)}
 .msend .material-symbols-rounded{font-size:20px;margin-left:2px}
 .msend:disabled{opacity:.28;transform:scale(.9);cursor:default}
-.msend:not(:disabled):active{transform:scale(.92)}
+.msend:not(:disabled):active{scale:.92}
 
 /* context menu + image viewer */
 .mmenu{position:fixed;z-index:400;min-width:184px;padding:5px;border-radius:14px;background:var(--surf-2);border:1px solid var(--line);

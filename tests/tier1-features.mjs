@@ -523,8 +523,11 @@ export function buildTier1Suite() {
   suite.test("F14-04: [Happy Path] Interactive buttons compress to scale(0.95) on :active", () => {
     const activeRules = extractRules(css, /\.btn:active/);
     assert.ok(activeRules.length > 0, "Expected .btn:active rule in CSS");
+    // The press may be expressed as `transform: scale()` or as the separate
+    // `scale` property (which composes with a positioning transform).
     const trf = activeRules[0].declarations.get("transform") || "";
-    assert.match(trf, /scale\(\s*0?\.95\s*\)/, `Expected .btn:active to compress to scale(0.95), got: ${trf}`);
+    const scl = activeRules[0].declarations.get("scale") || "";
+    assert.ok(/scale\(\s*0?\.95\s*\)/.test(trf) || /^\s*0?\.95\s*$/.test(scl), `Expected .btn:active to compress to scale(0.95), got: transform=${trf} scale=${scl}`);
   });
 
   suite.test("F14-05: [Happy Path] Icon buttons compress on :active with spring scale", () => {

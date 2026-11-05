@@ -2437,6 +2437,46 @@ function row(tr,extra="",removable=false,rmPid=null){
   ${removable?`<button class="heart rm" data-rmlocal="${esc(tr.id)}" aria-label="remove"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}
   ${rmPid?`<button class="heart rm" data-rmpl="${esc(rmPid)}" data-rmtrack="${esc(tr.id)}" data-rmsvc="${esc(tr.s)}" aria-label="remove from playlist" title="${esc(t("plctx.rmtrack"))}"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}</div>`}
 
+/* Long lists are drawn a screenful at a time. A favourites tab of 1 500 songs
+   was 20 000+ elements, and every colour written to <html> on a track change
+   (adaptive accent, cover glow) restyled all of them — ~80 ms of style work
+   per switch, the "lag when the track changes", and memory held for rows
+   nobody scrolled to. The first ROWS_CHUNK rows are drawn at once, the rest
+   arrive as the list scrolls towards them. A list redrawn in place (a heart
+   toggled, a track removed) gets back as many rows as it had, so the scroll
+   position does not jump. */
+const ROWS_CHUNK=60,ROWS_STEP=120,ROWS_MORE=new Map(),ROWS_SEEN=new Map();
+let rowsSeq=0,rowsIO=null;
+function rowsHTML(list,ctx,fn=x=>row(x),attrs=""){
+ const n=Math.min(list.length,Math.max(ROWS_CHUNK,ROWS_SEEN.get(ctx)||0));
+ let h=`<div class="rows" data-listctx="${esc(ctx)}"${attrs}>`;
+ for(let i=0;i<n;i++)h+=fn(list[i],i);
+ if(n<list.length){
+  const id=++rowsSeq;ROWS_MORE.set(id,{list,at:n,fn,ctx});
+  h+=`<div class="rows-more" data-more="${id}" aria-hidden="true"></div>`;
+  queueMicrotask(armRowsMore)}
+ ROWS_SEEN.set(ctx,n);
+ return h+`</div>`}
+function armRowsMore(){
+ if(!rowsIO){
+  if(typeof IntersectionObserver!=="function"){document.querySelectorAll(".rows-more").forEach(el=>{while(rowsMore(el));});return}
+  rowsIO=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)rowsMore(e.target)},{rootMargin:"1200px 0px"})}
+ for(const [id] of ROWS_MORE)if(!document.querySelector(`.rows-more[data-more="${id}"]`))ROWS_MORE.delete(id);
+ document.querySelectorAll(".rows-more:not([data-armed])").forEach(el=>{el.dataset.armed="1";rowsIO.observe(el)})}
+/* Appends the next step; true while more remain. */
+function rowsMore(el){
+ const id=+el.dataset.more,m=ROWS_MORE.get(id);
+ if(!m||!el.isConnected){rowsIO?.unobserve(el);el.remove();ROWS_MORE.delete(id);return false}
+ const end=Math.min(m.list.length,m.at+ROWS_STEP);
+ let h="";for(let i=m.at;i<end;i++)h+=m.fn(m.list[i],i);
+ el.insertAdjacentHTML("beforebegin",h);
+ m.at=end;ROWS_SEEN.set(m.ctx,end);
+ if(end>=m.list.length){rowsIO?.unobserve(el);el.remove();ROWS_MORE.delete(id);return false}
+ /* Still within reach after the insert: observing again delivers a fresh
+    entry, so a fast fling keeps filling without waiting for a scroll. */
+ if(rowsIO){rowsIO.unobserve(el);rowsIO.observe(el)}
+ return true}
+
 /* Artists, derived from the library rather than stored: a track always knows
    its artist, so a separate table would only be one more thing to keep in
    sync. Favourite artists are stored, since that is a user decision. */
@@ -2478,7 +2518,7 @@ function renderArtist(name){
    <b>${esc(a.name)}</b><span>${a.list.length} ${t("tracks")}</span>
    <button class="btn ${a.fav?"on":""}" id="artfav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span> ${a.fav?t("art.unfollow"):t("art.follow")}</button>
    <button class="btn" id="artplay"><span class="material-symbols-rounded" style="font-size:16px">play_arrow</span> ${t("pl.playall")}</button></div>
-   <div class="rows" data-listctx="art:${esc(a.name)}">`+a.list.map(x=>row(x)).join("")+`</div>`;
+   `+rowsHTML(a.list,"art:"+a.name);
  document.getElementById("artback").onclick=()=>{artOpen=null;renderLib()};
  document.getElementById("artfav").onclick=()=>{toggleFavArtist(a.name);renderArtist(a.name)};
  document.getElementById("artplay").onclick=()=>{
@@ -2589,7 +2629,7 @@ function renderLib(){
       ${pl.tracks.length?`<button class="btn" id="pldl"><span class="material-symbols-rounded" style="font-size:16px">download</span> ${t("pl.dl")}</button>`:""}
       <button class="btn danger" id="pldel"><span class="material-symbols-rounded" style="font-size:16px">delete</span> ${t("pl.del")}</button></div>`
      +(pl.tracks.length
-       ?`<div class="rows" data-listctx="pl:${esc(pl.id)}">`+pl.tracks.map(x=>row(x,"",false,pl.id)).join("")+`</div>`
+       ?rowsHTML(pl.tracks,"pl:"+pl.id,x=>row(x,"",false,pl.id))
        :empty("list-music",t("pl.empty.t"),t("pl.empty.s")));
     document.getElementById("plback").onclick=()=>{plOpen=null;renderLib()};
     document.getElementById("pldl")?.addEventListener("click",()=>downloadPlaylist(pl.id));
@@ -2632,7 +2672,7 @@ function renderLib(){
  else if(S.tab==="fav"){
   /* Newest first: the thing you just hearted is the thing you want to see. */
   const f=TRACKS.filter(x=>x.fav).sort((a,b)=>(b.favAt||0)-(a.favAt||0));
-  b.innerHTML=f.length?`<div class="rows" data-listctx="fav">`+f.map(x=>row(x)).join("")+`</div>`:empty("heart",t("fav.none.t"),t("fav.none.s"))}
+  b.innerHTML=f.length?rowsHTML(f,"fav"):empty("heart",t("fav.none.t"),t("fav.none.s"))}
  /* Imported files had no view of their own: they only surfaced through search,
     so there was no way to see what was imported or to remove any of it. */
  else if(S.tab==="loc"){
@@ -2643,7 +2683,7 @@ function renderLib(){
     <button class="btn" id="loc-addf">${t("loc.addfolder")}</button>
     ${loc.length?`<button class="btn danger" id="loc-clear">${t("loc.clear")}</button>`:""}</div>`
    +(loc.length
-     ?`<div class="rows" data-listctx="loc">`+loc.map(x=>row(x,null,true)).join("")+`</div>`
+     ?rowsHTML(loc,"loc",x=>row(x,null,true))
      :empty("folder",t("loc.none.t"),t("loc.none.s")));
   document.getElementById("loc-add").onclick=pickLocal;
   document.getElementById("loc-addf").onclick=pickLocalFolder;
@@ -2658,7 +2698,7 @@ function renderLib(){
       <b>${esc(a.name)}</b><span>${a.list.length} ${t("tracks")}${a.fav?` · <span class="material-symbols-rounded" style="font-size:13px">favorite</span>`:""}</span></button>`).join("")+`</div>`
    :empty("user",t("art.none.t"),t("art.none.s"))}
  else b.innerHTML=HISTORY.length
-  ?`<div class="rows" data-listctx="rec">`+HISTORY.map(h=>row(h.tr,ago(h.at))).join("")+`</div>`
+  ?rowsHTML(HISTORY,"rec",h=>row(h.tr,ago(h.at)))
   :empty("history",t("rec.none.t"),t("rec.none.s"));
  icons()}
 /* opening an artist playlist */
@@ -2670,7 +2710,7 @@ function openPl(i){
    <button class="btn" id="plback"><span class="material-symbols-rounded" style="font-size:16px">arrow_back</span> ${esc(g.a)}</button>
    <b>${esc(g.a)}</b><span>${g.list.length} ${t("tracks")}</span>
    <button class="btn" id="grpplay">${t("pl.playall")}</button></div>
-  <div class="rows" data-listctx="grp:${i}">`+g.list.map(x=>row(x)).join("")+`</div>`;
+  `+rowsHTML(g.list,"grp:"+i);
  document.getElementById("plback").onclick=()=>renderLib();
  document.getElementById("grpplay").onclick=()=>setTrack(g.list[0],true,true,"grp:"+i);
  icons()}
@@ -4261,9 +4301,16 @@ async function setTrack(tr,play=true,openFull=false,ctx,keepQueue,isBack=false){
   if(typeof WAVE_SESSION_PLAYED!=="undefined")WAVE_SESSION_PLAYED.add(String(tr.s)+":"+String(tr.id));
   if(queue.length<5&&typeof waveExtend==="function")waveExtend().catch(()=>{});
  }
- document.querySelectorAll(".row").forEach(r=>r.dataset.playing=
-  (String(r.dataset.track)===String(tr.id)&&r.dataset.svc===tr.s));
+ markPlayingRows(tr);
  if(openFull)openFP();else if(fp.dataset.open==="true")renderFP()}
+/* Only the rows whose state changes are touched: the one that stopped and the
+   ones that started, not every row in every list. */
+function markPlayingRows(tr){
+ document.querySelectorAll('.row[data-playing="true"]').forEach(r=>{
+  if(!(String(r.dataset.track)===String(tr?.id)&&r.dataset.svc===tr?.s))r.dataset.playing="false"});
+ if(!tr)return;
+ document.querySelectorAll(`.row[data-track="${cssEsc(String(tr.id))}"]`).forEach(r=>{
+  if(r.dataset.svc===tr.s&&r.dataset.playing!=="true")r.dataset.playing="true"})}
 function toggle(){
  initAudio();
  if(A.ctx&&A.ctx.state==="suspended"){A.ctx.resume().catch(()=>{})}
@@ -6001,7 +6048,16 @@ function scheduleDiskSave(){
   }catch(e){console.warn("store disk write:",e)}
  },400);
 }
-function save(){
+/* save() is called from ~120 places — every volume-slider step, every track
+   change — and each call serialised the whole library (favourites, local
+   files, playlists) and read a computed style, which forces a full style
+   recalculation right after the colour change of a new track. Calls inside
+   a quarter second now share one write; closing, hiding and the minute
+   timer write at once through saveNow(). */
+let saveTimer=0;
+function save(){if(!saveTimer)saveTimer=setTimeout(saveNow,250)}
+function saveNow(){
+ clearTimeout(saveTimer);saveTimer=0;
  const fullData={
   lang:LANG,theme:S.theme,accent:S.accent,glow:S.glow,blur:S.blur,dens:S.dens,dens2:1,pspeed:S.pspeed,
   svcOn:SERVICES.some(s=>!s.local&&s.on!==s.conn)
@@ -6022,7 +6078,9 @@ function save(){
  };
  /* The splash (boot.js) comes up in the accent the user had last time,
     the adaptive cover colour included; "" means «no accent». */
- try{localStorage.setItem("mw.boot.acc",S.accent==="none"?"":getComputedStyle(document.documentElement).getPropertyValue("--accent-rgb").trim())}catch(_){}
+ try{const de=document.documentElement;
+  /* the inline value first: getComputedStyle here forced a full restyle */
+  localStorage.setItem("mw.boot.acc",S.accent==="none"?"":(de.style.getPropertyValue("--accent-rgb")||getComputedStyle(de).getPropertyValue("--accent-rgb")).trim())}catch(_){}
  try{
   localStorage.setItem("meowave",JSON.stringify(fullData));
  }catch(e){
@@ -7009,7 +7067,7 @@ setInterval(()=>{if(S.playing)dcPush()},60000);
    save(). A long session that ended with a crash, a kill or an update lost every
    minute of it — which is exactly the "hours are not saved" report. A minute is
    cheap: this is one small JSON write. */
-setInterval(()=>{save();persistReport()},60000);
+setInterval(()=>{saveNow();persistReport()},60000);
 /* A closing window must not lose the current batch. The flushes are awaited
    because a fire-and-forget POST dies mid-flight once the webview is torn
    down; the Rust side closes on CloseRequested, so ending the request first
@@ -7030,12 +7088,12 @@ async function flushOnClose(){
    ]):Promise.resolve()
   ]),
   new Promise(r=>setTimeout(r,2500))])}catch(_){}
- persistReport();save()}
-window.addEventListener("beforeunload",()=>{save();flushOnClose()});
+ persistReport();saveNow()}
+window.addEventListener("beforeunload",()=>{saveNow();flushOnClose()});
 /* beforeunload does not fire reliably when a window is destroyed by the OS or
    the updater; pagehide and the hidden transition do. */
-window.addEventListener("pagehide",()=>{save();persistReport();flushListening(true)});
-document.addEventListener("visibilitychange",()=>{if(document.hidden){save();persistReport();flushListening(true)}});
+window.addEventListener("pagehide",()=>{saveNow();persistReport();flushListening(true)});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){saveNow();persistReport();flushListening(true)}});
 function authMsg(msg,cls){const el=document.getElementById("authmsg");if(el){el.textContent=msg||"";el.className="authmsg "+(cls||"")}}
 async function doAuth(kind){
  const email=(document.getElementById("au-email")?.value||"").trim();
@@ -7573,12 +7631,19 @@ function renderDislikes(){
    Only remote covers reach this: a local file with no artwork keeps the chosen
    accent instead of resetting the whole interface to grey. */
 let accentAdaptCache={};
+/* The full-screen player's glow colours. Only its own subtree reads them, so
+   they are set on #fp: written to <html> they restyled the whole document on
+   every track change, and a closed player (content-visibility:hidden) now
+   costs nothing at all. */
+function fpTint(a,b){
+ const el=document.getElementById("fp");if(!el||!a)return;
+ el.style.setProperty("--fp-tint",a.join(" "));
+ if(b)el.style.setProperty("--fp-tint-2",b.join(" "))}
 function adaptAccent(tr){
  if(!tr||!tr.art){coverTint(null);return}
  const hit=accentAdaptCache[trackKey(tr)];
  if(hit){
-  document.documentElement.style.setProperty("--fp-tint",hit.raw.join(" "));
-  if(hit.raw2)document.documentElement.style.setProperty("--fp-tint-2",hit.raw2.join(" "));
+  fpTint(hit.raw,hit.raw2);
   coverTint(hit.raw,hit.raw2);
   /* The UI tone depends on the theme, so it is derived on use, not cached. */
   if(S.accent==="adaptive")applyAccentRgb(liftForUi(hit.raw));
@@ -7619,8 +7684,7 @@ function adaptAccent(tr){
    /* The cache is per session and bounded: covers change constantly. */
    const keys=Object.keys(accentAdaptCache);
    if(keys.length>200)delete accentAdaptCache[keys[0]];
-   document.documentElement.style.setProperty("--fp-tint",best.join(" "));
-   document.documentElement.style.setProperty("--fp-tint-2",second.join(" "));
+   if(sameTrack(tr,S.current))fpTint(best,second);
    if(sameTrack(tr,S.current))coverTint(best,second);
    if(S.accent==="adaptive"&&sameTrack(tr,S.current))applyAccentRgb(rgb);
   }catch(e){/* a cover served without CORS taints the canvas; keep the accent */}};
