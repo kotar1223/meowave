@@ -40,6 +40,10 @@ Obsidian-хранилище с памяткой о проекте: как уст
 - [[Features/Keyboard shortcuts|Горячие клавиши]]
 - [[Features/Search|Поиск: артисты, плейлисты, «В тренде»]]
 - [[Features/Updates|Версия и обновления]]
+- [[Features/Rooms|Комнаты — слушать вместе]]
+- [[Features/Downloads and offline|Скачивание и офлайн]]
+- [[Features/Onboarding and sign-in|Первоначальная настройка и вход]]
+- [[Features/Apple Music]]
 
 ## Журнал
 - [[Log/Requests]] — все запросы владельца проекта со статусом

@@ -44,3 +44,8 @@
 - Если браузера на Chromium нет (только Firefox или Safari) — прежнее окно входа внутри Meowave; «Вставить ключ» остаётся запасным путём.
 - «Выйти» удаляет и профиль браузера.
 - Код: `src-tauri/src/browser.rs` (поиск, запуск, клиент DevTools по WebSocket), `accounts.rs` — `acc_login_browser`, `watch_browser`; `app.js` — `accCard`, `accLogin`, `accStatus`; стили `.acc-card`, `.acc-line`, `.acc-logo`, `.acc-meta`, `.acc-act`, `.acc-alt`, `.acc-go` в `app.css`.
+
+## Раунд 9 — Яндекс Музыка способом MarshalX
+Запрос: «обнови получение токена Яндекс Музыки, сделай методику с расширения MarshalX/yandex-music-token».
+- «Войти» открывает окно OAuth Яндекса с клиентом приложения Яндекс Музыки (как в расширении). После входа Яндекс перенаправляет на адрес с `#access_token=…` — Meowave ловит его из адреса окна, проверяет `account/status` и сохраняет в keychain.
+- Запасной путь — страница вставки токена.
