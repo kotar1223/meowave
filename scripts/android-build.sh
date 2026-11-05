@@ -15,6 +15,9 @@ cd "$(dirname "$0")/.."
 
 # shellcheck source=/dev/null
 source scripts/setup-android-env.sh
+# Dependencies as package-lock.json says (Vite builds dist/, which the APK
+# embeds; tauri runs that build itself as beforeBuildCommand).
+node scripts/web.mjs deps
 tauri android build --apk "$@"
 
 out=src-tauri/gen/android/app/build/outputs/apk/universal/release

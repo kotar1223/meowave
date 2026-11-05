@@ -6,7 +6,10 @@ name: CI
 on:
   push:
     branches: ["**"]
+    # Notes and docs only (brain/, *.md): nothing to build or test.
+    paths-ignore: ["brain/**", "**/*.md"]
   pull_request:
+    paths-ignore: ["brain/**", "**/*.md"]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +20,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # One commit is usually pushed to two or three branches at once (wip/…, then
+  # main and beta-redesign). Testing it once is enough, and Actions minutes in
+  # a private repository are limited — they ran out on 2026-11-05 (see
+  # brain/Known issues.md). So on a push, if an earlier run of this workflow
+  # already passed or is still testing the same commit, the jobs below are
+  # skipped: look at that run for the result. A re-run always tests.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          ATTEMPT: ${{ github.run_attempt }}
+          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          run=true
+          if [ "$EVENT" = push ] && [ "$ATTEMPT" = 1 ]; then
+            earlier=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=100" \
+              --jq "[.workflow_runs[] | select(.id < $RUN_ID and .event == \"push\" and (.status != \"completed\" or .conclusion == \"success\"))] | length" || echo 0)
+            if [ "${earlier:-0}" -gt 0 ] 2>/dev/null; then
+              run=false
+              echo "::notice::$SHA is already tested by an earlier CI run for another branch — skipping the jobs here."
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
   rust:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +110,8 @@ jobs:
       - run: cargo test
 
   frontend:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

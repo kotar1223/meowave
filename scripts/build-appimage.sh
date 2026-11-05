@@ -11,6 +11,9 @@ cd "$ROOT_DIR"
 echo "▶ 1. Ensuring ffmpeg sidecar is downloaded..."
 node scripts/fetch-ffmpeg.mjs
 
+echo "▶ 1b. Building the interface (Vite: src/ → dist/, embedded by cargo)..."
+node scripts/web.mjs build --install
+
 echo "▶ 2. Building release binary via cargo..."
 cargo build --release --manifest-path src-tauri/Cargo.toml
 

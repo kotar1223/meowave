@@ -56,6 +56,7 @@ fi
 
 if [ "$HAS_ABI" = false ]; then
     echo "🔨 Сборка debug APK под $TARGET..."
+    node "$SCRIPT_DIR/web.mjs" deps
     tauri android build --apk --target "$TARGET" --debug
 fi
 
