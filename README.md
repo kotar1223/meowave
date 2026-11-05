@@ -24,6 +24,7 @@
 - **📺 Fullscreen Stage & Cover Drift (F11)**:
   - Cinema stage mode with customizable album cover zoom and organic slow drift motion.
   - Clips β: the official YouTube music video plays muted behind the player, in sync with the track; without a clip, the album art stays.
+- **🔊 Native audio engine (Beta 3.3)**: on desktop the sound is read ahead, decoded (MP3, AAC, FLAC, ALAC, Vorbis, WAV), equalised and sent to the output device by Rust (symphonia + cpal) — no WebView crackle or dropouts, and the equaliser and speed work the same on Windows, macOS and Linux. Opus and HE-AAC tracks fall back to the WebView engine by themselves; Settings → Sound → Quality → Sound engine switches it.
 - **🔊 Audiophile DSP Pipeline**:
   - 10-band graphic equalizer with per-track and per-playlist saved presets.
   - 3D Spatial Audio: HRTF binaural head orbit panner with adjustable radius, speed, and elevation.
@@ -44,8 +45,8 @@
 - **🔎 Search**: artists, playlists and albums next to tracks; chips pick one service to search; with an empty field, «Trending» charts for Russia, the US or the whole world.
 - **📥 Downloads that work offline**: a downloaded track plays from the disk, with no traffic and no network; «My Files → Downloaded» lists them, and «Find earlier downloads» picks up files saved before.
 - **👋 First-run setup**: five animated steps (language, look, services with sign-in, account, summary) and one sign-in / sign-up card across the app.
-- **🌌 Home background**: the particle wave, the light «Aura» or a still background, at 60 or 30 fps (Settings → Appearance).
-- **⬆️ Versions and updates**: Beta 3.2 (3.2.0); the app checks for an update at launch, a source checkout updates with `git pull` from the dialog.
+- **🌌 Home background**: the particle wave, the light «Aura» or a still background, at 60 or 30 fps (Settings → Appearance); in the other tabs it keeps moving (panels drop their blur, so it stays light) or is hidden.
+- **⬆️ Versions and updates**: Beta 3.3 (3.3.0); the app checks for an update at launch, a source checkout updates with `git pull` from the dialog.
 
 ---
 

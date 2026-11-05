@@ -45,6 +45,7 @@ Obsidian-хранилище с памяткой о проекте: как уст
 - [[Features/Downloads and offline|Скачивание и офлайн]]
 - [[Features/Onboarding and sign-in|Первоначальная настройка и вход]]
 - [[Features/Apple Music]]
+- [[Features/Native audio engine|Встроенный звуковой движок]]
 
 ## Журнал
 - [[Log/Requests]] — все запросы владельца проекта со статусом

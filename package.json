@@ -1,6 +1,6 @@
 {
   "name": "meowave",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "description": "Tooling for the Meowave desktop player: badge catalog, Supabase schema and seeding.",
   "type": "module",

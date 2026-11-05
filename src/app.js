@@ -5833,7 +5833,10 @@ document.getElementById("presets").addEventListener("click",e=>{
    "Beauty|Balance" in English. */
 function paintSeg(seg){
  if(!seg)return;
- const on=seg.querySelector('[data-v][aria-pressed="true"]');
+ /* The sleep timer's buttons carry data-sleep, not data-v: with [data-v]
+    alone its pill never showed, and the chosen option (dark text meant for
+    the pill) was nearly invisible on the card. */
+ const on=seg.querySelector('[data-v][aria-pressed="true"],[data-sleep][aria-pressed="true"]');
  if(!on){seg.style.setProperty("--so","0");return}
  seg.style.setProperty("--sx",(on.offsetLeft)+"px");
  seg.style.setProperty("--sw",(on.offsetWidth)+"px");
