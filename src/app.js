@@ -875,7 +875,7 @@ function wireAudio(au){
  on("canplay",()=>{if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}A.onMeta?.();applyRate()});
  on("timeupdate",()=>A.onTime?.());
  on("seeking",()=>{/* seek initiated */});
- au.addEventListener("seeked",()=>{if(A.audio!==au)return;A.pendingSeek=null;A.seekingUntil=0;if(RMX)roomNoteSeek();if(CLIP.pace)clipPace()});
+ au.addEventListener("seeked",()=>{if(A.audio!==au)return;A.pendingSeek=null;A.seekingUntil=0;if(RMX)roomNoteSeek();if(CLIP.pace)clipPace(true)});
  on("ended",()=>A.onEnd?.());
  on("error",()=>A.onErr?.());
  /* The media load algorithm resets playbackRate to defaultPlaybackRate, and it
@@ -1928,13 +1928,15 @@ function frame(now){
    /* Background (aura.js): the wave, the light Аура, or nothing at all —
       "off" skips even the analyser read, so nothing under the glass moves. */
    const bgm=window.MWAura?.bg||"wave";
-   /* Behind any other screen the field now holds still (round 9: "the wave
-      lags in search, and other programs lag too"). At 30 % opacity under the
-      glass nobody follows its motion, yet every update made the compositor
-      re-blur each glass panel above it — 52 backdrop-filter rules — for the
-      whole time the user was in search, a playlist or the settings. The last
-      frame stays on the canvas; home picks up from there. */
-   if(bgm!=="off"&&S.view==="home"){
+   /* Behind any other screen (round 10: "the wave must not stop in the
+      tabs"): it moves there too, at 30 updates a second, over glass panels
+      that drop their backdrop blur while it does (app.css
+      html[data-tw="move"]) — the re-blur of every panel on every update was
+      what made round 9's search lag, not the field. «Фон во вкладках:
+      Выключен» hides it there instead (html[data-tw="off"]): nothing is
+      drawn. */
+   const home=S.view==="home",tabs=window.MWAura?.tabs==="off"?"off":"move";
+   if(bgm!=="off"&&(home||tabs==="move")){
    const lvl=audioBands(dt).lvl;
    /* Glow dust does not need every frame the UI gets: 40 updates a second
       read the same, and every canvas repaint is CPU pixels under WebKitGTK.
@@ -1948,7 +1950,7 @@ function frame(now){
    /* While another program has the focus the field drops to 24 updates a
       second: the window is still on screen, so it keeps moving, but it no
       longer competes at full rate with the application the user works in. */
-   const hz=!FOCUSED?24:S.lite||window.MWAura?.fps===30?30:(GLF.ok||aura)?0:40;
+   const hz=!FOCUSED?24:(!home||S.lite||window.MWAura?.fps===30)?30:(GLF.ok||aura)?0:40;
    /* a whole number of loop frames per update, so the updates are evenly
       spaced too */
    const every=hz?Math.max(1,Math.round(1000/(vk*vsMs)/hz)):1;
@@ -6146,7 +6148,15 @@ function initFPSettings(){
    it is off screen (player closed, another mode, window hidden for a
    minute) — a paused decoder still holds its frames — and the flow canvas
    under it stops drawing while the clip covers it (fp[data-clip]). */
-const CLIP={el:null,box:null,key:"",id:"",state:"idle",t:"",look:0,pace:0,hideT:0,lag:.25,seekAt:0,mem:null,bad:new Set(),fmt:null};
+const CLIP={el:null,box:null,key:"",id:"",state:"idle",t:"",look:0,pace:0,hideT:0,lag:.25,seekAt:0,mem:null,bad:new Set(),fmt:null,
+ /* when the picture last began to fade out; a pending source swap; retries
+    of a picture that broke mid-way; when it first played; the last
+    corrective seek; since when it has been starved */
+ hideAt:-1e9,swapT:0,tries:0,okAt:0,lastSeek:0,stallAt:0};
+/* The picture fades out for .7 s (app.css .fp-clip): its source is swapped or
+   dropped only after that, or the fading box goes black — the flash between
+   two tracks. */
+const CLIP_FADE=760;
 function clipFmt(){
  if(CLIP.fmt===null){
   const v=document.createElement("video");
@@ -6156,16 +6166,20 @@ function clipFmt(){
  return CLIP.fmt}
 /* key → [video id or "" for "none", when]; 400 at most, the oldest go first. */
 function clipMemo(key,val){
- if(!CLIP.mem){try{CLIP.mem=JSON.parse(localStorage.getItem("mw.clips")||"{}")||{}}catch(_){CLIP.mem={}}}
+ /* mw.clips held round 9's misses — songs whose clip the old search could
+    not find (SoundCloud's "Artist - Song", "(Official Audio)" titles). */
+ if(!CLIP.mem){
+  try{localStorage.removeItem?.("mw.clips")}catch(_){}
+  try{CLIP.mem=JSON.parse(localStorage.getItem("mw.clips2")||"{}")||{}}catch(_){CLIP.mem={}}}
  const m=CLIP.mem;
  if(val===undefined){
   const e=m[key];if(!Array.isArray(e))return undefined;
-  if(Date.now()-(+e[1]||0)>(e[0]?30:3)*864e5){delete m[key];return undefined}
+  if(Date.now()-(+e[1]||0)>(e[0]?30:2)*864e5){delete m[key];return undefined}
   return String(e[0]||"")}
  m[key]=[val,Date.now()];
  const ks=Object.keys(m);
  if(ks.length>400){ks.sort((a,b)=>(+m[a][1]||0)-(+m[b][1]||0));for(const k of ks.slice(0,ks.length-300))delete m[k]}
- try{localStorage.setItem("mw.clips",JSON.stringify(m))}catch(_){}}
+ try{localStorage.setItem("mw.clips2",JSON.stringify(m))}catch(_){}}
 const clipLive=()=>S.fpBgMode==="clips"&&fp.dataset.open==="true"&&!document.hidden;
 const clipPos=()=>(S.current?.mode==="local"&&A.audio&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:(+S.pos||0);
 function clipState(st,title){
@@ -6186,54 +6200,107 @@ function clipEl(){
   if(CLIP.seekAt){CLIP.lag=Math.min(1.5,Math.max(.05,CLIP.lag*.5+(performance.now()-CLIP.seekAt)/2000));CLIP.seekAt=0}
   clipPace()});
  v.addEventListener("playing",clipPace);
- v.addEventListener("error",()=>{
-  if(!v.getAttribute("src"))return;
-  if(CLIP.id)CLIP.bad.add(CLIP.id);
-  clipShow(false);clipRelease();clipState("err")});
+ v.addEventListener("error",()=>clipBroke("error"));
  CLIP.el=v;CLIP.box=box;return v}
 function clipShow(on){
  on=!!on;
- if(CLIP.box&&CLIP.box.dataset.on!==String(on))CLIP.box.dataset.on=String(on);
+ if(CLIP.box&&CLIP.box.dataset.on!==String(on)){
+  if(!on&&CLIP.box.dataset.on==="true")CLIP.hideAt=performance.now();
+  CLIP.box.dataset.on=String(on)}
  if(on&&(CLIP.state==="load"||CLIP.state==="end"))clipState("on");
  if((fp.dataset.clip==="on")!==on){
   if(on)fp.dataset.clip="on";else delete fp.dataset.clip;
   window.MWFX?.flow.kick()}}
+const clipFading=()=>performance.now()-CLIP.hideAt<CLIP_FADE;
 function clipRelease(){
- clearInterval(CLIP.pace);CLIP.pace=0;
+ clearInterval(CLIP.pace);CLIP.pace=0;clearTimeout(CLIP.swapT);CLIP.swapT=0;CLIP.stallAt=0;
  const v=CLIP.el;if(!v||!v.getAttribute("src"))return;
- try{v.pause();v.removeAttribute("src");v.load()}catch(_){}}
+ try{v.pause()}catch(_){}
+ const src=v.getAttribute("src");
+ const drop=()=>{
+  if(CLIP.el!==v||v.getAttribute("src")!==src||CLIP.box?.dataset.on==="true")return;
+  try{v.removeAttribute("src");v.load()}catch(_){}};
+ if(clipFading())setTimeout(drop,CLIP_FADE-(performance.now()-CLIP.hideAt));else drop()}
+/* The picture stopped (an expired URL, a dropped connection, a stream
+   starved for 12 s): one fresh try if it had been playing — the proxy
+   resolves the video again — then the album, for this video, this session. */
+function clipBroke(why){
+ const v=CLIP.el;if(!v||!v.getAttribute("src"))return;
+ const id=CLIP.id;
+ console.warn(`[meowave] clip ${id||"?"}: ${why}`);
+ CLIP.stallAt=0;
+ clipShow(false);
+ if(id&&CLIP.okAt&&CLIP.tries<1){
+  CLIP.tries++;CLIP.okAt=0;
+  const url=v.getAttribute("src").replace(/&rs=\d+$/,"")+"&rs="+Date.now();
+  clearTimeout(CLIP.swapT);
+  CLIP.swapT=setTimeout(()=>{CLIP.swapT=0;if(CLIP.id===id&&clipLive()){try{v.src=url}catch(_){}}},Math.max(0,CLIP_FADE-(performance.now()-CLIP.hideAt)));
+  return}
+ if(id)CLIP.bad.add(id);
+ clipRelease();clipState("err")}
 function clipSeek(force){
  const v=CLIP.el;if(!v||v.readyState<1)return;
  const dur=v.duration,pos=clipPos();
  if(!Number.isFinite(dur)||pos>=dur-.3)return;
  const target=Math.min(dur-.05,pos+(S.playing?CLIP.lag*(+S.rate||1):0));
- if(force||Math.abs(v.currentTime-target)>.25){CLIP.seekAt=performance.now();try{v.currentTime=target}catch(_){}}}
-/* Every 400 ms while a clip is on screen, and on the player's own events. */
-function clipPace(){
+ if(force||Math.abs(v.currentTime-target)>.25){CLIP.seekAt=CLIP.lastSeek=performance.now();try{v.currentTime=target}catch(_){}}}
+/* Every 400 ms while a clip is on screen, and on the player's own events
+   (jump: the user moved the song — follow at once). The picture comes up
+   only once it plays in step with the song, and once up it stays through a
+   short stall: shown-hidden-shown was the flicker of round 10. */
+function clipPace(jump){
  const v=CLIP.el;
- if(!v||!v.getAttribute("src"))return;
+ /* Not after a release (the video's own seeked / playing events still
+    arrive): the previous song's picture came back up for half a second
+    over the next one. */
+ if(!v||!v.getAttribute("src")||CLIP.swapT||!CLIP.pace||!CLIP.id)return;
  if(!clipLive()){clipRefresh();return}
  const dur=v.duration;
  if(v.readyState<1||!Number.isFinite(dur))return;
- const pos=clipPos(),rate=Math.max(.25,Math.min(4,+S.rate||1));
+ const pos=clipPos(),rate=Math.max(.25,Math.min(4,+S.rate||1)),now=performance.now();
  /* the song outlasts its video: the album until a seek back */
- if(pos>=dur-.3){clipShow(false);if(!v.paused)v.pause();if(CLIP.state==="on")clipState("end");return}
+ if(pos>=dur-.3){clipShow(false);if(!v.paused)v.pause();CLIP.stallAt=0;if(CLIP.state==="on")clipState("end");return}
  if(v.seeking)return;
- if(!S.playing){if(!v.paused)v.pause();clipSeek(false);if(v.readyState>=2)clipShow(true);return}
- /* Someone else's player reports its position a few times a second at
-    best: a coarse clock gets a wide margin and no rate nudging. */
- const coarse=S.current?.mode!=="local";
  const drift=v.currentTime-pos;
- if(Math.abs(drift)>(coarse?2.5:.8)){clipSeek(true);return}
+ if(!S.playing){
+  CLIP.stallAt=0;
+  if(!v.paused)v.pause();
+  /* paused: the frame of this very moment */
+  if(Math.abs(drift)>.25){if(jump||now-CLIP.lastSeek>1200)clipSeek(true);return}
+  if(v.readyState>=2)clipShow(true);
+  return}
+ /* starved: the last frame holds; 12 s of it is a broken stream */
+ if(v.readyState<3){
+  if(!CLIP.stallAt)CLIP.stallAt=now;
+  else if(now-CLIP.stallAt>12000){clipBroke("stalled");return}}
+ else CLIP.stallAt=0;
+ /* Someone else's player reports its position a few times a second at
+    best: a coarse clock gets a wide margin and no rate nudging. A
+    corrective seek at most every 2.5 s: each one is a new request, and a
+    seek that has not landed yet must not be chased by another. */
+ const coarse=S.current?.mode!=="local";
+ if(Math.abs(drift)>(coarse?2.5:.8)){
+  if(jump||now-CLIP.lastSeek>2500)clipSeek(true);
+  return}
  const want=(coarse||Math.abs(drift)<.05)?rate:rate*(1-Math.max(-.1,Math.min(.1,drift*.25)));
  if(Math.abs(v.playbackRate-want)>.001)v.playbackRate=want;
  if(v.paused){const p=v.play();if(p&&p.catch)p.catch(()=>{})}
- if(v.readyState>=2)clipShow(true)}
+ if(v.readyState>=3&&!v.paused&&Math.abs(drift)<(coarse?1.2:.5)){
+  if(!CLIP.okAt)CLIP.okAt=now;
+  clipShow(true)}}
 function clipLoad(id){
  const v=clipEl();
  const tier=(S.lite||hqFlag()===0)?0:(innerHeight*(devicePixelRatio||1)>=1000?2:1);
  const url=`http://127.0.0.1:${STREAM_PORT}/stream/ytv/${encodeURIComponent(id)}?k=${encodeURIComponent(STREAM_KEY)}&hq=${tier}&fmt=${clipFmt()}`;
- if(v.getAttribute("src")!==url){clipShow(false);v.src=url}
+ clearTimeout(CLIP.swapT);CLIP.swapT=0;
+ if((v.getAttribute("src")||"").replace(/&rs=\d+$/,"")!==url){
+  clipShow(false);
+  /* the previous picture fades out first, then the source changes */
+  if(clipFading()){
+   CLIP.swapT=setTimeout(()=>{CLIP.swapT=0;if(CLIP.id===id&&clipLive())clipLoad(id)},CLIP_FADE-(performance.now()-CLIP.hideAt));
+   return}
+  CLIP.tries=0;CLIP.okAt=0;CLIP.stallAt=0;CLIP.lastSeek=0;
+  v.src=url}
  clearInterval(CLIP.pace);CLIP.pace=setInterval(clipPace,400)}
 async function clipUse(key,id,title){
  if(!id||CLIP.bad.has(id)){CLIP.id="";clipState(id?"err":"none");return}
@@ -6244,7 +6311,7 @@ async function clipUse(key,id,title){
 async function clipLookup(tr,key){
  if(CLIP.key!==key||!clipLive())return;
  let hit=null;
- try{hit=await inv("ytm_clip",{t:String(tr.t||""),a:String(tr.a||""),d:Math.round(+tr.d||0)})}
+ try{hit=await inv("ytm_clip",{t:String(tr.t||""),a:String(tr.a||""),d:Math.round(+tr.d||0),s:String(tr.s||""),id:String(tr.id||"")})}
  catch(e){console.warn("clip:",e);if(CLIP.key===key){CLIP.key="";clipState("err")}return}
  const id=hit&&hit.id?String(hit.id):"";
  clipMemo(key,id);

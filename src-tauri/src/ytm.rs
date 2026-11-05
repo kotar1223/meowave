@@ -1804,14 +1804,84 @@ fn clip_ok(want_t: &str, want_a: &str, want_d: u32, got: &Track, kind: &str) -> 
     if want_d > 30 && got.d > 0 && (got.d * 4 < want_d * 3 || got.d > want_d * 2 + 90) {
         return false;
     }
-    crate::matching::score(want_t, want_a, 0, &got.t, &got.a, 0).is_some()
+    // Lengths go in only when they agree: a video with an intro is longer
+    // than its song, but one of the same length vouches for an artist the
+    // two catalogues spell differently ("Скриптонит" / "Skryptonite").
+    let close = want_d > 30 && got.d > 0 && got.d.abs_diff(want_d) <= 3;
+    let (wd, gd) = if close { (want_d, got.d) } else { (0, 0) };
+    crate::matching::score(want_t, want_a, wd, &got.t, &got.a, gd).is_some()
+}
+
+/// What a title carries that is about the upload, not the song: "(Official
+/// Audio)", "[Lyric Video]", "(Visualizer)", "| Official Video". Searching
+/// with them found the audio upload itself instead of the video.
+fn clip_title(t: &str) -> String {
+    const UPLOAD: &[&str] = &[
+        "official", "audio", "video", "music", "lyric", "lyrics", "visualizer", "visualiser", "hd", "hq", "4k",
+        "mv", "clip", "klip", "premiere", "premera", "oficialnyj", "ofitsialnyy", "tekst", "explicit",
+    ];
+    let is_upload = |inner: &str| {
+        let f = crate::matching::fold(inner);
+        let ws: Vec<&str> = f.split_whitespace().collect();
+        !ws.is_empty() && ws.iter().all(|w| UPLOAD.contains(w))
+    };
+    let mut out = String::with_capacity(t.len());
+    let mut rest = t;
+    while let Some(i) = rest.find(['(', '[']) {
+        let close = if rest[i..].starts_with('(') { ')' } else { ']' };
+        let Some(j) = rest[i..].find(close) else { break };
+        let inner = &rest[i + 1..i + j];
+        out.push_str(&rest[..i]);
+        if !is_upload(inner) {
+            out.push_str(&rest[i..=i + j]);
+        }
+        rest = &rest[i + j + 1..];
+    }
+    out.push_str(rest);
+    if let Some((head, tail)) = out.rsplit_once(" | ") {
+        if is_upload(tail) {
+            out = head.to_string();
+        }
+    }
+    let out = out.split_whitespace().collect::<Vec<_>>().join(" ");
+    if out.is_empty() {
+        t.trim().to_string()
+    } else {
+        out
+    }
+}
+
+/// Who and what to look for: the track as the catalogue names it, and — for
+/// uploads titled "Artist - Song" by someone else (SoundCloud, YouTube
+/// re-uploads) — the artist and song read out of the title; that reading
+/// first for SoundCloud (`split_first`), where it is usually the right one.
+fn clip_wants(t: &str, a: &str, split_first: bool) -> Vec<(String, String)> {
+    let t = clip_title(t);
+    let mut out = Vec::new();
+    if let Some((da, dt)) = crate::matching::split_dash(&t) {
+        let fa = crate::matching::fold(a);
+        let fda = crate::matching::fold(&da);
+        // "Artist - Song" under the artist's own name is the song "Song".
+        if a.trim().is_empty() || fa.split_whitespace().all(|w| fda.split_whitespace().any(|x| x == w)) || fda.contains(fa.trim()) {
+            out.push((da.clone(), clip_title(&dt)));
+        } else if split_first {
+            out.push((da, clip_title(&dt)));
+            out.push((a.trim().to_string(), t.clone()));
+        } else {
+            out.push((a.trim().to_string(), t.clone()));
+            out.push((da, clip_title(&dt)));
+        }
+    } else {
+        out.push((a.trim().to_string(), t));
+    }
+    out
 }
 
 /// Answers of this session, hits and misses alike: a track that comes round
 /// again costs no search.
 static CLIPS: std::sync::Mutex<Option<std::collections::HashMap<String, Option<Clip>>>> = std::sync::Mutex::new(None);
 
-pub async fn clip_for(t: &str, a: &str, d: u32) -> Result<Option<Clip>, String> {
+pub async fn clip_for(t: &str, a: &str, d: u32, own: Option<&str>, split_first: bool) -> Result<Option<Clip>, String> {
     if t.trim().is_empty() {
         return Ok(None);
     }
@@ -1819,17 +1889,44 @@ pub async fn clip_for(t: &str, a: &str, d: u32) -> Result<Option<Clip>, String> 
     if let Some(hit) = CLIPS.lock().ok().and_then(|g| g.as_ref().and_then(|m| m.get(&key).cloned())) {
         return Ok(hit);
     }
-    let q = if a.trim().is_empty() || a.trim() == "—" { t.to_string() } else { format!("{a} {t}") };
-    let body = json!({ "context": web_ctx_lang("en"), "query": q, "params": SEARCH_VIDEOS });
+    let mut hit = None;
+    let mut answered = false;
+    let mut last_err = String::new();
+    for (wa, wt) in clip_wants(t, a, split_first) {
+        let q = if wa.is_empty() || wa == "—" { wt.clone() } else { format!("{wa} {wt}") };
+        let body = json!({ "context": web_ctx_lang("en"), "query": q, "params": SEARCH_VIDEOS });
+        let resp = match post_web("search", body).await {
+            Ok(r) => r,
+            Err(e) => {
+                last_err = e;
+                continue;
+            }
+        };
+        answered = true;
+        let mut items = Vec::new();
+        collect(&resp, &mut items);
+        let rows: Vec<(Track, String)> = items
+            .iter()
+            .take(12)
+            .filter_map(|item| {
+                let tr = parse_item(item)?;
+                let kind = find_key(item, "musicVideoType").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                Some((tr, kind))
+            })
+            .collect();
+        // A YouTube Music track that is itself the official video.
+        hit = own
+            .and_then(|id| rows.iter().find(|(tr, kind)| tr.id == id && kind == "MUSIC_VIDEO_TYPE_OMV"))
+            .or_else(|| rows.iter().find(|(tr, kind)| clip_ok(&wt, &wa, d, tr, kind)))
+            .map(|(tr, _)| Clip { id: tr.id.clone(), t: tr.t.clone(), a: tr.a.clone(), d: tr.d });
+        if hit.is_some() {
+            break;
+        }
+    }
     // A failed search is not a "no": only answers are remembered.
-    let resp = post_web("search", body).await?;
-    let mut items = Vec::new();
-    collect(&resp, &mut items);
-    let hit = items.iter().take(12).find_map(|item| {
-        let tr = parse_item(item)?;
-        let kind = find_key(item, "musicVideoType").and_then(|v| v.as_str()).unwrap_or("");
-        clip_ok(t, a, d, &tr, kind).then_some(Clip { id: tr.id, t: tr.t, a: tr.a, d: tr.d })
-    });
+    if !answered {
+        return Err(last_err);
+    }
     if let Ok(mut g) = CLIPS.lock() {
         let m = g.get_or_insert_with(std::collections::HashMap::new);
         if m.len() > 512 {
@@ -1843,8 +1940,10 @@ pub async fn clip_for(t: &str, a: &str, d: u32) -> Result<Option<Clip>, String> 
 /// The official video of a song for the full player, or `None` — the album
 /// backdrop stays then.
 #[tauri::command]
-pub async fn ytm_clip(t: String, a: String, d: Option<u32>) -> Result<Option<Clip>, String> {
-    clip_for(&t, &a, d.unwrap_or(0)).await
+pub async fn ytm_clip(t: String, a: String, d: Option<u32>, s: Option<String>, id: Option<String>) -> Result<Option<Clip>, String> {
+    // A YouTube Music track may be the video itself.
+    let own = id.filter(|_| s.as_deref() == Some("ytm"));
+    clip_for(&t, &a, d.unwrap_or(0), own.as_deref(), s.as_deref() == Some("sc")).await
 }
 
 /// Picture-only adaptive formats with a plain `url`.
@@ -1911,14 +2010,22 @@ pub fn pick_video<'a>(fs: &[&'a Value], max_h: u64, fmt: &str) -> Option<&'a Val
 /// `max_h`, from the first client whose URL serves the whole file — the
 /// walk `stream` does for the sound. Client health is left alone: a clip is
 /// a nicety, and its refusals must not reorder the clients songs play from.
+/// Nor is there a "last resort": a URL refused past its start is a picture
+/// that freezes or drops out a few seconds in — the flicker of round 10 —
+/// and the album backdrop is better than that. A bot check ends the walk:
+/// every client would refuse, and each ask worsens the IP's standing for
+/// the songs.
 pub async fn video_stream(video_id: &str, max_h: u64, fmt: &str) -> Result<StreamPick, String> {
     let mut refusals: Vec<String> = Vec::new();
-    let mut last_resort: Option<StreamPick> = None;
     for (client, ua) in order() {
         let resp = match ask_client(video_id, client, ua).await {
             Ok(r) => r,
             Err(why) => {
+                let bot = is_bot_check(&why);
                 refusals.push(format!("{client}: {why}"));
+                if bot {
+                    break;
+                }
                 continue;
             }
         };
@@ -1929,20 +2036,14 @@ pub async fn video_stream(video_id: &str, max_h: u64, fmt: &str) -> Result<Strea
         };
         let Some(pick) = pick_of(f, client) else { continue };
         match probe_deep(&pick.url, media_ua_for(client), clen_of(&pick.url, Some(f))).await.0 {
-            Probe::Denied(_) => {
-                if last_resort.is_none() {
-                    last_resort = Some(pick);
-                }
-            }
+            Probe::Denied(_) => refusals.push(format!("{client}: refused past the start")),
             Probe::Ok | Probe::Unknown => return Ok(pick),
         }
     }
-    last_resort.ok_or_else(|| {
-        if refusals.is_empty() {
-            "YouTube will not play this video: no client answered".to_string()
-        } else {
-            format!("YouTube will not play this video: {}", refusals.join("; "))
-        }
+    Err(if refusals.is_empty() {
+        "YouTube will not play this video: no client answered".to_string()
+    } else {
+        format!("YouTube will not play this video: {}", refusals.join("; "))
     })
 }
 
@@ -2205,6 +2306,24 @@ mod tests {
         super::pick_video(&refs, max_h, fmt).and_then(|f| f.get("itag")).and_then(|i| i.as_u64()).unwrap_or(0)
     }
 
+    /// Upload decorations go, the song's own brackets stay.
+    #[test]
+    fn clip_title_drops_upload_words_only() {
+        assert_eq!(super::clip_title("Blinding Lights (Official Audio)"), "Blinding Lights");
+        assert_eq!(super::clip_title("Numb [Official Music Video]"), "Numb");
+        assert_eq!(super::clip_title("Levitating (feat. DaBaby)"), "Levitating (feat. DaBaby)");
+        assert_eq!(super::clip_title("Song (Remix) [Lyric Video]"), "Song (Remix)");
+        assert_eq!(super::clip_title("Песня | Official Video"), "Песня");
+        assert_eq!(super::clip_title("(Official Video)"), "(Official Video)");
+        let w = super::clip_wants("Miyagi & Andy Panda - Kosandra (Official Audio)", "rap_uploads", true);
+        assert_eq!(w[0], ("Miyagi & Andy Panda".to_string(), "Kosandra".to_string()));
+        assert_eq!(w.len(), 2);
+        let w = super::clip_wants("The Weeknd - Blinding Lights", "The Weeknd", false);
+        assert_eq!(w, vec![("The Weeknd".to_string(), "Blinding Lights".to_string())]);
+        let w = super::clip_wants("Numb - Live", "Linkin Park", false);
+        assert_eq!(w[0], ("Linkin Park".to_string(), "Numb - Live".to_string()));
+    }
+
     /// The backdrop takes the cheapest picture that still fills the screen.
     #[test]
     fn clip_picture_is_capped_cheap_and_decodable() {
@@ -2245,8 +2364,43 @@ mod tests {
             ("Никто", "Земфира", 236),
             ("Smells Like Teen Spirit", "Nirvana", 301),
             ("Shape of You", "Ed Sheeran", 233),
+            ("Малый повзрослел", "Макс Корж", 230),
+            ("Хочешь?", "Земфира", 222),
+            ("Капкан", "Мот", 234),
+            ("Kosandra", "Miyagi & Andy Panda", 221),
+            ("ЗА ДЕНЬГИ ДА", "INSTASAMKA", 118),
+            ("Дико, например", "PHARAOH", 205),
+            ("Каждый раз", "Монеточка", 173),
+            ("Miyagi & Andy Panda - Kosandra", "rap_uploads_ru", 221),
+            ("Blinding Lights (Official Audio)", "The Weeknd", 200),
+            ("Believer", "Imagine Dragons", 204),
+            ("Levitating (feat. DaBaby)", "Dua Lipa", 203),
         ] {
-            println!("{a} — {t}: {:?}", super::clip_for(t, a, d).await);
+            println!("{a} — {t}: {:?}", super::clip_for(t, a, d, None, a.contains('_')).await);
+        }
+    }
+
+    /// `cargo test --lib live_video -- --ignored --nocapture`: a clip's picture end to end.
+    #[tokio::test]
+    #[ignore]
+    async fn live_video_test() {
+        for id in ["x1ZtIVuHph0", "kXYiU_JCYtU", "napUAIh4UE0"] {
+            match super::video_stream(id, 720, "best").await {
+                Ok(p) => {
+                    let clen = super::clen_of(&p.url, None);
+                    println!("{id}: client={} mime={} itag={} clen={clen:?}", p.client, p.mime, p.itag);
+                    let mid = clen.unwrap_or(4_000_000) / 2;
+                    let r = super::client()
+                        .unwrap()
+                        .get(&p.url)
+                        .header("User-Agent", super::media_ua_for(&p.client))
+                        .header("Range", format!("bytes={mid}-{}", mid + 65535))
+                        .send()
+                        .await;
+                    println!("   middle range: {:?}", r.map(|r| r.status()));
+                }
+                Err(e) => println!("{id}: ERR {e}"),
+            }
         }
     }
 

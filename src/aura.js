@@ -15,23 +15,35 @@
    setParticlesEnabled, resize, draw, fieldAccent, oklchOf, oklchLin. */
 (()=>{
 "use strict";
-const LSM="mw.bg.mode",LSF="mw.bg.fps";
+const LSM="mw.bg.mode",LSF="mw.bg.fps",LST="mw.bg.tabs";
 const rd=(k,d)=>{try{return localStorage.getItem(k)||d}catch(_){return d}};
 const wr=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
 
 Object.assign(I18N.ru,{
  "bg.mode":"Фон главной","bg.mode.s":"Волна из частиц, лёгкая аура или спокойный фон без анимации",
  "bg.wave":"Волна","bg.aura":"Аура","bg.off":"Выкл",
- "bg.fps":"Частота фона","bg.fps.s":"30 кадров вдвое легче для видеокарты: стеклянные панели реже пересчитывают размытие"});
+ "bg.fps":"Частота фона","bg.fps.s":"30 кадров вдвое легче для видеокарты: стеклянные панели реже пересчитывают размытие",
+ "bg.tabs":"Фон во вкладках","bg.tabs.s":"В поиске, медиатеке и других вкладках: фон двигается (панели без размытия — так он не тормозит) или скрыт",
+ "bg.tabs.move":"Двигается","bg.tabs.off":"Выключен"});
 Object.assign(I18N.en,{
  "bg.mode":"Home background","bg.mode.s":"A particle wave, a light aura or a calm still background",
  "bg.wave":"Wave","bg.aura":"Aura","bg.off":"Off",
- "bg.fps":"Background frame rate","bg.fps.s":"30 fps is half the GPU work: the glass panels re-blur half as often"});
+ "bg.fps":"Background frame rate","bg.fps.s":"30 fps is half the GPU work: the glass panels re-blur half as often",
+ "bg.tabs":"Background in tabs","bg.tabs.s":"In search, the library and the other tabs: the background keeps moving (panels without blur, so it stays light) or is hidden",
+ "bg.tabs.move":"Moving","bg.tabs.off":"Off"});
 
-const M={bg:"wave",on:false,fps:60};
+const M={bg:"wave",on:false,fps:60,tabs:"move"};
 const MODES=["wave","aura","off"];
 M.bg=MODES.includes(rd(LSM,"wave"))?rd(LSM,"wave"):"wave";
 M.fps=rd(LSF,"60")==="30"?30:60;
+/* Round 10: "I don't want the wave to stop in the tabs — optimise it or turn
+   it off there". Round 9 held the field still behind other screens (each
+   update re-blurred every glass panel above it); a frozen wave read as a
+   broken one. Now it either moves there — at 30 updates a second, with the
+   panels' backdrop blur dropped (app.css html[data-tw="move"]) so a frame
+   costs one canvas, not fifty blur passes — or is not there at all. */
+M.tabs=rd(LST,"move")==="off"?"off":"move";
+document.documentElement.dataset.tw=M.tabs;
 
 /* the canvas sits with the field, under everything */
 const cv=document.createElement("canvas");cv.id="aura";cv.setAttribute("aria-hidden","true");
@@ -119,6 +131,8 @@ function apply(first){
  document.querySelectorAll(".bg-wave-only").forEach(f=>f.classList.toggle("bg-na",!want))}
 M.set=v=>{if(!MODES.includes(v)||v===M.bg)return;M.bg=v;wr(LSM,v);apply(false)};
 M.setFps=v=>{M.fps=+v===30?30:60;wr(LSF,String(M.fps))};
+M.setTabs=v=>{M.tabs=v==="off"?"off":"move";wr(LST,M.tabs);document.documentElement.dataset.tw=M.tabs;
+ if(document.getElementById("bgtabs"))setSeg("bgtabs",M.tabs)};
 
 /* settings: two rows above the wave's own controls (Вид) */
 function inject(){
@@ -129,11 +143,12 @@ function inject(){
 <div class="seg" id="${id}" role="group">${btns}</div>`;return d};
  const a=row("bgmode","bg.mode","bg.mode.s",MODES.map(m=>`<button data-v="${m}" data-i18n="bg.${m}">${t("bg."+m)}</button>`).join(""));
  const b=row("bgfps","bg.fps","bg.fps.s",`<button data-v="60">60</button><button data-v="30">30</button>`);
- f.before(a,b);
+ const c=row("bgtabs","bg.tabs","bg.tabs.s",`<button data-v="move" data-i18n="bg.tabs.move">${t("bg.tabs.move")}</button><button data-v="off" data-i18n="bg.tabs.off">${t("bg.tabs.off")}</button>`);
+ f.before(a,b,c);
  /* density and glow only mean something for the wave */
  for(const id of ["dens","glow"])document.getElementById(id)?.closest(".field")?.classList.add("bg-wave-only");
- seg("bgmode",v=>M.set(v));seg("bgfps",v=>M.setFps(v));
- setSeg("bgmode",M.bg);setSeg("bgfps",M.fps)}
+ seg("bgmode",v=>M.set(v));seg("bgfps",v=>M.setFps(v));seg("bgtabs",v=>M.setTabs(v));
+ setSeg("bgmode",M.bg);setSeg("bgfps",M.fps);setSeg("bgtabs",M.tabs)}
 
 /* dimmed behind other screens exactly like the field: go() toggles .dim on
    the field's canvases, the aura follows */

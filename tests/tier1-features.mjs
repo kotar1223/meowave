@@ -1003,7 +1003,7 @@ export function buildTier1Suite() {
     assert.equal(memo("ytm:b"), "", "a miss is an answer too");
     assert.equal(memo("ytm:c"), undefined);
     for (let i = 0; i < 420; i++) memo("k" + i, "v");
-    assert.ok(Object.keys(JSON.parse(store.get("mw.clips"))).length <= 400, "capped");
+    assert.ok(Object.keys(JSON.parse(store.get("mw.clips2"))).length <= 400, "capped");
   });
   suite.test("F30-04: [Accessibility] Reduced motion stills the clip fade and the status pulse", () => {
     const blocks = extractMediaBlocks(css, /prefers-reduced-motion:\s*reduce/).map(b => b.content).join("\n");

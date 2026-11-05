@@ -388,6 +388,14 @@ button{background:none;border:0;cursor:pointer}
      the canvas repainted the stacking context underneath it. */
   will-change:transform;transform:translateZ(0)}
 #field.dim,#fieldgl.dim{opacity:calc(.3 * var(--cz-fa,1))}
+/* Background in tabs (aura.js «Фон во вкладках»). Moving: behind every
+   screen but home the panels lose their backdrop blur — each update of the
+   field would otherwise re-blur all of them — and are a shade more opaque
+   instead, so the text reads the same. Off: the field is not there. */
+html[data-tw="move"]:not([data-view="home"]):not([data-bg="off"]) #app *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html[data-tw="move"]:not([data-view="home"]):not([data-bg="off"]) #app{--surf:oklch(19.5% 0.016 278 / .8);--surf-2:oklch(24% 0.018 278 / .86)}
+html[data-theme="light"][data-tw="move"]:not([data-view="home"]):not([data-bg="off"]) #app{--surf:oklch(100% 0 0 / .82);--surf-2:oklch(100% 0 0 / .9)}
+html[data-tw="off"]:not([data-view="home"]) :is(#field,#fieldgl,#aura){opacity:0}
 /* Only one of the two canvases draws: WebGL when the webview has it. */
 #fieldgl{display:none}
 html.glfield #fieldgl{display:block}
