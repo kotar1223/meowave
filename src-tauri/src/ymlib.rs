@@ -287,7 +287,10 @@ fn ym_row(v: &serde_json::Value) -> Option<serde_json::Value> {
         .map(|s| s == "explicit")
         .unwrap_or(false)
         || v.get("explicit").and_then(|x| x.as_bool()).unwrap_or(false);
-    Some(serde_json::json!({ "i": id, "t": t, "a": a, "al": al, "d": d, "exp": exp }))
+    // The cover travels with the row: without it every imported track sat in
+    // the library as a grey note.
+    let art = crate::api::ym_cover(v, "400x400");
+    Some(serde_json::json!({ "i": id, "t": t, "a": a, "al": al, "d": d, "exp": exp, "art": art }))
 }
 
 fn ym_api(path: &str, token: &str) -> Result<reqwest::RequestBuilder, String> {
@@ -609,6 +612,14 @@ mod tests {
         assert_eq!(row["a"], "Beach House");
         assert_eq!(row["al"], "Depression Cherry");
         assert_eq!(row["d"].as_f64().unwrap(), 320.0);
+        // No coverUri of its own: the album's cover, with scheme and size.
+        assert_eq!(row["art"], "https://avatars.yandex.net/get-music-content/123/400x400");
+        let own = serde_json::json!({"id": 1, "title": "x", "coverUri": "avatars.yandex.net/get-music-content/9/%%"});
+        assert_eq!(ym_row(&own).unwrap()["art"], "https://avatars.yandex.net/get-music-content/9/400x400");
+        let og = serde_json::json!({"id": 2, "title": "y", "ogImage": "https://avatars.yandex.net/get-music-content/7/%%"});
+        assert_eq!(ym_row(&og).unwrap()["art"], "https://avatars.yandex.net/get-music-content/7/400x400");
+        let none = serde_json::json!({"id": 3, "title": "z", "coverUri": ""});
+        assert!(ym_row(&none).unwrap()["art"].is_null());
     }
 
     #[test]

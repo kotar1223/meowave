@@ -191,6 +191,70 @@ pub(crate) fn ym_track_pub(v: &serde_json::Value) -> Option<Track> {
     ym_track(v)
 }
 
+/// The cover of a Yandex track (or album, playlist): its own `coverUri`, else
+/// the first album's, else `ogImage`. They come as
+/// "avatars.yandex.net/get-music-content/…/%%" — no scheme, the size left as a
+/// placeholder. Tracks imported from a Yandex library used to arrive with no
+/// cover at all because only `coverUri` was read and the importer's rows did
+/// not carry it.
+pub(crate) fn ym_cover(v: &serde_json::Value, size: &str) -> Option<String> {
+    let pick = |p: &str| v.pointer(p).and_then(|c| c.as_str()).map(str::trim).filter(|s| !s.is_empty());
+    let raw = pick("/coverUri")
+        .or_else(|| pick("/albums/0/coverUri"))
+        .or_else(|| pick("/ogImage"))
+        .or_else(|| pick("/albums/0/ogImage"))
+        .or_else(|| pick("/cover/uri"))?;
+    let url = if raw.starts_with("https://") || raw.starts_with("http://") {
+        raw.to_string()
+    } else {
+        format!("https://{}", raw.trim_start_matches('/'))
+    };
+    Some(url.replace("%%", size))
+}
+
+/// Covers for Yandex tracks that were saved without one: `/tracks` answers
+/// up to a few hundred ids per call. Used by the library's one-time cover
+/// repair; works without an account for most tracks, with one for the rest.
+#[tauri::command]
+pub async fn ym_covers(ids: Vec<String>) -> Result<std::collections::HashMap<String, String>, String> {
+    let mut out = std::collections::HashMap::new();
+    let ids: Vec<String> = ids
+        .into_iter()
+        .map(|i| i.trim().to_string())
+        .filter(|i| !i.is_empty() && i.len() < 40 && i.chars().all(|c| c.is_ascii_alphanumeric() || c == ':' || c == '_' || c == '-'))
+        .collect();
+    let token = crate::tokens::read_token("ym").ok().flatten().unwrap_or_default();
+    for chunk in ids.chunks(200) {
+        let mut rb = client()?
+            .post(format!("{YM_API}/tracks"))
+            .header("X-Yandex-Music-Client", "YandexMusicAndroid/24023621")
+            .form(&[("track-ids", chunk.join(","))]);
+        if !token.trim().is_empty() {
+            rb = rb.header("Authorization", ym_auth(token.trim().trim_start_matches("OAuth ")));
+        }
+        let v: serde_json::Value = rb
+            .send()
+            .await
+            .map_err(|e| format!("network: {e}"))?
+            .error_for_status()
+            .map_err(|e| format!("Yandex Music: {e}"))?
+            .json()
+            .await
+            .map_err(|e| format!("bad response: {e}"))?;
+        for tr in v.get("result").and_then(|r| r.as_array()).cloned().unwrap_or_default() {
+            let id = match tr.get("id") {
+                Some(serde_json::Value::String(s)) => s.clone(),
+                Some(other) => other.to_string(),
+                None => continue,
+            };
+            if let Some(art) = ym_cover(&tr, "400x400") {
+                out.insert(id, art);
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// One SoundCloud track object as a Track.
 pub(crate) fn sc_track(v: &serde_json::Value) -> Option<Track> {
     if v.get("kind").and_then(|k| k.as_str()).is_some_and(|k| k != "track") {
@@ -246,12 +310,7 @@ fn ym_track(v: &serde_json::Value) -> Option<Track> {
         .and_then(|t| t.as_str())
         .unwrap_or("")
         .to_string();
-    // Cover URIs come as "avatars.yandex.net/get-music-content/…/%%" with the
-    // size left as a placeholder for the caller to fill in.
-    let art = v
-        .get("coverUri")
-        .and_then(|c| c.as_str())
-        .map(|c| format!("https://{}", c.replace("%%", "400x400")));
+    let art = ym_cover(v, "400x400");
 
     Some(Track {
         id,

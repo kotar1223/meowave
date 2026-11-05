@@ -182,7 +182,7 @@ static STATE: Mutex<Option<State>> = Mutex::new(None);
 /// the id is public (anyone can read it off a presence), so it ships with the
 /// app and users never see it. Release builds can also bake one in with
 /// `DISCORD_CLIENT_ID` (repository secret, see release.yml).
-const MEOWAVE_APP_ID: &str = "";
+const MEOWAVE_APP_ID: &str = "1567590469779726407";
 
 /// Order: a developer override from Settings → Discord → Advanced, then
 /// DISCORD_CLIENT_ID at runtime, then the same variable at build time, then
@@ -674,6 +674,22 @@ mod tests {
         assert_eq!(a.get("state").and_then(|v| v.as_str()), Some("Artist"));
         assert_eq!(a.get("status_display_type").and_then(|v| v.as_u64()), Some(2));
         assert!(a.pointer("/assets/large_image").is_some());
+    }
+
+    #[test]
+    fn built_in_app_id_is_used_without_overrides() {
+        let st = State::new();
+        // An override from Settings wins, a malformed one falls back.
+        let mut custom = State::new();
+        custom.client_id = "123456789012345678".into();
+        assert_eq!(client_id(&custom).as_deref(), Some("123456789012345678"));
+        let mut bad = State::new();
+        bad.client_id = "not-an-id".into();
+        if std::env::var("DISCORD_CLIENT_ID").is_err() && option_env!("DISCORD_CLIENT_ID").is_none() {
+            assert_eq!(client_id(&st).as_deref(), Some(MEOWAVE_APP_ID));
+            assert_eq!(client_id(&bad).as_deref(), Some(MEOWAVE_APP_ID));
+        }
+        assert!(MEOWAVE_APP_ID.len() >= 15 && MEOWAVE_APP_ID.chars().all(|c| c.is_ascii_digit()));
     }
 
     #[test]

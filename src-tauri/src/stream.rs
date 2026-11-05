@@ -102,8 +102,58 @@ enum UpstreamKind {
 /// "failed at the media host: HTTP 403" loop: every client passed the probe,
 /// every real stream was refused. So a YouTube stream is pulled the way
 /// YouTube's own players pull it, one bounded window after another.
+///
+/// How big a window may be is not fixed either: from some connections a
+/// 2 KB range is a 206 and a 1 MiB one a 403 (the self-test's "win=0KB").
+/// A refused window is therefore asked again at a quarter of the size, down
+/// to `GV_MIN_WINDOW`, and the size that worked is kept for the session so the
+/// next track starts with it instead of failing over to another client first.
 const GV_FIRST_WINDOW: u64 = 512 * 1024;
 const GV_WINDOW: u64 = 2 * 1024 * 1024;
+const GV_MIN_WINDOW: u64 = 64 * 1024;
+static GV_CAP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(GV_WINDOW);
+/// When the cap last shrank. A refusal can also be about one expired URL, so
+/// a smaller cap is not kept forever: after a while full windows are tried again.
+static GV_CAP_AT: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+const GV_CAP_MEMORY: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
+/// The largest window to ask googlevideo for now.
+fn gv_window() -> u64 {
+    let stale = GV_CAP_AT.lock().ok().and_then(|g| *g).is_some_and(|t| t.elapsed() > GV_CAP_MEMORY);
+    if stale {
+        GV_CAP.store(GV_WINDOW, std::sync::atomic::Ordering::Relaxed);
+        if let Ok(mut g) = GV_CAP_AT.lock() {
+            *g = None;
+        }
+    }
+    GV_CAP.load(std::sync::atomic::Ordering::Relaxed).clamp(GV_MIN_WINDOW, GV_WINDOW)
+}
+
+/// For the YouTube self-test: the window size in use, in KiB.
+pub fn gv_window_kb() -> u64 {
+    gv_window() / 1024
+}
+
+/// The first window of a stream: small, so playback starts fast.
+fn gv_first_window() -> u64 {
+    GV_FIRST_WINDOW.min(gv_window())
+}
+
+/// A window of `size` was refused: the next request asks for a quarter of it.
+/// Returns the new size, or `None` when it is already as small as it goes
+/// (the refusal is then about the URL, not the size).
+fn gv_shrink(size: u64) -> Option<u64> {
+    if size <= GV_MIN_WINDOW {
+        return None;
+    }
+    let next = (size / 4).max(GV_MIN_WINDOW);
+    let _ = GV_CAP.fetch_min(next, std::sync::atomic::Ordering::Relaxed);
+    if let Ok(mut g) = GV_CAP_AT.lock() {
+        *g = Some(std::time::Instant::now());
+    }
+    eprintln!("[meowave] googlevideo refused a {} KB window, asking for {} KB", size / 1024, next / 1024);
+    Some(next)
+}
 
 /// A body pulled in bounded windows: the last byte the caller wants and how
 /// much to ask for per request.
@@ -258,25 +308,38 @@ impl<'a> Upstream<'a> {
     /// A ranged GET from `offset`. At offset 0 a 200 is as good as a 206; past
     /// it only a 206 is, since a 200 would restart the file mid-stream.
     fn fetch_from(&mut self, url: &str, ua: Option<&str>, offset: u64) -> Result<reqwest::Response, u16> {
-        let range = self.range_from(offset);
-        self.rt.block_on(async {
-            let c = crate::api::media_client().map_err(|_| 0u16)?;
-            let mut req = c.get(url).header("Range", range);
-            if let Some(ua) = ua {
-                req = req.header("User-Agent", ua);
-            }
-            match tokio::time::timeout(std::time::Duration::from_secs(20), req.send()).await {
-                Ok(Ok(r)) => {
-                    let code = r.status().as_u16();
-                    if code == 206 || (code == 200 && offset == 0) {
-                        Ok(r)
-                    } else {
-                        Err(code)
+        loop {
+            let range = self.range_from(offset);
+            let got = self.rt.block_on(async {
+                let c = crate::api::media_client().map_err(|_| 0u16)?;
+                let mut req = c.get(url).header("Range", range);
+                if let Some(ua) = ua {
+                    req = req.header("User-Agent", ua);
+                }
+                match tokio::time::timeout(std::time::Duration::from_secs(20), req.send()).await {
+                    Ok(Ok(r)) => {
+                        let code = r.status().as_u16();
+                        if code == 206 || (code == 200 && offset == 0) {
+                            Ok(r)
+                        } else {
+                            Err(code)
+                        }
+                    }
+                    _ => Err(0),
+                }
+            });
+            // A refused window: the same URL with a smaller one before the
+            // URL itself is given up on.
+            if got.as_ref().err() == Some(&403) {
+                if let Some(w) = self.window.as_mut() {
+                    if let Some(next) = gv_shrink(w.size) {
+                        w.size = next;
+                        continue;
                     }
                 }
-                _ => Err(0),
             }
-        })
+            return got;
+        }
     }
 
     /// Picks the stream up again at the byte where it stopped: the same URL
@@ -1367,9 +1430,10 @@ fn handle(
         // one of Google's own players, and only in bounded ranges.
         let is_google = (service == "ytm" && secret.alt.is_none()) || fetch_url.contains("googlevideo.com");
         // (start, caller's end, end of the first window)
+        let first = gv_first_window();
         let win: Option<(u64, Option<u64>, u64)> = match (&want, is_google && !is_hls_url) {
-            (None, true) => Some((0, None, GV_FIRST_WINDOW - 1)),
-            (Some(Some((s, e))), true) => Some((*s, *e, (s + GV_FIRST_WINDOW - 1).min(e.unwrap_or(u64::MAX)))),
+            (None, true) => Some((0, None, first - 1)),
+            (Some(Some((s, e))), true) => Some((*s, *e, (s + first - 1).min(e.unwrap_or(u64::MAX)))),
             _ => None,
         };
         let sent = rt.block_on(async {
@@ -1410,6 +1474,12 @@ fn handle(
                         out = out.with_header(h);
                     }
                     return request.respond(out).map_err(|e| e.to_string());
+                }
+                // The first window refused while smaller ranges of the same
+                // URL pass: shrink it and ask again, the URL is fine.
+                if status == 403 && win.is_some() && gv_shrink(first).is_some() {
+                    max_attempts = max_attempts.saturating_add(1);
+                    continue;
                 }
                 if status >= 400 {
                     cache_drop(&cache_key);
@@ -1545,14 +1615,14 @@ fn handle(
                     let end = e.unwrap_or(n - 1).min(n - 1);
                     let len = end - s + 1;
                     // A host that ignored the range sent the whole file in one go.
-                    let w = (status == 206).then_some(Window { end, size: GV_WINDOW });
+                    let w = (status == 206).then_some(Window { end, size: gv_window() });
                     let body = Upstream::new(rt, Some(resp), upstream.clone(), ua.clone(), Some(len), s).with_window(w, first_end);
                     let crange = range.is_some().then(|| format!("bytes {s}-{end}/{n}"));
                     (body, if range.is_some() { 206 } else { 200 }, Some(len as usize), crange)
                 }
                 None => {
                     // No size anywhere: windows until the host says the file is over.
-                    let w = (status == 206).then_some(Window { end: u64::MAX, size: GV_WINDOW });
+                    let w = (status == 206).then_some(Window { end: u64::MAX, size: gv_window() });
                     let body = Upstream::new(rt, Some(resp), upstream.clone(), ua.clone(), None, s).with_window(w, first_end);
                     (body, 200, None, None)
                 }
@@ -2508,7 +2578,8 @@ mod upstream_tests {
         let range = range_of(&req).and_then(|r| super::plain_range(&r));
         let hdr = |k: &str, v: &str| tiny_http::Header::from_bytes(k.as_bytes(), v.as_bytes()).unwrap();
         if path == "/gv" {
-            // Open-ended, missing or larger than 3 MiB: refused.
+            // Open-ended, missing or larger than 3 MiB (or `max=`): refused.
+            let max = crate::ytm::url_param(req.url(), "max").and_then(|v| v.parse::<u64>().ok()).unwrap_or(3 * 1024 * 1024);
             let Some((s, Some(e))) = range else {
                 let _ = req.respond(tiny_http::Response::from_string("no").with_status_code(403));
                 return;
@@ -2520,7 +2591,7 @@ mod upstream_tests {
                 let _ = req.respond(resp);
                 return;
             }
-            if e - s >= 3 * 1024 * 1024 {
+            if e - s >= max {
                 let _ = req.respond(tiny_http::Response::from_string("no").with_status_code(403));
                 return;
             }
@@ -2636,6 +2707,29 @@ mod upstream_tests {
         let (st, hs, _) = get(&url, Some(&format!("bytes={n}-")));
         assert_eq!(st, 416);
         assert_eq!(h(&hs, "content-range"), Some(format!("bytes */{n}").as_str()));
+    }
+
+    /// From some connections a 2 KB range passes and a large one is a 403
+    /// (the self-test's "win=0KB"). The proxy shrinks its window instead of
+    /// giving the URL up.
+    #[test]
+    fn a_refused_window_is_asked_again_smaller() {
+        let n: u64 = 1024 * 1024 + 4321;
+        let (up, _) = fake(n, vec![vec![0]]);
+        let port = super::spawn().unwrap();
+        let tok = super::token();
+        let key = super::cache_key_of("ytm", "fakevid2", 1, "best");
+        let max = 200 * 1024;
+        super::cache_put(key, format!("http://127.0.0.1:{up}/gv?clen={n}&max={max}&itag=251#mwua=ANDROID_VR"));
+        let url = format!("http://127.0.0.1:{port}/stream/ytm/fakevid2?k={tok}&hq=1&fmt=best&alt=0");
+        let (st, _, body) = get(&url, Some("bytes=0-"));
+        assert_eq!(st, 206);
+        assert_eq!(body.len() as u64, n);
+        assert!(body.iter().enumerate().all(|(i, b)| *b == byte(i as u64)));
+        assert!(super::gv_window() < max, "the smaller window is kept for the next track");
+        let (st, _, body) = get(&url, Some(&format!("bytes={}-", n / 2)));
+        assert_eq!(st, 206);
+        assert_eq!(body.len() as u64, n - n / 2);
     }
 
     #[test]

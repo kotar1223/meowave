@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Release APK: build with Tauri, then sign with the local keystore.
 #
-# The keystore password is never stored in the repository. Provide it via the
-# environment (or a git-ignored .env you source yourself):
+# The keystore password is never stored in the repository. It is read from
+# src-tauri/gen/android/keystore.env (written by scripts/android-rekey.sh,
+# git-ignored) or from the environment:
 #
 #   export MEOWAVE_KEYSTORE_PASSWORD='…'          # required for signing
 #   export MEOWAVE_KEY_PASSWORD='…'               # optional, defaults to the keystore password
@@ -22,6 +23,13 @@ signed="$out/app-universal-release-signed.apk"
 [ -f "$unsigned" ] || { echo "No unsigned release APK at $unsigned — nothing to sign."; exit 0; }
 
 ks="${MEOWAVE_KEYSTORE:-src-tauri/gen/android/keystore.jks}"
+# scripts/android-rekey.sh keeps the password next to the keystore (git-ignored)
+envf="${MEOWAVE_KEYSTORE_ENV:-$(dirname "$ks")/keystore.env}"
+if [ -z "${MEOWAVE_KEYSTORE_PASSWORD:-}" ] && [ -f "$envf" ]; then
+  MEOWAVE_KEYSTORE_PASSWORD="$(sed -n 's/^MEOWAVE_KEYSTORE_PASSWORD=//p' "$envf")"
+  MEOWAVE_KEYSTORE_PASSWORD="${MEOWAVE_KEYSTORE_PASSWORD%%$'\n'*}"
+  export MEOWAVE_KEYSTORE_PASSWORD
+fi
 if [ -z "${MEOWAVE_KEYSTORE_PASSWORD:-}" ]; then
   echo "MEOWAVE_KEYSTORE_PASSWORD is not set — the APK was built but left unsigned:" >&2
   echo "  $unsigned" >&2

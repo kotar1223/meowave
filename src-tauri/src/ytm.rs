@@ -61,12 +61,18 @@ pub const TV_UA: &str = "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/53
 /// and dies. That is the "Playback failed" a few seconds in. So the order
 /// below is only the starting point: `order()` puts the client that last
 /// worked first and the ones that recently failed last, for the session.
+///
+/// ANDROID_VR is last: it answers LOGIN_REQUIRED ("confirm you're not a bot")
+/// for nearly everyone now, and that has nothing to do with the user's own
+/// YouTube Music sign-in — these are guest clients, YouTube does not accept a
+/// web sign-in for them. Asking it first only cost a refusal per track and
+/// put "sign-in required" in front of people who are signed in.
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
-    ("ANDROID_VR", VR_UA),
     ("ANDROID_SDKLESS", SDKLESS_UA),
     ("IOS", IOS_UA),
     ("ANDROID", ANDROID_UA),
     ("ANDROID_TESTSUITE", "Google-Test-Suite"),
+    ("ANDROID_VR", VR_UA),
 ];
 
 /// What the session has learned about each client: when it last produced a
@@ -886,6 +892,19 @@ pub async fn browse_shelves(browse_id: &str, params: Option<&str>, hl: &str) -> 
     Ok(shelves_of(&resp))
 }
 
+/// YouTube Music's charts for one country: "RU", "US", or "ZZ" for the whole
+/// world. The country is a form value of the charts page, not the client's
+/// `gl` — without it the page answers for wherever the request comes from.
+pub async fn charts(country: &str, hl: &str) -> Result<Vec<crate::feeds::Shelf>, String> {
+    let body = json!({
+        "context": web_ctx_lang(hl),
+        "browseId": "FEmusic_charts",
+        "formData": { "selectedValues": [country] }
+    });
+    let resp = post_web("browse", body).await?;
+    Ok(shelves_of(&resp))
+}
+
 /// The shelves of one browse response, whichever renderer holds them.
 fn shelves_of(resp: &Value) -> Vec<crate::feeds::Shelf> {
     let mut raw: Vec<&Value> = Vec::new();
@@ -1059,6 +1078,79 @@ pub async fn signed_tracks(cookie: &str, id: &str) -> Result<Vec<Track>, String>
         body = json!({ "context": web_remix_ctx(), "continuation": token });
     }
     Ok(tracks)
+}
+
+/// Filters of YouTube Music's search (the "Artists", "Albums", "Featured
+/// playlists" and "Community playlists" chips), as its web client sends them.
+const SEARCH_ARTISTS: &str = "EgWKAQIgAWoMEA4QChADEAQQCRAF";
+const SEARCH_ALBUMS: &str = "EgWKAQIYAWoMEA4QChADEAQQCRAF";
+const SEARCH_FEATURED_PLAYLISTS: &str = "EgeKAQQoADgBagwQDhAKEAMQBBAJEAU=";
+const SEARCH_COMMUNITY_PLAYLISTS: &str = "EgeKAQQoAEABagwQDhAKEAMQBBAJEAU=";
+
+/// Every `{"musicResponsiveListItemRenderer": …}` in a response, in order.
+fn list_rows(v: &Value) -> Vec<&Value> {
+    fn walk<'a>(v: &'a Value, out: &mut Vec<&'a Value>) {
+        match v {
+            Value::Object(m) => {
+                if m.contains_key("musicResponsiveListItemRenderer") {
+                    out.push(v);
+                    return;
+                }
+                for x in m.values() {
+                    walk(x, out);
+                }
+            }
+            Value::Array(a) => {
+                for x in a {
+                    walk(x, out);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    walk(v, &mut out);
+    out
+}
+
+/// Cards of one kind ("artist", "playlist", "album") from a filtered search.
+pub(crate) fn cards_of_kind(resp: &Value, kind: &str, max: usize) -> Vec<crate::feeds::Card> {
+    let mut seen = std::collections::HashSet::new();
+    list_rows(resp)
+        .into_iter()
+        .filter_map(card_of)
+        .filter(|c| c.kind == kind && seen.insert(c.id.clone()))
+        .take(max)
+        .collect()
+}
+
+async fn search_kind(query: &str, params: &str, hl: &str, kind: &str) -> Vec<crate::feeds::Card> {
+    let body = json!({ "context": web_ctx_lang(hl), "query": query, "params": params });
+    match post_web("search", body).await {
+        Ok(resp) => cards_of_kind(&resp, kind, 12),
+        Err(e) => {
+            eprintln!("[ytm] search {kind}: {e}");
+            Vec::new()
+        }
+    }
+}
+
+/// Artists, playlists and albums for a query — four filtered searches at once.
+pub async fn search_cards(query: &str, hl: &str) -> (Vec<crate::feeds::Card>, Vec<crate::feeds::Card>, Vec<crate::feeds::Card>) {
+    let (artists, featured, community, albums) = tokio::join!(
+        search_kind(query, SEARCH_ARTISTS, hl, "artist"),
+        search_kind(query, SEARCH_FEATURED_PLAYLISTS, hl, "playlist"),
+        search_kind(query, SEARCH_COMMUNITY_PLAYLISTS, hl, "playlist"),
+        search_kind(query, SEARCH_ALBUMS, hl, "album"),
+    );
+    let mut lists = featured;
+    for c in community {
+        if !lists.iter().any(|x| x.id == c.id) {
+            lists.push(c);
+        }
+    }
+    lists.truncate(12);
+    (artists, lists, albums)
 }
 
 /// Search YouTube Music songs. Tries WEB_REMIX first, falls back to ANDROID_MUSIC.
@@ -1402,11 +1494,20 @@ pub struct SelfTest {
     /// HTTP status of an open-ended `bytes=0-` request — what the proxy used
     /// to send, and what googlevideo refuses for several clients.
     pub open: u16,
-    /// Kilobytes of a 1 MiB window actually received — how the proxy reads
-    /// now; 1024 when it came through whole.
+    /// The largest window (2 MiB, 512, 128 or 64 KiB) that came through
+    /// whole, in KiB; 0 when none did. The proxy reads in windows and shrinks
+    /// them on a refusal, so any non-zero value plays.
     pub window_kb: u64,
+    /// HTTP status of the full 2 MiB window when it did not come through
+    /// (0 = timeout or not reached) — the size googlevideo refuses.
+    pub window_code: u16,
+    /// The window the proxy is using right now, in KiB.
+    pub proxy_kb: u64,
     pub ms: u64,
 }
+
+/// Window sizes the self-test tries, largest first — the proxy's own ladder.
+const SELFTEST_WINDOWS_KB: [u64; 4] = [2048, 512, 128, 64];
 
 /// Asks every client for one video and fetches the start and a deep range of
 /// its best audio format. Shows the user — and whoever reads their report —
@@ -1426,6 +1527,8 @@ pub async fn ytm_selftest(video_id: Option<String>) -> Result<Vec<SelfTest>, Str
             deep: 0,
             open: 0,
             window_kb: 0,
+            window_code: 0,
+            proxy_kb: crate::stream::gv_window_kb(),
             ms: 0,
         };
         match player_response(&id, visitor_data().await.as_deref(), client, ua).await {
@@ -1456,16 +1559,34 @@ pub async fn ytm_selftest(video_id: Option<String>) -> Result<Vec<SelfTest>, Str
                             if let Ok(Ok(resp)) = tokio::time::timeout(std::time::Duration::from_secs(8), open).await {
                                 row.open = resp.status().as_u16();
                             }
-                            let win = c
-                                .get(url)
-                                .header("User-Agent", media_ua_for(client))
-                                .header("Range", "bytes=0-1048575")
-                                .send();
-                            if let Ok(Ok(resp)) = tokio::time::timeout(std::time::Duration::from_secs(8), win).await {
-                                if resp.status().is_success() {
-                                    if let Ok(Ok(b)) = tokio::time::timeout(std::time::Duration::from_secs(20), resp.bytes()).await {
-                                        row.window_kb = (b.len() / 1024) as u64;
+                            // Largest first; the first size that comes through
+                            // whole is what the proxy can read with.
+                            let clen = clen_of(url, Some(f));
+                            for (i, kb) in SELFTEST_WINDOWS_KB.iter().copied().enumerate() {
+                                let want = kb * 1024;
+                                let win = c
+                                    .get(url)
+                                    .header("User-Agent", media_ua_for(client))
+                                    .header("Range", format!("bytes=0-{}", want - 1))
+                                    .send();
+                                let mut got = 0u64;
+                                let mut code = 0u16;
+                                if let Ok(Ok(resp)) = tokio::time::timeout(std::time::Duration::from_secs(8), win).await {
+                                    code = resp.status().as_u16();
+                                    if resp.status().is_success() {
+                                        if let Ok(Ok(b)) = tokio::time::timeout(std::time::Duration::from_secs(20), resp.bytes()).await {
+                                            got = b.len() as u64;
+                                        }
                                     }
+                                }
+                                // Whole = the window, or the whole (shorter) file.
+                                let whole = got > 0 && (got >= want || clen.is_some_and(|n| got >= n));
+                                if whole {
+                                    row.window_kb = kb;
+                                    break;
+                                }
+                                if i == 0 {
+                                    row.window_code = code;
                                 }
                             }
                         }

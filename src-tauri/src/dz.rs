@@ -81,6 +81,55 @@ pub async fn search(q: &str) -> Result<Vec<Track>, String> {
     Ok(tracks_in(&v))
 }
 
+/// Artists, playlists and albums for a query, from Deezer's public search.
+pub async fn search_cards(q: &str) -> (Vec<Card>, Vec<Card>, Vec<Card>) {
+    let enc = urlencoding::encode(q).into_owned();
+    let (pa, pp, pal) = (
+        format!("/search/artist?q={enc}&limit=12"),
+        format!("/search/playlist?q={enc}&limit=12"),
+        format!("/search/album?q={enc}&limit=12"),
+    );
+    let (a, p, al) = tokio::join!(get(&pa), get(&pp), get(&pal));
+    (
+        a.map(|v| cards_in(&v, "artist")).unwrap_or_default(),
+        p.map(|v| cards_in(&v, "playlist")).unwrap_or_default(),
+        al.map(|v| cards_in(&v, "album")).unwrap_or_default(),
+    )
+}
+
+/// Cards from a Deezer list (`data: [...]`) of artists, playlists or albums.
+pub(crate) fn cards_in(v: &Value, kind: &str) -> Vec<Card> {
+    let s = |x: &Value, k: &str| x.get(k).and_then(|v| v.as_str()).map(|s| s.to_string());
+    v.get("data")
+        .and_then(|d| d.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| {
+                    let id = x.get("id")?.to_string();
+                    match kind {
+                        "artist" => {
+                            let t = s(x, "name")?;
+                            let fans = x.get("nb_fan").and_then(|n| n.as_u64()).unwrap_or(0);
+                            let sub = if fans > 0 { format!("{fans} fans") } else { String::new() };
+                            Some(Card::new("artist", "dz", &id, &t, &sub, s(x, "picture_xl").or_else(|| s(x, "picture_big"))))
+                        }
+                        "playlist" => {
+                            let t = s(x, "title")?;
+                            let sub = x.pointer("/user/name").and_then(|n| n.as_str()).unwrap_or("Deezer").to_string();
+                            Some(Card::new("playlist", "dz", &id, &t, &sub, s(x, "picture_xl").or_else(|| s(x, "picture_big"))))
+                        }
+                        _ => {
+                            let t = s(x, "title")?;
+                            let sub = x.pointer("/artist/name").and_then(|n| n.as_str()).unwrap_or("").to_string();
+                            Some(Card::new("album", "dz", &id, &t, &sub, s(x, "cover_xl").or_else(|| s(x, "cover_big"))))
+                        }
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 pub async fn home() -> Result<Vec<Shelf>, String> {
     let chart = get("/chart/0?limit=30").await?;
     let mut shelves = Vec::new();

@@ -1,6 +1,6 @@
 {
   "name": "meowave",
-  "version": "0.1.0",
+  "version": "3.2.0",
   "private": true,
   "description": "Tooling for the Meowave desktop player: badge catalog, Supabase schema and seeding.",
   "type": "module",
@@ -14,6 +14,7 @@
     "android:emulator": "./scripts/run-emulator.sh",
     "android:run": "./scripts/smart-install.sh",
     "android:build": "bash scripts/android-build.sh",
+    "android:rekey": "bash scripts/android-rekey.sh",
     "android:build:debug": "bash -c 'source scripts/setup-android-env.sh && tauri android build --apk --debug'",
     "android:build:x86": "bash -c 'source scripts/setup-android-env.sh && tauri android build --apk --target x86_64 --debug'",
     "ffmpeg": "node scripts/fetch-ffmpeg.mjs",

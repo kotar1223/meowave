@@ -518,8 +518,14 @@ async fn ym_home() -> Result<Vec<Shelf>, String> {
                 x.pointer("/cover/uri")
                     .or_else(|| x.get("coverUri"))
                     .or_else(|| x.pointer("/cover/itemsUri/0"))
+                    .or_else(|| x.get("ogImage"))
                     .and_then(|u| u.as_str())
-                    .map(|u| format!("https://{}", u.replace("%%", "400x400")))
+                    .filter(|u| !u.trim().is_empty())
+                    .map(|u| {
+                        let u = u.trim();
+                        let u = if u.starts_with("http") { u.to_string() } else { format!("https://{}", u.trim_start_matches('/')) };
+                        u.replace("%%", "400x400")
+                    })
             };
             match et {
                 "personal-playlist" | "playlist" => {
@@ -639,6 +645,122 @@ pub async fn feeds_home(service: String, lang: Option<String>) -> Result<Vec<She
     }
 }
 
+/// Search beyond songs: artists, playlists and albums, from the services that
+/// are switched on — YouTube Music's filtered searches first, Deezer's to fill
+/// a row YouTube Music left short. Shelf titles are keys ("artists",
+/// "playlists", "albums"); the frontend translates them.
+#[tauri::command]
+pub async fn search_cards(query: String, services: Vec<String>, lang: Option<String>) -> Result<Vec<Shelf>, String> {
+    let q = query.trim();
+    if q.chars().count() < 2 {
+        return Ok(Vec::new());
+    }
+    let hl = lang.unwrap_or_else(|| "ru".into());
+    let on = |id: &str| services.iter().any(|s| s == id);
+    let (mut artists, mut lists, mut albums) = (Vec::new(), Vec::new(), Vec::new());
+    if on("ytm") {
+        (artists, lists, albums) = crate::ytm::search_cards(q, &hl).await;
+    }
+    if on("dz") && (artists.len() < 4 || lists.len() < 4 || albums.len() < 4) {
+        let (a, p, al) = crate::dz::search_cards(q).await;
+        merge_cards(&mut artists, a);
+        merge_cards(&mut lists, p);
+        merge_cards(&mut albums, al);
+    }
+    Ok(card_shelves(artists, lists, albums))
+}
+
+/// Adds cards a row is short of, skipping a second card of the same name.
+fn merge_cards(into: &mut Vec<Card>, more: Vec<Card>) {
+    if into.len() >= 4 {
+        return;
+    }
+    for c in more {
+        if into.len() >= 12 {
+            break;
+        }
+        if !into.iter().any(|x| x.t.to_lowercase() == c.t.to_lowercase() && x.kind == c.kind) {
+            into.push(c);
+        }
+    }
+}
+
+fn card_shelves(artists: Vec<Card>, lists: Vec<Card>, albums: Vec<Card>) -> Vec<Shelf> {
+    [("artists", artists), ("playlists", lists), ("albums", albums)]
+        .into_iter()
+        .filter(|(_, c)| !c.is_empty())
+        .map(|(k, cards)| Shelf { title: k.into(), s: String::new(), cards })
+        .collect()
+}
+
+/// The search screen before anything is typed: what is popular right now.
+/// `region` is "ru", "us" or "world". Russia starts with Yandex Music's chart
+/// when an account is connected; every region then gets YouTube Music's charts
+/// for that country. YouTube Music publishes its top songs as playlists (the
+/// video charts), so the trending one — or the first — is opened for a track
+/// list. Deezer's worldwide chart stands in when YouTube Music answers nothing.
+#[tauri::command]
+pub async fn search_trending(region: String, lang: Option<String>) -> Result<Vec<Shelf>, String> {
+    let country = chart_country(&region);
+    let hl = lang.filter(|l| !l.is_empty()).unwrap_or_else(|| (if country == "RU" { "ru" } else { "en" }).into());
+    let mut out: Vec<Shelf> = Vec::new();
+    if country == "RU" && ym_token().is_ok() {
+        if let Ok(o) = ym_open("chart", "").await {
+            if !o.tracks.is_empty() {
+                let title = if hl == "ru" { "Чарт Яндекс Музыки" } else { "Yandex Music chart" };
+                out.push(Shelf { title: title.into(), s: "ym".into(), cards: o.tracks.into_iter().take(40).map(Card::track).collect() });
+            }
+        }
+    }
+    let mut last_err = None;
+    match crate::ytm::charts(country, &hl).await {
+        Ok(shelves) => {
+            if out.is_empty() {
+                let lists: Vec<&Card> = shelves.iter().flat_map(|s| s.cards.iter()).filter(|c| c.kind == "playlist").collect();
+                if let Some(pl) = lists.iter().find(|c| is_trending(&c.t)).or(lists.first()) {
+                    match crate::ytm::playlist(&pl.id).await {
+                        Ok(tracks) if !tracks.is_empty() => out.push(Shelf {
+                            title: if pl.t.is_empty() { (if hl == "ru" { "В тренде" } else { "Trending" }).into() } else { pl.t.clone() },
+                            s: "ytm".into(),
+                            cards: tracks.into_iter().take(40).map(Card::track).collect(),
+                        }),
+                        Ok(_) => {}
+                        Err(e) => last_err = Some(e),
+                    }
+                }
+            }
+            out.extend(shelves.into_iter().filter(|s| !s.cards.is_empty()));
+        }
+        Err(e) => last_err = Some(e),
+    }
+    if out.is_empty() {
+        match crate::dz::home().await {
+            Ok(mut s) => {
+                s.truncate(2);
+                out = s;
+            }
+            Err(e) => return Err(last_err.unwrap_or(e)),
+        }
+    }
+    Ok(out)
+}
+
+/// The charts page's country for a region of the search screen.
+fn chart_country(region: &str) -> &'static str {
+    match region.to_ascii_lowercase().as_str() {
+        "ru" => "RU",
+        "world" | "global" | "zz" => "ZZ",
+        _ => "US",
+    }
+}
+
+/// «Россия – 20 трендовых клипов», "Trending 20 Russia": the chart that moves
+/// fastest is the one the search screen opens.
+fn is_trending(title: &str) -> bool {
+    let l = title.to_lowercase();
+    l.contains("trend") || l.contains("тренд")
+}
+
 /// Contents of one card: tracks for a playlist/album/radio, shelves for a
 /// mood or genre page.
 #[tauri::command]
@@ -682,6 +804,33 @@ pub async fn feeds_open(service: String, kind: String, id: String, lang: Option<
 
 #[cfg(test)]
 mod live {
+
+    /// The search screen against the real services; run with
+    /// `cargo test -- --ignored live_search_screen --nocapture`.
+    #[tokio::test]
+    #[ignore]
+    async fn live_search_screen() {
+        for r in ["ru", "us", "world"] {
+            match super::search_trending(r.into(), Some("ru".into())).await {
+                Ok(sh) => {
+                    println!("[trending {r}] {} shelves", sh.len());
+                    for x in &sh {
+                        println!("   {} ({}): {}", x.title, x.cards.len(), x.cards.iter().take(3).map(|c| format!("{}:{}", c.kind, c.t)).collect::<Vec<_>>().join(" | "));
+                    }
+                }
+                Err(e) => println!("[trending {r}] FAILED: {e}"),
+            }
+        }
+        match super::search_cards("кино".into(), vec!["ytm".into(), "dz".into()], Some("ru".into())).await {
+            Ok(sh) => {
+                for x in &sh {
+                    println!("[cards] {} ({}): {}", x.title, x.cards.len(), x.cards.iter().take(4).map(|c| format!("{}:{}:{}", c.s, c.kind, c.t)).collect::<Vec<_>>().join(" | "));
+                }
+            }
+            Err(e) => println!("[cards] FAILED: {e}"),
+        }
+    }
+
     /// Network smoke test of every new feed; run with `cargo test -- --ignored live_feeds`.
     #[tokio::test]
     #[ignore]
@@ -732,5 +881,78 @@ mod live {
             Ok(u) => println!("dz stream -> {}", &u[..u.len().min(90)]),
             Err(e) => println!("dz stream FAILED: {e}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod search_tests {
+    use super::*;
+
+    #[test]
+    fn trending_regions_map_to_chart_countries() {
+        assert_eq!(chart_country("ru"), "RU");
+        assert_eq!(chart_country("World"), "ZZ");
+        assert_eq!(chart_country("us"), "US");
+        assert_eq!(chart_country("en"), "US");
+        assert!(is_trending("Россия\u{a0}– 20 трендовых клипов"));
+        assert!(is_trending("Trending 20 United States"));
+        assert!(!is_trending("Лучшие клипы за день\u{a0}– Россия"));
+    }
+
+    #[test]
+    fn search_card_rows_merge_and_label() {
+        let yt = vec![Card::new("artist", "ytm", "UC1", "Кино", "", None)];
+        let mut artists = yt;
+        merge_cards(
+            &mut artists,
+            vec![
+                Card::new("artist", "dz", "1", "кино", "", None),
+                Card::new("artist", "dz", "2", "Кино Фильм", "", None),
+            ],
+        );
+        // same name, other service: skipped; a new name fills the short row
+        assert_eq!(artists.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(), ["UC1", "2"]);
+        let shelves = card_shelves(artists, vec![], vec![Card::new("album", "dz", "9", "Группа крови", "Кино", None)]);
+        assert_eq!(shelves.iter().map(|s| s.title.as_str()).collect::<Vec<_>>(), ["artists", "albums"]);
+    }
+
+    #[test]
+    fn ytm_filtered_search_rows_become_cards() {
+        let resp = serde_json::json!({"contents": {"tabbedSearchResultsRenderer": {"tabs": [{"tabRenderer": {"content": {"sectionListRenderer": {"contents": [{"musicShelfRenderer": {"contents": [
+            {"musicResponsiveListItemRenderer": {
+                "flexColumns": [
+                    {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Кино"}]}}},
+                    {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Исполнитель"}]}}}
+                ],
+                "navigationEndpoint": {"browseEndpoint": {"browseId": "UCL9NQ06h7I0CRUcGxPWMtkQ",
+                    "browseEndpointContextSupportedConfigs": {"browseEndpointContextMusicConfig": {"pageType": "MUSIC_PAGE_TYPE_ARTIST"}}}}
+            }},
+            {"musicResponsiveListItemRenderer": {
+                "flexColumns": [
+                    {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "Presenting Кино"}]}}},
+                    {"musicResponsiveListItemFlexColumnRenderer": {"text": {"runs": [{"text": "YouTube Music • 25 треков"}]}}}
+                ],
+                "navigationEndpoint": {"browseEndpoint": {"browseId": "VLRDCLAK5uy_mydJ",
+                    "browseEndpointContextSupportedConfigs": {"browseEndpointContextMusicConfig": {"pageType": "MUSIC_PAGE_TYPE_PLAYLIST"}}}}
+            }}
+        ]}}]}}}}]}}});
+        let a = crate::ytm::cards_of_kind(&resp, "artist", 12);
+        assert_eq!((a.len(), a[0].t.as_str(), a[0].id.as_str()), (1, "Кино", "UCL9NQ06h7I0CRUcGxPWMtkQ"));
+        let p = crate::ytm::cards_of_kind(&resp, "playlist", 12);
+        assert_eq!((p.len(), p[0].id.as_str()), (1, "RDCLAK5uy_mydJ"));
+    }
+
+    #[test]
+    fn deezer_lists_become_cards() {
+        let v = serde_json::json!({"data": [
+            {"id": 13, "name": "Eminem", "nb_fan": 1000, "picture_xl": "https://e/x.jpg"},
+            {"id": 14}
+        ]});
+        let c = crate::dz::cards_in(&v, "artist");
+        assert_eq!(c.len(), 1);
+        assert_eq!((c[0].kind.as_str(), c[0].id.as_str(), c[0].t.as_str()), ("artist", "13", "Eminem"));
+        let v = serde_json::json!({"data": [{"id": 5, "title": "Top", "user": {"name": "Deezer"}, "picture_big": "https://p"}]});
+        let p = crate::dz::cards_in(&v, "playlist");
+        assert_eq!((p[0].sub.as_str(), p[0].art.as_deref()), ("Deezer", Some("https://p")));
     }
 }

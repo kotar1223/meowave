@@ -125,6 +125,14 @@ mod win {
         fn PostMessageW(hWnd: HWND, Msg: u32, wParam: usize, lParam: isize) -> BOOL;
         fn CreateIconIndirect(piconinfo: *mut ICONINFO) -> HICON;
         fn DestroyIcon(hicon: HICON) -> BOOL;
+        fn LoadImageW(hInst: *mut c_void, name: *const u16, ty: u32, cx: i32, cy: i32, fuLoad: u32) -> *mut c_void;
+        fn SendMessageW(hWnd: HWND, Msg: u32, wParam: usize, lParam: isize) -> isize;
+    }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetModuleHandleW(lpModuleName: *const u16) -> *mut c_void;
+        fn GetProcAddress(hModule: *mut c_void, lpProcName: *const u8) -> *mut c_void;
     }
 
     #[link(name = "gdi32")]
@@ -159,6 +167,63 @@ mod win {
     static mut WM_TASKBAR_BUTTON_CREATED: u32 = 0;
     static BUTTONS_ADDED: AtomicBool = AtomicBool::new(false);
     static CURRENT_PLAYING: AtomicBool = AtomicBool::new(false);
+    static mut APP_ICON_BIG: HICON = std::ptr::null_mut();
+    static mut APP_ICON_SMALL: HICON = std::ptr::null_mut();
+
+    // ── the window's own icon, crisp at every scale ──
+    // Tauri gives Windows one RGBA picture, the first layer of icon.ico (it
+    // was the 16 px one), and Windows stretched it to the taskbar's 32 px at
+    // 100 %, 40 at 125 %, 48 at 150 %: a blurry cat. The exe already carries
+    // the whole multi-size icon — tauri-build embeds icon.ico as resource
+    // 32512 — so ask LoadImageW for the exact sizes this monitor wants and let
+    // Windows pick the matching layer. Again on WM_DPICHANGED.
+    const IMAGE_ICON: u32 = 1;
+    const LR_DEFAULTCOLOR: u32 = 0;
+    const WM_SETICON: u32 = 0x0080;
+    const WM_DPICHANGED: u32 = 0x02E0;
+    const ICON_SMALL: usize = 0;
+    const ICON_BIG: usize = 1;
+    const APP_ICON_ID: usize = 32512;
+
+    /// GetDpiForWindow is Windows 10 1607+; looked up at run time so an older
+    /// system still starts (with the 96-dpi sizes).
+    unsafe fn window_dpi(hwnd: HWND) -> u32 {
+        let user32: Vec<u16> = "user32.dll\0".encode_utf16().collect();
+        let module = GetModuleHandleW(user32.as_ptr());
+        if module.is_null() {
+            return 96;
+        }
+        let f = GetProcAddress(module, b"GetDpiForWindow\0".as_ptr());
+        if f.is_null() {
+            return 96;
+        }
+        let get = std::mem::transmute::<*mut c_void, unsafe extern "system" fn(HWND) -> u32>(f);
+        match get(hwnd) {
+            0 => 96,
+            d => d,
+        }
+    }
+
+    unsafe fn apply_app_icon(hwnd: HWND, dpi: u32) {
+        let module = GetModuleHandleW(std::ptr::null());
+        let id = APP_ICON_ID as *const u16;
+        let big = LoadImageW(module, id, IMAGE_ICON, super::icon_px(32, dpi), super::icon_px(32, dpi), LR_DEFAULTCOLOR);
+        let small = LoadImageW(module, id, IMAGE_ICON, super::icon_px(16, dpi), super::icon_px(16, dpi), LR_DEFAULTCOLOR);
+        if !big.is_null() {
+            SendMessageW(hwnd, WM_SETICON, ICON_BIG, big as isize);
+            if !APP_ICON_BIG.is_null() {
+                DestroyIcon(APP_ICON_BIG);
+            }
+            APP_ICON_BIG = big;
+        }
+        if !small.is_null() {
+            SendMessageW(hwnd, WM_SETICON, ICON_SMALL, small as isize);
+            if !APP_ICON_SMALL.is_null() {
+                DestroyIcon(APP_ICON_SMALL);
+            }
+            APP_ICON_SMALL = small;
+        }
+    }
 
     pub fn to_u16_buf(s: &str) -> [u16; 260] {
         let mut buf = [0u16; 260];
@@ -360,6 +425,10 @@ mod win {
             add_or_update_buttons(hwnd);
             return 0;
         }
+        if msg == WM_DPICHANGED {
+            apply_app_icon(hwnd, (wparam & 0xFFFF) as u32);
+            return DefSubclassProc(hwnd, msg, wparam, lparam);
+        }
         if msg == WM_UPDATE_PLAYING {
             let playing = wparam != 0;
             update_play_pause(hwnd, playing);
@@ -397,6 +466,7 @@ mod win {
             WM_TASKBAR_BUTTON_CREATED = RegisterWindowMessageW(msg_name.as_ptr());
 
             SetWindowSubclass(hwnd_raw, subclass_proc, 4242, 0);
+            apply_app_icon(hwnd_raw, window_dpi(hwnd_raw));
             add_or_update_buttons(hwnd_raw);
         }
     }
@@ -427,6 +497,14 @@ mod win {
     }
 }
 
+/// Window icon edge in pixels for a 96-dpi base size (32 big, 16 small) at
+/// `dpi`: 125 % asks for 40 and 20, 150 % for 48 and 24.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+pub(crate) fn icon_px(base: u32, dpi: u32) -> i32 {
+    let dpi = if dpi == 0 { 96 } else { dpi };
+    ((base * dpi + 48) / 96).clamp(base, 256) as i32
+}
+
 #[tauri::command]
 pub fn taskbar_set_playing(playing: bool) -> Result<(), String> {
     #[cfg(target_os = "windows")]
@@ -445,6 +523,16 @@ pub fn init_window(window: &tauri::WebviewWindow) {
 mod tests {
     #[allow(unused_imports)]
     use super::*;
+
+    #[test]
+    fn icon_sizes_follow_the_monitor_scale() {
+        assert_eq!((icon_px(32, 96), icon_px(16, 96)), (32, 16));
+        assert_eq!((icon_px(32, 120), icon_px(16, 120)), (40, 20));
+        assert_eq!((icon_px(32, 144), icon_px(16, 144)), (48, 24));
+        assert_eq!((icon_px(32, 192), icon_px(16, 192)), (64, 32));
+        assert_eq!(icon_px(32, 0), 32);
+        assert_eq!(icon_px(32, 2000), 256);
+    }
 
     #[test]
     #[cfg(target_os = "windows")]
