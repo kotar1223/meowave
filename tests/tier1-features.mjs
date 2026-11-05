@@ -928,7 +928,18 @@ export function buildTier1Suite() {
   // here; what they hand to the classic scripts is window.X = … .
   const tsDir = path.join(PATHS.root, "src", "ts");
   const tsFiles = fs.existsSync(tsDir) ? fs.readdirSync(tsDir).filter(f => f.endsWith(".ts")).map(f => path.join(tsDir, f)) : [];
-  const tsExports = new Set(tsFiles.filter(f => !f.endsWith(".d.ts")).flatMap(f => [...fs.readFileSync(f, "utf-8").matchAll(/\bwindow\.([A-Za-z_$][\w$]*)\s*=(?!=)/g)].map(m => m[1])));
+  // Object.assign(window, {a, b, c: …}) hands a, b and c over as well (discover.ts).
+  const assignExports = src => [...src.matchAll(/Object\.assign\(\s*window\s*,\s*\{/g)].flatMap(m => {
+    let depth = 1, top = "";
+    for (let i = m.index + m[0].length; i < src.length && depth > 0; i++) {
+      const ch = src[i];
+      if ("{([".includes(ch)) depth++;
+      else if ("})]".includes(ch)) depth--;
+      top += depth === 1 && !"{}()[]".includes(ch) ? ch : depth <= 1 ? "," : "";
+    }
+    return top.split(",").map(s => s.split(":")[0].trim()).filter(s => /^[A-Za-z_$][\w$]*$/.test(s));
+  });
+  const tsExports = new Set(tsFiles.filter(f => !f.endsWith(".d.ts")).flatMap(f => { const src = fs.readFileSync(f, "utf-8"); return [...[...src.matchAll(/\bwindow\.([A-Za-z_$][\w$]*)\s*=(?!=)/g)].map(m => m[1]), ...assignExports(src)]; }));
   const und = spawnSync(process.execPath, ["--expose-internals", path.join(PATHS.root, "tests", "undef-names.cjs"), ...scripts], { encoding: "utf8", maxBuffer: 16 << 20 });
   let undRes = null;
   try { undRes = JSON.parse(und.stdout); } catch (_) { undRes = { skip: "checker output unreadable: " + (und.stderr || und.stdout).slice(0, 200) }; }
@@ -959,7 +970,7 @@ export function buildTier1Suite() {
     const classic = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
     assert.equal(classic[classic.length - 1], "ready", "ready.js must be the last classic script — the modules wait for it");
     const main = fs.readFileSync(path.join(tsDir, "main.ts"), "utf-8");
-    for (const m of ["naudio", "e2e", "fx", "m3", "search", "chat", "profile", "custom", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
+    for (const m of ["naudio", "e2e", "fx", "m3", "discover", "search", "chat", "profile", "custom", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
   });
 
   // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────

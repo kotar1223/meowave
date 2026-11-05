@@ -69,7 +69,7 @@ third-party client, so Meowave plays the same recording from another service
 
 - **App shell:** [Tauri 2](https://tauri.app) (Rust)
 - **Backend / accounts:** [Supabase](https://supabase.com) (Postgres + RLS)
-- **Frontend:** [Vite](https://vite.dev) + TypeScript, no framework. `src/` is the root: the classic scripts (`app.js`, `discover.js`, `messenger.js`…) and `app.css` are copied as they are, the modules moved so far live in `src/ts/` (the stack is being rewritten one screen at a time — see `HANDOFF.md`). The window shows the build in `dist/`.
+- **Frontend:** [Vite](https://vite.dev) + TypeScript, no framework. `src/` is the root: the classic scripts (`app.js`, `messenger.js`…) and `app.css` are copied as they are, the modules moved so far live in `src/ts/` (the stack is being rewritten one screen at a time — see `HANDOFF.md`). The window shows the build in `dist/`.
 
 ## Project Structure
 
@@ -146,7 +146,7 @@ system copy (`brew install ffmpeg`) — mp3 conversion works everywhere, but
 
 ```bash
 npm run check      # builds dist/, then cargo clippy -D warnings, cargo test
-npm run check:js   # syntax-checks app.js and discover.js, type-checks src/ts
+npm run check:js   # syntax-checks app.js and messenger.js, type-checks src/ts
 npm run typecheck  # tsc over src/ts only
 npm run test:e2e   # the static e2e suite (tests/run-e2e.mjs)
 ```

@@ -10,10 +10,10 @@
    MWSearch.start(q) once typing settles (the request runs alongside the track
    search), MWSearch.more(q,box,alive) after the track rows are painted —
    every call there checks that window.MWSearch exists.
-   Reads app.js's globals (globals.d.ts) and discover.js's MWDISC.shelvesHTML,
+   Reads app.js's globals (globals.d.ts) and discover.ts's MWDISC.shelvesHTML,
    whose cards open through the home sheet's own click handler. initSearch()
-   runs after the classic scripts (legacy.ts), as search2.js ran after
-   app.js and discover.js. The HTML it writes is byte for byte what
+   runs after the classic scripts (legacy.ts) and after initDiscover(), as
+   search2.js ran after app.js and discover.js. The HTML it writes is byte for byte what
    search2.js wrote, including the whitespace inside the templates. */
 
 import { IC, tf } from "./ui";

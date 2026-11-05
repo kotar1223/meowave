@@ -1,4 +1,4 @@
-/* Globals of the classic scripts (app.js, discover.js, …) that the TypeScript
+/* Globals of the classic scripts (app.js, messenger.js, …) that the TypeScript
    modules read. Top-level const/let/function of a classic script live in the
    page's global scope, and a module sees them by name — so these are only
    types, nothing is imported. tests/tier1-features.mjs (F27-02) checks that
@@ -18,7 +18,7 @@ interface MwTrack {
   id?: string | number;
   /** service: ym, ytm, sc, sp, am, local, … */
   s?: string;
-  art?: string;
+  art?: string | null;
   /** title, artist */
   t?: string;
   a?: string;
@@ -48,18 +48,26 @@ interface MwPlaylist {
   tracks?: MwTrack[];
   [key: string]: unknown;
 }
-/** A card on a home-sheet shelf or in search (discover.js renders them). */
+/** A card on a home-sheet shelf or in search (discover.ts renders them). */
 interface MwCard {
   /** track, artist, playlist, album, … */
   kind?: string;
   id?: string;
-  /** title */
+  /** service */
+  s?: string;
+  /** title, the line under it */
   t?: string;
+  sub?: string;
+  art?: string | null;
+  /** #rgb… behind the artwork */
+  color?: string;
   track?: MwTrack;
   [key: string]: unknown;
 }
 interface MwShelf {
   title?: string;
+  /** service */
+  s?: string;
   cards?: MwCard[];
   [key: string]: unknown;
 }
@@ -69,6 +77,8 @@ interface MwService {
   name?: string;
   /** switched on in Settings → Services */
   on?: boolean;
+  /** signed in / has what it needs to play */
+  conn?: boolean;
   /** the local library, not a streaming service */
   local?: boolean;
   [key: string]: unknown;
@@ -237,12 +247,10 @@ interface TauriGlobal {
 
 interface Window {
   __TAURI__?: TauriGlobal;
-  /** app.js: relabels the page in LANG; m3.ts and discover.js wrap it to relabel their own parts too. */
+  /** app.js: relabels the page in LANG; m3.ts and discover.ts wrap it to relabel their own parts too. */
   applyI18n?: () => void;
   /** app.js: the service search is narrowed to ("" — all of them). */
   searchScope?: () => string;
-  /** discover.js: the home sheet; its shelf renderer registers the cards for its own click handler. */
-  MWDISC?: { shelvesHTML?: (shelves: MwShelf[]) => string; [key: string]: unknown };
 }
 
 /** A value of the interface designer (custom.ts): #rrggbb, a number, or one of an item's options. */
@@ -261,6 +269,13 @@ interface MwMiniCfg {
   x?: number;
   y?: number;
 }
+/** discover.ts: My Wave's settings — source, character, mood, language (waveCfg() repairs them). */
+interface MwWaveCfg {
+  src?: string;
+  div?: string;
+  mood?: string;
+  lang?: string;
+}
 /** S.x: the settings saved with S that have no field of their own. */
 interface MwStateX {
   /** custom.ts: the interface designer */
@@ -273,6 +288,8 @@ interface MwStateX {
   ytmAlt?: boolean;
   /** m3.ts: the app icon (classic, clear-auto, ocean …) */
   appIcon?: string;
+  /** discover.ts */
+  wave?: MwWaveCfg;
   [key: string]: unknown;
 }
 /** What app.js's lyricsFor() knows about a track's lyrics. */
@@ -336,7 +353,8 @@ declare const uploadBanner: (f: File) => Promise<unknown>;
 declare function fillProfileSettings(): void;
 declare function openSettings(tab?: string): void;
 declare const avat: (p: MwPeer | MwProfile | null | undefined, size?: number, status?: unknown) => string;
-declare const svc: (id: string | undefined) => MwService | undefined;
+/** never undefined: an unknown id gets a stand-in, so callers read .name straight off */
+declare const svc: (id: string | undefined) => MwService;
 declare let queue: MwTrack[];
 declare const cssEsc: (s: unknown) => string;
 declare const coverStyle: (url?: string | null, l1?: unknown, l2?: unknown) => string;
@@ -350,7 +368,16 @@ declare const A: { audio: { paused: boolean; currentTime: number } | null; [key:
 /** how far ahead of the audio a synced line lights up, seconds */
 declare const LY_LEAD: number;
 /** track matching: of(a, b) — how surely b is the same recording as a (0…1), null when it is not */
-declare const MWM: { of(a: MwTrack, b: MwTrack): number | null; [key: string]: unknown };
+declare const MWM: {
+  of(a: MwTrack, b: MwTrack): number | null;
+  /** lower case, Latin letters for Cyrillic ones, no accents or punctuation */
+  fold(s: unknown): string;
+  /** a title without what platforms bolt onto it (feat., [Remastered], - Radio Edit) */
+  core(s: unknown): string;
+  /** one key for every copy of a recording across services */
+  key(tr: MwTrack): string;
+  [key: string]: unknown;
+};
 /** where the queue came from ("wave" — the wave) */
 declare let PLAYCTX: { key?: string; [key: string]: unknown };
 /** service id → its logo, as HTML */
@@ -382,6 +409,34 @@ declare function trackKey(tr: MwTrack): string;
 /** Spotify tracks resolved to another service, by sprKey() */
 declare function sprMap(): Map<string, unknown>;
 declare function sprSave(): void;
+/* … read by discover.ts */
+declare const RM: boolean;
+declare let FAV_ARTISTS: string[];
+declare function toggleFavArtist(name: string): void;
+declare const favTracks: () => MwTrack[];
+declare function isDisliked(tr: MwTrack | null | undefined): boolean;
+/** can a track of this service play right now */
+declare const playOn: (id: string | undefined) => boolean;
+/** the first of several artists ("A, B", "A feat. B") */
+declare const sprPrimary: (a: unknown) => string;
+/** where a Spotify track really plays from */
+declare function sprResolve(tr: MwTrack, force?: boolean): Promise<{ s?: string; id?: string | number; [key: string]: unknown } | null | undefined>;
+declare const cssUrl: (s: unknown) => string;
+/** the wave's own list, and what of it has played this session */
+declare let WAVE: MwTrack[];
+declare const WAVE_SESSION_PLAYED: Set<string>;
+declare function ensureStreamPort(): Promise<unknown>;
+declare function startWave(): Promise<void>;
+/** the wave from the library, when no service can make one */
+declare function startWaveLegacy(): Promise<void>;
+declare function renderFPBody(): void;
+declare function renderSrv(): void;
+declare function openArtist(name: string): void;
+declare function renderArtist(name: string): void;
+declare function setShuffle(on: boolean): void;
+declare function mergeLocal(added: MwTrack[]): void;
+declare function applyFPSettings(): void;
+declare function importRows(rows: MwTrack[], svcId: string | null, name: string, asFavorites: boolean, src?: unknown): Promise<unknown>;
 
 /* messenger.js */
 declare const MS: MwMessenger;

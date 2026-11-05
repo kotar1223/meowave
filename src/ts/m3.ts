@@ -13,19 +13,20 @@
 
    The old script ran right after app.js, before discover.js and
    messenger.js; a module cannot start between two classic scripts, so this
-   one now starts after them. Nothing they do at load needs it — app.js,
-   discover.js and messenger.js reach mwDialog, MW3, mwCloseLayer and
+   one now starts after messenger.js (discover.ts, a module too, starts
+   right after it, as before). Nothing they do at load needs it — app.js,
+   discover.ts and messenger.js reach mwDialog, MW3, mwCloseLayer and
    mwFailSnack only from handlers, each behind a guard. What moves:
-   - the applyI18n() wrappers nest the other way round (discover.js's
-     inside, this one outside); they relabel different elements;
    - messenger.js's applyI18n() at load now runs before this wrapper
      exists; init() below labels the mini button and the icon picker
      itself, and the mini player is closed at that point;
+   - the applyI18n() wrappers nest as before: this one inside,
+     discover.ts's outside;
    - the Escape listener (document, capture) still runs before
-     discover.js's (document, bubble), and the icon picker's click listener
+     discover.ts's (document, bubble), and the icon picker's click listener
      handles only its own targets. */
 
-/** Whatever is on top owns Escape: a dialog, the wave sheet (discover.js). */
+/** Whatever is on top owns Escape: a dialog, the wave sheet (discover.ts). */
 interface M3Layer { close(): void }
 /** app.js's stream probe of a track that failed to play. */
 interface M3Why { ok?: boolean; why?: string }
@@ -102,7 +103,7 @@ declare global {
     mwCloseLayer?: () => boolean;
     /** app.js: a track did not play — a snackbar with "Other source" and "Details" */
     mwFailSnack?: (tr: MwTrack, url: unknown, why: M3Why | null | undefined) => void;
-    /** discover.js: layer; app.js: altNote; custom.ts: copyText (falls back to execCommand where the Clipboard API is refused) */
+    /** discover.ts: layer; app.js: altNote; custom.ts: copyText (falls back to execCommand where the Clipboard API is refused) */
     MW3?: M3Api;
   }
 }

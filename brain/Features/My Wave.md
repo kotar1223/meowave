@@ -24,7 +24,7 @@
 Поле частиц рисуется WebGL одним вызовом (точечные спрайты): тысячи частиц вместо ~350, аддитивное свечение, размер и яркость от звука. Без WebGL — прежний Canvas 2D.
 
 ## Код
-`src/discover.js`: `wave2Start`, `wave2Extend`, `waveNoteStart`, `waveNoteEnd`, `waveRetune`, `mixBatch`, `ymBatch`, `paintWaveUI`, `paintHero`, `tuneBuild`, `tuneRows`, `tunePaint`, `tuneSet`, `setWaveOpt`, `waveReset`. В `app.js` старые `startWave` / `waveExtend` вызывают новые функции, `next()` и `setTrack()` сообщают о старте и конце трека.
+`src/ts/discover.ts`: `wave2Start`, `wave2Extend`, `waveNoteStart`, `waveNoteEnd`, `waveRetune`, `mixBatch`, `ymBatch`, `paintWaveUI`, `paintHero`, `tuneBuild`, `tuneRows`, `tunePaint`, `tuneSet`, `setWaveOpt`, `waveReset`. В `app.js` старые `startWave` / `waveExtend` вызывают новые функции, `next()` и `setTrack()` сообщают о старте и конце трека.
 
 ## Главная во время волны (раунд 4)
 `paintHero()` заменяет статичный заголовок: над названием — источник волны с эквалайзером и теги настройки, крупно — играющий трек и артист, ниже «Дальше: …». Кнопки: «Пауза» / «Продолжить» / «Запустить волну», «Регулировка», «Следующий» (только во время волны). Смена трека — короткая анимация, без мигания всей главной.

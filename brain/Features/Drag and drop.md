@@ -9,4 +9,4 @@
 
 В `tauri.conf.json` выключен `dragDropEnabled`, иначе окно Tauri перехватывает drop и страница его не видит.
 
-Код: `src/discover.js` (`dndInit`, `openLink`), `#dropzone` в `index.html`.
+Код: `src/ts/discover.ts` (`dndInit`, `openLink`), `#dropzone` в `index.html`.

@@ -28,4 +28,4 @@
 Открывается кликом по артисту где угодно (`openArtist` теперь ведёт сюда) и из шторки. «Назад» возвращает на предыдущую страницу или экран.
 
 ## Код
-`src/discover.js`: `hsSet`, `hsLoad`, `shelvesHTML`, `cardHTML`, `openCollection`, `colHTML`, `openArtistPage`, `artistHTML`, `dcGo`, `dcBack`. Rust: `feeds.rs`, `spanon.rs` (`artist_profile`), `dz.rs`. Вкладка `#v-discover`.
+`src/ts/discover.ts`: `hsSet`, `hsLoad`, `shelvesHTML`, `cardHTML`, `openCollection`, `colHTML`, `openArtistPage`, `artistHTML`, `dcGo`, `dcBack`. Rust: `feeds.rs`, `spanon.rs` (`artist_profile`), `dz.rs`. Вкладка `#v-discover`.
