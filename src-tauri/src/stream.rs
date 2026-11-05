@@ -2113,6 +2113,7 @@ pub(crate) async fn resolve_pub(service: &str, id: &str, hq: u8, fmt: &str) -> R
             .await
             .map(|p| format!("{}#mwua={}", p.url, p.client)),
         "dz" => crate::dz::stream_url(id, hq, fmt).await,
+        "am" => crate::am::stream_url(id, hq, fmt).await,
         other => Err(format!("unknown service: {other}")),
     }
 }

@@ -253,7 +253,7 @@ function ytcPanelInit(){
    The proxy answers a refused YouTube track with the same recording from
    Yandex Music or SoundCloud (stream.rs `ytm_alternative`). The listener is
    told once per track where it really plays from, and why. */
-const svcLabel=id=>SERVICES.find(s=>s.id===id)?.name||({ym:"Yandex Music",sc:"SoundCloud",ytm:"YouTube Music",dz:"Deezer"})[id]||id;
+const svcLabel=id=>SERVICES.find(s=>s.id===id)?.name||({ym:"Yandex Music",sc:"SoundCloud",ytm:"YouTube Music",dz:"Deezer",am:"Apple Music"})[id]||id;
 function altNote(tr,r){
  toast(t("alt.note").replace("{s}",svcLabel(r.s)),7000,{icon:"swap_horiz",actions:[{label:t("alt.why"),run:()=>altInfo(tr,r)}]})}
 function altInfo(tr,r){

@@ -453,6 +453,9 @@ const SERVICES=[
  /* Deezer's catalogue and charts are public; a full track is matched on
     Yandex / YouTube Music / SoundCloud, the 30 s preview is the last resort. */
  {id:"dz",name:"Deezer",conn:true,free:true,lossless:false,redir:"public API",lat:[300,720]},
+ /* Apple Music the same way (am.rs): the iTunes Search / Lookup API and the
+    Apple Music charts are public, the sound is matched elsewhere. */
+ {id:"am",name:"Apple Music",conn:true,free:true,lossless:false,redir:"iTunes Search API",lat:[300,720]},
  {id:"ym",name:"Yandex Music",conn:false,free:false,lossless:true,redir:"meowave://callback",lat:[400,1020]},
  {id:"sp",name:"Spotify",conn:false,free:false,lossless:false,redir:"http://localhost:8080/callback",lat:[250,500]},
  /* Local files are one more service to the UI, minus network and search. */
@@ -984,9 +987,10 @@ function load(tr,auto,resumePos=0){
     inv("stream_alt",{id:String(tr.id)}).then(r=>{
      if(!r||!r.s||!sameTrack(tr,S.current))return;
      tr._alt=r.s;window.MW3?.altNote?.(tr,r)}).catch(()=>{})}
-   if(tr.s==="dz"&&Number.isFinite(metaDur)&&metaDur>0&&metaDur<=31&&trDur>45&&!tr._pvWarned){
+   if((tr.s==="dz"||tr.s==="am")&&Number.isFinite(metaDur)&&metaDur>0&&metaDur<=31&&trDur>45&&!tr._pvWarned){
     tr._pvWarned=true;
-    toast(LANG==="ru"?"Полной версии не нашлось ни на одном сервисе — Deezer отдал только 30-секундный фрагмент":"No full version was found on any service — Deezer only has a 30-second preview",6500)}
+    const nm=svc(tr.s).name;
+    toast(LANG==="ru"?`Полной версии не нашлось ни на одном сервисе — ${nm} отдал только 30-секундный фрагмент`:`No full version was found on any service — ${nm} only has a 30-second preview`,6500)}
    renderNP();paint();
    lyricsDurCheck();
    if(fp.dataset.open==="true")renderFP();
@@ -1924,6 +1928,7 @@ const SVC_ICONS={
  ym:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.65 10.78 L22.52 12.90 L22.26 13.16 L18.87 12.27 L21.36 16.96 L21.06 17.10 L17.70 14.34 L18.43 19.74 L18.43 20.28 L18.11 20.48 L15.28 14.62 L12.25 21.94 L11.70 22.54 L11.42 22.45 L13.04 13.15 L4.30 17.99 L3.46 18.34 L3.22 17.89 L11.37 11.05 L1.47 9.90 L1.77 9.39 L10.36 8.72 L4.34 4.55 L4.59 4.33 L5.49 4.54 L10.99 6.47 L8.50 1.95 L8.91 1.85 L13.46 5.51 L13.49 1.56 L13.82 1.49 L15.79 6.01 L17.61 3.07 L17.91 3.42 L17.54 6.88 L20.10 5.71 L20.71 5.74 L18.78 8.48 L22.16 9.08 L22.23 9.47 L19.30 10.20 L19.16 10.39 L19.65 10.76 Z"/></svg>`,
  sp:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.58 14.42c-.18.3-.56.4-.86.22-2.35-1.44-5.32-1.76-8.81-.97-.34.08-.68-.14-.76-.48-.08-.34.14-.68.48-.76 3.82-.87 7.1-.51 9.73 1.13.3.18.4.56.22.86zm1.22-2.73c-.23.37-.72.49-1.09.26-2.69-1.66-6.8-2.14-9.99-1.17-.42.13-.86-.11-.99-.53-.13-.42.11-.86.53-.99 3.65-1.11 8.2-.58 11.28 1.34.37.23.49.72.26 1.09zm.11-2.85C14.68 8.87 9.39 8.7 6.3 9.64c-.49.15-1.02-.13-1.17-.62-.15-.49.13-1.02.62-1.17 3.56-1.08 9.42-.88 13.15 1.33.45.27.6.85.33 1.3-.27.45-.85.6-1.33.33z"/></svg>`,
  dz:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.693 10.024c.381 0 .693-1.256.693-2.807 0-1.55-.312-2.807-.693-2.807C.312 4.41 0 5.666 0 7.217s.312 2.808.693 2.808ZM21.038 1.56c-.364 0-.684.805-.91 2.096C19.765 1.446 19.184 0 18.526 0c-.78 0-1.464 2.036-1.784 5-.312-2.158-.788-3.536-1.325-3.536-.745 0-1.386 2.704-1.62 6.472-.442-1.932-1.083-3.145-1.793-3.145s-1.35 1.213-1.793 3.145c-.242-3.76-.874-6.463-1.628-6.463-.537 0-1.013 1.378-1.325 3.535C6.938 2.036 6.262 0 5.474 0c-.658 0-1.247 1.447-1.602 3.665-.217-1.291-.546-2.105-.91-2.105-.675 0-1.221 2.807-1.221 6.272 0 3.466.546 6.273 1.221 6.273.277 0 .537-.476.736-1.273.32 2.928.996 4.938 1.776 4.938.606 0 1.143-1.204 1.507-3.11.251 3.622.875 6.195 1.602 6.195.46 0 .875-1.023 1.187-2.677C10.142 21.6 11 24 12.004 24c1.005 0 1.863-2.4 2.235-5.822.312 1.654.727 2.677 1.186 2.677.728 0 1.352-2.573 1.603-6.195.364 1.906.9 3.11 1.507 3.11.78 0 1.455-2.01 1.775-4.938.208.797.46 1.273.737 1.273.675 0 1.22-2.807 1.22-6.273-.008-3.457-.553-6.272-1.23-6.272ZM23.307 10.024c.381 0 .693-1.256.693-2.807 0-1.55-.312-2.807-.693-2.807-.381 0-.693 1.256-.693 2.807s.312 2.808.693 2.808Z"/></svg>`,
+ am:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6.5 2h11A4.5 4.5 0 0 1 22 6.5v11a4.5 4.5 0 0 1-4.5 4.5h-11A4.5 4.5 0 0 1 2 17.5v-11A4.5 4.5 0 0 1 6.5 2Zm9.9 3.6-6.6 1.4a.9.9 0 0 0-.7.88v7.05a2.6 2.6 0 0 0-1.1-.23c-1.33 0-2.4.9-2.4 2s1.07 2 2.4 2 2.4-.9 2.4-2V10.4l5.4-1.15v4.75a2.6 2.6 0 0 0-1.1-.23c-1.33 0-2.4.9-2.4 2s1.07 2 2.4 2 2.4-.9 2.4-2V6.48a.9.9 0 0 0-1.1-.88Z"/></svg>`,
  local:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="11" cy="14" r="2"/><path d="M13 14V10"/></svg>`,
  genius:`<svg class="sic" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.5c-.8 2-2.8 3.5-5.5 3.5-3.6 0-6.5-2.9-6.5-6.5S8.4 5 12 5c2.4 0 4.4 1.3 5.4 3.2l-2.2 1.3c-.6-1.2-1.8-2-3.2-2-2.2 0-4 1.8-4 4s1.8 4 4 4c1.4 0 2.6-.7 3.3-1.8h-3.3v-2.4h5.8v3.2z"/></svg>`
 };
@@ -2985,7 +2990,8 @@ async function sprResolve(tr,force){
   const run=async list=>{
    const res=await Promise.all(list.map(q=>searchRemote(q).catch(()=>[])));
    for(const hits of res)for(const h of hits||[]){
-    if(!h||!h.id||h.s==="sp"||h.s==="local")continue;
+    /* Apple Music is metadata too: its own sound is matched the same way. */
+    if(!h||!h.id||h.s==="sp"||h.s==="am"||h.s==="local")continue;
     const kk=h.s+":"+h.id;
     /* The strict matcher (MWM) decides "same song"; the loose score only
        ranks among those. A candidate MWM rejects needs an otherwise
@@ -6639,7 +6645,7 @@ window.MWM=MWM;
 /* Service preference when several copies match equally well: the ones that
    stream a whole track anonymously first. Deezer last — on its own it only
    has a 30-second preview. */
-const SVC_PREF={ytm:.06,ym:.05,sc:.01,dz:-.08};
+const SVC_PREF={ytm:.06,ym:.05,sc:.01,dz:-.08,am:-.1};
 function pickFallbackCandidate(hits, tr, attempted = new Set(), sameLength = false) {
  if(!hits||!hits.length)return null;
  let best=null,bs=-1;
@@ -6647,8 +6653,9 @@ function pickFallbackCandidate(hits, tr, attempted = new Set(), sameLength = fal
   if(!h||!h.id||h.s==="sp"||h.s==="local")continue;
   if(attempted.has(trackKey(h))||(h.s===tr.s&&String(h.id)===String(tr.id)))continue;
   if(sameLength&&!(+tr.d>0&&+h.d>0&&Math.abs(+tr.d-+h.d)<=4))continue;
-  /* Deezer without a match is a 30-second preview: never a rescue mid-song. */
-  if(sameLength&&h.s==="dz")continue;
+  /* Deezer / Apple Music without a match is a 30-second preview: never a
+     rescue mid-song. */
+  if(sameLength&&(h.s==="dz"||h.s==="am"))continue;
   const m=MWM.of(tr,h);if(m==null)continue;
   const sc=m+(h.s!==tr.s?.2:0)+(SVC_PREF[h.s]||0);
   if(sc>bs){bs=sc;best=h}}
@@ -11122,6 +11129,7 @@ function dcTrackUrl(tr){
  if(tr.s==="ytm"&&/^[\w-]{11}$/.test(id))return "https://music.youtube.com/watch?v="+id;
  if(tr.s==="ym"&&/^\d+/.test(id))return "https://music.yandex.ru/track/"+id.split(":")[0];
  if(tr.s==="dz"&&/^\d+$/.test(id))return "https://www.deezer.com/track/"+id;
+ if(tr.s==="am"&&/^\d+$/.test(id))return "https://music.apple.com/song/"+id;
  if(tr.s==="sp"&&id)return "https://open.spotify.com/track/"+encodeURIComponent(id);
  const u=String(tr.permalink||tr.url||"");
  if(tr.s==="sc"&&/^https:\/\/soundcloud\.com\//.test(u))return u;

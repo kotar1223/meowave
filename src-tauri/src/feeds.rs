@@ -632,6 +632,7 @@ pub async fn feeds_home(service: String, lang: Option<String>) -> Result<Vec<She
         "ytm" => ytm_home(&hl).await,
         "sc" => sc_home().await,
         "dz" => crate::dz::home().await,
+        "am" => crate::am::home(&hl).await,
         "ym" => ym_home().await,
         other => Err(format!("no collections for {other}")),
     };
@@ -665,6 +666,11 @@ pub async fn search_cards(query: String, services: Vec<String>, lang: Option<Str
         let (a, p, al) = crate::dz::search_cards(q).await;
         merge_cards(&mut artists, a);
         merge_cards(&mut lists, p);
+        merge_cards(&mut albums, al);
+    }
+    if on("am") && (artists.len() < 4 || albums.len() < 4) {
+        let (a, al) = crate::am::search_cards(q).await;
+        merge_cards(&mut artists, a);
         merge_cards(&mut albums, al);
     }
     Ok(card_shelves(artists, lists, albums))
@@ -797,6 +803,7 @@ pub async fn feeds_open(service: String, kind: String, id: String, lang: Option<
         },
         "sc" => sc_open(&id).await,
         "dz" => crate::dz::open(&kind, &id).await,
+        "am" => crate::am::open(&kind, &id).await,
         "ym" => ym_open(&kind, &id).await,
         other => Err(format!("no collections for {other}")),
     }

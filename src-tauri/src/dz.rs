@@ -245,6 +245,7 @@ pub async fn radio_for(track_id: &str) -> Result<Vec<Track>, String> {
     Ok(out)
 }
 
+#[derive(Clone)]
 pub struct Info {
     pub t: String,
     pub a: String,
@@ -264,7 +265,13 @@ pub async fn info(id: &str) -> Result<Info, String> {
 
 /// Full-length audio for a Deezer track from a service that has it.
 pub async fn stream_url(id: &str, hq: u8, fmt: &str) -> Result<String, String> {
-    let i = info(id).await?;
+    stream_match(&info(id).await?, hq, fmt).await
+}
+
+/// The same recording on a service that streams it whole; the preview when
+/// none has it. Shared with Apple Music (am.rs), whose catalogue is just as
+/// open and whose audio is just as closed.
+pub async fn stream_match(i: &Info, hq: u8, fmt: &str) -> Result<String, String> {
     let q = format!("{} {}", i.a, i.t);
     // Yandex first when it is connected: the catalogue overlaps Deezer's best
     // and it streams in the quality the user picked.
@@ -301,6 +308,7 @@ pub async fn stream_url(id: &str, hq: u8, fmt: &str) -> Result<String, String> {
     // The 30-second preview is the last resort; the fragment tells the
     // frontend (through the X-Meowave-Preview header) that it is one.
     i.preview
+        .as_ref()
         .map(|p| format!("{p}#mwpreview=1"))
         .ok_or_else(|| "этот трек не нашёлся ни на одном сервисе".to_string())
 }

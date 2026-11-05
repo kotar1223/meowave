@@ -450,14 +450,14 @@ const KIND_IC={track:"music_note",album:"album",playlist:"queue_music",radio:"ra
 const KIND_N={ru:{album:"Альбом",playlist:"Плейлист",radio:"Радио",chart:"Чарт",browse:"Подборка",artist:"Артист",track:"Трек"},
  en:{album:"Album",playlist:"Playlist",radio:"Radio",chart:"Chart",browse:"Collection",artist:"Artist",track:"Track"}};
 const kindName=k=>(KIND_N[LANG]||KIND_N.en)[k]||"";
-const shortName=id=>({ym:LANG==="ru"?"Яндекс":"Yandex",ytm:"YouTube",sc:"SoundCloud",dz:"Deezer"})[id]||svc(id).name;
+const shortName=id=>({ym:LANG==="ru"?"Яндекс":"Yandex",ytm:"YouTube",sc:"SoundCloud",dz:"Deezer",am:"Apple"})[id]||svc(id).name;
 function trim(map,max){if(map.size<=max)return;let n=map.size-Math.floor(max*.75);for(const k of map.keys()){map.delete(k);if(--n<=0)break}}
 function regCard(c,shelf){const k="c"+(++CARD_N);CARDS.set(k,{c,shelf});trim(CARDS,6000);return k}
 function regShelf(sh){
  const k="s"+(++SHELF_N);
  SHELVES.set(k,{title:sh.title||"",s:sh.s||"",tracks:(sh.cards||[]).filter(c=>c&&c.kind==="track"&&c.track).map(c=>c.track)});
  trim(SHELVES,800);return k}
-function hsServices(){return [...(ymReady()?["ym"]:[]),...["ytm","sc","dz"].filter(id=>svc(id).on)]}
+function hsServices(){return [...(ymReady()?["ym"]:[]),...["ytm","sc","dz","am"].filter(id=>svc(id).on)]}
 function hsTabs(){
  const el=$("hs-tabs");if(!el)return;
  const list=hsServices();

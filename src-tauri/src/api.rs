@@ -931,6 +931,7 @@ pub async fn api_search(query: String, services: Vec<String>) -> Result<SearchRe
                 "ytm" => ytm_search(&q).await,
                 "sp" => crate::spotify::spotify_search(&q).await,
                 "dz" => crate::dz::search(&q).await,
+                "am" => crate::am::search(&q).await,
                 other => Err(format!("unknown service: {other}")),
             };
             (s, res)
@@ -965,6 +966,7 @@ pub async fn api_check_token(service: String, token: String) -> Result<bool, Str
         "ytm" => ytm_search("test").await.map(|_| true),
         "sp" => crate::spotify::access_token().await.map(|_| true),
         "dz" => crate::dz::search("test").await.map(|_| true),
+        "am" => crate::am::search("test").await.map(|_| true),
         other => Err(format!("unknown service: {other}")),
     }
 }
@@ -979,6 +981,7 @@ pub async fn api_probe_service(service: String) -> Result<bool, String> {
         "ym" => Err("Yandex Music needs your token".into()),
         "sp" => crate::spanon::search_tracks("test").await.map(|_| true),
         "dz" => crate::dz::search("test").await.map(|_| true),
+        "am" => crate::am::search("test").await.map(|_| true),
         other => Err(format!("unknown service: {other}")),
     }
 }

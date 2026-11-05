@@ -17,6 +17,7 @@ const KNOWN_SERVICES: &[&str] = &[
     "ytm",
     "sc",
     "dz",
+    "am",
     "ym",
     "sp",
     "sp_client_id",
@@ -96,7 +97,8 @@ fn join_parts(service: &str, head: String) -> Result<String, String> {
 /// (see dz.rs), so it never needs a credential either.
 /// Spotify is listed since search and metadata work anonymously (spanon.rs);
 /// its account session is read by spotify.rs itself, never through here.
-pub const TOKENLESS_SERVICES: &[&str] = &["sc", "ytm", "dz", "sp"];
+/// Apple Music's catalogue is public the same way (am.rs).
+pub const TOKENLESS_SERVICES: &[&str] = &["sc", "ytm", "dz", "sp", "am"];
 
 #[cfg(not(target_os = "android"))]
 fn entry(service: &str) -> Result<Entry, String> {
