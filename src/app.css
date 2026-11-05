@@ -3872,7 +3872,12 @@ html[data-fullscreen="true"] .fp {
 }
 
 /* ─── Flow backdrop, wallpapers (fx.js) ───────────────────────────────────── */
-.fp{transition:opacity .35s var(--e),content-visibility .35s allow-discrete}
+/* visibility follows the fade: a closed player keeps no painted layer at all
+   (its window-sized background was still rastered under opacity:0). */
+.fp{transition:opacity .35s var(--e),content-visibility .35s allow-discrete,visibility 0s linear .35s;visibility:hidden}
+.fp[data-open="true"]{visibility:visible;transition:opacity .35s var(--e),content-visibility .35s allow-discrete,visibility 0s}
+.dock[data-gone="true"]:not([data-open="true"]){visibility:hidden}
+html[data-fpcover="1"] :is(#app,.haze,#field,#fieldgl,#aura,#cvbg){visibility:hidden}
 .fp-flow{position:absolute;inset:-3%;width:106%;height:106%;z-index:0;pointer-events:none;
   display:none;image-rendering:auto;filter:blur(18px) saturate(1.1);transform:translateZ(0)}
 .fp[data-bg-mode="dynamic"] .fp-flow{display:block}

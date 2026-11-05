@@ -4104,7 +4104,16 @@ document.addEventListener("touchmove",e=>{
 
    Whisper returns chunk timestamps, so the result is synced like LRCLIB's, not
    a flat wall of text. */
-let WHISPER=null,WHISPER_ID=null;
+let WHISPER=null,WHISPER_ID=null,WHISPER_IDLE=0,WHISPER_BUSY=0;
+/* The model is ~40–150 MB of weights plus the runtime's buffers. It stayed
+   loaded for the rest of the session after one transcription; now it is
+   let go after two idle minutes and fetched from the HTTP cache if needed
+   again. */
+function whisperIdle(){
+ clearTimeout(WHISPER_IDLE);
+ if(WHISPER_BUSY>0)return;
+ WHISPER_IDLE=setTimeout(()=>{if(WHISPER_BUSY>0)return;const p=WHISPER;WHISPER=null;WHISPER_ID=null;
+  try{Promise.resolve(p?.dispose?.()).catch(()=>{})}catch(_){}},120000)}
 
 /* Model choice follows the hardware, because it decides whether this takes one
    minute or fifteen.
@@ -4121,6 +4130,7 @@ function whisperModel(){
   :{id:"onnx-community/whisper-tiny",dtype:"q8",device:"wasm"}}
 
 async function whisperPipe(onProgress){
+ clearTimeout(WHISPER_IDLE);
  const want=whisperModel();
  if(WHISPER&&WHISPER_ID===want.id)return WHISPER;
  const {pipeline,env}=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/+esm");
@@ -4179,6 +4189,7 @@ async function transcribeLyrics(tr){
  LYRICS.set(key,{state:"transcribing",progress:t("ly.listen")});
  if(fp.dataset.open==="true"&&S.fpMode==="lyric")renderLyricSheet();
  else renderLyrics();
+ WHISPER_BUSY++;
  try{
   const pipe=await whisperPipe(setProgress);
   if(my!==lyReq)return;
@@ -4214,6 +4225,7 @@ async function transcribeLyrics(tr){
   console.warn("transcribe:",e);
   if(my!==lyReq)return;
   LYRICS.set(key,{state:"error"})}
+ finally{WHISPER_BUSY--;whisperIdle()}
  if(sameTrack(tr,S.current)){
   if(fp.dataset.open==="true"&&S.fpMode==="lyric")renderLyricSheet();
   else if(S.fpTab==="lyrics")renderLyrics()}}
@@ -5438,6 +5450,7 @@ wireSeek("seek");
 
 /* EQ dock */
 const dock=document.getElementById("dock"),eqbtn=document.getElementById("eqbtn");
+if(dock&&dock.dataset.open!=="true")dock.dataset.gone="true";
 const dockBackdrop=document.getElementById("dock-backdrop");
 const dockClose=document.getElementById("dock-close");
 const dockSpSw=document.getElementById("dock-sp-sw");
@@ -5451,10 +5464,16 @@ function updateSpButtons(){
  });
 }
 
+let dockGoneTimer=0;
 function openDockSheet(open){
  if(!dock)return;
  const isCurrentlyOpen = dock.dataset.open === "true";
  const nextOpen = (typeof open === "boolean") ? open : !isCurrentlyOpen;
+ /* A closed dock stops painting once it has slid away: invisible, its glass
+    panel still held a raster layer the size of the panel. */
+ clearTimeout(dockGoneTimer);
+ if(nextOpen)delete dock.dataset.gone;
+ else dockGoneTimer=setTimeout(()=>{if(dock.dataset.open!=="true")dock.dataset.gone="true"},420);
  dock.dataset.open = String(nextOpen);
  if(eqbtn)eqbtn.setAttribute("aria-expanded", String(nextOpen));
  document.getElementById("fp-eq-btn")?.setAttribute("aria-pressed",String(nextOpen));
@@ -5849,14 +5868,28 @@ function initFPSettings(){
  syncFPSettingsUI()}
 function npArtRect(){const a=document.querySelector("#np .art");const r=a&&!a.hidden?a.getBoundingClientRect():null;return r&&r.width?r:null}
 let fpCloseTimer=0;
+/* While the player covers the window, what lies under it — the app, the
+   wave canvas, the glows — is hidden and the wave gives its backing store
+   back: occluded, those layers still held their raster (tens of megabytes
+   on a HiDPI screen). Set after the fade-in; lifted before the fade-out. */
+let fpCoverTimer=0;
+function fpCover(on){
+ clearTimeout(fpCoverTimer);
+ const de=document.documentElement;
+ if(on){fpCoverTimer=setTimeout(()=>{if(fp.dataset.open!=="true")return;
+   de.dataset.fpcover="1";
+   if(GLF.ok&&GLF.c&&GLF.c.width!==1){GLF.c.width=GLF.c.height=1}},450);return}
+ if(de.dataset.fpcover){delete de.dataset.fpcover;resize()}}
 function openFP(){
  if(S.current)adaptAccent(S.current);
+ fpCover(true);
  const from=fp.dataset.open==="true"?null:npArtRect();
  clearTimeout(fpCloseTimer);window.MWFX?.cover.reset();
  applyFPSettings();fp.dataset.open="true";renderFP();fpWake();
  window.MWFX?.flow.kick();window.MWFX?.wall.render();
  if(from)window.MWFX?.cover.flyFrom(from,{k:200,c:19})}
 function closeFP(){
+ fpCover(false);
  const to=npArtRect();
  if(to&&fp.dataset.open==="true")window.MWFX?.cover.flyTo(to);
  clearTimeout(fpCloseTimer);fpCloseTimer=setTimeout(()=>window.MWFX?.cover.reset(),420);
