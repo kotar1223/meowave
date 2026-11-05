@@ -926,5 +926,49 @@ export function buildTier1Suite() {
     for (const sel of [".ob-shell", ".authx"]) assert.ok(blocks.includes(sel), sel + " not covered by prefers-reduced-motion");
   });
 
+  // ─── Feature 29: Rooms — one clock, one read per tick, a lobby with a code field ──
+  const roomsSrc = () => { const a = js.indexOf("/* ── rooms ──"), b = js.indexOf("/* ── leaderboard ──"); assert.ok(a > 0 && b > a, "rooms section"); return js.slice(a, b); };
+  const fnSrc = (src, name) => { const i = src.indexOf("function " + name + "("); assert.ok(i >= 0, name); let d = 0, j = src.indexOf("{", i); for (let k = j; k < src.length; k++) { if (src[k] === "{") d++; else if (src[k] === "}" && --d === 0) return src.slice(i, k + 1); } throw new Error("unbalanced " + name); };
+  suite.test("F29-01: [Happy Path] The player tells the room about tracks, toggles, seeks and skips", () => {
+    assert.match(fnSrc(js, "setTrack"), /roomNoteTrack\(ctx,roomOwn\)/);
+    assert.match(fnSrc(js, "toggle"), /roomNoteToggle\(\)/);
+    assert.match(fnSrc(js, "sync"), /roomNoteSync\(\)/);
+    assert.match(fnSrc(js, "next"), /roomNext\(userInitiated\)/);
+    assert.match(fnSrc(js, "prev"), /roomPrev\(\)/);
+    assert.match(js, /addEventListener\("seeked",\(\)=>\{[^}]*roomNoteSeek\(\)/);
+  });
+  suite.test("F29-02: [Edge Case] Room state does not shadow the reduced-motion flag RM", () => {
+    const r = roomsSrc();
+    assert.doesNotMatch(js, /\b(var|let|const) RM\s*=\s*(null|\{)/, "RM is the reduced-motion const; room state is RMX");
+    assert.match(r, /var RMX=null;/);
+  });
+  suite.test("F29-03: [Performance] One embedded read per tick; the host publishes on change, drift or a 20 s heartbeat", () => {
+    const r = roomsSrc();
+    const refresh = fnSrc(r, "refreshRoomState");
+    assert.match(refresh, /room_members\(user_id,role\),room_queue\(/, "members and queue ride along with the row");
+    const pub = fnSrc(r, "roomPublishNow");
+    assert.match(pub, /drift<1\.2/);
+    assert.match(pub, /20000/);
+    assert.doesNotMatch(fnSrc(r, "roomTick"), /from\("rooms"\)\.update/, "the tick itself must not rewrite the row");
+  });
+  suite.test("F29-04: [Happy Path] Join codes are normalised as typed and the room clock runs on server time", () => {
+    const r = roomsSrc();
+    const fmt = new Function(fnSrc(r, "rmCodeFmt") + "; return rmCodeFmt;")();
+    assert.equal(fmt("meow-ab3k"), "MEOW-AB3K");
+    assert.equal(fmt("meowab3k"), "MEOW-AB3K");
+    assert.equal(fmt("ab3k"), "MEOW-AB3K");
+    assert.equal(fmt("Заходи: MEOW-XY7Q !"), "MEOW-XY7Q");
+    assert.equal(fmt("me"), "ME");
+    const want = new Function("SOC", "Date", fnSrc(r, "rmWant").replace("function rmWant", "return function").replace(/rmNow\(\)/g, "(Date.now()+(SOC.roomSkew||0))"));
+    const fakeDate = { now: () => Date.parse("2025-01-01T00:00:10Z"), parse: Date.parse };
+    const w = want({ roomSkew: 0 }, fakeDate);
+    assert.equal(Math.round(w({ position: 5, playing: true, updated_at: "2025-01-01T00:00:00Z" })), 15);
+    assert.equal(w({ position: 5, playing: false, updated_at: "2025-01-01T00:00:00Z" }), 5);
+  });
+  suite.test("F29-05: [Accessibility] Reduced motion stills the room cards, rows and the on-air pulse", () => {
+    const blocks = extractMediaBlocks(css, /prefers-reduced-motion:\s*reduce/).map(b => b.content).join("\n");
+    for (const sel of [".rmx-card", ".rmx-row", ".rmx-onair i", ".rmx-skel"]) assert.ok(blocks.includes(sel), sel + " not covered by prefers-reduced-motion");
+  });
+
   return suite;
 }

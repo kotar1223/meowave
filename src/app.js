@@ -381,7 +381,7 @@ Object.assign(I18N.ru,{
 "pv.everybody":"Все","pv.friends":"Друзья","pv.nobody":"Никто",
 "pr.bio":"О себе","pr.bio.ph":"Пара слов о вас","pr.bio.save":"Сохранить","pr.bio.saved":"Сохранено",
 "set.tab.prof":"Профиль","sprof.t":"Профиль","sprof.s":"Имя, описание и картинки профиля. Страница профиля показывает их, здесь они меняются.","sprof.ava":"Аватарка","sprof.ban":"Баннер","sprof.pick":"Выбрать","sprof.set":"загружена","soc.hidden":"Скрытый","pv.avatar":"Кто видит мою аватарку","pv.email":"Кто видит мою почту","pv.user":"Кто видит мой юзернейм","pv.user.s":"Скрытый юзернейм нельзя найти для заявки в друзья","room.privpub":"Публичная",
-"room.kick":"Убрать из комнаты","room.leave":"Выйти","room.del":"Удалить комнату","room.delq":"Удалить комнату? Она исчезнет для всех.","room.deleted":"Комната удалена","room.copycode":"Скопировать код","room.copied":"Код скопирован","room.kicked":"Убран","room.addq.ph":"Найти и добавить в очередь…","soc.needsql":"База отстала: прогони целиком supabase/FULL_SCHEMA.sql в SQL-редакторе Supabase — он идемпотентный и покрывает все миграции",
+"room.kick":"Убрать из комнаты","room.leave":"Выйти","room.del":"Удалить комнату","room.delq":"Удалить комнату? Она исчезнет для всех.","room.deleted":"Комната удалена","room.copycode":"Скопировать код","room.copied":"Код скопирован","room.kicked":"Убран","room.addq.ph":"Найти и добавить в очередь…","rm.hero.t":"Слушайте вместе","rm.hero.s":"Одна очередь, один эфир: хост включает — все слышат то же самое в ту же секунду. Друзья заходят по коду, предлагают треки и болтают в чате.","rm.mine":"Мои комнаты","rm.open":"Открытые комнаты","rm.live":"в эфире","rm.yours":"ваша","rm.name.need":"Придумайте название комнаты","rm.code.bad":"Код выглядит как MEOW-XXXX","rm.join.ok":"Вы в комнате «{n}»","rm.left":"Вы вышли из комнаты","rm.gone":"Комнаты больше нет","rm.kicked.me":"Хост убрал вас из комнаты","rm.host":"Хост","rm.listener":"Слушатель","rm.invite":"Пригласить","rm.invite.txt":"Заходи в комнату «{n}» в Meowave — код {c}","rm.invite.ok":"Приглашение скопировано","rm.n":"{n} в комнате","rm.makedj":"Сделать диджеем","rm.undj":"Забрать пульт","rm.next":"Дальше в эфире","rm.skip":"Следующий трек","rm.playnow":"Включить сейчас","rm.top":"Поднять наверх","rm.qdel":"Убрать из очереди","rm.follow":"Вернуться в эфир","rm.away":"Вы слушаете своё","rm.youhost":"Вы ведёте эфир","rm.lead":"Вести эфир","rm.sync.ok":"Синхронно","rm.sync.load":"Догоняем эфир…","rm.sync.wait":"Ждём хоста…","rm.host.idle":"Хост ещё ничего не включил","rm.idle.s":"Предложите трек — он появится у хоста в заявках.","rm.dj.t":"Эфир свободен","rm.dj.s":"Найдите трек ниже или включите что угодно — комната услышит.","rm.hostskips":"Треки в комнате переключает хост","rm.req.ph":"Предложить трек хосту…","rm.req.mine":"ждёт хоста","rm.req.ok":"Принять","rm.req.no":"Отклонить","rm.add":"В очередь","rm.ask":"Предложить","rm.added":"Добавлено в очередь","rm.searching":"Ищем…","rm.search.none":"Ничего не нашлось","rm.empty.t":"Пока ни одной открытой комнаты","rm.empty.s":"Создайте свою — друзья зайдут по коду.","rm.q.empty":"Очередь пуста — предложите трек через поиск ниже","rm.q.empty.dj":"Очередь пуста — найдите трек ниже","soc.needsql":"База отстала: прогони целиком supabase/FULL_SCHEMA.sql в SQL-редакторе Supabase — он идемпотентный и покрывает все миграции",
 "sp.desc":"Вход нужен для импорта плейлистов. Плеер не стримит Spotify напрямую (DRM), треки подбираются на YouTube Music.","sp.login":"Войти в Spotify","sp.logout":"Выйти","sp.loading":"Загрузка плейлистов…","sp.nolists":"Плейлистов нет","sp.import":"Импорт","sp.importing":"Импортирую {n} треков…","sp.imported":"Готово: {ok} из {n} найдено","sp.empty":"В плейлисте нет треков","sp.browser":"Открываю браузер для входа…","sp.capped":"Импортирую первые {n} треков — остальные пропущены"});
 Object.assign(I18N.en,{
  "nav.people":"People","people.search":"Find people","people.search.ph":"Username","people.empty":"Enter a username","people.none":"No people found","people.open":"Open profile","people.add":"Send friend request","people.pending":"Request sent","people.friend":"Friends","people.accept":"Accept","people.notice":"New friend request",
@@ -409,7 +409,7 @@ Object.assign(I18N.en,{
 "pv.everybody":"Everybody","pv.friends":"Friends","pv.nobody":"Nobody",
 "pr.bio":"About me","pr.bio.ph":"A couple of words","pr.bio.save":"Save","pr.bio.saved":"Saved",
 "set.tab.prof":"Profile","sprof.t":"Profile","sprof.s":"Name, description and profile pictures. The profile page displays them, this is where they change.","sprof.ava":"Avatar","sprof.ban":"Banner","sprof.pick":"Choose","sprof.set":"uploaded","soc.hidden":"Hidden","pv.avatar":"Who sees my avatar","pv.email":"Who sees my email","pv.user":"Who sees my username","pv.user.s":"A hidden username cannot be found for friend requests","room.privpub":"Public",
-"room.kick":"Remove from room","room.leave":"Leave","room.del":"Delete room","room.delq":"Delete the room? It disappears for everyone.","room.deleted":"Room deleted","room.copycode":"Copy code","room.copied":"Code copied","room.kicked":"Removed","room.addq.ph":"Find and add to the queue…","soc.needsql":"The database is behind: run all of supabase/FULL_SCHEMA.sql in the Supabase SQL editor — it is idempotent and covers every migration",
+"room.kick":"Remove from room","room.leave":"Leave","room.del":"Delete room","room.delq":"Delete the room? It disappears for everyone.","room.deleted":"Room deleted","room.copycode":"Copy code","room.copied":"Code copied","room.kicked":"Removed","room.addq.ph":"Find and add to the queue…","rm.hero.t":"Listen together","rm.hero.s":"One queue, one broadcast: the host plays, everyone hears the same second. Friends join with a code, suggest tracks and talk in the chat.","rm.mine":"My rooms","rm.open":"Open rooms","rm.live":"on air","rm.yours":"yours","rm.name.need":"Give the room a name","rm.code.bad":"A code looks like MEOW-XXXX","rm.join.ok":"You are in “{n}”","rm.left":"You left the room","rm.gone":"The room is gone","rm.kicked.me":"The host removed you from the room","rm.host":"Host","rm.listener":"Listener","rm.invite":"Invite","rm.invite.txt":"Join my room “{n}” on Meowave — code {c}","rm.invite.ok":"Invite copied","rm.n":"{n} in the room","rm.makedj":"Make DJ","rm.undj":"Take the decks back","rm.next":"Up next on air","rm.skip":"Next track","rm.playnow":"Play now","rm.top":"Move to top","rm.qdel":"Remove from queue","rm.follow":"Back to the broadcast","rm.away":"You are on your own music","rm.youhost":"You run the broadcast","rm.lead":"Take the broadcast","rm.sync.ok":"In sync","rm.sync.load":"Catching up…","rm.sync.wait":"Waiting for the host…","rm.host.idle":"The host has not played anything yet","rm.idle.s":"Suggest a track — it lands in the host's requests.","rm.dj.t":"The air is yours","rm.dj.s":"Find a track below or play anything — the room hears it.","rm.hostskips":"The host switches tracks in a room","rm.req.ph":"Suggest a track to the host…","rm.req.mine":"waiting","rm.req.ok":"Accept","rm.req.no":"Decline","rm.add":"Add to queue","rm.ask":"Suggest","rm.added":"Added to the queue","rm.searching":"Searching…","rm.search.none":"Nothing found","rm.empty.t":"No open rooms yet","rm.empty.s":"Make one — friends join with the code.","rm.q.empty":"The queue is empty — suggest a track with the search below","rm.q.empty.dj":"The queue is empty — find a track below","soc.needsql":"The database is behind: run all of supabase/FULL_SCHEMA.sql in the Supabase SQL editor — it is idempotent and covers every migration",
 "sp.desc":"Sign-in is for playlist import. The player cannot stream Spotify directly (DRM); tracks are matched on YouTube Music.","sp.login":"Sign in to Spotify","sp.logout":"Sign out","sp.loading":"Loading playlists…","sp.nolists":"No playlists","sp.import":"Import","sp.importing":"Importing {n} tracks…","sp.imported":"Done: {ok} of {n} matched","sp.empty":"The playlist is empty","sp.browser":"Opening the browser to sign in…","sp.capped":"Importing the first {n} tracks — the rest are skipped"});
 function applyI18n(){
   document.documentElement.lang=LANG;
@@ -767,7 +767,7 @@ function ensureAudioEl(){
  au.addEventListener("canplay",()=>{if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}A.onMeta?.();applyRate()});
  au.addEventListener("timeupdate",()=>A.onTime?.());
  au.addEventListener("seeking",()=>{/* seek initiated */});
- au.addEventListener("seeked",()=>{A.pendingSeek=null;A.seekingUntil=0});
+ au.addEventListener("seeked",()=>{A.pendingSeek=null;A.seekingUntil=0;if(RMX)roomNoteSeek()});
  au.addEventListener("ended",()=>A.onEnd?.());
  au.addEventListener("error",()=>A.onErr?.());
  /* The media load algorithm resets playbackRate to defaultPlaybackRate, and it
@@ -4334,6 +4334,8 @@ function setBand(i,v){initAudio();S.eq[i]=Math.max(-12,Math.min(12,v));paintBand
    than setting a global first keeps "what plays next" decided in one place. */
 async function setTrack(tr,play=true,openFull=false,ctx,keepQueue,isBack=false){
  if(!tr)return;
+ /* read now: the room's own moves set RMX.own only for this synchronous call */
+ const roomOwn=!!(RMX&&RMX.own);
  initAudio();
  if(play&&A.ctx&&A.ctx.state==="suspended"){A.ctx.resume().catch(()=>{})}
  if(!isBack&&S.current&&S.current.mode!=="empty"&&!sameTrack(S.current,tr)){
@@ -4368,6 +4370,9 @@ async function setTrack(tr,play=true,openFull=false,ctx,keepQueue,isBack=false){
     went by. Listeners never consume — roomConsume() checks the role. */
  if(String(PLAYCTX.key||"").startsWith("room:"))roomConsume(S.current);
  load(tr,play);S.playing=play;sync();renderNP();paint();updateLyricOffsetUi();
+ /* In a room, a host's new track goes on air; a listener who picks their own
+    music stops following the broadcast. */
+ if(RMX)roomNoteTrack(ctx,roomOwn);
  /* The cover drives the accent colour when adaptive mode is on. */
  adaptAccent(tr);
  pushHistory(tr);noteTrackStart(tr);
@@ -4390,6 +4395,7 @@ function toggle(){
  initAudio();
  if(A.ctx&&A.ctx.state==="suspended"){A.ctx.resume().catch(()=>{})}
  if(S.current?.mode==="empty")return go("search");
+ if(RMX)roomNoteToggle();
  const au=ensureAudioEl();
  if(S.playing){
   fadePause(au);
@@ -4446,7 +4452,7 @@ function listFor(key){
  if(k.startsWith("art:"))return (artistList().find(a=>a.name===k.slice(4))?.list||[]).slice();
  if(k.startsWith("grp:"))return (PL_GROUPS[+k.slice(4)]?.list||[]).slice();
  /* A room's line-up lives server-side, not in a local array like the rest. */
- if(k.startsWith("room:"))return (SOC.roomQueue||[]).map(r=>r.track).slice();
+ if(k.startsWith("room:"))return (SOC.roomQueue||[]).map(r=>roomTrackOf(r.track)).filter(Boolean);
  /* Collections, charts and artist pages opened from the home sheet. */
  if(k.startsWith("x:"))return (XLISTS.get(k)?.tracks||[]).slice();
  return null}
@@ -4468,6 +4474,7 @@ function ctxName(key){
  if(k.startsWith("art:"))return k.slice(4);
  if(k.startsWith("grp:"))return PL_GROUPS[+k.slice(4)]?.a||t("lib.art");
  if(k.startsWith("x:"))return XLISTS.get(k)?.name||t("ctx.all");
+ if(k.startsWith("room:"))return (RMX&&SOC.room?.name)||t("nav.rooms");
  return t("ctx.all")}
 
 /* The pool the queue is built from: the context when it still holds something
@@ -4528,6 +4535,9 @@ function queueRemove(id,s){
  if(fp.dataset.open==="true")renderFPBody()}
 
 function next(userInitiated){
+ /* In a room the room decides first: its queue outranks the host's own list,
+    and a listener's player waits for the host instead of moving on. */
+ if(RMX&&roomNext(userInitiated))return;
  /* Repeat-one restart lives here for a track's natural end, but a manual skip
     (button, media keys, Shift+Arrow) must always advance — an unconditional
     restart made "Next" replay the same song whenever repeat was on. */
@@ -4536,6 +4546,9 @@ function next(userInitiated){
  /* The wave learns from how a track ended: played out, or skipped. */
  if(PLAYCTX.key==="wave"&&typeof waveNoteEnd==="function")waveNoteEnd(S.current,!userInitiated);
  let nx=null;
+ /* Inside a room context the server queue is the schedule and roomNext()
+    already took its head; the local copy would replay what went by. */
+ if(SOC.room&&String(PLAYCTX.key||"").startsWith("room:"))queue=[];
  while(queue.length&&!nx){
   const c=queue.shift();
   if(c&&!isDisliked(c)&&c.mode!=="empty"&&playOn(c.s))nx=c}
@@ -4547,8 +4560,10 @@ function next(userInitiated){
   /* The queue is drained; what follows decides what "the end" means. */
   if(String(PLAYCTX.key||"").startsWith("room:")){
    /* A room listener decides nothing: the host's row is the clock and
-      paintRoomPlayback() follows it on its own tick. */
-   if(!(SOC.roomRole==="owner"||SOC.roomRole==="dj"))return;
+      paintRoomPlayback() follows it on its own tick. Out of the room, the
+      room's line-up is over. */
+   if(!SOC.room)return stopAtEnd();
+   if(!rmClock())return;
    roomAdvance()
     .then(advanced=>{if(!advanced)stopAtEnd()})
     .catch(e=>{console.warn("room advance:",e);toast(String(e.message||e))});
@@ -4691,6 +4706,7 @@ function waveExtend(){
 }
 
 function prev(){
+ if(RMX&&roomPrev())return;
  if(S.pos>4){S.pos=0;if(A.audio&&S.current?.mode==="local")A.audio.currentTime=0;return paint()}
  while(PREV_STACK.length){
   const candidate=PREV_STACK.pop();
@@ -4895,6 +4911,7 @@ function sync(){
    inv("taskbar_set_playing",{playing:!!S.playing}).catch(()=>{});
   }
   pushMpris();
+  if(RMX)roomNoteSync();
 }
 
 /* nav */
@@ -4970,10 +4987,13 @@ function liveRefresh(v){
     renderPeople();
     return}
    if(v==="top")renderTop();
-   if(v==="quests")renderQuestsView()};
+   if(v==="quests")renderQuestsView();
+   /* the lobby only: inside a room roomTick() keeps the screen current */
+   if(v==="rooms"&&!SOC.room)renderRooms()};
   if(v==="people")socTimer("live",tick,6000);
   else if(v==="top")socTimer("live",tick,20000);
-  else if(v==="quests")socTimer("live",tick,15000)}
+  else if(v==="quests")socTimer("live",tick,15000);
+  else if(v==="rooms")socTimer("live",tick,10000)}
 /* A window that comes back from the background should not show a stale screen
    for the rest of the interval. */
 document.addEventListener("visibilitychange",()=>{
@@ -7057,7 +7077,7 @@ async function initSupabase(){
       look like data loss. */
    if(wasSignedIn&&!sess?.user)await flushFavorites();
    sbUser=sess?.user||null;sbProfile=null;sbStats=null;delArmed=false;
-   if(!sbUser){OWNED=new Set()}
+   if(!sbUser){OWNED=new Set();if(RMX&&SOC.room)rmStop()}
    if(sbUser){await loadProfile();checkSchema()}
    renderProfile();
    if(obOpen())obAuth();
@@ -10092,48 +10112,181 @@ async function compressChatImage(file,maxSide=720,budget=150000){
  return null}
 
 /* ── rooms ──────────────────────────────────────────────── */
+/* Round 9 rewrite. A room is one row (track / position / playing, written by
+   whoever runs the broadcast) plus members, a server queue, listener requests
+   and a chat (messenger.js).
+
+   Sync, in one place:
+   - One client is the clock: a host (owner or DJ) who last did something
+     with playback. It publishes at once on every change it makes — a track,
+     play/pause, a seek — and otherwise only when its real position drifts
+     more than a second from what the row predicts, plus a 20 s heartbeat.
+     It used to rewrite the row on every 3 s tick.
+   - updated_at is stamped by the server (rooms_guard), so "where the room is
+     now" is position + (server now − updated_at); server now comes from
+     measureRoomSkew(). Every follower computes the same number.
+   - Followers read the row, the members, the queue and the requests in one
+     request every 3 s. Where a Realtime socket gets through, the host also
+     sends a bare "ping" and followers read at once — a skip or a pause lands
+     in well under a second. The ping carries nothing: what to play is only
+     ever read from the row, which RLS protects, so a forged ping costs one
+     read and nothing else.
+   - A listener who deliberately plays something else or pauses stops
+     following — the room no longer yanks them back every tick — and gets a
+     "back to the room" button. A follower's natural track end waits for the
+     host instead of running its own queue for a few seconds.
+   - The room queue outranks the host's own queue: when a track ends, the
+     next one comes from the room's queue if it holds anything, and the
+     host's album / wave carries on after it is drained. */
+/* RMX, not RM: RM is the reduced-motion flag. The player hooks can run before
+   this line (a var is hoisted as undefined); each of them checks RMX first. */
+var RMX=null;
+RMX={follow:true,host:false,own:false,ownSeek:0,pubT:0,pubF:false,pubAt:0,pubWait:null,ch:null,live:false,rtFail:0,pingT:0,
+ prof:new Map(),memKey:"",qSig:"",again:false,seekGen:0,searchT:0,searchQ:"",results:[],lobbySig:"",usedKey:"",usedAt:0};
+const rmDj=()=>SOC.roomRole==="owner"||SOC.roomRole==="dj";
+/* the clock: a DJ who currently runs the broadcast */
+const rmClock=()=>!!(SOC.room&&rmDj()&&RMX.host);
+const rmNow=()=>Date.now()+(SOC.roomSkew||0);
+const rmKey=tr=>tr&&tr.mode!=="empty"&&tr.id!=null?String(tr.s)+":"+String(tr.id):"";
+const rmInCtx=()=>String(PLAYCTX.key||"").startsWith("room:");
+/* The local track is the room's one. A copy found on another service when the
+   room's source failed (fallbackResolveTrack swaps id/s) still counts — it
+   carries the room's key in _room — or the follower would restart the
+   broken original every tick. */
+const rmIs=(cur,rt)=>!!cur&&!!rt&&cur.mode!=="empty"&&(sameTrack(cur,rt)||(!!cur._room&&cur._room===rmKey(rt)));
+function rmWant(r){
+ if(!r)return 0;
+ const base=+r.position||0;
+ if(!r.playing)return Math.max(0,base);
+ const at=Date.parse(r.updated_at);
+ return Math.max(0,base+(Number.isFinite(at)?(rmNow()-at)/1000:0))}
+function rmFresh(r,ms=90000){const at=Date.parse(r?.updated_at);return Number.isFinite(at)&&rmNow()-at<ms}
+function rmCodeFmt(v){
+ const s=String(v||"").toUpperCase();
+ const m=s.match(/MEOW-?([2-9A-HJ-NP-Z]{4})\b/);
+ if(m)return "MEOW-"+m[1];
+ const raw=s.replace(/[^A-Z0-9]/g,"");
+ if(!raw)return "";
+ if(raw.startsWith("MEOW"))return raw.length>4?"MEOW-"+raw.slice(4,8):raw;
+ if("MEOW".startsWith(raw))return raw;
+ return "MEOW-"+raw.slice(0,4)}
+const rmCodeOk=c=>/^MEOW-[2-9A-HJ-NP-Z]{4}$/.test(c);
+const rmName=(m,me)=>m?.profile?.username||(m?.user_id===me?(S.username||t("ms.you.n")):t(m?.role==="owner"?"rm.host":"rm.listener"));
+/* Programmatic moves the room makes on a follower's player: the hooks below
+   must not read them as the listener walking away. */
+function rmOwn(f){RMX.own=true;try{return f()}finally{RMX.own=false}}
+function rmView(inRoom){const v=document.getElementById("v-rooms");if(v)v.dataset.inroom=inRoom?"1":""}
+
+/* ── lobby ── */
+function rmLobbyHtml(){
+ return `<div class="rmx-lobby">
+  <section class="rmx-hero">
+   <div class="rmx-hero-copy">
+    <span class="rmx-hero-ic">${msym("podcasts",26)}</span>
+    <h3>${esc(t("rm.hero.t"))}</h3>
+    <p>${esc(t("rm.hero.s"))}</p>
+   </div>
+   <div class="rmx-forms">
+    <form class="rmx-make" id="rmx-make" autocomplete="off" novalidate>
+     <label class="rmx-in">${msym("meeting_room",18)}<input id="rmx-name" maxlength="40" placeholder="${esc(t("room.newname"))}" aria-label="${esc(t("room.newname"))}"></label>
+     <button type="button" class="rmx-priv" id="rmx-priv" role="switch" aria-checked="false" title="${esc(t("room.privq"))}">${msym("public",16)}<span>${esc(t("room.privpub"))}</span></button>
+     <button class="primary" type="submit" id="mkroom">${msym("add",18)}<span>${esc(t("room.new"))}</span></button>
+    </form>
+    <form class="rmx-join" id="rmx-join" autocomplete="off" novalidate>
+     <label class="rmx-in rmx-code-in">${msym("key",18)}<input id="joincode" placeholder="MEOW-XXXX" maxlength="9" spellcheck="false" autocapitalize="characters" aria-label="${esc(t("room.join"))}"></label>
+     <button class="btn" type="submit" id="joinbtn" disabled>${msym("login",17)}<span>${esc(t("room.join"))}</span></button>
+    </form>
+   </div>
+  </section>
+  <section class="rmx-sec" id="rmx-mine" hidden><h4>${esc(t("rm.mine"))}</h4><div class="rmx-grid" id="rmx-mine-list"></div></section>
+  <section class="rmx-sec"><h4>${esc(t("rm.open"))}<small id="rmx-open-n"></small></h4>
+   <div class="rmx-grid" id="rmx-list">${'<span class="rmx-skel"></span>'.repeat(3)}</div></section>
+ </div>`}
+function rmCard(r,i,mine){
+ const n=(r.room_members||[]).length;
+ const tr=r.track;
+ const live=!!(r.playing&&tr&&rmFresh(r));
+ const sub=tr?`${tr.t||""} — ${tr.a||""}`:t("room.silent");
+ return `<button class="rmx-card" data-roomid="${esc(r.id)}" style="--i:${Math.min(i,12)}">
+  <span class="rmx-card-art${tr?"":" is-empty"}" ${coverStyle(tr?.art)}>${tr?"":msym("podcasts",30)}${live?`<i class="rmx-live">${msym("graphic_eq",13)}<span>${esc(t("rm.live"))}</span></i>`:""}</span>
+  <span class="rmx-card-meta"><b>${esc(r.name)}</b><small>${esc(sub)}</small></span>
+  <span class="rmx-card-foot">${msym("group",14)}<span>${n}</span>${r.is_private?msym("lock",14):""}${mine&&r._role==="owner"?`<em>${esc(t("rm.yours"))}</em>`:""}</span>
+ </button>`}
+function rmShake(el){if(!el)return;el.classList.remove("rmx-shake");void el.offsetWidth;el.classList.add("rmx-shake")}
+function rmWireLobby(box){
+ const make=box.querySelector("#rmx-make"),join=box.querySelector("#rmx-join");
+ const name=box.querySelector("#rmx-name"),priv=box.querySelector("#rmx-priv");
+ const code=box.querySelector("#joincode"),jb=box.querySelector("#joinbtn");
+ priv.onclick=()=>{
+  const on=priv.getAttribute("aria-checked")!=="true";
+  priv.setAttribute("aria-checked",String(on));
+  priv.innerHTML=`${msym(on?"lock":"public",16)}<span>${esc(t(on?"room.privyes":"room.privpub"))}</span>`};
+ make.onsubmit=async e=>{
+  e.preventDefault();
+  const n=name.value.trim();
+  if(!n){rmShake(name.parentElement);name.focus();return toast(t("rm.name.need"))}
+  const btn=box.querySelector("#mkroom");if(btn.disabled)return;btn.disabled=true;
+  try{
+   const {data,error}=await sb.rpc("create_room",{name:n,private:priv.getAttribute("aria-checked")==="true"});
+   if(error)return toast(socialFail(error));
+   name.value="";await enterRoom(data);
+  }finally{btn.disabled=false}};
+ const syncCode=()=>{const v=rmCodeFmt(code.value);if(v!==code.value)code.value=v;jb.disabled=!rmCodeOk(v)};
+ code.addEventListener("input",syncCode);
+ join.onsubmit=async e=>{
+  e.preventDefault();syncCode();
+  if(!rmCodeOk(code.value)){rmShake(code.parentElement);return toast(t("rm.code.bad"))}
+  jb.disabled=true;
+  try{if(!await joinRoomByCode(code.value))rmShake(code.parentElement)}finally{syncCode()}};
+ box.addEventListener("click",async e=>{
+  const card=e.target instanceof Element&&e.target.closest("[data-roomid]");if(!card||card.getAttribute("aria-busy"))return;
+  card.setAttribute("aria-busy","true");
+  try{
+   const {data}=await sb.from("rooms").select("*").eq("id",card.dataset.roomid).maybeSingle();
+   if(data)await enterRoom(data);else{toast(t("rm.gone"));RMX.lobbySig="";renderRooms()}
+  }finally{card.removeAttribute("aria-busy")}})}
 async function renderRooms(){
  const box=document.getElementById("roombody");if(!box)return;
- if(!sb||!sbUser)return needAuth(box);
+ if(!sb||!sbUser){rmView(false);return needAuth(box)}
  if(SOC.room)return paintRoomShell(); /* already inside one */
+ rmView(false);
+ if(!box.querySelector(".rmx-lobby")){box.innerHTML=rmLobbyHtml();rmWireLobby(box);RMX.lobbySig=""}
+ const sum=document.getElementById("roomsum");if(sum)sum.textContent="";
  try{
-  const {data}=await sb.from("rooms").select("id,name,join_code,is_private,updated_at,track,playing,room_members(user_id)")
-   .eq("is_private",false).order("updated_at",{ascending:false}).limit(30);
- const list=data||[];
- box.innerHTML=`<div class="panel pane">
-  <div class="tokrow" style="margin:0 0 12px">
-   <button class="primary sm" id="mkroom"><span class="material-symbols-rounded" style="font-size:16px">add</span>${t("room.new")}</button>
-   <input id="joincode" placeholder="MEOW-XXXX" maxlength="9" style="text-transform:uppercase">
-   <button class="btn" id="joinbtn">${t("room.join")}</button>
-  </div>
-  ${list.map(r=>`<button class="chatrow" data-roomid="${r.id}">
-    <span class="avat ghost"><span class="material-symbols-rounded" style="font-size:18px">headphones</span></span>
-    <span class="meta"><b>${esc(r.name)}</b><span>${r.playing?esc(r.track?.t||""):t("room.silent")} · ${(r.room_members||[]).length}</span></span>
-    <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`).join("")
-   ||`<p class="ph">${t("room.none")}</p>`}
- </div>`;
- document.getElementById("mkroom").onclick=async()=>{
-  const n=await askText(t("dlg.room.t"),"",{icon:"meeting_room",label:t("room.newname"),confirm:t("dlg.next"),required:true});
-  if(!n)return;
-  /* One decision, two buttons: "Private" is OK, "Public" is cancel — there is
-     no third "abort" state worth a dialog of its own. */
-  const priv=await showModal({title:t("room.privq"),input:false,icon:"lock",
-   confirm:t("room.privyes"),cancel:t("room.privpub")});
-  const {data,error}=await sb.rpc("create_room",{name:n,private:!!priv});
-  if(error)return toast(error.message);
-  enterRoom(data)};
- document.getElementById("joinbtn").onclick=()=>joinRoomByCode(document.getElementById("joincode").value);
- box.querySelectorAll("[data-roomid]").forEach(b=>b.onclick=async()=>{
-   const {data}=await sb.from("rooms").select("*").eq("id",b.dataset.roomid).maybeSingle();
-   if(data)enterRoom(data)});
- icons()
- }catch(e){box.innerHTML=socErrBox(socialFail(e))}}
+  const cols="id,name,join_code,is_private,owner_id,updated_at,track,playing,room_members(user_id)";
+  const [pub,mine]=await Promise.all([
+   sb.from("rooms").select(cols).eq("is_private",false).order("updated_at",{ascending:false}).limit(30),
+   sb.from("room_members").select(`role,rooms(${cols})`).eq("user_id",sbUser.id).limit(24)]);
+  if(pub.error&&mine.error)throw pub.error;
+  if(SOC.room||!box.querySelector(".rmx-lobby"))return;
+  const my=(mine.data||[]).map(m=>m.rooms&&{...m.rooms,_role:m.role}).filter(Boolean)
+   .sort((a,b)=>(Date.parse(b.updated_at)||0)-(Date.parse(a.updated_at)||0));
+  const mineIds=new Set(my.map(r=>r.id));
+  /* live rooms first, then the most recently touched */
+  const live=r=>+!!(r.playing&&r.track&&rmFresh(r));
+  const open=(pub.data||[]).filter(r=>!mineIds.has(r.id))
+   .sort((a,b)=>(live(b)-live(a))||((Date.parse(b.updated_at)||0)-(Date.parse(a.updated_at)||0)));
+  const row=r=>[r.id,r.name,rmKey(r.track),(r.room_members||[]).length,live(r)];
+  const sig=JSON.stringify([my.map(row),open.map(row)]);
+  if(sig===RMX.lobbySig)return;
+  RMX.lobbySig=sig;
+  box.querySelector("#rmx-mine").hidden=!my.length;
+  box.querySelector("#rmx-mine-list").innerHTML=my.map((r,i)=>rmCard(r,i,true)).join("");
+  box.querySelector("#rmx-open-n").textContent=open.length?String(open.length):"";
+  box.querySelector("#rmx-list").innerHTML=open.map((r,i)=>rmCard(r,i+my.length,false)).join("")
+   ||`<div class="rmx-empty">${msym("podcasts",28)}<b>${esc(t("rm.empty.t"))}</b><span>${esc(t("rm.empty.s"))}</span></div>`;
+ }catch(e){
+  RMX.lobbySig="";
+  const l=box.querySelector("#rmx-list");if(l)l.innerHTML=socErrBox(socialFail(e))}}
 
 async function joinRoomByCode(code){
- if(!sb||!sbUser)return go("rooms");
- const {data,error}=await sb.rpc("join_room",{code});
- if(error)return toast(t("room.nocode"));
- enterRoom(data)}
+ if(!sb||!sbUser){go("rooms");return false}
+ const c=rmCodeFmt(code);
+ if(!rmCodeOk(c)){toast(t("rm.code.bad"));return false}
+ const {data,error}=await sb.rpc("join_room",{code:c});
+ if(error||!data){toast(t("room.nocode"));return false}
+ await enterRoom(data);
+ return true}
 
 function roomTrackOf(tr){
   /* Room tracks use the same proxy/audio path as normal search results. */
@@ -10153,10 +10306,13 @@ async function measureRoomSkew(){
   if(!isFinite(serverMs))return 0;
   return serverMs+(Date.now()-t0)/2-Date.now();
  }catch(e){return 0}}
+
 async function enterRoom(row){
- if(!row)return;
- SOC.room=row;
- if(sb&&sbUser){
+ if(!row||!sb)return;
+ if(SOC.room&&SOC.room.id!==row.id)rmStop();
+ SOC.room=row;SOC.roomRole=null;
+ Object.assign(RMX,{follow:true,host:false,memKey:"",qSig:"",pubAt:0,again:false,results:[]});
+ if(sbUser){
   try{
    if(row.join_code){
     await sb.rpc("join_room",{code:row.join_code});
@@ -10166,316 +10322,596 @@ async function enterRoom(row){
    }
   }catch(e){console.warn("join room membership:",e)}
  }
- measureRoomSkew().then(v=>SOC.roomSkew=v);
- await refreshRoomState();
- go("rooms");
- paintRoomShell();
- const isDj=SOC.roomRole==="owner"||SOC.roomRole==="dj"||row.owner_id===(sbUser?.id);
- if(isDj&&S.current&&S.current.mode!=="empty"&&S.playing){
-  try{
-   const patch={track:stripTrack(S.current),position:S.pos||0,playing:true,updated_at:new Date().toISOString()};
-   const {data}=await sb.from("rooms").update(patch).eq("id",row.id).select().single();
-   if(data)SOC.room=data;
-  }catch(e){}
- }
- paintRoomPlayback();
- roomLoop()}
-
-/* The room loop: one interval that both publishes (DJ) and follows (listener).
-   The DJ's client is the clock: it writes track/position every few seconds and
-   on every change. Listeners read the same row and correct their drift only
-   when it exceeds a second and a half — constantly re-seeking sounds worse
-   than being a little off. */
-function roomLoop(){
- socTimer("room",roomTick,3000)}
-let roomTickBusy=false;
-async function roomTick(){
- if(!SOC.room||roomTickBusy)return;
- /* A slow network can stretch one tick past the 3 s interval; overlapping
-    ticks both saw "not following yet" and the second load() restarted the
-    track from zero. */
- roomTickBusy=true;
- try{
-  const dj=SOC.roomRole==="owner"||SOC.roomRole==="dj";
-  /* The host broadcasts whatever they are playing, full stop.
-
-     This used to require PLAYCTX.key to equal "room:<id>", i.e. the track had to
-     have been started from the room's own queue panel. Playing anything the
-     normal way — from the wave, a search result, the library — left the room row
-     untouched, so the host heard music and everyone else sat in silence looking
-     at "тишина". That is the reported "rooms work very strangely": the
-     expectation is simply that the host presses play and the room follows.
-
-     So the condition is the role, not the playback context. */
-  if(dj&&S.current&&S.current.mode!=="empty"){
-   const playing=!!S.playing;
-   const sameTrack=SOC.room.track&&String(S.current.id)===String(SOC.room.track.id)&&S.current.s===SOC.room.track.s;
-   if(!sameTrack||Math.abs((SOC.room.position||0)-S.pos)>2||SOC.room.playing!==playing){
-    const patch={track:stripTrack(S.current),position:S.pos,playing,updated_at:new Date().toISOString()};
-    const {data,error}=await sb.from("rooms").update(patch).eq("id",SOC.room.id).select().single();
-    if(!error&&data)SOC.room=data}
-  }
-  await refreshRoomState();
-  paintRoomPlayback();
- }finally{roomTickBusy=false}}
-
-function stripTrack(tr){return tr&&tr.mode!=="empty"
- ?{s:tr.s,id:tr.id,t:tr.t,a:tr.a,al:tr.al,art:tr.art,d:tr.d}:null}
-
-async function refreshRoomState(){
-  if(!SOC.room)return;
-  /* The room poll runs every three seconds; one failed round trip must not
-     throw through roomTick and kill the interval chain. */
-  try{
-  const {data}=await sb.from("rooms").select("*").eq("id",SOC.room.id).maybeSingle();
-  if(!data){SOC.room=null;socClear("room");return renderRooms()}
-  SOC.room=data;
-  const mem=(await sb.from("room_members").select("user_id,role").eq("room_id",data.id)).data||[];
-  SOC.roomRole=mem.find(m=>m.user_id===sbUser?.id)?.role||(data.owner_id===sbUser?.id?"owner":null);
-  const ids=mem.map(m=>m.user_id);
-  let ps=[];
-  if(ids.length){
-   let pRes=await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",ids);
-   if(pRes.error){
-    pRes=await sb.from("profiles").select("id,username,avatar_url").in("id",ids);
-   }
-   ps=(pRes.data||[]).map(maskProf);
-  }
-  SOC.roomMembers=mem.map(m=>{
-   let prof=ps.find(p=>p?.id===m.user_id);
-   if(!prof&&m.user_id===sbUser?.id){
-    prof={id:sbUser.id,username:S.username||sbUser.email?.split("@")[0]||"Я",avatar_url:S.avatarUrl||null};
-   }else if(!prof){
-    prof={id:m.user_id,username:m.role==="owner"?(LANG==="ru"?"Владелец":"Owner"):(LANG==="ru"?"Слушатель":"Listener"),avatar_url:null};
-   }
-   return {...m,profile:prof};
-  });
-  SOC.roomQueue=(await sb.from("room_queue").select("*").eq("room_id",data.id).order("position")).data||[];
-  SOC.requests=(await sb.from("room_requests").select("*").eq("room_id",data.id).eq("status","pending").order("id",{ascending:false}).limit(20)).data||[];
-  /* The room chat is not fetched here any more: msRoomMount (messenger.js)
-     polls only the rows it has not seen, decrypts them and patches the log. */
-  }catch(e){console.warn("room state:",e?.message||e)}}
-
-/* The listener side of sync: called after every refresh. */
-function paintRoomPlayback(){
- if(!SOC.room||!SOC.room.track)return;
+ const [skew]=await Promise.all([measureRoomSkew(),refreshRoomState()]);
+ SOC.roomSkew=skew;
+ if(!SOC.room||SOC.room.id!==row.id)return;
  const r=SOC.room;
- const isDj=SOC.roomRole==="owner"||SOC.roomRole==="dj";
- /* The host is the clock and never follows the row it just wrote — regardless
-    of where its current track was started from. Tying this to PLAYCTX made the
-    host chase its own broadcast and re-seek itself whenever it played from
-    anywhere but the room panel. */
- if(isDj)return;
- const localIsIt=S.current&&String(S.current.id)===String(r.track.id)&&S.current.s===r.track.s;
- /* ahead is anchored to the server clock (measureRoomSkew): comparing raw
-    Date.now() with the row's timestamp turned any client clock skew into a
-    permanent playback offset. */
- const ahead=(Date.now()+(SOC.roomSkew||0)-new Date(r.updated_at).getTime())/1000;
- const want=r.playing?Math.max(0,(r.position||0)+ahead):Math.max(0,r.position||0);
- if(!localIsIt){
-  const tr=roomTrackOf(r.track);
-  /* openFull stays off: the fullscreen player popping open over chat or
-     settings whenever the DJ started a track read as the app hijacking the
-     screen. */
-  if(tr){
-   setTrack(tr,r.playing,false,"room:"+r.id);
-   if(r.playing&&want>1){
-    setTimeout(()=>{if(sameTrack(tr,S.current)&&A.audio)seekSeconds(want)},600);
-   }
-  }
-  return}
- if(r.playing){
-  if(!S.playing){
-   if(A.audio&&A.audio.src){
-    A.ctx?.resume();
-    A.audio.play().then(()=>{S.playing=true;sync();if(want>1)seekSeconds(want)}).catch(e=>{
-     console.warn("listener play catch:",e);
-    });
-   }else{
-    const tr=roomTrackOf(r.track);
-    if(tr)setTrack(tr,true,false,"room:"+r.id);
-   }
-  }else if(Math.abs(S.pos-want)>1.5&&S.current?.mode==="local"){
-   seekSeconds(Math.max(0,want));
-  }
- }else if(!r.playing&&S.playing){
-  toggle();
- }
-}
+ /* Who runs the broadcast on the way in: a host who is playing something
+    takes the room unless someone else is already live in it; a host who is
+    not playing anything follows whatever is on. */
+ const mine=!!(S.current&&S.current.mode!=="empty"&&S.playing);
+ const busy=!!(r.track&&r.playing&&rmFresh(r,60000));
+ RMX.host=rmDj()&&(mine?(!busy||rmKey(S.current)===rmKey(r.track)):(!busy&&SOC.roomRole==="owner"));
+ go("rooms");
+ if(rmClock()&&mine)roomPublish(true);else paintRoomPlayback();
+ rmChannel(r);
+ roomLoop();
+ toast(t("rm.join.ok").replace("{n}",r.name||""))}
 
-function paintRoomShell(){
- const box=document.getElementById("roombody");if(!box)return;
- const r=SOC.room;if(!r)return renderRooms();
- const isOwner=SOC.roomRole==="owner";
- const isDj=isOwner||SOC.roomRole==="dj";
+/* Leaving, kicking and deletion all end here: every room timer, the socket
+   and the follower state go; the music itself keeps playing. */
+function rmStop(){
+ ["room","mroom","rmprog"].forEach(socClear);
+ clearTimeout(RMX.pubT);clearTimeout(RMX.searchT);clearTimeout(RMX.pingT);
+ RMX.pubT=0;RMX.pubF=false;
+ rmChannelOff();
+ SOC.room=null;SOC.roomRole=null;SOC.roomMembers=[];SOC.roomQueue=[];SOC.requests=[];
+ /* the room's line-up is not this player's any more: the current track
+    plays out and the room context ends there */
+ if(rmInCtx())queue=[];
+ Object.assign(RMX,{follow:true,host:false,memKey:"",qSig:"",lobbySig:"",results:[],again:false});
+ rmView(false)}
+async function roomLeave(){
+ const r=SOC.room;if(!r)return;
  const me=sbUser?.id;
- const members=SOC.roomMembers||[];
- const memberHtml=members.map(m=>{
-  const name=m.profile?.username||(m.user_id===me?(S.username||"Я"):(m.role==="owner"?(LANG==="ru"?"Владелец":"Owner"):(LANG==="ru"?"Слушатель":"Listener")));
-  const profForAvat=m.profile||{username:name,id:m.user_id};
-  return `
-  <span class="memchip" data-uid="${m.user_id}" title="${esc(name)}">
-   ${avat(profForAvat,22)}
-   <i>${esc(name.slice(0,12))}${m.role==="owner"?` <span class="material-symbols-rounded" style="font-size:12px">crown</span>`:""}</i>
-   ${isOwner&&m.user_id!==me?`<button class="qrm" data-kick="${m.user_id}" title="${t("room.kick")}"><span class="material-symbols-rounded" style="font-size:14px">close</span></button>`:""}
-  </span>`}).join("");
-
- const existing=box.querySelector(".roompane");
- if(existing){
-  const mem=existing.querySelector(".memstrip");if(mem)mem.innerHTML=memberHtml;
-  paintRoomNow();
-  paintRoomLists();
-  if(typeof msRoomMount==="function")msRoomMount(existing.querySelector("#roomchat"),r);
-  return;
- }
-
- box.innerHTML=`<div class="panel pane roompane">
-  <div class="chathdr">
-   <button class="ic" id="leaveroom" title="${t("room.leave")}"><span class="material-symbols-rounded" style="font-size:18px">logout</span></button>
-   <b>${esc(r.name)}</b>
-   <button class="codechip" id="copycode" title="${t("room.copycode")}">${esc(r.join_code)}${r.is_private?` · <span class="material-symbols-rounded" style="font-size:13px">lock</span>`:""}</button>
-   <span class="grow"></span>
-   ${isOwner?`<button class="btn sm danger" id="delroom">${t("room.del")}</button>`:""}
-  </div>
-  <div class="memstrip">${memberHtml}</div>
-  <div class="roomnow" id="roomnow"></div>
-  <div class="roomcols">
-   <div>
-    <p class="eyebrow">${t("room.queue")}</p>
-    <div class="qlist roomq" id="roomql"></div>
-    <div class="tokrow roomadd" style="margin-top:8px">
-     <input id="reqq" placeholder="${isDj?t("room.addq.ph"):t("room.findph")}">
-    </div>
-    <div id="reqres" class="reqres"></div>
-    ${isDj?`<p class="eyebrow" style="margin-top:12px">${t("room.reqs")}</p>
-      <div id="roomreqs"></div>`:""}
-   </div>
-   <div class="roomchatcol">
-    <p class="eyebrow">${t("room.chat")}</p>
-    <div class="roomchat" id="roomchat"></div>
-   </div>
-  </div></div>`;
- document.getElementById("leaveroom").onclick=async()=>{
-  /* The RPC also sweeps the room away when the last member leaves; the plain
-     delete is the pre-11 fallback so leaving never gets stuck. */
+ rmStop();
+ renderRooms();
+ /* The RPC also sweeps the room away when the last member leaves; the plain
+    delete is the pre-11 fallback so leaving never gets stuck. */
+ try{
   const {error}=await sb.rpc("leave_room",{r:r.id});
-  if(error)await sb.from("room_members").delete().eq("room_id",r.id).eq("user_id",me);
-  SOC.room=null;socClearAll();renderRooms()};
-  document.getElementById("delroom")?.addEventListener("click",async()=>{
-  if(!await askConfirm(t("room.delq"),t("room.del"),true,{icon:"delete"}))return;
-  await sb.from("rooms").delete().eq("id",r.id);
-   SOC.room=null;socClearAll();renderRooms();toast(t("room.deleted"))});
- document.getElementById("copycode").onclick=()=>{
-  navigator.clipboard?.writeText(r.join_code).then(()=>toast(t("room.copied"))).catch(()=>{})};
- box.querySelectorAll("[data-kick]").forEach(b=>b.onclick=async()=>{
-  await sb.from("room_members").delete().eq("room_id",r.id).eq("user_id",b.dataset.kick);
-  toast(t("room.kicked"));
-  refreshRoomState().then(paintRoomShell)});
- /* One search box, two behaviours: DJs put the track straight into the queue,
-    listeners propose it and wait for a ✓. The queue only moves when a DJ is
-    playing the room context, so a listener search can never seize playback. */
- document.getElementById("reqq").addEventListener("input",async e=>{
-  const q=e.target.value.trim();if(q.length<2)return;
-  const res=await searchRemote(q).catch(()=>[]);
-  const host=document.getElementById("reqres");
-  host.innerHTML=(res||[]).slice(0,6).map(x=>
-   `<button class="btn sm" data-full='${esc(JSON.stringify({s:x.s,id:x.id,t:x.t,a:x.a,al:x.al,art:x.art,d:x.d}))}'>
-     ${isDj?"＋ ":""}${esc(x.t)} — ${esc(x.a)}</button>`).join("");
-  host.querySelectorAll("[data-full]").forEach(b=>b.onclick=async()=>{
-   const tr=JSON.parse(b.dataset.full);
-   if(isDj){
-    const {error}=await sb.from("room_queue").insert({room_id:r.id,track:tr,added_by:me});
-    if(error)return toast(error.message);
-    host.innerHTML="";
-    /* Nothing on air yet: start the room on this track right away instead of
-       making the DJ find a play button. */
-    if(!r.track&&PLAYCTX.key!=="room:"+r.id)setTrack(tr,true,true,"room:"+r.id);
-    refreshRoomState().then(()=>{paintRoomLists();paintRoomNow()})}
-   else{
-    const {error}=await sb.from("room_requests").insert({room_id:r.id,user_id:me,track:tr});
-    toast(error?error.message:t("room.req.sent"));
-    if(!error)host.innerHTML=""}})});
+  if(error&&me)await sb.from("room_members").delete().eq("room_id",r.id).eq("user_id",me);
+ }catch(e){console.warn("leave room:",e?.message||e)}
+ RMX.lobbySig="";renderRooms();
+ toast(t("rm.left"))}
+
+/* ── realtime ping (optional accelerator; polling stays the source of truth) ── */
+function rmChannel(r){
+ rmChannelOff();
+ if(!sb?.channel||RMX.rtFail>=2||!r?.id)return;
+ try{
+  const ch=sb.channel("mw-room-"+r.id,{config:{broadcast:{self:false,ack:false}}});
+  ch.on("broadcast",{event:"ping"},()=>{clearTimeout(RMX.pingT);RMX.pingT=setTimeout(roomTick,40)});
+  ch.subscribe(st=>{
+   if(RMX.ch!==ch)return;
+   RMX.live=st==="SUBSCRIBED";
+   if(st==="SUBSCRIBED")RMX.rtFail=0;
+   /* A socket that cannot get through (blocked network, a relay URL the CSP
+      does not cover, Realtime off on the project) is dropped at its first
+      failure, and after two rooms' worth for the whole session, instead of
+      reconnecting in the background forever. */
+   if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"){RMX.rtFail++;rmChannelOff()}});
+  RMX.ch=ch;
+ }catch(e){RMX.ch=null;RMX.live=false}}
+function rmChannelOff(){
+ const ch=RMX?.ch;if(RMX){RMX.ch=null;RMX.live=false}
+ if(ch){try{sb?.removeChannel(ch)}catch(_){}}}
+function rmPing(){
+ if(!RMX.ch||!RMX.live)return;
+ try{RMX.ch.send({type:"broadcast",event:"ping",payload:{}})?.catch?.(()=>{})}catch(_){}}
+
+/* ── host side: publish what this client plays ── */
+/* A forced publish (this host just changed something) goes out after 150 ms;
+   a drift check after 400 ms, and a pending one is never pushed back by the
+   next call — sync() can fire in bursts. */
+function roomPublish(force){
+ if(!RMX||!SOC.room||!rmDj()||!sb)return;
+ if(force)RMX.host=true;
+ if(!RMX.host)return;
+ if(RMX.pubT&&(RMX.pubF||!force))return;
+ clearTimeout(RMX.pubT);
+ RMX.pubF=!!force;
+ RMX.pubT=setTimeout(()=>{const f=RMX.pubF;RMX.pubT=0;RMX.pubF=false;roomPublishNow(f)},force?150:400)}
+async function roomPublishNow(force){
+ const r=SOC.room;if(!r||!rmClock())return;
+ if(RMX.pubWait){RMX.again=RMX.again||force;return}
+ const cur=S.current&&S.current.mode!=="empty"?S.current:null;
+ const key=rmKey(cur),playing=!!(cur&&S.playing);
+ const pos=Math.max(0,+(S.pos||0));
+ const me=sbUser?.id;
+ /* the row names its clock (track.by): a row someone else wrote is never
+    "the same" as this host's state, even on the same song */
+ const same=key===rmKey(r.track)&&playing===!!r.playing&&(!r.track?.by||r.track.by===me);
+ const drift=Math.abs(rmWant(r)-pos);
+ const stale=Date.now()-RMX.pubAt>20000;
+ if(!force&&same&&(!playing||drift<1.2)&&!(playing&&stale))return;
+ if(!cur&&!r.track)return;
+ const tr=stripTrack(cur);if(tr&&me)tr.by=me;
+ const patch={track:tr,position:Math.round(pos*100)/100,playing,updated_at:new Date(rmNow()).toISOString()};
+ RMX.pubAt=Date.now();
+ RMX.pubWait=sb.from("rooms").update(patch).eq("id",r.id).select().maybeSingle();
+ try{
+  const {data,error}=await RMX.pubWait;
+  if(error)console.warn("room publish:",error.message);
+  else if(data&&SOC.room?.id===data.id){SOC.room=data;rmPing()}
+ }catch(e){console.warn("room publish:",e?.message||e)}
+ finally{RMX.pubWait=null}
  paintRoomNow();
- paintRoomLists();
- if(typeof msRoomMount==="function")msRoomMount(document.getElementById("roomchat"),r);
- icons()}
+ if(RMX.again&&SOC.room){RMX.again=false;roomPublishNow(true)}}
 
-function paintRoomNow(){
- const el=document.getElementById("roomnow");if(!el)return;
- const r=SOC.room;const isDj=SOC.roomRole==="owner"||SOC.roomRole==="dj";
- const tr=r.track;
- el.innerHTML=tr?`
-  <span class="art" ${coverStyle(tr.art)}></span>
-  <span class="meta"><b>${esc(tr.t)}</b><span>${esc(tr.a)}</span></span>
-  ${isDj?`<button class="ic" id="roomplay"><span class="material-symbols-rounded" style="font-size:18px">${S.playing?"pause":"play_arrow"}</span></button>`:
-    `<button class="btn sm ghost" id="roomlisten" style="display:inline-flex;align-items:center;gap:6px">
-      <span class="material-symbols-rounded" style="font-size:16px">${S.playing?"volume_up":"play_arrow"}</span>
-      <span>${r.playing?(S.playing?t("room.live"):(LANG==="ru"?"Слушать эфир":"Listen live")):t("room.paused")}</span>
-    </button>`}`
-  :`<p class="ph" style="margin:0">${t("room.silent")}</p>`;
- document.getElementById("roomplay")?.addEventListener("click",()=>{
-  if(PLAYCTX.key!=="room:"+r.id&&r.track)setTrack(roomTrackOf(r.track),true,true,"room:"+r.id);
-  else toggle();
-  roomTick()});
- document.getElementById("roomlisten")?.addEventListener("click",()=>{
-  if(r.track){
-   setTrack(roomTrackOf(r.track),true,false,"room:"+r.id);
-   paintRoomPlayback();
-  }
- });
-}
-
-function paintRoomLists(){
- const ql=document.getElementById("roomql");if(!ql)return;
- const isDj=SOC.roomRole==="owner"||SOC.roomRole==="dj";
- ql.innerHTML=(SOC.roomQueue||[]).map((q,i)=>`
-  <div class="q" style="--i:${Math.min(i,12)}">
-   <i class="n">${String(i+1).padStart(2,"0")}</i>
-   <b>${esc(q.track?.t||"")}</b><em>${esc(q.track?.a||"")}</em>
-   ${isDj?`<button class="qrm" data-delm="${q.id}"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}
-  </div>`).join("")||`<p class="ph">${t("room.qempty")}</p>`;
- ql.querySelectorAll("[data-delm]").forEach(b=>b.onclick=async()=>{
-  await sb.from("room_queue").delete().eq("id",+b.dataset.delm);
-  refreshRoomState().then(()=>{paintRoomLists()})});
- const rq=document.getElementById("roomreqs");
- if(rq){
-  const me=sbUser.id;
-  rq.innerHTML=(SOC.requests||[]).map(q=>{
-   const who=(SOC.roomMembers||[]).find(x=>x.user_id===q.user_id)?.profile;
-   return `<div class="reqrow">
-    ${avat(who,24)}<span class="meta"><b>${esc(who?.username||"")}</b><span>${esc(q.track?.t||"")} — ${esc(q.track?.a||"")}</span></span>
-    <button class="primary sm" data-ok="${q.id}"><span class="material-symbols-rounded" style="font-size:18px">check</span></button>
-    <button class="btn sm danger" data-no="${q.id}"><span class="material-symbols-rounded" style="font-size:18px">close</span></button></div>`}).join("")
-   ||`<p class="ph">${t("room.noreqs")}</p>`;
-  rq.querySelectorAll("[data-ok]").forEach(b=>b.onclick=async()=>{
-   const {error}=await sb.rpc("approve_request",{req:+b.dataset.ok});
-   if(error)toast(error.message);
-   refreshRoomState().then(()=>{paintRoomLists();paintRoomNow()})});
-  rq.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{
-   const {error}=await sb.rpc("decline_request",{req:+b.dataset.no});
-   if(error)toast(error.message);
-   refreshRoomState().then(paintRoomLists)})}}
-
-/* The row whose track is starting leaves the server queue. Fire-and-forget:
-   roomTick() refreshes the room state every three seconds, so a dropped round
-   trip delays the panel, never playback. */
-function roomConsume(tr){
- if(!sb||!tr||tr.mode==="empty")return;
- if(!(SOC.roomRole==="owner"||SOC.roomRole==="dj"))return;
- const row=(SOC.roomQueue||[]).find(q=>q.track&&String(q.track.id)===String(tr.id)&&q.track.s===tr.s);
+/* Hooks the player calls (setTrack / toggle / sync / seeked / next / prev).
+   Each is a no-op outside a room and for the room's own moves (RMX.own). */
+function roomNoteTrack(ctx,own){
+ if(!RMX||!SOC.room||own||RMX.own)return;
+ if(rmDj()){RMX.host=true;roomPublish(true);return}
+ if(RMX.follow&&!String(ctx||"").startsWith("room:")){RMX.follow=false;paintRoomNow()}}
+function roomNoteToggle(){
+ if(!RMX||!SOC.room||RMX.own)return;
+ if(rmDj()){RMX.host=true;roomPublish(true);return}
+ const r=SOC.room,roomOne=rmIs(S.current,r.track),willPlay=!S.playing;
+ /* A listener's own pause — or play while the room is paused — means "not
+    now", not "pull me back in 3 s"; resuming the room's own track while it
+    is on air means "I'm back". */
+ if(RMX.follow){if(willPlay!==!!r.playing||!roomOne){RMX.follow=false;setTimeout(()=>paintRoomNow(),0)}}
+ else if(willPlay&&roomOne&&r.playing){RMX.follow=true;setTimeout(paintRoomPlayback,0)}}
+function roomNoteSync(){if(RMX&&SOC.room&&rmClock())roomPublish(false)}
+function roomNoteSeek(){
+ if(!RMX||!SOC.room||Date.now()<RMX.ownSeek)return;
+ if(rmClock())roomPublish(false)}
+/* next(): true when the room decided what happens (or that nothing does). */
+function roomNext(user){
+ if(!RMX||!SOC.room)return false;
+ /* a DJ who skips takes the broadcast */
+ if(user&&rmDj())RMX.host=true;
+ if(!rmClock()){
+  if(!rmInCtx())return false; /* a listener on their own music: normal next */
+  if(user){toast(t("rm.hostskips"));return true}
+  /* A follower's player never picks the next track: the host's row does.
+     A listener who had stepped away and let the room's track play out is
+     back in the broadcast. */
+  if(!RMX.follow){RMX.follow=true;setTimeout(paintRoomPlayback,0)}
+  return true}
+ if(!user&&S.repeat)return false; /* repeat-one is next()'s */
+ const head=(SOC.roomQueue||[])[0];
+ if(!head?.track)return false;
+ /* Inserted ahead of the host's own list, which carries on afterwards: the
+    context and the local queue are kept, the server row is consumed. */
+ rmConsumeRow(head);
+ setTrack(roomTrackOf(head.track),true,false,undefined,true);
+ return true}
+function roomPrev(){
+ if(!RMX||!SOC.room)return false;
+ if(rmDj()){RMX.host=true;return false}
+ if(rmInCtx()&&RMX.follow){toast(t("rm.hostskips"));return true}
+ return false}
+function rmConsumeRow(row){
  if(!row)return;
- sb.from("room_queue").delete().eq("id",row.id).then(()=>{},e=>console.warn("room consume:",e?.message||e));}
-
-/* When the DJ's track ends inside a room, the queue's head takes over. The row
-   itself is consumed by setTrack() -> roomConsume(), so this only has to find
-   what is left after the refresh. */
+ RMX.usedKey=rmKey(roomTrackOf(row.track));RMX.usedAt=Date.now();
+ SOC.roomQueue=(SOC.roomQueue||[]).filter(q=>q.id!==row.id);
+ rmSyncLocalQueue();
+ sb.from("room_queue").delete().eq("id",row.id).then(()=>rmPing(),e=>console.warn("room consume:",e?.message||e))}
+/* A track picked from the room's list in the player's queue panel leaves the
+   server queue too (DJ only). One that roomNext() just consumed is skipped,
+   or a song queued twice would lose both rows at once. */
+function roomConsume(tr){
+ if(!sb||!SOC.room||!tr||tr.mode==="empty"||!rmDj())return;
+ const key=rmKey(tr);
+ if(key===RMX.usedKey&&Date.now()-RMX.usedAt<5000)return;
+ const row=(SOC.roomQueue||[]).find(q=>q.track&&rmKey(roomTrackOf(q.track))===key);
+ if(row)rmConsumeRow(row)}
+/* When the room's own list runs out inside the room context. */
 async function roomAdvance(){
  if(!SOC.room)return false;
  await refreshRoomState();
  const nextRow=(SOC.roomQueue||[])[0];
- if(!nextRow)return false;
- setTrack(roomTrackOf(nextRow.track),true,true,"room:"+SOC.room.id);
+ if(!nextRow||!rmDj())return false;
+ RMX.host=true;
+ rmConsumeRow(nextRow);
+ setTrack(roomTrackOf(nextRow.track),true,false,"room:"+SOC.room.id,true);
  return true}
+/* Inside the room context the player's "up next" is the room's queue. */
+function rmSyncLocalQueue(){
+ if(!rmInCtx())return;
+ queue=(SOC.roomQueue||[]).map(q=>roomTrackOf(q.track)).filter(Boolean);
+ if(fp.dataset.open==="true")renderFPBody()}
+
+function roomLoop(){
+ socTimer("room",roomTick,3000);
+ socTimer("rmprog",rmProg,1000)}
+let roomTickBusy=false;
+async function roomTick(){
+ if(!SOC.room)return;
+ /* A slow network can stretch one tick past the interval; overlapping ticks
+    both saw "not following yet" and the second load() restarted the track
+    from zero. A ping that lands mid-tick runs one more right after. */
+ if(roomTickBusy){RMX.again=true;return}
+ /* A hidden window keeps its sound in step but skips the extra reads. */
+ roomTickBusy=true;
+ try{
+  /* Read first, then publish: a host that wrote blindly first would answer
+     another DJ's fresh track by overwriting it, and two hosts would trade
+     the row back and forth every tick. refreshRoomState() steps this one
+     down when someone else acted after its last write. */
+  await refreshRoomState();
+  if(!SOC.room)return;
+  if(rmClock())await roomPublishNow(false);
+  paintRoomPlayback();
+  if(S.view==="rooms"&&!document.hidden)paintRoomShell();
+ }finally{
+  roomTickBusy=false;
+  if(RMX.again&&SOC.room&&!RMX.pubWait){RMX.again=false;setTimeout(roomTick,0)}}}
+
+function stripTrack(tr){return tr&&tr.mode!=="empty"
+ ?{s:tr.s,id:tr.id,t:tr.t,a:tr.a,al:tr.al,art:tr.art,d:tr.d}:null}
+
+/* One request for the row, its members, queue and requests; profiles only
+   when the member list changes. The old refresh made five round trips every
+   three seconds per listener. */
+let rmEmbed=true;
+async function refreshRoomState(){
+ const room=SOC.room;if(!room||!sb)return;
+ if(!sbUser){rmStop();return}
+ try{
+  let data=null,mem=[],queue_=[],reqs=[];
+  let one=null;
+  if(rmEmbed){
+   one=await sb.from("rooms")
+    .select("*,room_members(user_id,role),room_queue(id,position,track,added_by,created_at),room_requests(id,user_id,track,status,created_at)")
+    .eq("id",room.id).eq("room_requests.status","pending").maybeSingle();
+   /* a project whose PostgREST cannot embed these falls back for good */
+   if(one.error&&/relationship|embed|PGRST2/i.test(String(one.error.message||one.error.code||"")))rmEmbed=false;
+  }
+  if(one&&!one.error){
+   data=one.data;
+   if(data){mem=data.room_members||[];queue_=data.room_queue||[];reqs=data.room_requests||[];
+    delete data.room_members;delete data.room_queue;delete data.room_requests}
+  }else{
+   const r1=await sb.from("rooms").select("*").eq("id",room.id).maybeSingle();
+   if(r1.error)throw r1.error;
+   data=r1.data;
+   if(data){
+    const [m,q,rq]=await Promise.all([
+     sb.from("room_members").select("user_id,role").eq("room_id",data.id),
+     sb.from("room_queue").select("*").eq("room_id",data.id).order("position"),
+     sb.from("room_requests").select("*").eq("room_id",data.id).eq("status","pending").order("id",{ascending:false}).limit(20)]);
+    mem=m.data||[];queue_=q.data||[];reqs=rq.data||[]}
+  }
+  if(SOC.room?.id!==room.id)return;
+  if(!data){rmStop();toast(t("rm.gone"));renderRooms();return}
+  const me=sbUser?.id;
+  const myRow=mem.find(m=>m.user_id===me);
+  if(!myRow&&data.owner_id!==me){rmStop();toast(t("rm.kicked.me"));renderRooms();return}
+  SOC.room=data;
+  SOC.roomRole=myRow?.role||(data.owner_id===me?"owner":null);
+  if(!rmDj())RMX.host=false;
+  /* Someone else took the broadcast over — the row holds another track or
+     state, written after this host's last write: this one follows until it
+     acts again. The margin absorbs the clock-anchor error. */
+  if(RMX.host&&RMX.pubAt&&!RMX.pubWait&&!RMX.pubT){
+   const at=Date.parse(data.updated_at)||0;
+   const theirs=!!(data.track?.by&&data.track.by!==me);
+   const mineNow=!theirs&&rmKey(S.current)===rmKey(data.track)&&!!S.playing===!!data.playing;
+   if(!mineNow&&at>RMX.pubAt+(SOC.roomSkew||0)+1200)RMX.host=false}
+  queue_.sort((a,b)=>(a.position-b.position)||(a.id-b.id));
+  SOC.roomQueue=queue_;
+  const qSig=queue_.map(q=>q.id).join(",");
+  if(qSig!==RMX.qSig){RMX.qSig=qSig;rmSyncLocalQueue()}
+  SOC.requests=reqs.sort((a,b)=>b.id-a.id).slice(0,20);
+  const key=mem.map(m=>m.user_id+":"+m.role).sort().join(",");
+  if(key!==RMX.memKey){
+   RMX.memKey=key;
+   const need=mem.map(m=>m.user_id).filter(id=>!RMX.prof.has(id));
+   if(need.length){
+    let pRes=await sb.from("profiles").select("id,username,avatar_url,privacy").in("id",need);
+    if(pRes.error)pRes=await sb.from("profiles").select("id,username,avatar_url").in("id",need);
+    (pRes.data||[]).map(maskProf).forEach(p=>p&&RMX.prof.set(p.id,p));
+    /* a long session meets many people; the cache stays small */
+    if(RMX.prof.size>200)RMX.prof=new Map([...RMX.prof].slice(-120));
+   }
+  }
+  SOC.roomMembers=mem.map(m=>{
+   let prof=RMX.prof.get(m.user_id);
+   if(!prof&&m.user_id===me)prof={id:me,username:S.username||sbUser.email?.split("@")[0]||t("ms.you.n"),avatar_url:S.avatarUrl||null};
+   return {...m,profile:prof||{id:m.user_id,username:t(m.role==="owner"?"rm.host":"rm.listener"),avatar_url:null}}})
+   .sort((a,b)=>(a.role==="owner"?-1:b.role==="owner"?1:0)||(a.role==="dj"?-1:b.role==="dj"?1:0));
+ }catch(e){console.warn("room state:",e?.message||e)}}
+
+/* ── follower side ── */
+/* Seek to where the room is once the new track actually plays: a seek on a
+   stream that is still opening lands nowhere. pos fixes the target (a DJ
+   resuming a paused room); without it the room's live position is used. */
+function rmSeekWhenReady(roomTr,pos){
+ const gen=++RMX.seekGen;
+ const au=A.audio;if(!au)return;
+ const goNow=()=>{
+  if(gen!==RMX.seekGen||!SOC.room||!rmIs(S.current,roomTr))return;
+  const r=SOC.room;
+  if(pos==null&&(!r.playing||!rmFollowing()))return;
+  const w=pos!=null?pos:rmWant(r);
+  if(w>1&&Math.abs((au.currentTime||0)-w)>1){RMX.ownSeek=Date.now()+1500;seekSeconds(w)}};
+ au.addEventListener("playing",goNow,{once:true});
+ setTimeout(goNow,9000)}
+function rmFollowing(){return !!SOC.room&&!rmClock()&&(rmDj()||RMX.follow)}
+function paintRoomPlayback(){
+ const r=SOC.room;if(!r)return;
+ if(!rmFollowing()){paintRoomNow();return}
+ if(!r.track){
+  if(S.playing&&rmInCtx())rmOwn(()=>toggle());
+  paintRoomNow();return}
+ const want=rmWant(r);
+ const dur=+r.track.d||0;
+ /* The row says the track should be over and nobody updated it: the host is
+    gone or between tracks. Wait instead of playing past the end. */
+ if(r.playing&&dur&&want>dur+4){paintRoomNow("wait");return}
+ if(!rmIs(S.current,r.track)){
+  /* openFull stays off: the fullscreen player popping open over chat or
+     settings whenever the DJ started a track read as the app hijacking the
+     screen. */
+  const tr={...roomTrackOf(r.track),_room:rmKey(r.track)};
+  rmOwn(()=>setTrack(tr,!!r.playing,false,"room:"+r.id));
+  if(r.playing)rmSeekWhenReady(r.track);
+  paintRoomNow("load");return}
+ const au=A.audio;
+ if(r.playing){
+  if(!S.playing){rmOwn(()=>toggle());rmSeekWhenReady(r.track)}
+  /* played out locally while the room still runs it (a host that repeats) */
+  else if(au&&au.ended){RMX.ownSeek=Date.now()+1500;seekSeconds(want);au.play().catch(()=>{})}
+  else if(au&&!au.paused&&Date.now()>(A.seekingUntil||0)&&Math.abs((S.pos||0)-want)>1.5){
+   RMX.ownSeek=Date.now()+1500;seekSeconds(want)}
+ }else if(S.playing){
+  rmOwn(()=>toggle());
+  if(Math.abs((S.pos||0)-want)>1.5){RMX.ownSeek=Date.now()+1500;seekSeconds(want)}
+ }
+ paintRoomNow()}
+
+/* ── room screen ── */
+function rmRoomHtml(r){
+ return `<div class="rmx-room" data-id="${esc(r.id)}">
+  <header class="rmx-top">
+   <div class="rmx-title"><b>${esc(r.name)}</b><small id="rmx-sub"></small></div>
+   <div class="rmx-top-acts">
+    <button class="rmx-code" id="copycode" title="${esc(t("room.copycode"))}">${msym(r.is_private?"lock":"public",14)}<span>${esc(r.join_code||"")}</span>${msym("content_copy",14)}</button>
+    <button class="btn sm" id="rminvite">${msym("person_add",16)}<span>${esc(t("rm.invite"))}</span></button>
+    <button class="btn sm" id="leaveroom">${msym("logout",16)}<span>${esc(t("room.leave"))}</span></button>
+    <button class="btn sm danger" id="delroom" title="${esc(t("room.del"))}" aria-label="${esc(t("room.del"))}" hidden>${msym("delete",16)}</button>
+   </div>
+  </header>
+  <section class="rmx-stage" id="roomnow"></section>
+  <div class="rmx-members" id="rmx-mem"></div>
+  <div class="rmx-cols">
+   <div class="rmx-panel">
+    <h4 class="rmx-h">${msym("queue_music",17)}<span>${esc(t("rm.next"))}</span><small id="rmx-qn"></small></h4>
+    <div class="rmx-list" id="roomql"></div>
+    <label class="rmx-in rmx-find">${msym("search",18)}<input id="reqq" autocomplete="off" spellcheck="false"></label>
+    <div id="reqres" class="rmx-res"></div>
+    <div id="rmx-reqwrap" hidden>
+     <h4 class="rmx-h">${msym("how_to_vote",17)}<span>${esc(t("room.reqs"))}</span><small id="rmx-rn"></small></h4>
+     <div class="rmx-list" id="roomreqs"></div>
+    </div>
+   </div>
+   <div class="rmx-panel roomchatcol">
+    <h4 class="rmx-h">${msym("forum",17)}<span>${esc(t("room.chat"))}</span></h4>
+    <div class="roomchat" id="roomchat"></div>
+   </div>
+  </div></div>`}
+function rmWireRoom(box,r){
+ box.querySelector("#leaveroom").onclick=()=>roomLeave();
+ box.querySelector("#delroom").onclick=async()=>{
+  if(!await askConfirm(t("room.delq"),t("room.del"),true,{icon:"delete"}))return;
+  const id=r.id;rmStop();
+  const {error}=await sb.from("rooms").delete().eq("id",id);
+  if(error)toast(socialFail(error));else toast(t("room.deleted"));
+  renderRooms()};
+ box.querySelector("#copycode").onclick=()=>{
+  navigator.clipboard?.writeText(r.join_code).then(()=>toast(t("room.copied"))).catch(()=>{})};
+ box.querySelector("#rminvite").onclick=()=>{
+  const txt=t("rm.invite.txt").replace("{n}",r.name||"").replace("{c}",r.join_code||"");
+  navigator.clipboard?.writeText(txt).then(()=>toast(t("rm.invite.ok"))).catch(()=>toast(txt,6000))};
+ /* Stage, members, queue, requests and search results: one delegated
+    listener, so repainting a list never leaves a stale handler behind. */
+ box.querySelector(".rmx-room").addEventListener("click",e=>{
+  const el=e.target instanceof Element?e.target:null;if(!el)return;
+  const b=el.closest("[data-rm]");if(!b||b.disabled||!SOC.room)return;
+  rmAct(b.dataset.rm,b).catch(err=>{console.warn("room action:",err);toast(socialFail(err))})});
+ const q=box.querySelector("#reqq");
+ q.addEventListener("input",()=>{
+  clearTimeout(RMX.searchT);
+  const v=q.value.trim();
+  if(v.length<2){RMX.searchQ="";RMX.results=[];box.querySelector("#reqres").innerHTML="";return}
+  RMX.searchT=setTimeout(()=>rmSearch(v),320)});
+ q.addEventListener("keydown",e=>{if(e.key==="Escape"){q.value="";RMX.searchQ="";RMX.results=[];box.querySelector("#reqres").innerHTML=""}})}
+async function rmAct(act,b){
+ const room=SOC.room,id=b.dataset.id;
+ if(act==="play"){
+  RMX.host=true;
+  const rt=room.track;
+  if(rt&&!rmIs(S.current,rt)){
+   /* the room's own track, from where the room stands */
+   const pos=rmWant(room);
+   setTrack({...roomTrackOf(rt),_room:rmKey(rt)},true,false,"room:"+room.id);
+   if(pos>1)rmSeekWhenReady(rt,pos);
+   return}
+  if(S.current&&S.current.mode!=="empty")return toggle();
+  if((SOC.roomQueue||[]).length){roomNext(true);return}
+  return toast(t("rm.q.empty.dj"))}
+ if(act==="skip"){
+  RMX.host=true;
+  if(!(SOC.roomQueue||[]).length&&(rmInCtx()||!queue.length))return toast(t("room.qempty"));
+  return next(true)}
+ if(act==="follow"){RMX.follow=true;RMX.host=false;paintRoomPlayback();return}
+ if(act==="lead"){RMX.host=true;roomPublish(true);return}
+ if(act==="kick"){
+  b.disabled=true;
+  const {error}=await sb.from("room_members").delete().eq("room_id",room.id).eq("user_id",id);
+  if(error){b.disabled=false;return toast(socialFail(error))}
+  toast(t("room.kicked"));await refreshRoomState();paintRoomShell();return}
+ if(act==="dj"){
+  b.disabled=true;
+  const {error}=await sb.rpc("set_room_role",{room:room.id,member:id,new_role:b.dataset.v});
+  if(error)toast(socialFail(error));
+  await refreshRoomState();paintRoomShell();return}
+ if(act==="qdel"){
+  b.disabled=true;
+  const {error}=await sb.from("room_queue").delete().eq("id",+id);
+  if(error){b.disabled=false;return toast(socialFail(error))}
+  SOC.roomQueue=SOC.roomQueue.filter(q=>q.id!==+id);rmSyncLocalQueue();paintRoomLists();paintRoomNow();rmPing();return}
+ if(act==="qtop"){
+  const min=Math.min(...SOC.roomQueue.map(q=>+q.position||0));
+  b.disabled=true;
+  await sb.from("room_queue").update({position:min-1}).eq("id",+id);
+  await refreshRoomState();paintRoomLists();rmPing();return}
+ if(act==="qnow"){
+  const row=SOC.roomQueue.find(q=>q.id===+id);if(!row)return;
+  RMX.host=true;rmConsumeRow(row);
+  setTrack(roomTrackOf(row.track),true,false,undefined,true);
+  paintRoomLists();return}
+ if(act==="ok"||act==="no"){
+  b.disabled=true;
+  const {error}=await sb.rpc(act==="ok"?"approve_request":"decline_request",{req:+id});
+  if(error)toast(socialFail(error));
+  await refreshRoomState();paintRoomLists();paintRoomNow();rmPing();return}
+ if(act==="add"){
+  const tr=RMX.results?.[+id];if(!tr)return;
+  b.disabled=true;
+  if(rmDj()){
+   const pos=Math.max(0,...SOC.roomQueue.map(q=>+q.position||0))+1;
+   const {error}=await sb.from("room_queue").insert({room_id:room.id,track:tr,added_by:sbUser.id,position:pos});
+   if(error){b.disabled=false;return toast(socialFail(error))}
+   toast(t("rm.added"));
+   await refreshRoomState();
+   /* Nothing on air yet: start the room on it instead of making the DJ
+      find a play button. */
+   if(!SOC.room?.track&&!S.playing){RMX.host=true;roomNext(true)}
+  }else{
+   const {error}=await sb.from("room_requests").insert({room_id:room.id,user_id:sbUser.id,track:tr});
+   if(error){b.disabled=false;return toast(socialFail(error))}
+   toast(t("room.req.sent"));
+   await refreshRoomState();
+  }
+  b.innerHTML=msym("check",18);
+  paintRoomLists();paintRoomNow();rmPing();return}}
+async function rmSearch(v){
+ RMX.searchQ=v;
+ const host=document.getElementById("reqres");if(!host)return;
+ host.innerHTML=`<p class="rmx-ph is-busy">${msym("progress_activity",16)}<span>${esc(t("rm.searching"))}</span></p>`;
+ const res=await searchRemote(v).catch(()=>[]);
+ if(RMX.searchQ!==v||!document.getElementById("reqres"))return;
+ const list=(res||[]).filter(x=>x&&x.mode!=="empty").slice(0,8).map(stripTrack).filter(Boolean);
+ RMX.results=list;
+ const dj=rmDj();
+ host.innerHTML=list.map((x,i)=>`<div class="rmx-row" style="--i:${i}">
+   <span class="art" ${coverStyle(x.art)}></span>
+   <span class="meta"><b>${esc(x.t||"")}</b><span>${esc(x.a||"")}</span></span>
+   <span class="acts on"><button data-rm="add" data-id="${i}" title="${esc(t(dj?"rm.add":"rm.ask"))}" aria-label="${esc(t(dj?"rm.add":"rm.ask"))}">${msym(dj?"playlist_add":"send",18)}</button></span></div>`).join("")
+  ||`<p class="rmx-ph">${esc(t("rm.search.none"))}</p>`}
+function paintRoomShell(){
+ const box=document.getElementById("roombody");if(!box)return;
+ const r=SOC.room;if(!r)return renderRooms();
+ rmView(true);
+ let cur=box.querySelector(".rmx-room");
+ if(!cur||cur.dataset.id!==r.id){
+  box.innerHTML=rmRoomHtml(r);
+  rmWireRoom(box,r);
+  cur=box.querySelector(".rmx-room");
+ }
+ /* Role-dependent bits are toggled in place: rebuilding the screen on a DJ
+    promotion would also wipe a half-typed chat message. */
+ const dj=rmDj(),role=String(SOC.roomRole||"");
+ if(cur.dataset.role!==role){
+  cur.dataset.role=role;
+  const del=cur.querySelector("#delroom");if(del)del.hidden=SOC.roomRole!=="owner";
+  const q=cur.querySelector("#reqq");
+  if(q){const ph=t(dj?"room.addq.ph":"rm.req.ph");q.placeholder=ph;q.setAttribute("aria-label",ph)}
+  if(RMX.searchQ)rmSearch(RMX.searchQ);
+ }
+ if(typeof msRoomMount==="function")msRoomMount(document.getElementById("roomchat"),r);
+ paintRoomMembers();paintRoomNow();paintRoomLists()}
+function paintRoomMembers(){
+ const el=document.getElementById("rmx-mem");if(!el)return;
+ const me=sbUser?.id,owner=SOC.roomRole==="owner";
+ const mem=SOC.roomMembers||[];
+ const sub=document.getElementById("rmx-sub");
+ if(sub){const s=t("rm.n").replace("{n}",mem.length)+(SOC.room?.is_private?" · "+t("room.privyes"):"");if(sub.textContent!==s)sub.textContent=s}
+ const by=SOC.room?.playing&&rmFresh(SOC.room)?SOC.room.track?.by:null;
+ const html=mem.map((m,i)=>{
+  const name=rmName(m,me);
+  const role=m.role==="owner"?`<span class="role">${esc(t("rm.host"))}</span>`:m.role==="dj"?`<span class="role">DJ</span>`:"";
+  const tools=owner&&m.user_id!==me?`<span class="tools"><button data-rm="dj" data-id="${esc(m.user_id)}" data-v="${m.role==="dj"?"listener":"dj"}" title="${esc(t(m.role==="dj"?"rm.undj":"rm.makedj"))}" aria-label="${esc(t(m.role==="dj"?"rm.undj":"rm.makedj"))}">${msym(m.role==="dj"?"headset_off":"headphones",14)}</button><button data-rm="kick" data-id="${esc(m.user_id)}" title="${esc(t("room.kick"))}" aria-label="${esc(t("room.kick"))}">${msym("close",14)}</button></span>`:"";
+  return `<span class="rmx-mchip" data-uid="${esc(m.user_id)}"${m.user_id===by?` data-live="1" title="${esc(t("rm.live"))}"`:""} style="--i:${Math.min(i,12)}">${avat(m.profile||{username:name,id:m.user_id},26)}<i>${esc(name.slice(0,18))}${m.user_id===me?` <small>(${esc(t("ms.you.n"))})</small>`:""}</i>${role}${tools}</span>`}).join("");
+ if(el.dataset.sig!==html){el.dataset.sig=html;el.innerHTML=html}}
+function rmStageState(r){
+ if(!r?.track)return "idle";
+ if(rmClock())return "host";
+ if(!rmDj()&&!RMX.follow)return "away";
+ const dur=+r.track.d||0;
+ if(r.playing&&dur&&rmWant(r)>dur+4)return "wait";
+ if(!r.playing)return "paused";
+ if(!rmIs(S.current,r.track)||!S.playing||A.audio?.paused)return "load";
+ return Math.abs((S.pos||0)-rmWant(r))<=1.6?"ok":"load"}
+function paintRoomNow(hint){
+ const el=document.getElementById("roomnow");if(!el)return;
+ const r=SOC.room;if(!r)return;
+ const dj=rmDj(),tr=r.track,clock=rmClock();
+ const st=hint==="load"||hint==="wait"?hint:rmStageState(r);
+ const on=!!(tr&&r.playing&&rmFresh(r));
+ const mineOn=!!S.playing&&(clock||rmIs(S.current,tr));
+ const sig=[rmKey(tr),st,on,mineOn,dj,clock,RMX.follow,LANG].join("|");
+ if(el.dataset.sig===sig){rmProg(true);return}
+ el.dataset.sig=sig;
+ el.dataset.on=String(on);
+ el.dataset.st=st;
+ const chip={ok:["check_circle","rm.sync.ok"],load:["progress_activity","rm.sync.load"],wait:["hourglass_top","rm.sync.wait"],
+  paused:["pause_circle","room.paused"],away:["headphones","rm.away"],host:["podcasts","rm.youhost"],idle:["music_off","room.silent"]}[st];
+ const hostCtl=dj?`<button class="primary rmx-play" data-rm="play" title="${esc(t(mineOn?"np.pause":"np.play"))}" aria-label="${esc(t(mineOn?"np.pause":"np.play"))}">${msym(mineOn?"pause":"play_arrow",24)}</button>
+   <button class="ic rmx-skip" data-rm="skip" title="${esc(t("rm.skip"))}" aria-label="${esc(t("rm.skip"))}">${msym("skip_next",22)}</button>
+   ${!clock&&tr?`<button class="btn sm" data-rm="lead">${msym("podcasts",16)}<span>${esc(t("rm.lead"))}</span></button>`:""}`:"";
+ const listenCtl=!dj&&tr&&st==="away"?`<button class="primary sm rmx-follow" data-rm="follow">${msym("sensors",16)}<span>${esc(t("rm.follow"))}</span></button>`:"";
+ el.innerHTML=tr?`
+  <span class="rmx-stage-bg" ${coverStyle(tr.art)}></span>
+  <span class="rmx-stage-art" ${coverStyle(tr.art)}></span>
+  <div class="rmx-stage-meta">
+   <span class="rmx-onair" data-on="${on}"><i></i>${esc(t(on?"rm.live":r.playing?"rm.sync.wait":"room.paused"))}</span>
+   <b class="rmx-stage-t">${esc(tr.t||"")}</b><span class="rmx-stage-a">${esc(tr.a||"")}</span>
+   <div class="rmx-prog"><span id="rmx-pos">0:00</span><span class="rmx-bar"><i id="rmx-fill"></i></span><span>${fmt(+tr.d||0)}</span></div>
+   <div class="rmx-ctl">${hostCtl}${listenCtl}<span class="rmx-sync" data-st="${st}">${msym(chip[0],15)}<span>${esc(t(chip[1]))}</span></span></div>
+  </div>`
+  :`<span class="rmx-stage-art is-empty">${msym("podcasts",38)}</span>
+  <div class="rmx-stage-meta">
+   <span class="rmx-onair"><i></i>${esc(t("room.silent"))}</span>
+   <b class="rmx-stage-t">${esc(t(dj?"rm.dj.t":"rm.host.idle"))}</b><span class="rmx-stage-a">${esc(t(dj?"rm.dj.s":"rm.idle.s"))}</span>
+   ${dj?`<div class="rmx-ctl">${hostCtl}</div>`:""}
+  </div>`;
+ rmProg(true)}
+/* The stage clock: the room's position, ticking locally between polls.
+   quiet: called from paintRoomNow itself, so no repaint from here. */
+function rmProg(quiet){
+ const r=SOC.room;if(!r?.track||S.view!=="rooms"||document.hidden)return;
+ const pe=document.getElementById("rmx-pos"),fe=document.getElementById("rmx-fill");if(!pe||!fe)return;
+ const dur=+r.track.d||0;
+ const p=rmClock()?(S.pos||0):Math.min(rmWant(r),dur||Infinity);
+ const txt=fmt(p);if(pe.textContent!==txt)pe.textContent=txt;
+ fe.style.transform=`scaleX(${dur?Math.max(0,Math.min(1,p/dur)).toFixed(4):0})`;
+ /* the chip follows the local player between polls ("catching up" → "in sync") */
+ const el=document.getElementById("roomnow");
+ if(!quiet&&el&&el.dataset.st!=="wait"&&el.dataset.st!==rmStageState(r))paintRoomNow()}
+function rmRow(x,i,acts,extra=""){
+ return `<div class="rmx-row${extra}" style="--i:${Math.min(i,12)}">
+  <i class="n">${String(i+1).padStart(2,"0")}</i>
+  <span class="art" ${coverStyle(x?.art)}></span>
+  <span class="meta"><b>${esc(x?.t||"")}</b><span>${esc(x?.a||"")}</span></span>
+  ${acts?`<span class="acts">${acts}</span>`:""}</div>`}
+function paintRoomLists(){
+ const ql=document.getElementById("roomql");if(!ql)return;
+ const dj=rmDj(),me=sbUser?.id;
+ const queue_=SOC.roomQueue||[];
+ const mine=!dj?(SOC.requests||[]).filter(q=>q.user_id===me):[];
+ const qn=document.getElementById("rmx-qn");if(qn){const s=queue_.length+mine.length?String(queue_.length+mine.length):"";if(qn.textContent!==s)qn.textContent=s}
+ const qhtml=queue_.map((q,i)=>rmRow(q.track,i,dj?`${i?`<button data-rm="qtop" data-id="${q.id}" title="${esc(t("rm.top"))}" aria-label="${esc(t("rm.top"))}">${msym("vertical_align_top",17)}</button>`:""}<button data-rm="qnow" data-id="${q.id}" title="${esc(t("rm.playnow"))}" aria-label="${esc(t("rm.playnow"))}">${msym("play_arrow",17)}</button><button data-rm="qdel" data-id="${q.id}" title="${esc(t("rm.qdel"))}" aria-label="${esc(t("rm.qdel"))}">${msym("close",17)}</button>`:"")).join("")
+  +mine.map((q,i)=>rmRow(q.track,queue_.length+i,`<span class="rmx-tag">${esc(t("rm.req.mine"))}</span>`," is-pending")).join("");
+ const html=qhtml||`<p class="rmx-ph">${msym("queue_music",16)}<span>${esc(t(dj?"rm.q.empty.dj":"rm.q.empty"))}</span></p>`;
+ if(ql.dataset.sig!==html){ql.dataset.sig=html;ql.innerHTML=html}
+ const wrap=document.getElementById("rmx-reqwrap");if(wrap&&wrap.hidden!==!dj)wrap.hidden=!dj;
+ const rq=document.getElementById("roomreqs");
+ if(rq&&dj){
+  const reqs=SOC.requests||[];
+  const rn=document.getElementById("rmx-rn");if(rn){const s=reqs.length?String(reqs.length):"";if(rn.textContent!==s)rn.textContent=s}
+  const rhtml=reqs.map((q,i)=>{
+   const who=(SOC.roomMembers||[]).find(x=>x.user_id===q.user_id);
+   return `<div class="rmx-row rmx-req" style="--i:${Math.min(i,12)}">${avat(who?.profile||{id:q.user_id,username:rmName(who,me)},30)}
+    <span class="meta"><b>${esc(q.track?.t||"")} — ${esc(q.track?.a||"")}</b><span>${esc(rmName(who,me))}</span></span>
+    <span class="acts on"><button data-rm="ok" data-id="${q.id}" title="${esc(t("rm.req.ok"))}" aria-label="${esc(t("rm.req.ok"))}">${msym("check",18)}</button><button data-rm="no" data-id="${q.id}" title="${esc(t("rm.req.no"))}" aria-label="${esc(t("rm.req.no"))}">${msym("close",18)}</button></span></div>`}).join("")
+   ||`<p class="rmx-ph">${esc(t("room.noreqs"))}</p>`;
+  if(rq.dataset.sig!==rhtml){rq.dataset.sig=rhtml;rq.innerHTML=rhtml}}}
 
 /* ── leaderboard ────────────────────────────────────────── */
 async function renderTop(){
