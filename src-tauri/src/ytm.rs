@@ -1684,6 +1684,189 @@ fn pick_format<'a>(audio: &[&'a Value], hq: bool, fmt: &str) -> Option<&'a Value
     }
 }
 
+// ─────────────── clips: the full player's video backdrop ───────────────
+
+/// The "Videos" filter of a YouTube Music search (`search` uses "Songs").
+const SEARCH_VIDEOS: &str = "EgWKAQIQAWoKEAoQAxAEEAkQBQ==";
+
+/// The official video of a song, behind the full player in "Clips" mode.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+pub struct Clip {
+    pub id: String,
+    pub t: String,
+    pub a: String,
+    pub d: u32,
+}
+
+/// Uploads that are not a clip even from the artist's own channel: a still
+/// picture with the song under it (the album backdrop already is one), or
+/// something about the song rather than its video. Folded, like `fold`.
+const NOT_A_CLIP: &[&str] = &[
+    "audio", "lyric", "lyrics", "visualizer", "visualiser", "tekst", "teaser", "trailer", "snippet",
+    "preview", "reaction", "interview", "practice", "making", "behind", "shorts", "loop",
+];
+
+/// Is `got` (a "Videos" search row of kind `kind`) the official video of
+/// this song? Official only (`MUSIC_VIDEO_TYPE_OMV`: the artist's channel,
+/// never a fan upload), the same song by the same artist under the shared
+/// rules of `matching::score` — which also turns away live takes, covers and
+/// remixes — and not a still or a teaser. Videos run longer than the song
+/// (an intro, a story), so the length only has to be in the same league.
+fn clip_ok(want_t: &str, want_a: &str, want_d: u32, got: &Track, kind: &str) -> bool {
+    if kind != "MUSIC_VIDEO_TYPE_OMV" {
+        return false;
+    }
+    let wanted = crate::matching::fold(want_t);
+    let wanted: Vec<&str> = wanted.split_whitespace().collect();
+    let title = crate::matching::fold(&got.t);
+    if title.split_whitespace().any(|w| NOT_A_CLIP.contains(&w) && !wanted.contains(&w)) {
+        return false;
+    }
+    if want_d > 30 && got.d > 0 && (got.d * 4 < want_d * 3 || got.d > want_d * 2 + 90) {
+        return false;
+    }
+    crate::matching::score(want_t, want_a, 0, &got.t, &got.a, 0).is_some()
+}
+
+/// Answers of this session, hits and misses alike: a track that comes round
+/// again costs no search.
+static CLIPS: std::sync::Mutex<Option<std::collections::HashMap<String, Option<Clip>>>> = std::sync::Mutex::new(None);
+
+pub async fn clip_for(t: &str, a: &str, d: u32) -> Result<Option<Clip>, String> {
+    if t.trim().is_empty() {
+        return Ok(None);
+    }
+    let key = format!("{}\u{1}{}", crate::matching::fold(t), crate::matching::fold(a));
+    if let Some(hit) = CLIPS.lock().ok().and_then(|g| g.as_ref().and_then(|m| m.get(&key).cloned())) {
+        return Ok(hit);
+    }
+    let q = if a.trim().is_empty() || a.trim() == "—" { t.to_string() } else { format!("{a} {t}") };
+    let body = json!({ "context": web_ctx_lang("en"), "query": q, "params": SEARCH_VIDEOS });
+    // A failed search is not a "no": only answers are remembered.
+    let resp = post_web("search", body).await?;
+    let mut items = Vec::new();
+    collect(&resp, &mut items);
+    let hit = items.iter().take(12).find_map(|item| {
+        let tr = parse_item(item)?;
+        let kind = find_key(item, "musicVideoType").and_then(|v| v.as_str()).unwrap_or("");
+        clip_ok(t, a, d, &tr, kind).then_some(Clip { id: tr.id, t: tr.t, a: tr.a, d: tr.d })
+    });
+    if let Ok(mut g) = CLIPS.lock() {
+        let m = g.get_or_insert_with(std::collections::HashMap::new);
+        if m.len() > 512 {
+            m.clear();
+        }
+        m.insert(key, hit.clone());
+    }
+    Ok(hit)
+}
+
+/// The official video of a song for the full player, or `None` — the album
+/// backdrop stays then.
+#[tauri::command]
+pub async fn ytm_clip(t: String, a: String, d: Option<u32>) -> Result<Option<Clip>, String> {
+    clip_for(&t, &a, d.unwrap_or(0)).await
+}
+
+/// Picture-only adaptive formats with a plain `url`.
+fn video_formats(resp: &Value) -> Vec<&Value> {
+    resp.pointer("/streamingData/adaptiveFormats")
+        .and_then(|f| f.as_array())
+        .map(|a| {
+            a.iter()
+                .filter(|f| {
+                    f.get("mimeType").and_then(|m| m.as_str()).is_some_and(|m| m.starts_with("video/"))
+                        && f.get("url").and_then(|u| u.as_str()).is_some()
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// "avc" (H.264), "vp9", "av1" or "" for anything else.
+fn vcodec(f: &Value) -> &'static str {
+    let m = f.get("mimeType").and_then(|m| m.as_str()).unwrap_or("");
+    if m.contains("avc1") {
+        "avc"
+    } else if m.contains("vp9") || m.contains("vp09") {
+        "vp9"
+    } else if m.contains("av01") {
+        "av1"
+    } else {
+        ""
+    }
+}
+
+/// One picture for a muted backdrop, as cheap to decode as it can be:
+/// `fmt` is what the webview decodes ("mp4" = H.264, "webm" = VP9, "best" =
+/// either); never AV1 (a CPU core in most webviews) and never HDR. Within
+/// `max_h` lines: 30 fps before 60 (half the decoding — a 60 fps source
+/// usually has its 30 fps copies only below 720p, and those win), then the
+/// tallest, then H.264 (hardware decoding nearly everywhere), then the
+/// smaller file. Nothing that low: the smallest picture there is.
+pub fn pick_video<'a>(fs: &[&'a Value], max_h: u64, fmt: &str) -> Option<&'a Value> {
+    let ok_codec = |c: &str| match fmt {
+        "mp4" => c == "avc",
+        "webm" => c == "vp9",
+        _ => c == "avc" || c == "vp9",
+    };
+    let h = |f: &Value| f.get("height").and_then(|v| v.as_u64()).unwrap_or(0);
+    let fps = |f: &Value| f.get("fps").and_then(|v| v.as_u64()).unwrap_or(30);
+    let hdr = |f: &Value| {
+        f.get("qualityLabel").and_then(|q| q.as_str()).is_some_and(|q| q.contains("HDR"))
+            || f.pointer("/colorInfo/transferCharacteristics")
+                .and_then(|v| v.as_str())
+                .is_some_and(|t| t.contains("2084") || t.contains("HLG"))
+    };
+    let pool: Vec<&Value> = fs.iter().copied().filter(|f| ok_codec(vcodec(f)) && !hdr(f) && h(f) > 0).collect();
+    let under: Vec<&Value> = pool.iter().copied().filter(|f| h(f) <= max_h).collect();
+    if under.is_empty() {
+        return pool.into_iter().min_by_key(|f| (h(f), fps(f), bitrate(f)));
+    }
+    under
+        .into_iter()
+        .max_by_key(|f| (fps(f) <= 30, h(f), vcodec(f) == "avc", std::cmp::Reverse(bitrate(f))))
+}
+
+/// The clip's picture: a video-only stream of `video_id` no taller than
+/// `max_h`, from the first client whose URL serves the whole file — the
+/// walk `stream` does for the sound. Client health is left alone: a clip is
+/// a nicety, and its refusals must not reorder the clients songs play from.
+pub async fn video_stream(video_id: &str, max_h: u64, fmt: &str) -> Result<StreamPick, String> {
+    let mut refusals: Vec<String> = Vec::new();
+    let mut last_resort: Option<StreamPick> = None;
+    for (client, ua) in order() {
+        let resp = match ask_client(video_id, client, ua).await {
+            Ok(r) => r,
+            Err(why) => {
+                refusals.push(format!("{client}: {why}"));
+                continue;
+            }
+        };
+        let pics = video_formats(&resp);
+        let Some(f) = pick_video(&pics, max_h, fmt) else {
+            refusals.push(format!("{client}: no picture this webview decodes"));
+            continue;
+        };
+        let Some(pick) = pick_of(f, client) else { continue };
+        match probe_deep(&pick.url, media_ua_for(client), clen_of(&pick.url, Some(f))).await.0 {
+            Probe::Denied(_) => {
+                if last_resort.is_none() {
+                    last_resort = Some(pick);
+                }
+            }
+            Probe::Ok | Probe::Unknown => return Ok(pick),
+        }
+    }
+    last_resort.ok_or_else(|| {
+        if refusals.is_empty() {
+            "YouTube will not play this video: no client answered".to_string()
+        } else {
+            format!("YouTube will not play this video: {}", refusals.join("; "))
+        }
+    })
+}
+
 /// Browse id for a video's lyrics tab, if it has one.
 ///
 /// `next` returns the tab strip for the watch page; the lyrics tab carries a
@@ -1760,6 +1943,7 @@ pub async fn lyrics_text(browse_id: &str) -> Result<Option<String>, String> {
 #[cfg(test)]
 mod tests {
     use super::{clen_of, continuation_token, deep_offset, health_set, media_ua_for, order, pick_format, url_param, PLAYER_CLIENTS};
+    use crate::api::Track;
     use serde_json::json;
 
     /// The failover reads the itag and the length straight off the signed
@@ -1890,6 +2074,86 @@ mod tests {
         );
         // No audio formats at all is still an error, not a silent success.
         assert!(pick_format(&[], true, "best").is_none());
+    }
+
+    fn row(t: &str, a: &str, d: u32) -> Track {
+        Track { id: "v".into(), s: "ytm".into(), t: t.into(), a: a.into(), al: String::new(), d, art: None, mode: "local".into() }
+    }
+
+    /// Only the artist's own official video of this very song is a clip.
+    #[test]
+    fn clip_is_the_official_video_of_the_same_song() {
+        let omv = "MUSIC_VIDEO_TYPE_OMV";
+        let ok = |t: &str, a: &str, d: u32, kind: &str| super::clip_ok("Blinding Lights", "The Weeknd", 200, &row(t, a, d), kind);
+        assert!(ok("Blinding Lights (Official Video)", "The Weeknd", 263, omv));
+        assert!(ok("The Weeknd - Blinding Lights (Official Music Video)", "The Weeknd", 263, omv));
+        // A still picture, someone else's take, a fan upload, a remix, a teaser.
+        assert!(!ok("Blinding Lights (Official Audio)", "The Weeknd", 204, omv));
+        assert!(!ok("Blinding Lights (Official Lyric Video)", "The Weeknd", 204, omv));
+        assert!(!ok("Blinding Lights", "Teddy Swims", 216, omv));
+        assert!(!ok("Blinding Lights (Official Video)", "The Weeknd", 263, "MUSIC_VIDEO_TYPE_UGC"));
+        assert!(!ok("Blinding Lights [Remix] (Official Video)", "The Weeknd ft. ROSALÍA", 215, omv));
+        assert!(!ok("Blinding Lights (Teaser)", "The Weeknd", 30, omv));
+        // A ten-minute short film around the song is not its clip.
+        assert!(!ok("Blinding Lights (Official Video)", "The Weeknd", 900, omv));
+        // Cyrillic and Latin spellings of one artist meet in `fold`.
+        assert!(super::clip_ok("Звезда по имени Солнце", "Кино", 225, &row("Звезда по имени Солнце", "Kino", 178), omv));
+        // A word that names the song is not held against its video.
+        assert!(super::clip_ok("Making Love", "Blue Lagoon", 200, &row("Making Love (Official Video)", "Blue Lagoon", 230), omv));
+    }
+
+    fn pic(itag: u64, mime: &str, h: u64, fps: u64, br: u64) -> serde_json::Value {
+        json!({"itag":itag,"mimeType":mime,"height":h,"fps":fps,"bitrate":br,"url":format!("u{itag}")})
+    }
+
+    fn pick_v(rows: &[serde_json::Value], max_h: u64, fmt: &str) -> u64 {
+        let refs: Vec<&serde_json::Value> = rows.iter().collect();
+        super::pick_video(&refs, max_h, fmt).and_then(|f| f.get("itag")).and_then(|i| i.as_u64()).unwrap_or(0)
+    }
+
+    /// The backdrop takes the cheapest picture that still fills the screen.
+    #[test]
+    fn clip_picture_is_capped_cheap_and_decodable() {
+        let avc = "video/mp4; codecs=\"avc1.4d401f\"";
+        let vp9 = "video/webm; codecs=\"vp9\"";
+        let av1 = "video/mp4; codecs=\"av01.0.05M.08\"";
+        let rows = vec![
+            pic(137, avc, 1080, 30, 4_000_000),
+            pic(136, avc, 720, 30, 1_500_000),
+            pic(135, avc, 480, 30, 700_000),
+            pic(247, vp9, 720, 30, 1_200_000),
+            pic(244, vp9, 480, 30, 500_000),
+            pic(398, av1, 720, 30, 900_000),
+        ];
+        assert_eq!(pick_v(&rows, 720, "best"), 136, "tallest under the cap, H.264 first");
+        assert_eq!(pick_v(&rows, 480, "best"), 135);
+        assert_eq!(pick_v(&rows, 720, "webm"), 247, "a webview without H.264 gets VP9");
+        assert_eq!(pick_v(&rows, 240, "best"), 244, "nothing that low: the smallest picture");
+        // 60 fps above, 30 fps below: half the decoding wins over the lines.
+        let sixty = vec![pic(298, avc, 720, 60, 2_500_000), pic(135, avc, 480, 30, 700_000)];
+        assert_eq!(pick_v(&sixty, 720, "best"), 135);
+        // AV1 only, or HDR only: no clip rather than a CPU core.
+        assert_eq!(pick_v(&[pic(398, av1, 720, 30, 900_000)], 720, "best"), 0);
+        let hdr = json!({"itag":337,"mimeType":vp9,"height":720,"fps":30,"bitrate":1,"url":"u","qualityLabel":"720p HDR"});
+        assert_eq!(pick_v(&[hdr], 720, "best"), 0);
+    }
+
+    /// `cargo test --lib live_clip -- --ignored --nocapture`: real searches.
+    #[tokio::test]
+    #[ignore]
+    async fn live_clip_test() {
+        for (t, a, d) in [
+            ("Blinding Lights", "The Weeknd", 200),
+            ("Группа крови", "Кино", 286),
+            ("Звезда по имени Солнце", "Кино", 225),
+            ("Numb", "Linkin Park", 185),
+            ("Bad Guy", "Billie Eilish", 194),
+            ("Никто", "Земфира", 236),
+            ("Smells Like Teen Spirit", "Nirvana", 301),
+            ("Shape of You", "Ed Sheeran", 233),
+        ] {
+            println!("{a} — {t}: {:?}", super::clip_for(t, a, d).await);
+        }
     }
 
     #[tokio::test]

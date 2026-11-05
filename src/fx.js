@@ -217,7 +217,10 @@ function flowActive(){
  if(document.hidden)return false;
  if(FLOW_HOST)return FLOW_HOST.isConnected&&document.documentElement.dataset.mini==="on";
  const fp=document.getElementById("fp");
- return !!fp&&fp.dataset.open==="true"&&(fp.dataset.bgMode||"dynamic")==="dynamic"}
+ if(!fp||fp.dataset.open!=="true")return false;
+ const m=fp.dataset.bgMode||"dynamic";
+ /* "clips" keeps the album flow underneath until its video covers it */
+ return m==="dynamic"||(m==="clips"&&fp.dataset.clip!=="on")}
 /* Drawn at up to 40 fps: the field moves a fraction of a pixel per frame, so
    more frames would not look any smoother, while every one of them makes the
    compositor re-blur a full-window layer. Time-based, so the speed holds. */

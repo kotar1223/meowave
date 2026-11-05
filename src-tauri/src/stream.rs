@@ -1461,7 +1461,7 @@ fn handle(
     // client, and that is a genuinely new chance rather than a repeat — and,
     // when every client is refused at the media host, one more from another
     // service (`ytm_alternative`).
-    let mut max_attempts: u8 = if service == "ytm" { 3 } else { 2 };
+    let mut max_attempts: u8 = if service == "ytm" || service == "ytv" { 3 } else { 2 };
     let mut alt_tried = false;
     let mut attempt = 0u8;
     let (status, ctype, crange, clen, resp, secret, win) = loop {
@@ -1672,6 +1672,10 @@ fn handle(
         } else {
             normalized = "audio/mpeg".to_string();
         }
+    }
+    // A clip is a picture: whatever the host labelled it, <video> is told so.
+    if service == "ytv" && !normalized.starts_with("video/") {
+        normalized = if upstream.contains("mime=video%2Fwebm") { "video/webm" } else { "video/mp4" }.to_string();
     }
     let ua = is_google.then(|| secret.ua().to_string());
     // The file this answer would come from must be the file the player has
@@ -2091,7 +2095,7 @@ pub(crate) async fn resolve_pub(service: &str, id: &str, hq: u8, fmt: &str) -> R
     // Only Yandex needs credentials; sc/ytm resolve anonymously — and they
     // must not touch the keychain, which on a desktop with no Secret Service
     // errors instead of reporting "no entry" (see api::api_search).
-    let token = if crate::tokens::TOKENLESS_SERVICES.contains(&service) {
+    let token = if crate::tokens::TOKENLESS_SERVICES.contains(&service) || service == "ytv" {
         String::new()
     } else {
         crate::tokens::read_token(service)?.unwrap_or_default()
@@ -2112,6 +2116,21 @@ pub(crate) async fn resolve_pub(service: &str, id: &str, hq: u8, fmt: &str) -> R
         "ytm" => crate::ytm::stream(id, hq > 0, fmt)
             .await
             .map(|p| format!("{}#mwua={}", p.url, p.client)),
+        // The full player's clip: a muted picture, its height from the
+        // quality tier (data saver 360, normal 480, a large window 720).
+        // Behind a bot check every client refuses: no clip, and no more
+        // requests that make the IP's standing worse for the songs.
+        "ytv" if crate::ytm::bot_checked_recently() => Err("YouTube asks this network to sign in; no clip".into()),
+        "ytv" => {
+            let max_h = match hq {
+                0 => 360,
+                2 => 720,
+                _ => 480,
+            };
+            crate::ytm::video_stream(id, max_h, fmt)
+                .await
+                .map(|p| format!("{}#mwua={}", p.url, p.client))
+        }
         "dz" => crate::dz::stream_url(id, hq, fmt).await,
         "am" => crate::am::stream_url(id, hq, fmt).await,
         other => Err(format!("unknown service: {other}")),

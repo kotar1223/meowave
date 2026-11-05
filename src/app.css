@@ -4487,7 +4487,7 @@ html[data-wall] body{background:#000}
 .fpset-card>.fpset-row:has(>.fpset-select){flex-direction:column;align-items:stretch;gap:9px}
 .fpset .fpwall-file{background:rgb(0 0 0/.2)}
 .fpset .fpwall-file .fpx-chip{height:28px;padding:0 11px}
-.fp:not([data-bg-mode="dynamic"]) .fpset-only-dynamic,.fp:not([data-bg-mode="ambient"]) .fpset-only-ambient{display:none}
+.fp:not([data-bg-mode="dynamic"]):not([data-bg-mode="clips"]) .fpset-only-dynamic,.fp:not([data-bg-mode="ambient"]) .fpset-only-ambient,.fp:not([data-bg-mode="clips"]) .fpset-only-clips{display:none}
 
 /* Small menus opened from the player (sleep timer, audio source). */
 .mw-pop{position:fixed;z-index:260;min-width:224px;max-width:min(340px,calc(100vw - 16px));max-height:min(70vh,520px);overflow-y:auto;
@@ -6377,3 +6377,32 @@ html[data-theme="light"] .rmx-sync[data-st="ok"]{color:oklch(48% .13 150)}
 /* the member whose player is the room's clock right now */
 .rmx-mchip[data-live="1"]{border-color:oklch(60% .2 25 / .55)}
 .rmx-mchip[data-live="1"] .avat{box-shadow:0 0 0 2px var(--bg),0 0 0 4px oklch(60% .2 25 / .85)}
+
+/* ─── Full player: clips (beta) ─────────────────────────────────────────────
+   The album flow stays underneath as the fallback; the video fades in over it
+   once frames arrive, and from then on the flow stops drawing (data-clip). */
+.fp[data-bg-mode="clips"] .fp-flow{display:block;filter:blur(18px) saturate(1.1) brightness(calc(.5 + .5 * var(--fp-glow,1)))}
+.fp[data-bg-mode="clips"] .fp-bg,.fp[data-bg-mode="clips"] .fp-volumetric{display:none!important}
+.fp[data-bg-mode="clips"]:not([data-clip="on"]) .fp-grain{display:block}
+.fp[data-bg-mode="clips"] .fp-vignette{box-shadow:none;
+  background:linear-gradient(180deg,rgba(0,0,0,.22) 0%,rgba(0,0,0,.04) 35%,rgba(0,0,0,.12) 65%,rgba(0,0,0,.45) 100%)}
+.fp-clip{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:#000;
+  opacity:0;visibility:hidden;transition:opacity .7s var(--e),visibility 0s linear .7s}
+.fp-clip[data-on="true"]{opacity:1;visibility:visible;transition:opacity .7s var(--e),visibility 0s}
+.fp:not([data-bg-mode="clips"]) .fp-clip{display:none}
+.fp-clip video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+/* The "background brightness" slider dims the picture: 100 % leaves a 30 %
+   shade for the lyrics and controls over a bright frame. */
+.fp-clip::after{content:"";position:absolute;inset:0;background:#000;opacity:calc(.6 - .3 * var(--fp-glow,1))}
+.fpclip-state{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:12px;background:rgb(0 0 0/.2);
+  font-size:.8rem;line-height:1.3;color:rgb(255 255 255/.8);min-width:0}
+.fpclip-state .material-symbols-rounded{font-size:18px;opacity:.7;flex:none}
+.fpclip-state #fp-clip-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpclip-state[data-state="on"] .material-symbols-rounded{opacity:1;color:rgb(var(--accent-rgb,255 255 255))}
+.fpclip-state:is([data-state="look"],[data-state="load"]) #fp-clip-txt{animation:fpclipPulse 1.4s ease-in-out infinite}
+@keyframes fpclipPulse{0%,100%{opacity:.55}50%{opacity:1}}
+.fp #fp-bg-mode-group .seg-btn{padding-inline:4px}
+@media (prefers-reduced-motion:reduce){
+  .fp-clip,.fp-clip[data-on="true"]{transition:none}
+  .fpclip-state #fp-clip-txt{animation:none}
+}

@@ -164,7 +164,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "data.reset":"Сбросить избранное и историю","data.reset.s":"Настройки и токены останутся","data.reset.btn":"Сбросить","data.done":"Избранное и история очищены",
 "about.ver":"Версия","about.s":"Кросс-сервисный плеер с собственным звуковым трактом: эквалайзер, HRTF-орбита и визуализатор работают на всех сервисах, потому что звук идёт через нас, а не через чужой плеер.",
 "import.t":"Импорт плейлиста","import.s":"Вставьте ссылку на плейлист из Spotify, YouTube Music или SoundCloud","import.btn":"Импорт","import.check":"Проверить","import.dest_pl":"Создать новый плейлист","import.dest_fav":"Добавить в Избранное","import.submit":"Импортировать","import.enter_url":"Введите ссылку на плейлист",
-"fp.set.t":"Настройки плеера","fp.set.bg":"Фон плеера","fp.bg.dynamic":"Альбом","fp.bg.ambient":"Эмбиент","fp.bg.black":"OLED","fp.bg.wall":"Обои","fp.wall.t":"Обои: картинка, GIF или видео","fp.wall.pick":"Выбрать","fp.wall.clear":"Убрать","fp.wall.dim":"Затемнение","fp.wall.blur":"Размытие обоев","fp.wall.app":"Обои на фоне всего приложения","fp.wall.app_sub":"Не только в полноэкранном плеере","fp.set.glow":"Подсветка","fp.set.blur":"Размытие фона","fp.set.font":"Шрифт текста","fp.set.fill":"Режим караоке","fp.fill.smooth":"Плавное","fp.fill.line":"Построчно","fp.set.wobble":"Раскачка обложки","fp.set.wobble_sub":"Анимация бита и парения",
+"fp.set.t":"Настройки плеера","fp.set.bg":"Фон плеера","fp.bg.dynamic":"Альбом","fp.bg.ambient":"Эмбиент","fp.bg.black":"OLED","fp.bg.wall":"Обои","fp.bg.clips":"Клипы β","fp.clip.hint":"Бета: официальный клип трека с YouTube играет без звука за плеером. Нет клипа — обычный фон «Альбом».","fp.clip.idle":"Клип подберётся, когда заиграет трек","fp.clip.look":"Ищем клип…","fp.clip.load":"Загружаем клип…","fp.clip.on":"Клип: {t}","fp.clip.none":"У этого трека нет клипа — фон «Альбом»","fp.clip.err":"Клип не загрузился — фон «Альбом»","fp.clip.app":"Клипы работают только в приложении","fp.clip.codec":"Этот WebView не воспроизводит видео H.264/VP9","fp.clip.end":"Клип короче трека — дальше фон «Альбом»","fp.wall.t":"Обои: картинка, GIF или видео","fp.wall.pick":"Выбрать","fp.wall.clear":"Убрать","fp.wall.dim":"Затемнение","fp.wall.blur":"Размытие обоев","fp.wall.app":"Обои на фоне всего приложения","fp.wall.app_sub":"Не только в полноэкранном плеере","fp.set.glow":"Подсветка","fp.set.blur":"Размытие фона","fp.set.font":"Шрифт текста","fp.set.fill":"Режим караоке","fp.fill.smooth":"Плавное","fp.fill.line":"Построчно","fp.set.wobble":"Раскачка обложки","fp.set.wobble_sub":"Анимация бита и парения",
 "chat.share_np":"Поделиться текущим треком","wave.moods":"Настроения и жанры","wave.artists":"Рекомендованные артисты",
 "cancel":"Отмена","close":"Закрыть","fp.fill.off":"Без заливки","np.play":"Воспроизвести","np.pause":"Пауза","np.prev":"Предыдущий","np.next":"Следующий","np.shuffle":"Перемешать","np.repeat":"Повтор","act.fav":"В избранное","nav.quests":"Квесты и Значки","upd.up_to_date":"Установлена последняя версия","pr.auth.guest.desc":"Локальный профиль Meowave","fp.set.zoom":"Масштаб обложки (YouTube Music)","fp.zoom.normal":"Обычный","fp.zoom.large":"Крупный","fp.zoom.full":"На весь экран","fp.set.drift":"Плавный дрейф и парение","fp.set.drift_sub":"Анимация движения обложки на весь экран",
 "pr.err.email":"Введите email","pr.err.pass":"Введите пароль","pr.welcome":"Добро пожаловать!","people.profile":"Профиль",
@@ -298,7 +298,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "data.reset":"Reset favorites and history","data.reset.s":"Settings and tokens are kept","data.reset.btn":"Reset","data.done":"Favorites and history cleared",
 "about.ver":"Version","about.s":"A cross-service player with its own audio path: the EQ, HRTF orbit and visualiser work on every service because the sound flows through us, not somebody else's player.",
 "import.t":"Import Playlist","import.s":"Paste a playlist link from Spotify, YouTube Music or SoundCloud","import.btn":"Import","import.check":"Check","import.dest_pl":"Create new playlist","import.dest_fav":"Add to Favorites","import.submit":"Import","import.enter_url":"Enter a playlist URL",
-"fp.set.t":"Player Settings","fp.set.bg":"Player Background","fp.bg.dynamic":"Album","fp.bg.ambient":"Ambient","fp.bg.black":"OLED","fp.bg.wall":"Wallpaper","fp.wall.t":"Wallpaper: image, GIF or video","fp.wall.pick":"Choose","fp.wall.clear":"Remove","fp.wall.dim":"Dim","fp.wall.blur":"Wallpaper blur","fp.wall.app":"Wallpaper behind the whole app","fp.wall.app_sub":"Not only in the full player","fp.set.glow":"Backlight Glow","fp.set.blur":"Background Blur","fp.set.font":"Lyrics Font","fp.set.fill":"Karaoke Mode","fp.fill.smooth":"Smooth","fp.fill.line":"Per-line","fp.set.wobble":"Cover Wobble & Float","fp.set.wobble_sub":"Beat bounce & floating animation",
+"fp.set.t":"Player Settings","fp.set.bg":"Player Background","fp.bg.dynamic":"Album","fp.bg.ambient":"Ambient","fp.bg.black":"OLED","fp.bg.wall":"Wallpaper","fp.bg.clips":"Clips β","fp.clip.hint":"Beta: the track's official YouTube video plays muted behind the player. No video — the usual Album backdrop.","fp.clip.idle":"A video is picked once a track plays","fp.clip.look":"Looking for the video…","fp.clip.load":"Loading the video…","fp.clip.on":"Video: {t}","fp.clip.none":"No video for this track — Album backdrop","fp.clip.err":"The video did not load — Album backdrop","fp.clip.app":"Videos play in the desktop app only","fp.clip.codec":"This WebView cannot play H.264/VP9 video","fp.clip.end":"The video is shorter than the song — Album backdrop from here","fp.wall.t":"Wallpaper: image, GIF or video","fp.wall.pick":"Choose","fp.wall.clear":"Remove","fp.wall.dim":"Dim","fp.wall.blur":"Wallpaper blur","fp.wall.app":"Wallpaper behind the whole app","fp.wall.app_sub":"Not only in the full player","fp.set.glow":"Backlight Glow","fp.set.blur":"Background Blur","fp.set.font":"Lyrics Font","fp.set.fill":"Karaoke Mode","fp.fill.smooth":"Smooth","fp.fill.line":"Per-line","fp.set.wobble":"Cover Wobble & Float","fp.set.wobble_sub":"Beat bounce & floating animation",
 "chat.share_np":"Share current track","wave.moods":"Moods & Genres","wave.artists":"Recommended Artists",
 "cancel":"Cancel","close":"Close","fp.fill.off":"Off","np.play":"Play","np.pause":"Pause","np.prev":"Previous","np.next":"Next","np.shuffle":"Shuffle","np.repeat":"Repeat","act.fav":"Add to favorites","nav.quests":"Quests & Badges","upd.up_to_date":"You are on the latest version","pr.auth.guest.desc":"Local Meowave profile","fp.set.zoom":"Artwork scale (YouTube Music)","fp.zoom.normal":"Normal","fp.zoom.large":"Large","fp.zoom.full":"Fullscreen","fp.set.drift":"Smooth drift and float","fp.set.drift_sub":"Fullscreen cover floating animation",
 "pr.err.email":"Enter your email","pr.err.pass":"Enter your password","pr.welcome":"Welcome!","people.profile":"Profile",
@@ -767,7 +767,7 @@ function ensureAudioEl(){
  au.addEventListener("canplay",()=>{if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}A.onMeta?.();applyRate()});
  au.addEventListener("timeupdate",()=>A.onTime?.());
  au.addEventListener("seeking",()=>{/* seek initiated */});
- au.addEventListener("seeked",()=>{A.pendingSeek=null;A.seekingUntil=0;if(RMX)roomNoteSeek()});
+ au.addEventListener("seeked",()=>{A.pendingSeek=null;A.seekingUntil=0;if(RMX)roomNoteSeek();if(CLIP.pace)clipPace()});
  au.addEventListener("ended",()=>A.onEnd?.());
  au.addEventListener("error",()=>A.onErr?.());
  /* The media load algorithm resets playbackRate to defaultPlaybackRate, and it
@@ -3552,6 +3552,7 @@ function renderFP(){
  updateSpButtons();
  applyLyVars();
  if(fpOpen&&swapped&&!built)window.MWFX?.cover.land();
+ clipRefresh();
  fpWake()}
 
 window.renderFP=renderFP;window.paint=paint;
@@ -4912,6 +4913,7 @@ function sync(){
   }
   pushMpris();
   if(RMX)roomNoteSync();
+  if(CLIP.pace)clipPace();
 }
 
 /* nav */
@@ -5859,7 +5861,8 @@ function applyFPSettings(){
  const fill=S.lyKaraoke||"karaoke";
  for(const id of ["fplyr","lyr"]){const el=document.getElementById(id);if(el)el.dataset.karaoke=fill}
  if(!X.beat)fpBeatReset();
- if(X.idle===false||!S.playing)fpWake()}
+ if(X.idle===false||!S.playing)fpWake();
+ clipRefresh()}
 /* Settings sheet helpers: segmented groups, ranges with their readouts, switches. */
 function fpSegPaint(id,attr,val){
  document.querySelectorAll(`#${id} .seg-btn`).forEach(b=>{const on=b.dataset[attr]===val;
@@ -5890,7 +5893,8 @@ function syncFPSettingsUI(){
  fpSwPaint("fp-wobble-sw",!!X.beat);
  fpSwPaint("fp-idle-sw",X.idle!==false);
  for(const id of ["fp-font-select","ly-font-select"]){const s=document.getElementById(id);if(s)s.value=S.ly.font||""}
- fpWallUI()}
+ fpWallUI();
+ clipState(CLIP.state)}
 let saveT=0;
 function saveSoon(){clearTimeout(saveT);saveT=setTimeout(save,350)}
 /* The settings sheet slides in from the right edge of the player. */
@@ -5949,6 +5953,152 @@ function initFPSettings(){
   if(e.target.closest("#fp-settings-popover,#fp-settings-btn"))return;
   e.stopPropagation();e.preventDefault();fpSettings(false)},true);
  syncFPSettingsUI()}
+/* ─── Clips (beta): the song's official video behind the full player ───
+   Background mode "clips". Looked up once per track (ytm_clip: the artist's
+   own official video of this very song — never a cover, a live take, a remix
+   or a still "audio"/lyric upload; remembered in localStorage, a miss for
+   three days), streamed muted through the proxy (/stream/ytv/…: picture only,
+   360p with data saver or the lite mode, 480p, 720p on a large window; 30 fps
+   before 60) and paced to the audio clock — the rate nudged for a small
+   drift, a seek for a large one, the seek's own delay learnt and led.
+   No clip, one that fails, or a song that outlasts its video: the album
+   backdrop underneath shows through, exactly as in the "Album" mode.
+   Memory: one <video> for the app's life whose source is dropped as soon as
+   it is off screen (player closed, another mode, window hidden for a
+   minute) — a paused decoder still holds its frames — and the flow canvas
+   under it stops drawing while the clip covers it (fp[data-clip]). */
+const CLIP={el:null,box:null,key:"",id:"",state:"idle",t:"",look:0,pace:0,hideT:0,lag:.25,seekAt:0,mem:null,bad:new Set(),fmt:null};
+function clipFmt(){
+ if(CLIP.fmt===null){
+  const v=document.createElement("video");
+  const can=s=>{try{const r=v.canPlayType(s);return r==="probably"||r==="maybe"}catch(_){return false}};
+  const h264=can('video/mp4; codecs="avc1.4d401e"'),vp9=can('video/webm; codecs="vp9"');
+  CLIP.fmt=h264&&vp9?"best":h264?"mp4":vp9?"webm":""}
+ return CLIP.fmt}
+/* key → [video id or "" for "none", when]; 400 at most, the oldest go first. */
+function clipMemo(key,val){
+ if(!CLIP.mem){try{CLIP.mem=JSON.parse(localStorage.getItem("mw.clips")||"{}")||{}}catch(_){CLIP.mem={}}}
+ const m=CLIP.mem;
+ if(val===undefined){
+  const e=m[key];if(!Array.isArray(e))return undefined;
+  if(Date.now()-(+e[1]||0)>(e[0]?30:3)*864e5){delete m[key];return undefined}
+  return String(e[0]||"")}
+ m[key]=[val,Date.now()];
+ const ks=Object.keys(m);
+ if(ks.length>400){ks.sort((a,b)=>(+m[a][1]||0)-(+m[b][1]||0));for(const k of ks.slice(0,ks.length-300))delete m[k]}
+ try{localStorage.setItem("mw.clips",JSON.stringify(m))}catch(_){}}
+const clipLive=()=>S.fpBgMode==="clips"&&fp.dataset.open==="true"&&!document.hidden;
+const clipPos=()=>(S.current?.mode==="local"&&A.audio&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:(+S.pos||0);
+function clipState(st,title){
+ CLIP.state=st;if(title!==undefined)CLIP.t=title||"";
+ const box=document.getElementById("fp-clip-state");if(box)box.dataset.state=st;
+ const txt=document.getElementById("fp-clip-txt");
+ if(txt)txt.textContent=st==="on"?t("fp.clip.on").replace("{t}",CLIP.t):t("fp.clip."+st)}
+function clipEl(){
+ if(CLIP.el&&CLIP.box&&CLIP.box.isConnected)return CLIP.el;
+ const box=document.createElement("div");box.className="fp-clip";box.setAttribute("aria-hidden","true");
+ const v=document.createElement("video");
+ v.muted=true;v.defaultMuted=true;v.playsInline=true;v.preload="auto";v.disablePictureInPicture=true;
+ for(const a of ["muted","playsinline","disablepictureinpicture","disableremoteplayback"])v.setAttribute(a,"");
+ box.appendChild(v);
+ fp.insertBefore(box,fp.querySelector(":scope>.fp-vignette"));
+ v.addEventListener("loadedmetadata",()=>{clipSeek(true);clipPace()});
+ v.addEventListener("seeked",()=>{
+  if(CLIP.seekAt){CLIP.lag=Math.min(1.5,Math.max(.05,CLIP.lag*.5+(performance.now()-CLIP.seekAt)/2000));CLIP.seekAt=0}
+  clipPace()});
+ v.addEventListener("playing",clipPace);
+ v.addEventListener("error",()=>{
+  if(!v.getAttribute("src"))return;
+  if(CLIP.id)CLIP.bad.add(CLIP.id);
+  clipShow(false);clipRelease();clipState("err")});
+ CLIP.el=v;CLIP.box=box;return v}
+function clipShow(on){
+ on=!!on;
+ if(CLIP.box&&CLIP.box.dataset.on!==String(on))CLIP.box.dataset.on=String(on);
+ if(on&&(CLIP.state==="load"||CLIP.state==="end"))clipState("on");
+ if((fp.dataset.clip==="on")!==on){
+  if(on)fp.dataset.clip="on";else delete fp.dataset.clip;
+  window.MWFX?.flow.kick()}}
+function clipRelease(){
+ clearInterval(CLIP.pace);CLIP.pace=0;
+ const v=CLIP.el;if(!v||!v.getAttribute("src"))return;
+ try{v.pause();v.removeAttribute("src");v.load()}catch(_){}}
+function clipSeek(force){
+ const v=CLIP.el;if(!v||v.readyState<1)return;
+ const dur=v.duration,pos=clipPos();
+ if(!Number.isFinite(dur)||pos>=dur-.3)return;
+ const target=Math.min(dur-.05,pos+(S.playing?CLIP.lag*(+S.rate||1):0));
+ if(force||Math.abs(v.currentTime-target)>.25){CLIP.seekAt=performance.now();try{v.currentTime=target}catch(_){}}}
+/* Every 400 ms while a clip is on screen, and on the player's own events. */
+function clipPace(){
+ const v=CLIP.el;
+ if(!v||!v.getAttribute("src"))return;
+ if(!clipLive()){clipRefresh();return}
+ const dur=v.duration;
+ if(v.readyState<1||!Number.isFinite(dur))return;
+ const pos=clipPos(),rate=Math.max(.25,Math.min(4,+S.rate||1));
+ /* the song outlasts its video: the album until a seek back */
+ if(pos>=dur-.3){clipShow(false);if(!v.paused)v.pause();if(CLIP.state==="on")clipState("end");return}
+ if(v.seeking)return;
+ if(!S.playing){if(!v.paused)v.pause();clipSeek(false);if(v.readyState>=2)clipShow(true);return}
+ /* Someone else's player reports its position a few times a second at
+    best: a coarse clock gets a wide margin and no rate nudging. */
+ const coarse=S.current?.mode!=="local";
+ const drift=v.currentTime-pos;
+ if(Math.abs(drift)>(coarse?2.5:.8)){clipSeek(true);return}
+ const want=(coarse||Math.abs(drift)<.05)?rate:rate*(1-Math.max(-.1,Math.min(.1,drift*.25)));
+ if(Math.abs(v.playbackRate-want)>.001)v.playbackRate=want;
+ if(v.paused){const p=v.play();if(p&&p.catch)p.catch(()=>{})}
+ if(v.readyState>=2)clipShow(true)}
+function clipLoad(id){
+ const v=clipEl();
+ const tier=(S.lite||hqFlag()===0)?0:(innerHeight*(devicePixelRatio||1)>=1000?2:1);
+ const url=`http://127.0.0.1:${STREAM_PORT}/stream/ytv/${encodeURIComponent(id)}?k=${encodeURIComponent(STREAM_KEY)}&hq=${tier}&fmt=${clipFmt()}`;
+ if(v.getAttribute("src")!==url){clipShow(false);v.src=url}
+ clearInterval(CLIP.pace);CLIP.pace=setInterval(clipPace,400)}
+async function clipUse(key,id,title){
+ if(!id||CLIP.bad.has(id)){CLIP.id="";clipState(id?"err":"none");return}
+ if(!STREAM_PORT)await ensureStreamPort();
+ if(CLIP.key!==key||!clipLive())return;
+ if(!STREAM_PORT){clipState("err");return}
+ CLIP.id=id;clipState("load",title);clipLoad(id)}
+async function clipLookup(tr,key){
+ if(CLIP.key!==key||!clipLive())return;
+ let hit=null;
+ try{hit=await inv("ytm_clip",{t:String(tr.t||""),a:String(tr.a||""),d:Math.round(+tr.d||0)})}
+ catch(e){console.warn("clip:",e);if(CLIP.key===key){CLIP.key="";clipState("err")}return}
+ const id=hit&&hit.id?String(hit.id):"";
+ clipMemo(key,id);
+ if(CLIP.key===key)clipUse(key,id,tr.t);}
+/* What should be on screen now — called on opening and closing the player,
+   a mode change, a new track and the window's visibility. Idempotent. */
+function clipRefresh(){
+ clearTimeout(CLIP.hideT);
+ if(!clipLive()){
+  clipShow(false);
+  if(CLIP.el&&!CLIP.el.paused)CLIP.el.pause();
+  clearInterval(CLIP.pace);CLIP.pace=0;
+  if(S.fpBgMode!=="clips"||fp.dataset.open!=="true"){clipRelease();clearTimeout(CLIP.look);CLIP.key=""}
+  else CLIP.hideT=setTimeout(clipRelease,60000);
+  if(S.fpBgMode!=="clips")clipState("idle");
+  return}
+ if(!TAURI){clipState("app");return}
+ if(!clipFmt()){clipState("codec");return}
+ const tr=S.current;
+ if(!tr||tr.mode==="empty"||!tr.t){CLIP.key="";clipShow(false);clipRelease();clipState("idle");return}
+ const key=trackKey(tr);
+ if(CLIP.key!==key){
+  CLIP.key=key;CLIP.id="";clipShow(false);clipRelease();clearTimeout(CLIP.look);
+  const known=clipMemo(key);
+  if(known!==undefined){clipUse(key,known,tr.t);return}
+  clipState("look",tr.t);
+  /* a track skipped within the second costs no search */
+  CLIP.look=setTimeout(()=>clipLookup(tr,key),600);
+  return}
+ if(!CLIP.id||CLIP.bad.has(CLIP.id))return;
+ if(!CLIP.el||!CLIP.el.getAttribute("src"))clipUse(key,CLIP.id,tr.t);
+ else{if(!CLIP.pace)CLIP.pace=setInterval(clipPace,400);clipPace()}}
+document.addEventListener("visibilitychange",()=>{if(S.fpBgMode==="clips"||CLIP.key)clipRefresh()});
 function npArtRect(){const a=document.querySelector("#np .art");const r=a&&!a.hidden?a.getBoundingClientRect():null;return r&&r.width?r:null}
 let fpCloseTimer=0;
 /* While the player covers the window, what lies under it — the app, the
@@ -5978,6 +6128,7 @@ function closeFP(){
  clearTimeout(fpCloseTimer);fpCloseTimer=setTimeout(()=>window.MWFX?.cover.reset(),420);
  fp.dataset.open="false";
  window.MWFX?.wall.render();
+ clipRefresh();
  clearTimeout(fpIdleTimer);
  fpSettings(false,true);
  document.querySelectorAll("#sleep-pop,#src-pop").forEach(p=>p.remove());

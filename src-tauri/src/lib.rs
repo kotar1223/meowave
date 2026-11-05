@@ -574,6 +574,7 @@ pub fn run() {
             accounts::acc_lists,
             accounts::acc_tracks,
             ytm::ytm_selftest,
+            ytm::ytm_clip,
             feeds::feeds_home,
             feeds::feeds_open,
             feeds::search_cards,

@@ -970,5 +970,53 @@ export function buildTier1Suite() {
     for (const sel of [".rmx-card", ".rmx-row", ".rmx-onair i", ".rmx-skel"]) assert.ok(blocks.includes(sel), sel + " not covered by prefers-reduced-motion");
   });
 
+  // ─── Feature 30: Clips (beta) — the official video behind the full player ──
+  const clipSrc = () => { const a = js.indexOf("/* ─── Clips (beta)"), b = js.indexOf("function npArtRect("); assert.ok(a > 0 && b > a, "clips section"); return js.slice(a, b); };
+  suite.test("F30-01: [Happy Path] A fifth background mode, its status row and both languages", () => {
+    assert.match(html, /<button class="seg-btn" data-bg="clips" data-i18n="fp\.bg\.clips">/);
+    assert.ok(domHasElement(html, "#fp-clip-state") && domHasElement(html, "#fp-clip-txt"), "status row");
+    for (const k of ["fp.bg.clips", "fp.clip.hint", "fp.clip.look", "fp.clip.load", "fp.clip.on", "fp.clip.none", "fp.clip.err", "fp.clip.end", "fp.clip.app", "fp.clip.codec", "fp.clip.idle"]) {
+      assert.equal(js.split(`"${k}":`).length - 1, 2, k + " must exist in RU and EN");
+    }
+    assert.match(fnSrc(js, "renderFP"), /clipRefresh\(\)/);
+    assert.match(fnSrc(js, "closeFP"), /clipRefresh\(\)/);
+    assert.match(fnSrc(js, "applyFPSettings"), /clipRefresh\(\)/);
+  });
+  suite.test("F30-02: [Performance] One video element, its source dropped off screen, the flow paused under it", () => {
+    const c = clipSrc();
+    assert.equal((c.match(/createElement\("video"\)/g) || []).length, 2, "one for the codec probe, one for the clip");
+    assert.match(fnSrc(c, "clipRelease"), /removeAttribute\("src"\);v\.load\(\)/);
+    assert.match(fnSrc(c, "clipRefresh"), /setTimeout\(clipRelease,60000\)/);
+    assert.match(c, /tier=\(S\.lite\|\|hqFlag\(\)===0\)\?0/);
+    const fx = readSrc("src/fx.js");
+    assert.match(fx, /m==="clips"&&fp\.dataset\.clip!=="on"/, "flowActive must stop drawing under a clip");
+  });
+  suite.test("F30-03: [Edge Case] A lookup waits out quick skips and every answer is remembered", () => {
+    const c = clipSrc();
+    assert.match(fnSrc(c, "clipRefresh"), /setTimeout\(\(\)=>clipLookup\(tr,key\),600\)/);
+    const store = new Map();
+    const env = { localStorage: { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) } };
+    const memo = new Function("CLIP", "localStorage", fnSrc(c, "clipMemo") + "; return clipMemo;")({ mem: null }, env.localStorage);
+    memo("ytm:a", "vid");
+    memo("ytm:b", "");
+    assert.equal(memo("ytm:a"), "vid");
+    assert.equal(memo("ytm:b"), "", "a miss is an answer too");
+    assert.equal(memo("ytm:c"), undefined);
+    for (let i = 0; i < 420; i++) memo("k" + i, "v");
+    assert.ok(Object.keys(JSON.parse(store.get("mw.clips"))).length <= 400, "capped");
+  });
+  suite.test("F30-04: [Accessibility] Reduced motion stills the clip fade and the status pulse", () => {
+    const blocks = extractMediaBlocks(css, /prefers-reduced-motion:\s*reduce/).map(b => b.content).join("\n");
+    for (const sel of [".fp-clip", ".fpclip-state #fp-clip-txt"]) assert.ok(blocks.includes(sel), sel + " not covered by prefers-reduced-motion");
+  });
+  suite.test("F30-05: [Static] The proxy serves clips as a tokenless, capped picture-only route", () => {
+    const st = readSrc("src-tauri/src/stream.rs"), yt = readSrc("src-tauri/src/ytm.rs"), lib = readSrc("src-tauri/src/lib.rs");
+    assert.match(st, /TOKENLESS_SERVICES\.contains\(&service\) \|\| service == "ytv"/);
+    assert.match(st, /"ytv" if crate::ytm::bot_checked_recently\(\)/);
+    assert.match(st, /0 => 360,\s*2 => 720,\s*_ => 480,/);
+    assert.match(yt, /kind != "MUSIC_VIDEO_TYPE_OMV"/);
+    assert.match(lib, /ytm::ytm_clip,/);
+  });
+
   return suite;
 }
