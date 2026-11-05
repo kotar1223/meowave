@@ -6066,7 +6066,7 @@ html[data-boot-acc] .splash-bar i{background:var(--boot-acc)}
 html[data-boot-acc] .splash-mark{filter:drop-shadow(0 12px 26px color-mix(in oklab,var(--boot-acc) 26%,rgb(0 0 0/.28)))}
 html[data-boot-acc] .splash-word{color:color-mix(in oklab,var(--boot-acc) 30%,var(--text,oklch(95% 0.006 280)))}
 
-/* ─── search2.js: «В тренде», recent searches, artists / playlists / albums
+/* ─── search (src/ts/search.ts): «В тренде», recent searches, artists / playlists / albums
    for a query (round 8). The home sheet's shelves are reused as they are; in
    the search view they line up with the track rows instead of the sheet. ─── */
 #sres .hs-head,#sres .hs-pills{padding-inline:var(--sp-3,12px)}

@@ -22,8 +22,44 @@ interface MwTrack {
   [key: string]: unknown;
 }
 interface MwPlaylist {
+  id?: string;
+  name?: string;
+  /** A picture chosen for the playlist (else the first track's). */
+  cover?: string;
   tracks?: MwTrack[];
   [key: string]: unknown;
+}
+/** A card on a home-sheet shelf or in search (discover.js renders them). */
+interface MwCard {
+  /** track, artist, playlist, album, … */
+  kind?: string;
+  id?: string;
+  /** title */
+  t?: string;
+  track?: MwTrack;
+  [key: string]: unknown;
+}
+interface MwShelf {
+  title?: string;
+  cards?: MwCard[];
+  [key: string]: unknown;
+}
+/** An entry of app.js's SERVICES. */
+interface MwService {
+  id: string;
+  name?: string;
+  /** switched on in Settings → Services */
+  on?: boolean;
+  /** the local library, not a streaming service */
+  local?: boolean;
+  [key: string]: unknown;
+}
+/** An artist of the library, as app.js's artistList() groups them. */
+interface MwArtist {
+  name: string;
+  list: MwTrack[];
+  art: string | null;
+  fav: boolean;
 }
 interface MwHistoryEntry {
   tr?: MwTrack;
@@ -76,6 +112,10 @@ interface Window {
   mwDialog?: (options: MwDialogOptions) => unknown;
   /** custom.js: a particle colour picked in the interface designer. */
   CZ_FIELD?: [number, number, number] | null;
+  /** app.js: the service search is narrowed to ("" — all of them). */
+  searchScope?: () => string;
+  /** discover.js: the home sheet; its shelf renderer registers the cards for its own click handler. */
+  MWDISC?: { shelvesHTML?: (shelves: MwShelf[]) => string; [key: string]: unknown };
 }
 
 /* app.js */
@@ -102,3 +142,17 @@ declare function oklchOf(rgb: readonly number[]): [number, number, number];
 declare function oklchLin(L: number, C: number, H: number): [number, number, number];
 declare function save(): void;
 declare function renderLib(): void;
+declare let LANG: string;
+declare const SERVICES: MwService[];
+/** The playlist open in the library ("" or null — the list of playlists). */
+declare let plOpen: string | null;
+declare const icons: () => unknown;
+declare const empty: (icon: string, head: string, sub?: string) => string;
+declare const cssUrlRaw: (s: unknown) => string;
+declare function row(tr: MwTrack, extra?: string, removable?: boolean, rmPid?: string | null): string;
+declare function xlistSet(key: string, name: string, tracks: MwTrack[]): void;
+declare function listFor(key: string): MwTrack[] | null;
+declare function setTrack(tr: MwTrack, play?: boolean, openFull?: boolean, ctx?: string, keepQueue?: boolean, isBack?: boolean): Promise<unknown>;
+declare function go(view: string): void;
+declare function search(query: string, silent?: boolean): Promise<unknown>;
+declare function artistList(): MwArtist[];

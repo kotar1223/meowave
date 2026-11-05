@@ -2941,7 +2941,7 @@ async function search(v,silent){
  if(!q){
   cnt.textContent="";
   box.classList.remove("searching");
-  /* search2.js: trending charts and recent searches. */
+  /* src/ts/search.ts: trending charts and recent searches. */
   if(window.MWSearch)return MWSearch.idle(box);
   box.innerHTML=empty("search",t("s.idle.t"),t("s.idle.s"));
   icons();

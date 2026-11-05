@@ -7,10 +7,12 @@
    is the order the old scripts had on the page. */
 import "./naudio";
 import { afterLegacy } from "./legacy";
+import { initSearch } from "./search";
 import { initUpdate } from "./update";
 import { initCovers } from "./covers";
 import { initAura } from "./aura";
 
+afterLegacy(initSearch);
 afterLegacy(initUpdate);
 afterLegacy(initCovers);
 afterLegacy(initAura);
