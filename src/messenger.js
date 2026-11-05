@@ -209,7 +209,7 @@ function msClean(p){
  const out={type:["text","image","music_card","listen_party_invite"].includes(p.type)?p.type:"text",text:s(p.text,4000)};
  if(out.type==="image"){
   const im=s(p.image,300000);if(MS_IMG.test(im))out.image=im;
-  /* A full-size file in chat-media (chatplus.js): path, its own key, type, size. */
+  /* A full-size file in chat-media (src/ts/chat.ts): path, its own key, type, size. */
   const m=p.media;
   if(m&&typeof m==="object"&&/^[0-9a-f-]{36}\/[0-9a-f]{32}\.bin$/.test(String(m.p||""))&&/^[A-Za-z0-9+/=]{40,48}$/.test(String(m.k||""))&&/^[A-Za-z0-9+/=]{16}$/.test(String(m.iv||"")))
    out.media={p:String(m.p),k:String(m.k),iv:String(m.iv),m:/^image\/(png|jpeg|webp|gif)$/.test(String(m.m||""))?String(m.m):"image/webp",

@@ -19,6 +19,15 @@ interface MwTrack {
   /** service: ym, ytm, sc, sp, am, local, … */
   s?: string;
   art?: string;
+  /** title, artist */
+  t?: string;
+  a?: string;
+  /** "empty" for the placeholder of an empty player; "local" for a file */
+  mode?: string;
+  fav?: boolean;
+  favAt?: number;
+  /** chat.ts: a hit from the services, not from the library */
+  _remote?: boolean;
   [key: string]: unknown;
 }
 interface MwPlaylist {
@@ -129,7 +138,38 @@ interface MwProfile {
 /** The part of the Supabase client (vendor/supabase.js, app.js sb) the modules use. */
 interface MwSupabase {
   from(table: string): { upsert(row: Record<string, unknown>): PromiseLike<{ error: { message?: string } | null }> };
-  storage: { from(bucket: string): { remove(paths: string[]): Promise<unknown> } };
+  storage: {
+    from(bucket: string): {
+      remove(paths: string[]): Promise<unknown>;
+      upload(path: string, body: Blob, options?: Record<string, unknown>): Promise<{ error: { message?: string } | null }>;
+      download(path: string): Promise<{ data: Blob | null; error: unknown }>;
+    };
+  };
+}
+/** A chat partner as messenger.js caches them (a profiles row). */
+interface MwPeer {
+  id?: string;
+  username?: string;
+  [key: string]: unknown;
+}
+/** A conversation (messenger.js msConvNew). */
+interface MwConv {
+  /** "dm" or "room" */
+  kind: string;
+  peer: string | null;
+  /** the log on screen, while it is open */
+  root: HTMLElement | null;
+  /** the message being answered */
+  reply: { id?: string | number } | null;
+  [key: string]: unknown;
+}
+/** messenger.js's state (MS). */
+interface MwMessenger {
+  threads: { peer: string; [key: string]: unknown }[];
+  friends: string[] | null;
+  peers: Map<string, MwPeer>;
+  conv: MwConv | null;
+  [key: string]: unknown;
 }
 
 interface Window {
@@ -147,7 +187,7 @@ interface Window {
 /* app.js */
 declare const I18N: Record<string, Record<string, string>> & { ru: Record<string, string>; en: Record<string, string> };
 declare const t: (key: string) => string;
-declare const S: { pspeed?: number | string; view?: string; banner?: string; [key: string]: unknown };
+declare const S: { pspeed?: number | string; view?: string; banner?: string; current?: MwTrack | null; [key: string]: unknown };
 declare const AB: { bass: number; mid: number; high: number; lvl: number; beat: number; [key: string]: number };
 declare const BOOT: { done: boolean; reduce: boolean };
 declare const TAURI: TauriCore | undefined;
@@ -190,3 +230,27 @@ declare function renderProfile(savedVals?: Record<string, unknown>): void;
 declare const uploadBanner: (f: File) => Promise<unknown>;
 declare function fillProfileSettings(): void;
 declare function openSettings(tab?: string): void;
+declare const avat: (p: MwPeer | MwProfile | null | undefined, size?: number, status?: unknown) => string;
+declare const svc: (id: string) => MwService | undefined;
+declare let queue: MwTrack[];
+declare const cssEsc: (s: unknown) => string;
+declare const coverStyle: (url?: string | null, l1?: unknown, l2?: unknown) => string;
+declare function queueFav(tr: MwTrack, on: boolean): void;
+declare function autoDownload(tr: MwTrack, playlistName: string | null): unknown;
+declare function renderWaveHint(): void;
+declare function searchRemote(query: string, only?: unknown): Promise<MwTrack[] | null | undefined>;
+declare function stripTrack(tr: MwTrack | null | undefined): MwTrack | null;
+
+/* messenger.js */
+declare const MS: MwMessenger;
+declare const msMe: () => string;
+declare const msName: (p: MwPeer | null | undefined) => string;
+declare function msErr(e: unknown): string;
+declare function msCtx(c: MwConv, mode: string | null, row?: unknown): void;
+declare function msPost(c: MwConv, payload: Record<string, unknown>, replyTo: unknown): Promise<unknown>;
+declare function msSend(c: MwConv, payload: Record<string, unknown>, replyTo: unknown): Promise<{ error?: unknown } | null | undefined>;
+declare function msConvNew(kind: string, id: unknown): MwConv;
+declare function msLoadThreads(): Promise<unknown>;
+declare function msPaintList(showFriends?: boolean): void;
+declare function msLoadFriends(force?: boolean): Promise<unknown>;
+declare function msEnsurePeers(ids: string[]): Promise<unknown>;

@@ -8,12 +8,14 @@
 import "./naudio";
 import { afterLegacy } from "./legacy";
 import { initSearch } from "./search";
+import { initChat } from "./chat";
 import { initProfile } from "./profile";
 import { initUpdate } from "./update";
 import { initCovers } from "./covers";
 import { initAura } from "./aura";
 
 afterLegacy(initSearch);
+afterLegacy(initChat);
 afterLegacy(initProfile);
 afterLegacy(initUpdate);
 afterLegacy(initCovers);

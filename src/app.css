@@ -5964,7 +5964,7 @@ html[data-shell="tauri"],html[data-shell="tauri"] body{overscroll-behavior:none}
 .upd-dlg .upd-log{margin:0;padding:10px 12px;border-radius:12px;background:var(--surf-2);color:var(--text);font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto}
 .ytc-sum .ytc-proxy{display:block;margin-top:2px;color:var(--mute);font-size:.8125rem}
 
-/* ── chats, round 8 (chatplus.js) ─────────────────────────────── */
+/* ── chats, round 8 (src/ts/chat.ts) ──────────────────────────── */
 /* Less air at the sides: the log uses the whole pane; the builder can bring
    the narrow column back (Chats → «Narrow centred column», «Side padding»). */
 .mlog{padding:10px 14px 6px}
@@ -5988,8 +5988,10 @@ img.mimg[data-mstate="loading"]{animation:mImgWait 1.4s ease-in-out infinite}
 img.mimg[data-mstate="ok"]{min-width:0;min-height:0}
 @keyframes mImgWait{50%{opacity:.62}}
 
-/* chat settings */
-.cs{display:grid;gap:14px}
+/* chat settings. One column no wider than the dialog: the volume row (label + range + 70%) used to ask for
+   ~393px in a 350px dialog, so the switches were cut off on the right and the body scrolled sideways. */
+.cs{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media (min-width:561px){.cs-dlg.mdd{width:min(440px,100%)}}
 .cs-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .cs-row>div{display:flex;flex-direction:column;gap:2px;min-width:0}
 .cs-row b{font-weight:600;color:var(--text);font-size:.92rem}

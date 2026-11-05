@@ -903,7 +903,8 @@ export function buildTier1Suite() {
   if (undRes.skip) suite.skip("F27-01: [Static] Every identifier the frontend reads is declared or a platform global", undRes.skip);
   else suite.test("F27-01: [Static] Every identifier the frontend reads is declared or a platform global", () => {
     assert.ok(!undRes.error, "parse failed: " + undRes.error);
-    assert.ok(scripts.length >= 10, "expected the app's scripts in index.html, found " + scripts.length);
+    // boot.js, app.js and ready.js stay classic until step 3; the rest move to src/ts one by one.
+    assert.ok(scripts.length >= 3, "expected the app's scripts in index.html, found " + scripts.length);
     const bad = Object.entries(undRes.unresolved).filter(([n]) => !PLATFORM.has(n) && !tsExports.has(n));
     assert.deepEqual(bad.map(([n, w]) => `${n} (${w.join(", ")})`), [], "names read but never defined — a ReferenceError at runtime");
   });
@@ -926,7 +927,7 @@ export function buildTier1Suite() {
     const classic = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
     assert.equal(classic[classic.length - 1], "ready", "ready.js must be the last classic script — the modules wait for it");
     const main = fs.readFileSync(path.join(tsDir, "main.ts"), "utf-8");
-    for (const m of ["naudio", "search", "profile", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
+    for (const m of ["naudio", "search", "chat", "profile", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
   });
 
   // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────
