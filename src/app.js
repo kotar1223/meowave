@@ -50,7 +50,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "hs.t":"Подборки","hs.load":"Загружаем подборки…","hs.err":"Не удалось загрузить подборки","hs.retry":"Повторить","hs.empty":"Здесь пока пусто","hs.ymtok":"Для подборок Яндекса нужен токен (Настройки → Аккаунты)",
 "dv.back":"Назад","dv.play":"Слушать","dv.shuffle":"Перемешать","dv.save":"В медиатеку","dv.saved":"Сохранено в плейлисты","dv.load":"Открываем…","dv.err":"Не удалось открыть","dv.tracks":"Треки","dv.top":"Популярные треки","dv.albums":"Альбомы","dv.singles":"Синглы и EP","dv.related":"Похожие артисты","dv.about":"Об артисте","dv.monthly":"{n} слушателей в месяц","dv.followers":"{n} подписчиков","dv.cities":"Где слушают","dv.follow":"Отслеживать","dv.following":"Вы отслеживаете","dv.lib":"В вашей медиатеке","dv.radio":"Радио артиста","dv.plays":"{n} прослушиваний","dv.src":"Данные: {s}",
 "fps.align.r":"Справа","set.wall":"Обои приложения","set.wall.s":"Картинка, GIF или видео за всем интерфейсом","wall.none":"Не выбраны","wall.file":"Файл","wall.url":"По ссылке","wall.clear":"Убрать","wall.dim":"Затемнение","wall.blur":"Размытие","wall.url.ask":"Ссылка на картинку, GIF или видео (https://…)","wall.url.bad":"Нужна ссылка https:// на картинку или видео",
-"alt.note":"YouTube не отдал трек — играет из {s}","alt.why":"Почему","alt.t":"Трек играет из другого сервиса","alt.s":"YouTube попросил подтвердить, что вы не бот, и отказался отдавать звук. Так бывает с VPN, общим или корпоративным IP. Чтобы трек не молчал, Meowave нашёл ту же запись в {s} и играет её оттуда.","alt.fix":"Чтобы снова слушать с YouTube: выключите VPN для Meowave (раздельное туннелирование), смените сервер VPN или направьте YouTube через прокси в Настройки → Сеть.","alt.set":"Подменять источник, если YouTube отказывает","alt.set.s":"Тот же трек из Яндекс Музыки или SoundCloud — только точное совпадение","alt.from":"Найдено: {t} — {a}","snk.close":"Закрыть","fail.more":"Подробнее","fail.other":"Другой источник","fail.t":"Почему трек не играет","fail.s":"Всё, что приложение знает о сбое. Если повторяется — скопируйте и пришлите разработчику.","fail.copy":"Копировать","fail.copied":"Скопировано","fail.src":"Источник","fail.probe":"Проверка потока","fail.none":"Подробностей нет: сервис ответил, но файл не воспроизвёлся.","src.t":"Другой источник","src.s":"Тот же трек на других сервисах — выберите, откуда играть.","src.load":"Ищем копии трека…","src.none":"Других источников не нашлось","src.exact":"Точно","src.close":"Похоже","src.maybe":"Другая версия?","src.now":"Играет из: {s}","ytc.t":"Проверка YouTube Music","ytc.s":"Спрашивает каждый клиент YouTube, отдаёт ли он звук на ваше подключение, и проверяет начало и середину файла. Если YouTube Music не играет — пришлите результат.","ytc.run":"Проверить YouTube Music","ytc.btn":"Проверить","ytc.busy":"Проверяем клиенты YouTube… это займёт до минуты","ytc.ok":"Работает","ytc.part":"Только начало","ytc.bad":"Не отдаёт","ytc.sum.ok":"Звук целиком отдают клиенты: {n} из {m} — YouTube Music должен играть","ytc.sum.bad":"Ни один клиент не отдаёт звук целиком. Обычно виноват VPN или общий IP — смените сервер или выключите VPN","ytc.desk":"Проверка работает только в приложении","ytc.copy":"Копировать отчёт","ytc.formats":"форматов: {n}","ytc.start":"начало","ytc.deep":"середина","ytc.win":"окно 1 МБ","ytc.open":"запрос «до конца»","wv.sheet":"Регулировка волны","wv.sheet.s":"Меняется сразу — играющая волна перестроится на ходу","wv.sheet.def":"Настройки по умолчанию","wv.reset":"Сбросить","wv.done":"Готово","wv.live":"Моя волна","wv.now":"Сейчас играет","wv.next":"Дальше","wv.resume":"Продолжить","wv.src.auto.s":"Яндекс, если подключён, иначе другие сервисы","wv.src.ym.s":"Моя волна Яндекса — знает ваши вкусы","wv.src.mix.s":"Из ваших треков и похожих на них","wv.div.default.s":"Любимое и новое вперемешку","wv.div.favorite.s":"Чаще то, что вы уже любите","wv.div.discover.s":"Больше незнакомых артистов","wv.div.popular.s":"Хиты и то, что слушают все","wv.mood.all.s":"Волна подстроится сама","wv.mood.active.s":"Энергично и в ритм","wv.mood.fun.s":"Легко и солнечно","wv.mood.calm.s":"Чтобы выдохнуть","wv.mood.sad.s":"Для дождливого вечера","mini.t":"Мини-плеер","mini.on":"Мини-плеер поверх окон (Ctrl+M)","mini.exit":"Развернуть (Ctrl+M)","mini.pin":"Поверх всех окон","mini.pin.on":"Мини-плеер поверх всех окон","mini.pin.off":"Мини-плеер как обычное окно","mini.idle":"Ничего не играет","mini.idle.s":"Запустите волну или трек","mini.seek":"Позиция","mini.dis":"Не нравится","mini.err":"Не удалось переключить мини-плеер","wv.any":"Любое","wv.lang.any":"Любой","wv.cap":"Волна","wv.mix":"Из ваших треков · {s}","dv.verified":"Подтверждённый артист","dv.rank":"#{n} в мире","dv.gallery":"Галерея","dv.popular":"Популярные релизы","dv.more":"Ещё","wall.set":"Обои установлены","drop.files":"Добавлено файлов: {n}",
+"alt.note":"YouTube не отдал трек — играет из {s}","alt.why":"Почему","alt.t":"Трек играет из другого сервиса","alt.s":"YouTube попросил подтвердить, что вы не бот, и отказался отдавать звук. Так бывает с VPN, общим или корпоративным IP. Чтобы трек не молчал, Meowave нашёл ту же запись в {s} и играет её оттуда.","alt.fix":"Чтобы снова слушать с YouTube: выключите VPN для Meowave (раздельное туннелирование), смените сервер VPN или направьте YouTube через прокси в Настройки → Сеть.","alt.set":"Подменять источник, если YouTube отказывает","alt.set.s":"Тот же трек из Яндекс Музыки или SoundCloud — только точное совпадение","alt.from":"Найдено: {t} — {a}","snk.close":"Закрыть","fail.more":"Подробнее","fail.other":"Другой источник","fail.t":"Почему трек не играет","fail.s":"Всё, что приложение знает о сбое. Если повторяется — скопируйте и пришлите разработчику.","fail.copy":"Копировать","fail.copied":"Скопировано","fail.src":"Источник","fail.probe":"Проверка потока","fail.none":"Подробностей нет: сервис ответил, но файл не воспроизвёлся.","src.t":"Другой источник","src.s":"Тот же трек на других сервисах — выберите, откуда играть.","src.load":"Ищем копии трека…","src.none":"Других источников не нашлось","src.exact":"Точно","src.close":"Похоже","src.maybe":"Другая версия?","src.now":"Играет из: {s}","ytc.t":"Проверка YouTube Music","ytc.s":"Спрашивает каждый клиент YouTube, отдаёт ли он звук на ваше подключение, и проверяет начало и середину файла. Если YouTube Music не играет — пришлите результат.","ytc.run":"Проверить YouTube Music","ytc.btn":"Проверить","ytc.busy":"Проверяем клиенты YouTube… это займёт до минуты","ytc.ok":"Работает","ytc.part":"Только начало","ytc.bad":"Не отдаёт","ytc.sum.ok":"Звук целиком отдают клиенты: {n} из {m} — YouTube Music должен играть","ytc.sum.bad":"Ни один клиент не отдаёт звук целиком. Обычно виноват VPN или общий IP — смените сервер или выключите VPN","ytc.desk":"Проверка работает только в приложении","ytc.copy":"Копировать отчёт","ytc.formats":"форматов: {n}","ytc.start":"начало","ytc.deep":"середина","ytc.win":"окно","ytc.open":"запрос «до конца»","wv.sheet":"Регулировка волны","wv.sheet.s":"Меняется сразу — играющая волна перестроится на ходу","wv.sheet.def":"Настройки по умолчанию","wv.reset":"Сбросить","wv.done":"Готово","wv.live":"Моя волна","wv.now":"Сейчас играет","wv.next":"Дальше","wv.resume":"Продолжить","wv.src.auto.s":"Яндекс, если подключён, иначе другие сервисы","wv.src.ym.s":"Моя волна Яндекса — знает ваши вкусы","wv.src.mix.s":"Из ваших треков и похожих на них","wv.div.default.s":"Любимое и новое вперемешку","wv.div.favorite.s":"Чаще то, что вы уже любите","wv.div.discover.s":"Больше незнакомых артистов","wv.div.popular.s":"Хиты и то, что слушают все","wv.mood.all.s":"Волна подстроится сама","wv.mood.active.s":"Энергично и в ритм","wv.mood.fun.s":"Легко и солнечно","wv.mood.calm.s":"Чтобы выдохнуть","wv.mood.sad.s":"Для дождливого вечера","mini.t":"Мини-плеер","mini.on":"Мини-плеер поверх окон (Ctrl+M)","mini.exit":"Развернуть (Ctrl+M)","mini.pin":"Поверх всех окон","mini.pin.on":"Мини-плеер поверх всех окон","mini.pin.off":"Мини-плеер как обычное окно","mini.idle":"Ничего не играет","mini.idle.s":"Запустите волну или трек","mini.seek":"Позиция","mini.dis":"Не нравится","mini.err":"Не удалось переключить мини-плеер","wv.any":"Любое","wv.lang.any":"Любой","wv.cap":"Волна","wv.mix":"Из ваших треков · {s}","dv.verified":"Подтверждённый артист","dv.rank":"#{n} в мире","dv.gallery":"Галерея","dv.popular":"Популярные релизы","dv.more":"Ещё","wall.set":"Обои установлены","drop.files":"Добавлено файлов: {n}",
 "set.covf":"Обложка следует за курсором","set.covf.s":"Лёгкий наклон обложки в полноэкранном плеере",
 "drop.t":"Отпустите, чтобы включить","drop.s":"Ссылка на трек, альбом или плейлист: YouTube Music, Spotify, Яндекс Музыка, SoundCloud, Deezer","drop.busy":"Открываем ссылку…","drop.bad":"Эту ссылку не получилось открыть","drop.list":"«{n}»: {c} треков в очереди","drop.one":"Играет: {n}",
 "home.t":"Тишина. Поле ждёт.","home.s":"Запустите волну: поток соберётся из ваших артистов, обложка и очередь откроются на весь экран.","home.start":"Запустить волну",
@@ -184,7 +184,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "hs.t":"Collections","hs.load":"Loading collections…","hs.err":"Could not load collections","hs.retry":"Retry","hs.empty":"Nothing here yet","hs.ymtok":"Yandex collections need a token (Settings → Accounts)",
 "dv.back":"Back","dv.play":"Play","dv.shuffle":"Shuffle","dv.save":"Add to library","dv.saved":"Saved to playlists","dv.load":"Opening…","dv.err":"Could not open","dv.tracks":"Tracks","dv.top":"Popular tracks","dv.albums":"Albums","dv.singles":"Singles & EPs","dv.related":"Fans also like","dv.about":"About","dv.monthly":"{n} monthly listeners","dv.followers":"{n} followers","dv.cities":"Where people listen","dv.follow":"Follow","dv.following":"Following","dv.lib":"In your library","dv.radio":"Artist radio","dv.plays":"{n} plays","dv.src":"Data: {s}",
 "fps.align.r":"Right","set.wall":"App wallpaper","set.wall.s":"An image, GIF or video behind the whole interface","wall.none":"None","wall.file":"File","wall.url":"From link","wall.clear":"Remove","wall.dim":"Dim","wall.blur":"Blur","wall.url.ask":"Link to an image, GIF or video (https://…)","wall.url.bad":"Needs an https:// link to an image or video",
-"alt.note":"YouTube refused the track — playing it from {s}","alt.why":"Why","alt.t":"Playing from another service","alt.s":"YouTube asked to confirm you are not a bot and refused to serve the audio. This happens behind VPNs and shared or corporate IPs. So the track is not silent, Meowave found the same recording on {s} and plays it from there.","alt.fix":"To listen from YouTube again: exclude Meowave from the VPN (split tunnelling), switch the VPN server, or route YouTube through a proxy in Settings → Network.","alt.set":"Switch source when YouTube refuses","alt.set.s":"The same track from Yandex Music or SoundCloud — exact matches only","alt.from":"Found: {t} — {a}","snk.close":"Dismiss","fail.more":"Details","fail.other":"Other source","fail.t":"Why the track did not play","fail.s":"Everything the app knows about the failure. If it keeps happening, copy it and send it to the developer.","fail.copy":"Copy","fail.copied":"Copied","fail.src":"Source","fail.probe":"Stream check","fail.none":"No details: the service answered, but the file did not play.","src.t":"Other source","src.s":"The same track on other services — pick where to play it from.","src.load":"Looking for copies of the track…","src.none":"No other source found","src.exact":"Exact","src.close":"Close","src.maybe":"Other version?","src.now":"Playing from {s}","ytc.t":"YouTube Music check","ytc.s":"Asks every YouTube client whether it serves audio to your connection and checks the start and the middle of the file. If YouTube Music does not play, send the result.","ytc.run":"Check YouTube Music","ytc.btn":"Run check","ytc.busy":"Checking YouTube clients… this can take up to a minute","ytc.ok":"Works","ytc.part":"Start only","ytc.bad":"Refused","ytc.sum.ok":"{n} of {m} clients serve the whole file — YouTube Music should play","ytc.sum.bad":"No client serves the whole file. Usually a VPN or a shared IP — switch the server or turn the VPN off","ytc.desk":"The check only works in the desktop app","ytc.copy":"Copy report","ytc.formats":"formats: {n}","ytc.start":"start","ytc.deep":"middle","ytc.win":"1 MB window","ytc.open":"open-ended request","wv.sheet":"Tune your wave","wv.sheet.s":"Applies instantly — a playing wave rebuilds on the fly","wv.sheet.def":"Default settings","wv.reset":"Reset","wv.done":"Done","wv.live":"My Wave","wv.now":"Now playing","wv.next":"Up next","wv.resume":"Resume","wv.src.auto.s":"Yandex if connected, otherwise the other services","wv.src.ym.s":"Yandex My Wave — knows your taste","wv.src.mix.s":"From your tracks and ones like them","wv.div.default.s":"Favourites and new music mixed","wv.div.favorite.s":"More of what you already love","wv.div.discover.s":"More artists you have not heard","wv.div.popular.s":"Hits and what everyone plays","wv.mood.all.s":"The wave adapts on its own","wv.mood.active.s":"Energetic, on the beat","wv.mood.fun.s":"Light and sunny","wv.mood.calm.s":"To breathe out","wv.mood.sad.s":"For a rainy evening","mini.t":"Mini player","mini.on":"Mini player on top (Ctrl+M)","mini.exit":"Expand (Ctrl+M)","mini.pin":"Always on top","mini.pin.on":"Mini player stays on top","mini.pin.off":"Mini player as a normal window","mini.idle":"Nothing playing","mini.idle.s":"Start the wave or a track","mini.seek":"Position","mini.dis":"Dislike","mini.err":"Could not switch the mini player","wv.any":"Any","wv.lang.any":"Any","wv.cap":"Wave","wv.mix":"From your tracks · {s}","dv.verified":"Verified artist","dv.rank":"#{n} in the world","dv.gallery":"Gallery","dv.popular":"Popular releases","dv.more":"More","wall.set":"Wallpaper set","drop.files":"Files added: {n}",
+"alt.note":"YouTube refused the track — playing it from {s}","alt.why":"Why","alt.t":"Playing from another service","alt.s":"YouTube asked to confirm you are not a bot and refused to serve the audio. This happens behind VPNs and shared or corporate IPs. So the track is not silent, Meowave found the same recording on {s} and plays it from there.","alt.fix":"To listen from YouTube again: exclude Meowave from the VPN (split tunnelling), switch the VPN server, or route YouTube through a proxy in Settings → Network.","alt.set":"Switch source when YouTube refuses","alt.set.s":"The same track from Yandex Music or SoundCloud — exact matches only","alt.from":"Found: {t} — {a}","snk.close":"Dismiss","fail.more":"Details","fail.other":"Other source","fail.t":"Why the track did not play","fail.s":"Everything the app knows about the failure. If it keeps happening, copy it and send it to the developer.","fail.copy":"Copy","fail.copied":"Copied","fail.src":"Source","fail.probe":"Stream check","fail.none":"No details: the service answered, but the file did not play.","src.t":"Other source","src.s":"The same track on other services — pick where to play it from.","src.load":"Looking for copies of the track…","src.none":"No other source found","src.exact":"Exact","src.close":"Close","src.maybe":"Other version?","src.now":"Playing from {s}","ytc.t":"YouTube Music check","ytc.s":"Asks every YouTube client whether it serves audio to your connection and checks the start and the middle of the file. If YouTube Music does not play, send the result.","ytc.run":"Check YouTube Music","ytc.btn":"Run check","ytc.busy":"Checking YouTube clients… this can take up to a minute","ytc.ok":"Works","ytc.part":"Start only","ytc.bad":"Refused","ytc.sum.ok":"{n} of {m} clients serve the whole file — YouTube Music should play","ytc.sum.bad":"No client serves the whole file. Usually a VPN or a shared IP — switch the server or turn the VPN off","ytc.desk":"The check only works in the desktop app","ytc.copy":"Copy report","ytc.formats":"formats: {n}","ytc.start":"start","ytc.deep":"middle","ytc.win":"window","ytc.open":"open-ended request","wv.sheet":"Tune your wave","wv.sheet.s":"Applies instantly — a playing wave rebuilds on the fly","wv.sheet.def":"Default settings","wv.reset":"Reset","wv.done":"Done","wv.live":"My Wave","wv.now":"Now playing","wv.next":"Up next","wv.resume":"Resume","wv.src.auto.s":"Yandex if connected, otherwise the other services","wv.src.ym.s":"Yandex My Wave — knows your taste","wv.src.mix.s":"From your tracks and ones like them","wv.div.default.s":"Favourites and new music mixed","wv.div.favorite.s":"More of what you already love","wv.div.discover.s":"More artists you have not heard","wv.div.popular.s":"Hits and what everyone plays","wv.mood.all.s":"The wave adapts on its own","wv.mood.active.s":"Energetic, on the beat","wv.mood.fun.s":"Light and sunny","wv.mood.calm.s":"To breathe out","wv.mood.sad.s":"For a rainy evening","mini.t":"Mini player","mini.on":"Mini player on top (Ctrl+M)","mini.exit":"Expand (Ctrl+M)","mini.pin":"Always on top","mini.pin.on":"Mini player stays on top","mini.pin.off":"Mini player as a normal window","mini.idle":"Nothing playing","mini.idle.s":"Start the wave or a track","mini.seek":"Position","mini.dis":"Dislike","mini.err":"Could not switch the mini player","wv.any":"Any","wv.lang.any":"Any","wv.cap":"Wave","wv.mix":"From your tracks · {s}","dv.verified":"Verified artist","dv.rank":"#{n} in the world","dv.gallery":"Gallery","dv.popular":"Popular releases","dv.more":"More","wall.set":"Wallpaper set","drop.files":"Files added: {n}",
 "set.covf":"Cover follows the cursor","set.covf.s":"A slight tilt of the cover in the fullscreen player",
 "drop.t":"Drop to play","drop.s":"A track, album or playlist link: YouTube Music, Spotify, Yandex Music, SoundCloud, Deezer","drop.busy":"Opening the link…","drop.bad":"Could not open this link","drop.list":"“{n}”: {c} tracks queued","drop.one":"Playing: {n}",
 "home.t":"Silence. The field waits.","home.s":"Start the wave: the stream builds from your artists, cover and queue open fullscreen.","home.start":"Start the wave",
@@ -1440,6 +1440,16 @@ function resize(){
     afford a little more resolution, which keeps the sprites round. */
  F.dpr=Math.min(S.lite?0.75:(GLF.ok?1.25:1.0),window.devicePixelRatio||1);
  F.w=innerWidth;F.h=innerHeight;
+ /* Round 8, "the wave eats a lot": the backing store is capped at about
+    2.4 megapixels. A 1440p or a scaled 4K window asked the GPU for 4–6 MP of
+    blended sprites every frame for a glow too soft to show the difference. */
+ if(F.w*F.h*F.dpr*F.dpr>2.4e6)F.dpr=Math.max(.6,Math.sqrt(2.4e6/(F.w*F.h)));
+ /* Аура or no background (aura.js): the field is off, so its canvases give
+    their backing store back instead of holding a full-window texture. */
+ if(!particlesEnabled){
+  if(GLF.ok&&GLF.c&&GLF.c.width!==1){GLF.c.width=GLF.c.height=1}
+  if(cv.width!==1){cv.width=cv.height=1}
+  window.MWAura?.resize?.();staticFieldDrawn=false;return}
  if(GLF.ok){
   GLF.c.width=Math.round(F.w*F.dpr);GLF.c.height=Math.round(F.h*F.dpr);
   if(cv.width!==1){cv.width=cv.height=1}
@@ -1548,7 +1558,8 @@ function visColor(){
  if(visTextTheme!==th){visTextTheme=th;visText=getComputedStyle(de).getPropertyValue("--text").trim()}
  return visText}
 function drawVis(){
- if(!particlesEnabled)return;
+ /* the line goes with the background: Аура keeps it, Выкл stills it too */
+ if(!particlesEnabled&&!window.MWAura?.on)return;
  if(!vis.c)return;const c=vis.c,g=vis.g,w=c.width,h=c.height;
  g.clearRect(0,0,w,h);
  const b=bins(48);
@@ -1691,7 +1702,7 @@ const toD = p => 'M' + p.map(q => q[0].toFixed(2) + ' ' + q[1].toFixed(2)).join(
     60fps is the ceiling now; CSS motion is unaffected and stays on the
     compositor's own refresh rate. Only the canvas field and the karaoke clock
     are capped. */
-let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=1000/60,fieldDt=0;
+let last=performance.now(),raf=0,lastFrame=0,renderOn=true,budget=1000/60,fieldDt=0,vsMs=1000/60,vsLast=0,vsTick=0,vkCur=1,fieldTick=0;
 function onReducedMotionChange(reduced){
  staticFieldDrawn=false;
  if(!reduced && renderOn && !raf) raf=requestAnimationFrame(frame);
@@ -1703,14 +1714,23 @@ function advanceClock(dt){
  if(S.pos>=S.dur){S.repeat?S.pos=0:next()}
  paint()}
 function frame(now){
- if(!renderOn||document.hidden){raf=0;return}
+ if(!renderOn||document.hidden){raf=0;vsLast=0;return}
  const isReduce=BOOT.reduce;
- const since=now-lastFrame;
- if(since<budget-1.5){raf=requestAnimationFrame(frame);return}
- /* Keep the phase instead of resetting it to `now`: on a 75 Hz screen the
-    reset halved the loop to 37 fps, since every other vsync arrived just under
-    the budget. With the remainder carried over it averages a true 60. */
- lastFrame=since>budget*3?now:now-(since%budget);
+ /* Even pacing (round 8, "the wave is still jerky"). A time cap of 60 on a
+    75, 144 or 165 Hz screen drew on an irregular subset of vsyncs — 2, then 3,
+    then 2 refreshes apart — and particles moving at a steady speed stuttered.
+    Now the refresh interval is measured and the loop draws on every k-th
+    vsync: 144 Hz runs at an even 72, 165 at 55, 120 and 240 at 60, 75 and 90
+    at their own rate. The time floor stays for stacks whose rAF is not tied
+    to vsync at all. */
+ if(vsLast){const d=now-vsLast;if(d>2&&d<60)vsMs+=(d-vsMs)*(d<vsMs*1.5?.06:.01)}
+ vsLast=now;
+ /* with a little hysteresis, so a refresh rate on the boundary (100 Hz)
+    does not flip between two divisors */
+ {const want=budget*1.2/vsMs;if(want<vkCur-.1||want>=vkCur+1.1)vkCur=Math.max(1,Math.floor(want))}
+ const vk=vkCur;
+ if(++vsTick<vk||now-lastFrame<Math.min(budget,vk*vsMs)*.82){raf=requestAnimationFrame(frame);return}
+ vsTick=0;lastFrame=now;
  const dt=Math.min(.25,(now-last)/1000);last=now;
  if(!isReduce){
   staticFieldDrawn=false;
@@ -1718,6 +1738,10 @@ function frame(now){
   if(fp.dataset.open==="true"){
    fpBeat(dt);
   }else{
+   /* Background (aura.js): the wave, the light Аура, or nothing at all —
+      "off" skips even the analyser read, so nothing under the glass moves. */
+   const bgm=window.MWAura?.bg||"wave";
+   if(bgm!=="off"){
    const lvl=audioBands(dt).lvl;
    /* Glow dust does not need every frame the UI gets: 40 updates a second
       read the same, and every canvas repaint is CPU pixels under WebKitGTK.
@@ -1725,14 +1749,22 @@ function frame(now){
       draws on the GPU, so it takes every frame and stays fluid. */
    /* Behind any other screen the field is dimmed to 30 % (#field.dim): 30
       updates a second look the same there, and each update also re-blurs
-      every glass panel above it — the expensive part on WebKitGTK/WKWebView. */
-   const hz=S.view!=="home"?30:GLF.ok?0:40;
+      every glass panel above it — the expensive part on WebKitGTK/WKWebView.
+      «Частота фона: 30» and lite mode ask for the same on the home screen. */
+   const aura=bgm==="aura";
+   const hz=S.view!=="home"||S.lite||window.MWAura?.fps===30?30:(GLF.ok||aura)?0:40;
+   /* a whole number of loop frames per update, so the updates are evenly
+      spaced too */
+   const every=hz?Math.max(1,Math.round(1000/(vk*vsMs)/hz)):1;
    fieldDt+=dt;
-   if(!hz||fieldDt>=1/hz-.004){step(fieldDt,lvl);draw(lvl);fieldDt=0}
+   if(++fieldTick>=every){fieldTick=0;
+    if(aura)MWAura.frame(fieldDt,lvl);else{step(fieldDt,lvl);draw(lvl)}
+    fieldDt=0}
+   }
   }
  }else if(!staticFieldDrawn&&F.w&&F.h){
-  gx.clearRect(0,0,F.w,F.h);
-  draw(0);
+  if(window.MWAura?.on)MWAura.frame(0,0);
+  else{gx.clearRect(0,0,F.w,F.h);draw(0)}
   staticFieldDrawn=true;
  }
  /* Non-local playback has no media element to read a clock from, so its
@@ -2575,8 +2607,10 @@ async function search(v,silent){
  const box=document.getElementById("sres"),cnt=document.getElementById("scount"),q=(v||"").trim().toLowerCase(),my=++tok;
  if(!q){
   cnt.textContent="";
-  box.innerHTML=empty("search",t("s.idle.t"),t("s.idle.s"));
   box.classList.remove("searching");
+  /* search2.js: trending charts and recent searches. */
+  if(window.MWSearch)return MWSearch.idle(box);
+  box.innerHTML=empty("search",t("s.idle.t"),t("s.idle.s"));
   icons();
   return;
  }
@@ -2584,6 +2618,9 @@ async function search(v,silent){
  /* Debounce typing without destroying the DOM on every letter */
  await new Promise(r=>setTimeout(r,260));
  if(my!==tok)return;
+ /* Artists, playlists and albums are fetched alongside the tracks. */
+ const linkQ=/^https?:|spotify\.com\/|youtube\.com\/|youtu\.be\/|soundcloud\.com\//i.test(q);
+ if(!linkQ)window.MWSearch?.start(q);
 
  const act=SERVICES.filter(s=>s.conn&&s.on&&!s.local);
  cnt.innerHTML=act.length?`<span class="search-spinner"></span>${t("s.ing")}: ${esc(act.map(s=>svc(s.id).name).join(", "))}`:t("s.nosvc");
@@ -2609,6 +2646,7 @@ async function search(v,silent){
    remote=await searchRemote(q);
   }
  if(my!==tok)return;
+ if(!linkQ&&window.MWSearch){await MWSearch.settle(q,700);if(my!==tok)return}
 
  const fresh=[];
  remote.forEach(x=>{
@@ -2628,6 +2666,7 @@ async function search(v,silent){
   box.innerHTML=`<div class="rows" id="hits" data-listctx="search">${allHits.map(x=>row(x)).join("")}</div>`;
  }
  icons();
+ if(!linkQ)window.MWSearch?.more(q,box,()=>my===tok);
 }
 /* The bar is built once and then updated field by field.
 
@@ -5896,6 +5935,9 @@ function save(){
   favArtists:FAV_ARTISTS,
   loct:TRACKS.filter(x=>x.s==="local").map(({id,s,t,a,al,d,art,mode,path,fav})=>({id,s,t,a,al,d,art,mode,path,fav:!!fav}))
  };
+ /* The splash (boot.js) comes up in the accent the user had last time,
+    the adaptive cover colour included; "" means «no accent». */
+ try{localStorage.setItem("mw.boot.acc",S.accent==="none"?"":getComputedStyle(document.documentElement).getPropertyValue("--accent-rgb").trim())}catch(_){}
  try{
   localStorage.setItem("meowave",JSON.stringify(fullData));
  }catch(e){
@@ -7086,6 +7128,8 @@ async function uploadImage(file,kind){
  const sProp=kind==="avatar"?"avatar":"banner";
 
  // 1. Always save locally immediately so the user's avatar is instantly updated and persisted
+ /* profile2.js: a picture replaces a banner colour or gradient at once. */
+ if(kind==="banner")window.MWProf?.imageChosen?.();
  S[sProp]=dataUrl;
  if(sbProfile)sbProfile={...sbProfile,[col]:dataUrl};
  else sbProfile={[col]:dataUrl,username:S.username||t("pr.auth.guest")};
@@ -7094,18 +7138,21 @@ async function uploadImage(file,kind){
  fillProfileSettings();
  toast(t("img.ok"));
 
- if(!sb||!sbUser)return;
+ if(!sb||!sbUser){if(kind==="banner")window.MWProf?.added?.(dataUrl);return}
 
  // 2. Graceful background sync with Supabase Storage and database
  try{
   const bucket=kind==="avatar"?"avatars":"banners";
-  const base=`${sbUser.id}/${kind}`;
+  /* Banners get a file each, so the ones kept in «Мои баннеры» (profile2.js)
+     still exist when you swap back; the avatar keeps its one file. */
+  const base=kind==="banner"?`${sbUser.id}/banner-${Date.now().toString(36)}`:`${sbUser.id}/${kind}`;
   const path=`${base}.${ext}`;
-  const stale=["gif","webp","jpg"].filter(e=>e!==ext).map(e=>`${base}.${e}`);
+  const stale=kind==="banner"?[]:["gif","webp","jpg"].filter(e=>e!==ext).map(e=>`${base}.${e}`);
   const {error}=await sb.storage.from(bucket).upload(path,blob,{upsert:true,contentType:type});
   if(!error){
-   sb.storage.from(bucket).remove(stale).catch(()=>{});
+   if(stale.length)sb.storage.from(bucket).remove(stale).catch(()=>{});
    const pubUrl=sb.storage.from(bucket).getPublicUrl(path).data.publicUrl+"?v="+Date.now();
+   if(kind==="banner")window.MWProf?.added?.(pubUrl);
    S[sProp]=pubUrl;
    sbProfile={...sbProfile,[col]:pubUrl};
    save();
@@ -7659,31 +7706,9 @@ seg("dl-mode",v=>{S.dlMode=v});
   if(S[key]&&(key==="dlAutoFav"||key==="dlAutoPl")&&!S.dlDir)pickDownloadDir();
   renderDlSettings();save()})});
 
-/* Update check. */
-async function checkUpdate(manual){
- if(!TAURI)return;
- const st=document.getElementById("upd-state");
- if(manual&&st)st.textContent=t("upd.checking");
- try{
-  const u=await inv("update_check");
-  const curVer=u?.current_version||"0.1.0";
-  if(!u?.available){
-   if(st)st.textContent=`Meowave v${curVer} (${LANG==="ru"?"актуальная":"latest"})`;
-   if(manual)toast(LANG==="ru"?`У вас установлена актуальная версия Meowave v${curVer}`:`You have the latest version of Meowave v${curVer}`,4000);
-   return;
-  }
-  if(st)st.textContent=t("upd.found").replace("{v}",u.version);
-  const go=await showModal({title:t("upd.ask").replace("{v}",u.version),icon:"system_update",
-   label:(u.body||"").slice(0,300),input:false,confirm:t("upd.install")});
-  if(!go)return;
-  toast(t("upd.installing"),20000);
-  await inv("update_install");
- }catch(e){
-  const msg=String(e.message||e);
-  const none=/release JSON|404|not found|endpoint|failed to fetch/i.test(msg);
-  if(st)st.textContent=`Meowave v0.1.0 (${LANG==="ru"?"актуальная":"latest"})`;
-  if(manual)toast(none?(LANG==="ru"?"У вас установлена актуальная версия Meowave v0.1.0":"You have the latest version of Meowave v0.1.0"):t("upd.fail")+": "+msg,4500);
- }}
+/* Update check: update.js — the "Beta 3.2" label from the real version,
+   signed releases for installed builds, git pull for a source checkout. */
+function checkUpdate(manual){return window.mwUpdate?.check(manual)}
 document.getElementById("upd-btn")?.addEventListener("click",()=>checkUpdate(true));
 /* Memory, on demand from Настройки → О приложении.
    Rust counts this process plus every descendant, because the webview renders
@@ -7856,6 +7881,7 @@ function openCtx(x,y,tr){
   <button data-ctx="qlast"><span class="material-symbols-rounded" style="font-size:16px">queue_music</span>${t("ctx.qlast")}</button>
   <button data-ctx="fav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span>${tr.fav?t("ctx.unfav"):t("ctx.fav")}</button>
   <button data-ctx="artist"><span class="material-symbols-rounded" style="font-size:16px">person</span>${t("ctx.artist")}</button>
+  ${remote&&window.MWChat&&typeof sbUser!=="undefined"&&sbUser?`<button data-ctx="share"><span class="material-symbols-rounded" style="font-size:16px">send</span>${t("ctx.share")}</button>`:""}
   ${tr.s==="local"?`<button data-ctx="rmlocal"><span class="material-symbols-rounded" style="font-size:16px">delete</span>${t("ctx.rmlocal")}</button>`:""}
   ${remote?`<div class="sep"></div>
   <span class="lbl">${t("dl.preset.t")}</span>
@@ -8062,6 +8088,7 @@ addEventListener("click",e=>{
  else if(act==="dlfx")downloadProcessed(tr);
  else if(act==="rmlocal")removeLocal(tr.id);
  else if(act==="artist")openArtist(tr.a);
+ else if(act==="share")window.MWChat?.shareTrack(tr);
  else if(act==="eq")pinPresetToTrack(tr,b.dataset.eq);
  else if(act==="eqoff")pinPresetToTrack(tr,null);
  else if(act==="pl")addToPlaylist(b.dataset.pid,tr);
@@ -8379,25 +8406,29 @@ function renderProfile(savedVals={}){
    const favs=TRACKS.filter(x=>x.fav).length;
    const ava=S.avatar||sbProfile?.avatar_url||"./icons/app/classic.png";
    const ban=S.banner||sbProfile?.banner_url||"";
-   box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
-     <label class="banner${ban?"":" noimg"}" title="${t("pr.ban.hint")}" style="${!ban?'background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))':''}">
-      ${ban?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
+   /* profile2.js: a colour / gradient banner, or the picture. */
+   const bs=window.MWProf?MWProf.attrs(MWProf.myStyle()):{cls:"",style:""};
+   const useImg=!!ban&&!bs.cls;
+   box.innerHTML=`<div class="panel pane pf2" style="overflow:hidden;padding:0">
+     <label class="banner${useImg?"":bs.cls||" noimg"}" title="${t("pr.ban.hint")}"${useImg?"":bs.style||` style="background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9))"`}>
+      ${useImg?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
       <span class="cam"><span class="material-symbols-rounded" style="font-size:16px">photo_camera</span> <span>${t("pr.ban.cta")}</span></span>
       <input type="file" id="prof-ban-input" accept="image/*">
      </label>
-     <div style="padding:var(--sp-6)">
+     <div class="pf-main">
      <div class="profhead">
       <label class="avatar has-img" title="${t("pr.ava.hint")}">
        <img src="${esc(ava)}" alt="" id="prof-ava-img">
        <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
        <input type="file" id="prof-ava-input" accept="image/*">
       </label>
-      <div>
-       <div class="uname" data-worn="${esc(myBadges().join(","))}"><b class="unview">${esc(S.username||sbProfile?.username||t("pr.auth.guest"))}</b> ${userBadgeTag(myBadges())} <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
+      <div class="pf-id">
+       <div class="uname" data-worn="${esc(myBadges().join(","))}"><b class="unview">${esc(S.username||sbProfile?.username||t("pf.guest"))}</b> ${userBadgeTag(myBadges())} <span class="svc-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:var(--bg-card);color:var(--mute)">Offline</span></div>
        <p class="pbio" style="margin-top:4px;color:var(--mute);font-size:0.85rem">${t("pr.auth.guest.desc")||"Локальный профиль Meowave"}</p>
       </div>
+      <div class="pf-acts"><button class="btn sm" data-pfbanner><span class="material-symbols-rounded" style="font-size:16px">palette</span> ${t("pf.banner")}</button></div>
      </div>
-     <div class="stats" style="margin-top:16px">
+     <div class="stats">
       <div class="stat"><b>${fmtListen(S.listen||0)}</b><span>${t("pr.hours")}</span></div>
       <div class="stat"><b>${favs}</b><span>${t("pr.favs")}</span></div>
       <div class="stat"><b>${OWNED.size}</b><span>${t("pr.badges")}</span></div>
@@ -8413,7 +8444,7 @@ function renderProfile(savedVals={}){
     lbl.onclick=e=>{if(e.target.id!=="prof-ava-input"){e.preventDefault();document.getElementById("prof-ava-input")?.click()}};
    });
    box.querySelectorAll("label.banner").forEach(lbl=>{
-    lbl.onclick=e=>{if(e.target.id!=="prof-ban-input"){e.preventDefault();document.getElementById("prof-ban-input")?.click()}};
+    lbl.onclick=e=>{if(e.target.id!=="prof-ban-input"){e.preventDefault();if(window.MWProf)MWProf.pick();else document.getElementById("prof-ban-input")?.click()}};
    });
    document.getElementById("prof-ava-input")?.addEventListener("change",async e=>{
     const f=e.target.files?.[0];e.target.value="";
@@ -8534,25 +8565,31 @@ function renderProfile(savedVals={}){
  const ownedShown=(BADGES||[]).filter(b=>OWNED.has(b.id)).length;
  const ava=p.avatar_url||S.avatar||"";
  const ban=p.banner_url||S.banner||"";
- box.innerHTML=`<div class="panel pane" style="overflow:hidden;padding:0">
-   <label class="banner${ban?"":" noimg"}" title="${t("pr.ban.hint")}">
-    ${ban?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
+ const bs=window.MWProf?MWProf.attrs(MWProf.myStyle()):{cls:"",style:""};
+ const useImg=!!ban&&!bs.cls;
+ box.innerHTML=`<div class="panel pane pf2" style="overflow:hidden;padding:0">
+   <label class="banner${useImg?"":bs.cls||" noimg"}" title="${t("pr.ban.hint")}"${useImg?"":bs.style}>
+    ${useImg?`<img src="${esc(ban)}" alt="" id="prof-ban-img">`:""}
     <span class="cam"><span class="material-symbols-rounded" style="font-size:16px">photo_camera</span> <span>${t("pr.ban.cta")}</span></span>
     <input type="file" id="prof-ban-input" accept="image/*">
    </label>
-   <div style="padding:var(--sp-6)">
+   <div class="pf-main">
    <div class="profhead">
     <label class="avatar${ava?" has-img":""}" title="${t("pr.ava.hint")}">
      ${ava?`<img src="${esc(ava)}" alt="" id="prof-ava-img">`:`<span class="avatar-ph">${esc(((p.username||sbUser.email||"M")[0]||"M").toUpperCase())}</span>`}
      <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
      <input type="file" id="prof-ava-input" accept="image/*">
     </label>
-    <div>
+    <div class="pf-id">
      <div class="uname" data-worn="${esc(myBadges().join(","))}"><b class="unview">${esc(p.username||t("pr.name.ph"))}</b> ${userBadgeTag(myBadges(),{full:true})}</div>
      <div class="pinrow" id="pinrow"></div>
      ${sbProfile?.bio?`<p class="pbio">${esc(sbProfile.bio)}</p>`:""}
      <p class="pmail">${esc(sbUser.email||"")}</p>
      <p class="authmsg" id="authmsg"></p>
+    </div>
+    <div class="pf-acts">
+     <button class="btn sm" data-pfbanner><span class="material-symbols-rounded" style="font-size:16px">palette</span> ${t("pf.banner")}</button>
+     <button class="btn sm" data-pfedit><span class="material-symbols-rounded" style="font-size:16px">edit</span> ${t("pf.edit")}</button>
     </div>
    </div>
    <div class="stats">
@@ -8616,7 +8653,7 @@ function renderProfile(savedVals={}){
   lbl.onclick=e=>{if(e.target.id!=="prof-ava-input"){e.preventDefault();document.getElementById("prof-ava-input")?.click()}};
  });
  box.querySelectorAll("label.banner").forEach(lbl=>{
-  lbl.onclick=e=>{if(e.target.id!=="prof-ban-input"){e.preventDefault();document.getElementById("prof-ban-input")?.click()}};
+  lbl.onclick=e=>{if(e.target.id!=="prof-ban-input"){e.preventDefault();if(window.MWProf)MWProf.pick();else document.getElementById("prof-ban-input")?.click()}};
  });
  document.getElementById("prof-ava-input")?.addEventListener("change",async e=>{
   const f=e.target.files?.[0];e.target.value="";
@@ -9089,12 +9126,14 @@ async function renderPeopleProfile(id){
 
   const profTr=mine?S.profileTrack:(p.prefs?.profile_track||p.profile_track||(p.listening?{t:p.listening.t,a:p.listening.a,art:p.listening.art}:null));
 
-  box.innerHTML=`<div class="panel pane public-profile" style="padding:0;overflow:hidden">
-    <div class="banner${view.banner_url?"":" noimg"}">${view.banner_url?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
-    <div style="padding:var(--sp-6)">
+  const pbs=window.MWProf?MWProf.attrs(MWProf.specOf(p)):{cls:"",style:""};
+  const pImg=!!view.banner_url&&!pbs.cls;
+  box.innerHTML=`<div class="panel pane public-profile pf2" style="padding:0;overflow:hidden">
+    <div class="banner${pImg?"":pbs.cls||" noimg"}"${pImg?"":pbs.style}>${pImg?`<img src="${esc(view.banner_url)}" alt="">`:""}</div>
+    <div class="pf-main">
       <div class="profhead">
         <span class="avatar-holder"><span class="avatar${view.avatar_url?" has-img":""}">${avat(view, 104)}</span>${(()=>{const st=presStatus(p.id)||(friend?"offline":null);if(!st)return "";const c=st==="listening"?"listening":st==="online"?"online":"offline";return `<span class="status-indicator ${c}"></span>`})()}</span>
-        <div style="min-width:0;flex:1">
+        <div class="pf-id">
           <div class="uname"><b class="unview">${esc(view.username||t("chat.anon"))}</b> ${userBadgeTag(mine?myBadges():badgeIds(p),{full:true})}</div>
           <div class="pinrow" style="margin-top:4px">${pinHtml}</div>
           ${p.bio?`<p class="pbio" style="margin-top:6px">${esc(p.bio)}</p>`:""}
@@ -9331,7 +9370,7 @@ async function renderPeopleFind(box){
               </div>`:"" ;
             return `
             <div class="people-find-card">
-              <div class="people-find-banner" data-person="${esc(p.id)}" style="${banner?`background-image:url('${cssUrl(banner)}')`:""}"></div>
+              <div class="people-find-banner" data-person="${esc(p.id)}" style="${banner?`background-image:url('${cssUrl(banner)}')`:(window.MWProf?.cardBg?.(p)||"")}"></div>
               <div class="people-find-body">
                 <div class="people-find-top">
                   ${avat(p, 46, presStatus(p.id)||p.status||null)}
@@ -11191,17 +11230,17 @@ async function importRows(rows,svcId,name,asFavorites,src){
   if(r.id&&(r.s==="ytm"||r.s==="sc"||r.s==="ym"||r.s==="dz")){
    hit={id:String(r.id),s:r.s,t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:(r.s==="ym"||r.s==="local")?"local":"local"};
    const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
-   if(known)hit=known;else TRACKS.push(hit);
+   if(known){if(!known.art&&hit.art)known.art=hit.art;hit=known}else TRACKS.push(hit);
   }else if(r.i&&svcId){
    /* Native id: the track is directly playable on its home service. */
    hit={id:String(r.i),s:svcId,t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"local"};
    const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
-   if(known)hit=known;else TRACKS.push(hit);
+   if(known){if(!known.art&&hit.art)known.art=hit.art;hit=known}else TRACKS.push(hit);
   }else if(r.s==="sp"||svcId==="sp"){
    /* Spotify tracks retain full metadata and resolve on play */
    hit={id:String(r.id||uid()),s:"sp",t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"web"};
    const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
-   if(known)hit=known;else TRACKS.push(hit);
+   if(known){if(!known.art&&hit.art)known.art=hit.art;hit=known}else TRACKS.push(hit);
   }else{
    const q=`${r.a||""} ${r.t||""}`.trim();
    if(q){
@@ -11233,6 +11272,8 @@ async function importRows(rows,svcId,name,asFavorites,src){
   }catch(e){console.warn("playlist_sync:",e.message||e)}
  }
  save();renderLib();renderWaveHint();
+ /* Rows that came without a cover get one now (covers.js). */
+ window.mwCovers?.repair?.();
  toast(t("sp.imported").replace("{ok}",ok).replace("{n}",take.length),5200)}
 
 /* The Spotify importer now rides on the same core as the Yandex one. */

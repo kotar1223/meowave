@@ -207,7 +207,14 @@ function msClean(p){
  if(!p||typeof p!=="object")return {type:"broken"};
  const s=(v,n)=>typeof v==="string"?v.slice(0,n):(typeof v==="number"?String(v).slice(0,n):"");
  const out={type:["text","image","music_card","listen_party_invite"].includes(p.type)?p.type:"text",text:s(p.text,4000)};
- if(out.type==="image"){const im=s(p.image,300000);if(MS_IMG.test(im))out.image=im;else out.type="text"}
+ if(out.type==="image"){
+  const im=s(p.image,300000);if(MS_IMG.test(im))out.image=im;
+  /* A full-size file in chat-media (chatplus.js): path, its own key, type, size. */
+  const m=p.media;
+  if(m&&typeof m==="object"&&/^[0-9a-f-]{36}\/[0-9a-f]{32}\.bin$/.test(String(m.p||""))&&/^[A-Za-z0-9+/=]{40,48}$/.test(String(m.k||""))&&/^[A-Za-z0-9+/=]{16}$/.test(String(m.iv||"")))
+   out.media={p:String(m.p),k:String(m.k),iv:String(m.iv),m:/^image\/(png|jpeg|webp|gif)$/.test(String(m.m||""))?String(m.m):"image/webp",
+    w:Math.max(0,Math.min(20000,+m.w||0)),h:Math.max(0,Math.min(20000,+m.h||0)),n:Math.max(0,+m.n||0)};
+  if(!out.image&&!out.media)out.type="text"}
  if(out.type==="music_card"){
   const x=p.track||{};
   out.track={s:s(x.s,24),id:s(x.id,300),t:s(x.t,300),a:s(x.a,300),al:s(x.al,300),art:s(x.art,2000),d:Math.max(0,+x.d||0)};
@@ -326,6 +333,8 @@ async function msNotifyNew(th){
   const row=MS.last.get(x.peer);
   if(!row||row.sender===me||row.read_at)continue;
   if(MS.open===x.peer&&S.view==="chats"&&!document.hidden)continue;
+  if(window.MWChat?.quiet(x.peer))continue;
+  window.MWChat?.incoming(x.peer,false);
   const p=x.p||await msOpen(row);
   notify(msName(MS.peers.get(x.peer)),msPreview(p).slice(0,140),{icon:"chat",onClick:()=>msgrOpen(x.peer)})}
  MS.primed=true}
@@ -366,6 +375,7 @@ function msShell(root){
  root.innerHTML=`
   <aside class="msgr-side">
    <div class="msgr-side-hd"><h2>${t("nav.msgs")}</h2>
+    <button class="ic" id="msgr-set" title="${t("cs.t")}"><span class="material-symbols-rounded">tune</span></button>
     <button class="ic" id="msgr-new" title="${t("ms.new")}"><span class="material-symbols-rounded">edit_square</span></button></div>
    <label class="msgr-search"><span class="material-symbols-rounded">search</span>
     <input id="msgr-q" type="search" placeholder="${t("ms.search")}" autocomplete="off" spellcheck="false"></label>
@@ -375,6 +385,7 @@ function msShell(root){
  const q=root.querySelector("#msgr-q");
  q.value=MS.q;
  q.addEventListener("input",()=>{MS.q=q.value.trim().toLowerCase();msPaintList()});
+ root.querySelector("#msgr-set").onclick=()=>window.MWChat?.openSettings();
  root.querySelector("#msgr-new").onclick=()=>{q.focus();q.select();MS.q="";q.value="";msPaintList(true)};
  root.querySelector("#msgr-list").addEventListener("click",e=>{
   const b=e.target.closest("[data-peer]");if(b)msgrOpen(b.dataset.peer)})}
@@ -439,8 +450,13 @@ async function msTick(){
  catch(e){console.warn("messenger:",e?.message||e)}
  finally{MS.busy=false}}
 /* Unread badge and notifications while the messenger is closed. */
+let msBgN=0;
 setInterval(()=>{
- if(!msMe()||document.hidden||S.view==="chats"||MS.busy)return;
+ if(!msMe()||MS.busy)return;
+ /* The open messenger polls itself; a hidden window still hears new
+    messages (sound, notification), at half the rate. */
+ if(S.view==="chats"&&!document.hidden)return;
+ if(document.hidden&&++msBgN%2)return;
  if(MS.uid!==msMe())msReset();
  MS.busy=true;
  msLoadThreads().catch(e=>console.warn("messenger bg:",e?.message||e)).finally(()=>{MS.busy=false})},15000);
@@ -485,6 +501,7 @@ function msConvHtml(c){
    <span class="me2e" hidden><span class="material-symbols-rounded">lock</span></span>
    <button class="ic" data-mact="listen" title="${t("ms.listen")}" hidden><span class="material-symbols-rounded">headphones</span></button>
    <button class="ic" data-mact="invite" title="${t("ms.room")}"><span class="material-symbols-rounded">podcasts</span></button>
+   <button class="ic" data-mact="mute" title="${t(window.MWChat?.muted(c.peer)?"cs.unmute":"cs.mute")}"><span class="material-symbols-rounded">${window.MWChat?.muted(c.peer)?"notifications_off":"notifications"}</span></button>
    <button class="ic" data-mact="profile" title="${t("ms.profile")}"><span class="material-symbols-rounded">person</span></button>
   </header>
   <div class="mbanner" hidden></div>
@@ -616,6 +633,9 @@ async function msPollConv(c){
  const log=c.root?.querySelector(".mlog");
  const up=log&&log.scrollHeight-log.scrollTop-log.clientHeight>160;
  if(up&&incoming)c.newBelow+=incoming;
+ if(incoming&&!document.hidden){
+  const who=c.kind==="dm"?c.peer:"room:"+c.room;
+  if(!window.MWChat?.quiet(who))window.MWChat?.incoming(who,true)}
  msPaintLog(c);
  if(incoming)msMarkRead(c)}
 function msMarkRead(c){
@@ -637,6 +657,7 @@ function msPeer(c,uid){
 function msItems(c){
  const me=msMe(),out=[];
  let rows=[...c.rows,...c.pending];
+ if(window.MWChat)rows=rows.filter(r=>!MWChat.hidden(r.id));
  /* A room shows what this device can read; history from before joining is
     one quiet line rather than a column of locks. */
  if(c.kind==="room"){
@@ -677,12 +698,15 @@ function msBubble(c,r,p,{cont,last,mine},read){
  const ava=room&&!mine?`<span class="mava">${last?avat(who||{id:r.sender},30):""}</span>`:"";
  const plain=!p.sealed&&!r._pending&&!room&&c.sealed===true?`<span class="material-symbols-rounded mplain" title="${t("ms.plain")}">lock_open</span>`:"";
  const meta=`<span class="mmeta">${plain}${r.edited_at?`<i>${t("ms.edited")}</i>`:""}<time datetime="${esc(r.sent_at)}" title="${esc(new Date(r.sent_at).toLocaleString(msLoc()))}">${esc(msClock(r.sent_at))}</time>${mine&&!room?msTickHtml(r,read):(mine&&(r._pending||r._failed)?msTickHtml(r,false):"")}</span>`;
- return `<div class="${cls}" data-key="m${esc(r.id)}" data-mid="${esc(r.id)}">${ava}<div class="mb">${name}${r.reply_to?msQuote(c,r.reply_to):""}${msContent(r,p)}${meta}${!r._pending&&!r._failed?`<button class="ic mrep" data-mrep title="${t("ms.reply")}"><span class="material-symbols-rounded">reply</span></button>`:""}</div>${r._failed?`<button class="ic mretry" data-mretry="${esc(r.id)}" title="${t("ms.retry")}"><span class="material-symbols-rounded">refresh</span></button>`:""}</div>`}
+ return `<div class="${cls}" data-key="m${esc(r.id)}" data-mid="${esc(r.id)}">${ava}<div class="mb">${name}${r.reply_to?msQuote(c,r.reply_to):""}${msContent(r,p)}${meta}${!r._pending&&!r._failed?`<span class="mtools"><button class="ic mrep" data-mrep title="${t("ms.reply")}"><span class="material-symbols-rounded">reply</span></button><button class="ic mmore" data-mmore title="${t("ms.more")}"><span class="material-symbols-rounded">more_horiz</span></button></span>`:""}</div>${r._failed?`<button class="ic mretry" data-mretry="${esc(r.id)}" title="${t("ms.retry")}"><span class="material-symbols-rounded">refresh</span></button>`:""}</div>`}
 function msContent(r,p){
  if(p.type==="locked")return `<div class="mtext mlock"><span class="material-symbols-rounded">lock</span>${t("ms.locked")}</div>`;
  if(p.type==="broken")return `<div class="mtext mlock"><span class="material-symbols-rounded">gpp_bad</span>${t("ms.broken")}</div>`;
  let h="";
- if(p.type==="image"&&p.image)h+=`<img class="mimg" src="${esc(p.image)}" alt="" decoding="async">`;
+ if(p.type==="image"&&p.media&&window.MWChat){
+  const m=p.media,ar=m.w&&m.h?` style="aspect-ratio:${m.w}/${m.h}"`:"";
+  h+=`<img class="mimg" data-mpath="${esc(MWChat.note(m))}" src="${esc(p.image||"data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==")}" alt="" decoding="async"${ar}>`}
+ else if(p.type==="image"&&p.image)h+=`<img class="mimg" src="${esc(p.image)}" alt="" decoding="async">`;
  if(p.type==="music_card"&&p.track)h+=`<div class="mcard" data-mplay="${esc(r.id)}" role="button" tabindex="0" title="${t("ms.play")}">
    <span class="mcard-art" ${coverStyle(p.track.art)}><span class="material-symbols-rounded">play_arrow</span></span>
    <span class="mcard-t"><b>${esc(p.track.t)}</b><span>${esc(p.track.a||"")}</span>${p.track.s?`<i>${esc(msSvc(p.track.s))}</i>`:""}</span></div>`;
@@ -723,6 +747,7 @@ function msPaintLog(c,{stick=false,anim=true}={}){
  const near=log.scrollHeight-log.scrollTop-log.clientHeight<160;
  const added=msSync(log.firstElementChild,msItems(c),anim&&!stick);
  if(added)icons();
+ window.MWChat?.hydrate(log);
  if(stick||near){log.scrollTop=log.scrollHeight;c.newBelow=0}
  msDown(c)}
 function msDown(c){
@@ -772,6 +797,7 @@ async function msPost(c,payload,replyTo){
   const r=await msSend(c,payload,replyTo);
   if(r.error)throw r.error;
   c.pending=c.pending.filter(x=>x!==tmp);
+  window.MWChat?.sent();
   msMerge(c,[r.data]);
   /* The sealed payload is known here; no need to decrypt our own message. */
   if(r.data)c.pay.set(r.data.id,{...msClean(payload),sealed:!!r.data.ciphertext,_k:`|${r.data.ciphertext?Object.keys(r.data.e2e?.k||{}).length:0}`});
@@ -807,14 +833,25 @@ async function msSubmit(c){
  await msPost(c,{type:"text",text},replyTo)}
 async function msAttach(c,file){
  if(!file)return;
- const img=await compressChatImage(file);
- if(!img)return;
+ const X=window.MWChat;
+ let pay=null;
+ /* Full size and moving GIFs go encrypted through chat-media; a chat that
+    is not end-to-end (an old peer) cannot carry the key, so it keeps the
+    inline picture. */
+ if(X&&c.sealed!==false){
+  const r=await X.prepare(file).catch(e=>{console.warn("chat-media:",e);return null});
+  if(r===false)return;
+  if(r&&!r.fallback)pay=r}
+ if(!pay){
+  const img=(X&&await X.inlineGif(file))||await compressChatImage(file);
+  if(!img)return;
+  pay={type:"image",image:img}}
  const inp=c.root?.querySelector(".minp");
  const text=(inp?.value||"").trim();
  const replyTo=c.reply?.id||null;
  if(inp){inp.value="";msGrow(inp)}
  msCtx(c,null);
- await msPost(c,{type:"image",image:img,text},replyTo)}
+ await msPost(c,{...pay,text},replyTo)}
 async function msShareNow(c){
  const cur=S.current;
  if(!cur||cur.mode==="empty")return toast(t("ms.np.none"));
@@ -838,10 +875,29 @@ async function msAct(c,row,act){
   const s=p.text||(p.type==="music_card"?`${p.track.a} — ${p.track.t}`:"");
   navigator.clipboard?.writeText(s).then(()=>toast(t("ms.copied"))).catch(()=>{});return}
  if(act==="edit")return msCtx(c,"edit",row);
+ const X=window.MWChat;
+ if(act==="play")return msPlayTrack(p.track);
+ if(act==="qnext"||act==="qlast"){const x=roomTrackOf(p.track);if(x)(act==="qnext"?queueNext:queueLast)(x);return}
+ if(act==="fav")return X?.favTrack(roomTrackOf(p.track));
+ if(act==="fwd"&&X){
+  const peer=await X.pickChat(t("ms.fwd.t"));if(!peer)return;
+  if(await X.postTo(peer,msClean(p)))toast(t("ms.fwd.done").replace("{name}",msName(MS.peers.get(peer))),2600,{icon:"forward"});
+  return}
+ if(act==="save"&&X){
+  let url=p.image||"";
+  if(p.media)try{url=await X.load(p.media)}catch(_){}
+  const mime=p.media?.m||(/^data:(image\/[a-z]+)/.exec(url)||[])[1]||"";
+  if(url)X.saveImage(url,`meowave-${row.id}.${X.extOf(mime)}`);
+  return}
+ if(act==="hide"&&X){
+  X.hide(row.id);msPaintLog(c);
+  toast(t("ms.hidden"),2600,{icon:"visibility_off"});
+  return}
  if(act==="del"){
   if(!await askConfirm(t("ms.del.q"),t("ms.del"),true,{icon:"delete",sub:t("ms.del.s")}))return;
   const {error}=await sb.from("messages").delete().eq("id",row.id);
   if(error)return toast(msErr(error));
+  if(p.media)window.MWChat?.removeMedia(p.media);
   c.byId.delete(row.id);c.pay.delete(row.id);
   c.rows=c.rows.filter(r=>r.id!==row.id);
   msPaintLog(c);
@@ -861,10 +917,20 @@ function msMenu(c,row,x,y){
  const p=c.pay.get(row.id)||row._p||msLegacy(row);
  const readable=p.type!=="locked"&&p.type!=="broken";
  if(row._failed)return msMenuShow(c,row,x,y,[["retry","refresh",t("ms.retry")],["drop","delete",t("ms.del"),"danger"]]);
+ const X=window.MWChat;
+ const card=readable&&p.type==="music_card"&&p.track;
+ const pic=readable&&p.type==="image"&&(p.image||p.media);
  msMenuShow(c,row,x,y,[
   readable?["reply","reply",t("ms.reply")]:null,
+  card?["play","play_arrow",t("ms.play")]:null,
+  card?["qnext","subdirectory_arrow_right",t("ms.qnext")]:null,
+  card?["qlast","queue_music",t("ms.qlast")]:null,
+  card&&X?["fav","favorite",t("ms.fav")]:null,
   readable&&(p.text||p.type==="music_card")?["copy","content_copy",t("ms.copy")]:null,
+  X&&readable&&p.type!=="listen_party_invite"?["fwd","forward",t("ms.fwd")]:null,
+  X&&pic?["save","download",t("ms.save")]:null,
   mine&&readable&&(p.type==="text"||p.type==="image")?["edit","edit",t("ms.edit")]:null,
+  X?["hide","visibility_off",t("ms.hide")]:null,
   mine?["del","delete",t("ms.del"),"danger"]:null].filter(Boolean))}
 function msMenuShow(c,row,x,y,items){
  if(!items.length)return;
@@ -899,10 +965,13 @@ function msWire(c){
   if(act==="profile")return openProfile(c.peer);
   if(act==="listen")return msPlayTrack(presTrack(c.peer));
   if(act==="invite")return msInvite(c);
+  if(act==="mute"&&window.MWChat){
+   const on=MWChat.toggleMute(c.peer),b=el.closest("[data-mact]");
+   b.title=t(on?"cs.unmute":"cs.mute");b.querySelector(".material-symbols-rounded").textContent=on?"notifications_off":"notifications";return}
   const mc=el.closest("[data-mc]")?.dataset.mc;
   if(mc==="x"){if(c.edit){inp.value="";msGrow(inp)}return msCtx(c,null)}
   if(mc==="att")return file.click();
-  if(mc==="np")return msShareNow(c);
+  if(mc==="np")return window.MWChat?MWChat.composerTrack(c):msShareNow(c);
   if(mc==="send")return msSubmit(c);
   const go2=el.closest("[data-goto]");if(go2)return msGoto(c,go2.dataset.goto);
   const join=el.closest("[data-join]");if(join)return joinRoomByCode(join.dataset.join);
@@ -911,7 +980,8 @@ function msWire(c){
   const chip=el.closest("[data-chat-play]");if(chip)return msPlayQuery(chip.dataset.chatPlay);
   if(el.closest("[data-mretry]"))return msRetry(c,el.closest("[data-mretry]").dataset.mretry);
   if(el.closest("[data-mrep]")){const r=msRowOf(c,el);if(r)msCtx(c,"reply",r);return}
-  if(el.closest(".mimg")&&!el.closest("a"))return msViewImage(el.closest(".mimg").src);
+  if(el.closest("[data-mmore]")){const r=msRowOf(c,el);if(r){const b=el.closest("[data-mmore]").getBoundingClientRect();msMenu(c,r,b.left,b.bottom+4)}return}
+  if(el.closest(".mimg")&&!el.closest("a"))return window.MWChat?MWChat.view(el.closest(".mimg")):msViewImage(el.closest(".mimg").src);
   if(el.closest(".mdown")){log.scrollTo({top:log.scrollHeight,behavior:"smooth"});c.newBelow=0;msDown(c)}});
  root.addEventListener("contextmenu",e=>{
   const r=msRowOf(c,e.target);if(!r)return;

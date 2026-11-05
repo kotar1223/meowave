@@ -52,6 +52,7 @@ Object.assign(I18N.ru,{
  "cz.fieldA":"Яркость частиц",
  "cz.fpCovR":"Скругление обложки","cz.lyA":"Текущая строка песни","cz.lyI":"Остальные строки",
  "cz.mOut":"Мои сообщения","cz.mIn":"Входящие сообщения","cz.mPane":"Фон переписки","cz.mR":"Скругление сообщений","cz.mFs":"Размер текста",
+ "cz.mSide":"Отступы по бокам","cz.mMaxW":"Ширина сообщения","cz.mNarrow":"Узкая лента по центру",
  "cz.menuBg":"Контекстные меню","cz.dlgBg":"Окна и настройки","cz.dlgR":"Скругление окон","cz.toast":"Уведомления","cz.scrim":"Затемнение под окнами",
  "cz.scW":"Ширина","cz.scW.thin":"Тонкие","cz.scW.normal":"Обычные","cz.scW.none":"Скрыть","cz.scC":"Цвет",
  "cz.tbBg":"Фон","cz.tbBrand":"Название и значок"});
@@ -85,6 +86,7 @@ Object.assign(I18N.en,{
  "cz.fieldA":"Particle brightness",
  "cz.fpCovR":"Cover corners","cz.lyA":"Current lyric line","cz.lyI":"Other lines",
  "cz.mOut":"My messages","cz.mIn":"Incoming messages","cz.mPane":"Chat background","cz.mR":"Bubble corners","cz.mFs":"Text size",
+ "cz.mSide":"Side padding","cz.mMaxW":"Bubble width","cz.mNarrow":"Narrow centred column",
  "cz.menuBg":"Context menus","cz.dlgBg":"Dialogs & settings","cz.dlgR":"Dialog corners","cz.toast":"Notifications","cz.scrim":"Backdrop dimming",
  "cz.scW":"Width","cz.scW.thin":"Thin","cz.scW.normal":"Normal","cz.scW.none":"Hidden","cz.scC":"Colour",
  "cz.tbBg":"Background","cz.tbBrand":"Name & icon"});
@@ -165,7 +167,11 @@ const G=[
   {k:"mIn",ty:"c",th:1,pv:"var(--m-in)",css:(v,P)=>`${P}{--m-in:${v}!important}${P} .mrow:not(.out) .mb{color:${onC(v)}!important}`},
   {k:"mPane",ty:"c",th:1,pv:"var(--m-pane)",css:(v,P,c)=>`${P}{--m-pane:${mix(v,c.A)}!important}`},
   {k:"mR",ty:"r",min:2,max:26,step:1,def:18,u:"px",css:(v,P)=>`${P}{--m-r:${px(v)}!important}`},
-  {k:"mFs",ty:"r",min:80,max:140,step:5,def:100,u:"%",css:(v,P)=>`${P} .mb{font-size:${(.92*v/100).toFixed(3)}rem!important}`}]},
+  {k:"mFs",ty:"r",min:80,max:140,step:5,def:100,u:"%",css:(v,P)=>`${P} .mb{font-size:${(.92*v/100).toFixed(3)}rem!important}`},
+  /* Round 8: the log runs edge to edge now; these bring the column back. */
+  {k:"mSide",ty:"r",min:0,max:160,step:2,def:null,ph:14,u:"px",css:(v,P)=>`${P} .mlog{padding-inline:${px(v)}!important}`},
+  {k:"mMaxW",ty:"r",min:40,max:100,step:2,def:null,ph:78,u:"%",css:(v,P)=>`${P} .mb{max-width:${v}%!important}`},
+  {k:"mNarrow",ty:"t",def:0,css:(v,P)=>v?`${P} .mlog-in{max-width:820px!important}`:""}]},
  {id:"menu",ic:"web_asset",items:[
   {k:"menuBg",ty:"c",th:1,pv:"var(--menu-bg)",css:(v,P,c)=>`${P}{--menu-bg:${mix(v,Math.max(c.A,90))}!important}`},
   {k:"dlgBg",ty:"c",th:1,pv:"var(--dlg-bg)",css:(v,P)=>`${P}{--dlg-bg:${mix(v,97)}!important}`},

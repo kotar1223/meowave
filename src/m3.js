@@ -70,6 +70,8 @@ function dialog({icon,title,body,actions=[],cls=""}){
   const f=bodyEl.querySelector("input:not([type=hidden]):not([disabled]),textarea:not([disabled])");
   (f||box).focus({preventScroll:true})});
  return api}
+/* Shared with the later modules (update.js, chats) so every dialog is this one. */
+window.mwDialog=dialog;
 
 async function copyText(text){
  try{await navigator.clipboard.writeText(text);toast(t("fail.copied"),2200,{icon:"content_copy"});return true}
@@ -166,11 +168,22 @@ function useSource(tr,h){
  load(resolved,true,0)}
 
 /* ── YouTube Music check ── */
+Object.assign(I18N.ru,{
+ "ytc.win.no":"окна не проходят",
+ "ytc.bot":"Гостевой клиент: YouTube просит подтвердить, что вы не бот. Ваш вход в YouTube Music такие клиенты не используют — это не ошибка, пока работают другие.",
+ "ytc.proxy":"Плеер читает окнами по {n}"});
+Object.assign(I18N.en,{
+ "ytc.win.no":"no window passes",
+ "ytc.bot":"A guest client: YouTube asks to confirm you are not a bot. Your YouTube Music sign-in is not used by these clients — not an error while the others work.",
+ "ytc.proxy":"The player reads in {n} windows"});
 const CLIENT_N={ANDROID_VR:"Android VR",ANDROID_SDKLESS:"Android · SDK-less",IOS:"iOS",ANDROID:"Android",ANDROID_TESTSUITE:"Android Test Suite",WEB_REMIX:"Web"};
 const okCode=c=>c===200||c===206;
-/* `window_kb`: how much of a 1 MiB window came through — the way the proxy
-   reads googlevideo now (bounded windows, never an open `bytes=0-`). */
-const winOk=r=>r.window_kb==null||r.window_kb>=1000;
+const kb=n=>n>=1024?`${Math.round(n/102.4)/10} ${LANG==="ru"?"МБ":"MB"}`:`${n} ${LANG==="ru"?"КБ":"KB"}`;
+const isBot=r=>/LOGIN_REQUIRED/.test(r.status||"")||/not a bot|sign in/i.test(r.reason||"");
+/* `window_kb`: the largest window (2 MB → 64 KB) that came through whole.
+   The proxy reads googlevideo in such windows and shrinks them when one is
+   refused, so any window that passes is enough to play. */
+const winOk=r=>r.window_kb==null||r.window_kb>0;
 function ytcVerdict(r){
  if(r.status==="OK"&&okCode(r.start)&&okCode(r.deep)&&winOk(r))return "ok";
  if(r.status==="OK"&&okCode(r.start))return "part";
@@ -184,8 +197,11 @@ function ytcRowsHTML(rows){
    bits.push(tf("ytc.formats",{n:r.formats}));
    bits.push(`${t("ytc.start")} ${r.start||"—"}`);
    bits.push(`${t("ytc.deep")} ${r.deep||"—"}`);
-   if(r.window_kb!=null)bits.push(`${t("ytc.win")} ${r.window_kb} ${LANG==="ru"?"КБ":"KB"}`);
+   if(r.window_kb!=null)bits.push(r.window_kb>0
+    ?`${t("ytc.win")} ${kb(r.window_kb)}${r.window_kb<2048&&r.window_code?` (2 ${LANG==="ru"?"МБ":"MB"} → ${r.window_code})`:""}`
+    :`${t("ytc.win.no")}${r.window_code?` (${r.window_code})`:""}`);
    if(r.open)bits.push(`${t("ytc.open")} ${r.open}`)}
+  else if(isBot(r))bits.push(t("ytc.bot"));
   else bits.push([r.status,r.reason].filter(Boolean).join(" — "));
   bits.push(`${r.ms} ${LANG==="ru"?"мс":"ms"}`);
   return `<div class="m3-li is-static" role="listitem" data-v="${v}">
@@ -194,14 +210,17 @@ function ytcRowsHTML(rows){
    <span class="m3-li-tag" data-q="${v==="ok"?"hi":v==="part"?"mid":"low"}">${esc(t("ytc."+v))}</span></div>`}).join("")}
 function ytcReport(rows){
  return ["Meowave · YouTube Music check · "+new Date().toISOString(),
-  ...rows.map(r=>`${r.client}: ${r.status}${r.reason?` (${r.reason})`:""} formats=${r.formats} start=${r.start} deep=${r.deep} open=${r.open??"?"} win=${r.window_kb??"?"}KB ${r.ms}ms`)].join("\n")}
+  ...rows.map(r=>`${r.client}: ${r.status}${r.reason?` (${r.reason})`:""} formats=${r.formats} start=${r.start} deep=${r.deep} open=${r.open??"?"} win=${r.window_kb??"?"}KB${r.window_code?` (2048KB:${r.window_code})`:""} ${r.ms}ms`),
+  rows[0]?.proxy_kb?`proxy window: ${rows[0].proxy_kb}KB`:""].filter(Boolean).join("\n")}
 async function ytcRun(videoId){
  if(!TAURI)throw new Error(t("ytc.desk"));
  const rows=await inv("ytm_selftest",{videoId:videoId||null});
  return Array.isArray(rows)?rows:[]}
 function ytcSummary(rows){
  const good=rows.filter(r=>ytcVerdict(r)==="ok").length;
- return {good,html:`<div class="ytc-sum" data-ok="${good>0}">${IC(good?"verified":"wifi_off",22)}<span>${esc(good?tf("ytc.sum.ok",{n:good,m:rows.length}):t("ytc.sum.bad"))}</span></div>`}}
+ const pk=rows[0]?.proxy_kb;
+ const proxy=good&&pk&&pk<2048?`<small class="ytc-proxy">${esc(tf("ytc.proxy",{n:kb(pk)}))}</small>`:"";
+ return {good,html:`<div class="ytc-sum" data-ok="${good>0}">${IC(good?"verified":"wifi_off",22)}<span>${esc(good?tf("ytc.sum.ok",{n:good,m:rows.length}):t("ytc.sum.bad"))}${proxy}</span></div>`}}
 
 /* In a dialog (from the failure details) … */
 function ytcDialog(videoId){

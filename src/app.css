@@ -392,6 +392,18 @@ button{background:none;border:0;cursor:pointer}
 #fieldgl{display:none}
 html.glfield #fieldgl{display:block}
 html.glfield #field{display:none}
+/* Round 8: Аура (aura.js) — a tiny canvas stretched to the window; the
+   bilinear upscale is the blur. With Аура or Выкл the field's canvases are
+   not shown at all, and Выкл also stills the haze. */
+#aura{position:fixed;inset:0;z-index:0;width:100%;height:100%;display:none;pointer-events:none;
+  opacity:var(--cz-fa,1);transition:opacity .6s var(--e);will-change:transform;transform:translateZ(0)}
+#aura.dim{opacity:calc(.4 * var(--cz-fa,1))}
+html[data-bg="aura"] #aura{display:block}
+html[data-bg="aura"] #field,html[data-bg="aura"] #fieldgl,
+html[data-bg="off"] #field,html[data-bg="off"] #fieldgl{display:none!important}
+html[data-bg="aura"] .haze{display:none}
+html[data-bg="off"] .haze i{animation:none}
+.field.bg-na{display:none}
 /* Performance tiers.
    backdrop-filter is removed rather than reduced: any non-zero radius still
    forces a full-window composite pass every frame, which is what actually
@@ -4576,7 +4588,7 @@ html[data-lite] #fplyr.lyr-big{-webkit-mask-image:none;mask-image:none}
 .hs-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 0 32px;overscroll-behavior:contain;
   opacity:0;pointer-events:none;transition:opacity .3s var(--e)}
 .hsheet[data-open="true"] .hs-body,.hsheet[data-drag="1"] .hs-body{opacity:1;pointer-events:auto}
-html[data-hs="open"] #field,html[data-hs="open"] #fieldgl{opacity:calc(.35 * var(--cz-fa,1))}
+html[data-hs="open"] #field,html[data-hs="open"] #fieldgl,html[data-hs="open"] #aura{opacity:calc(.35 * var(--cz-fa,1))}
 .hs-shelf{padding:12px 0 4px}
 .hs-shelf.is-pills{padding-top:6px}
 .hs-head{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 18px 10px}
@@ -5765,3 +5777,260 @@ html[data-os="mac"] body{-webkit-font-smoothing:antialiased;-moz-osx-font-smooth
 /* An app window does not rubber-band as a whole page (WebKit on macOS and on
    Linux touchpads did); lists inside still scroll and bounce on their own. */
 html[data-shell="tauri"],html[data-shell="tauri"] body{overscroll-behavior:none}
+
+/* ── Updates (update.js): what's new in the incoming version ── */
+.upd-dlg .mdd-b p{margin:0 0 8px}
+.upd-dlg .upd-n{color:var(--text);font-weight:600}
+.upd-dlg .upd-h{margin-top:4px;color:var(--text);font-weight:600}
+.upd-dlg .upd-list{margin:0 0 10px;padding-left:18px;display:grid;gap:4px}
+.upd-dlg .upd-list li{line-height:1.4;overflow-wrap:anywhere}
+.upd-dlg .upd-warn{padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--text)}
+.ytc-sum .ytc-proxy{display:block;margin-top:2px;color:var(--mute);font-size:.8125rem}
+
+/* ── chats, round 8 (chatplus.js) ─────────────────────────────── */
+/* Less air at the sides: the log uses the whole pane; the builder can bring
+   the narrow column back (Chats → «Narrow centred column», «Side padding»). */
+.mlog{padding:10px 14px 6px}
+.mlog-in{max-width:none}
+.mroomchat .mlog{padding-inline:8px}
+/* Reply and «more» beside the bubble, on hover. */
+.mtools{position:absolute;top:50%;left:calc(100% + 6px);display:flex;gap:4px;transform:translateY(-50%);pointer-events:none}
+.mrow.out .mtools{left:auto;right:calc(100% + 6px);flex-direction:row-reverse}
+.mtools .mrep{position:static;margin:0}
+.mmore{width:30px!important;height:30px!important;border-radius:50%!important;opacity:0;transform:scale(.8);pointer-events:none;
+  background:oklch(100% 0 0 / .06);transition:opacity .15s var(--e),transform .15s var(--e)}
+html[data-theme="light"] .mmore{background:oklch(20% 0.01 280 / .06)}
+.mmore .material-symbols-rounded{font-size:17px}
+.mrow:hover .mmore,.mmore:focus-visible{opacity:1;transform:none;pointer-events:auto}
+.mtools:focus-within{pointer-events:auto}
+@media (hover:none){.mtools{display:none!important}}
+.mmenu{max-height:calc(100vh - 16px);overflow-y:auto}
+/* A full-size picture arrives encrypted; the preview shimmers meanwhile. */
+img.mimg[data-mpath]{min-width:120px;min-height:80px}
+img.mimg[data-mstate="loading"]{animation:mImgWait 1.4s ease-in-out infinite}
+img.mimg[data-mstate="ok"]{min-width:0;min-height:0}
+@keyframes mImgWait{50%{opacity:.62}}
+
+/* chat settings */
+.cs{display:grid;gap:14px}
+.cs-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.cs-row>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cs-row b{font-weight:600;color:var(--text);font-size:.92rem}
+.cs-row small,.cs-hint{color:var(--mute);font-size:.8rem;line-height:1.35}
+.cs-hint{margin:-6px 0 0}
+p.cs-hint{margin:2px 0 0}
+.cs-sw{position:relative;flex:none;width:46px;height:28px;border-radius:99px;background:var(--line-2);transition:background-color .18s var(--e)}
+.cs-sw span{position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:var(--text);opacity:.72;
+  transition:transform .18s var(--e),opacity .18s var(--e),background-color .18s var(--e)}
+.cs-sw[aria-checked="true"]{background:var(--accent)}
+.cs-sw[aria-checked="true"] span{transform:translateX(18px);background:#fff;opacity:1}
+.cs-sw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cs-kinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+.cs-k{display:flex;align-items:center;gap:7px;padding:9px 10px;border-radius:12px;border:1px solid var(--line);color:var(--text);
+  font-size:.84rem;text-align:left;transition:background-color .15s var(--e),border-color .15s var(--e)}
+.cs-k:hover{background:oklch(100% 0 0 / .05)}
+html[data-theme="light"] .cs-k:hover{background:oklch(20% 0.01 280 / .05)}
+.cs-k[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.cs-k .material-symbols-rounded{color:var(--mute)}
+.cs-k[aria-checked="true"] .material-symbols-rounded{color:var(--accent)}
+.cs-own{border-style:dashed}
+.cs-vol{display:flex;align-items:center;gap:8px;min-width:0;flex:1;justify-content:flex-end}
+.cs-vol input{flex:1;max-width:200px;accent-color:var(--accent)}
+.cs-vol output{min-width:3.2em;text-align:right;color:var(--mute);font-size:.84rem;font-variant-numeric:tabular-nums}
+
+/* track and chat pickers */
+.tp-q{display:flex;align-items:center;gap:8px;padding:0 12px;height:42px;border-radius:12px;background:oklch(100% 0 0 / .05);
+  border:1px solid var(--line);color:var(--mute)}
+html[data-theme="light"] .tp-q{background:oklch(20% 0.01 280 / .04)}
+.tp-q input{flex:1;min-width:0;height:100%;border:0;background:none;color:var(--text);font:inherit;outline:0}
+.tp-tabs{display:flex;gap:6px;margin:10px 0 6px;flex-wrap:wrap}
+.tp-tabs button{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);color:var(--mute);font-size:.84rem}
+.tp-tabs button[aria-selected="true"]{background:var(--accent-soft);border-color:transparent;color:var(--text)}
+.tp-pl{width:100%;margin:2px 0 6px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surf-2);color:var(--text);font:inherit}
+.tp-list{display:flex;flex-direction:column;gap:2px;max-height:52vh;min-height:120px;overflow-y:auto;margin:4px -6px 0;padding:0 2px;
+  scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.tp-row{display:flex;align-items:center;gap:12px;width:100%;padding:6px 8px;border-radius:12px;text-align:left;color:var(--text)}
+.tp-row:hover,.tp-row:focus-visible{background:oklch(100% 0 0 / .06);outline:0}
+html[data-theme="light"] .tp-row:hover,html[data-theme="light"] .tp-row:focus-visible{background:oklch(20% 0.01 280 / .05)}
+.tp-row>.material-symbols-rounded{color:var(--mute);opacity:0;transition:opacity .15s var(--e)}
+.tp-row:hover>.material-symbols-rounded,.tp-row:focus-visible>.material-symbols-rounded{opacity:1;color:var(--accent)}
+.tp-art{flex:none;width:44px;height:44px;border-radius:9px;background-size:cover;background-position:center;background-color:oklch(100% 0 0 / .07);
+  display:grid;place-items:center;color:var(--mute)}
+.tp-t{display:flex;flex-direction:column;min-width:0;flex:1}
+.tp-t b{font-weight:600;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-t span{font-size:.8rem;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-none{margin:18px 0;text-align:center;color:var(--mute);font-size:.88rem}
+
+/* image viewer with zoom */
+.mview2{position:fixed;inset:0;z-index:520;display:flex;flex-direction:column;background:oklch(0% 0 0 / .86);animation:mFade .18s ease both;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mview2.out{animation:mFade .18s ease reverse both}
+.mv-stage{position:relative;flex:1;min-height:0;display:grid;place-items:center;overflow:hidden;touch-action:none;cursor:zoom-out;
+  margin-top:var(--tb,0px)}
+.mview2[data-zoom="1"] .mv-stage{cursor:grab}
+.mview2[data-zoom="1"] .mv-stage:active{cursor:grabbing}
+.mv-stage img{max-width:none;max-height:none;transform-origin:center;user-select:none;-webkit-user-drag:none;border-radius:6px;
+  box-shadow:0 20px 60px oklch(0% 0 0 / .5);will-change:transform;image-rendering:auto}
+.mv-bar{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:5px 8px;border-radius:99px;
+  background:oklch(18% 0.01 280 / .82);border:1px solid oklch(100% 0 0 / .1);color:#fff;box-shadow:0 8px 28px oklch(0% 0 0 / .4)}
+.mv-bar .ic{color:#fff}
+.mv-bar output{min-width:4.2em;text-align:center;font-size:.84rem;font-variant-numeric:tabular-nums;opacity:.85}
+.mv-sep{width:1px;height:20px;margin:0 4px;background:oklch(100% 0 0 / .18)}
+
+/* ── splash in the accent (boot.js sets --boot-acc from the last session) ──
+   Round 8 (Beta 3.2): «at least in the app's colour, not neon». A soft wash
+   of the accent behind the mark, the ripple and the hairline in it — no glow,
+   still only opacity and transform animating. */
+html[data-boot-acc] .splash{background:radial-gradient(60vmax 60vmax at 50% 46%,color-mix(in oklab,var(--boot-acc) 13%,transparent),transparent 70%),var(--bg,oklch(13.5% 0.014 278))}
+html[data-theme="light"][data-boot-acc] .splash{background:radial-gradient(60vmax 60vmax at 50% 46%,color-mix(in oklab,var(--boot-acc) 22%,transparent),transparent 70%),var(--bg,oklch(97% 0.004 280))}
+html[data-boot-acc] .splash-ring,html[data-boot-acc] .splash-ring::before{border-color:color-mix(in oklab,var(--boot-acc) 62%,transparent);border-width:1.5px}
+html[data-boot-acc] .splash-bar{background:color-mix(in oklab,var(--boot-acc) 18%,transparent)}
+html[data-boot-acc] .splash-bar i{background:var(--boot-acc)}
+html[data-boot-acc] .splash-mark{filter:drop-shadow(0 12px 26px color-mix(in oklab,var(--boot-acc) 26%,rgb(0 0 0/.28)))}
+html[data-boot-acc] .splash-word{color:color-mix(in oklab,var(--boot-acc) 30%,var(--text,oklch(95% 0.006 280)))}
+
+/* ─── search2.js: «В тренде», recent searches, artists / playlists / albums
+   for a query (round 8). The home sheet's shelves are reused as they are; in
+   the search view they line up with the track rows instead of the sheet. ─── */
+#sres .hs-head,#sres .hs-pills{padding-inline:var(--sp-3,12px)}
+#sres .hs-row{padding-inline:var(--sp-3,12px);scroll-padding-inline:var(--sp-3,12px)}
+.s2-idle{display:flex;flex-direction:column;gap:4px}
+.s2-th{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px var(--sp-3,12px) 8px}
+.s2-th h2{margin:0;font-size:1.3rem;font-weight:650;letter-spacing:-.015em}
+.s2-seg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--surf);border:1px solid var(--line)}
+.s2-seg button{padding:6px 13px;border-radius:999px;font-size:.76rem;font-weight:500;color:var(--mute);
+  transition:color .2s var(--e),background-color .25s var(--e)}
+.s2-seg button:hover{color:var(--text)}
+.s2-seg button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
+.s2-re{margin-left:auto}
+.s2-re.is-spin .material-symbols-rounded{animation:hsSpin 1s linear infinite}
+.s2-top{padding:6px 0 8px}
+.s2-toph{display:flex;align-items:center;gap:10px;padding:0 var(--sp-3,12px) 8px}
+.s2-toph h3{margin:0;min-width:0;font-size:1.04rem;font-weight:650;letter-spacing:-.012em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s2-play{display:inline-flex;align-items:center;gap:4px;margin-left:auto;flex:none}
+.s2-rank{counter-reset:s2rank}
+.s2-rank .row{counter-increment:s2rank}
+.s2-rank .row::before{content:counter(s2rank);flex:none;width:20px;margin-right:-4px;text-align:right;font-size:.82rem;font-weight:620;
+  font-variant-numeric:tabular-nums;color:var(--mute)}
+html:not([data-accent="none"]) .s2-rank .row:nth-child(-n+3)::before{color:var(--accent)}
+.s2-rank:not(.is-all) .row:nth-child(n+11){display:none}
+.s2-all{display:block;margin:8px auto 0;padding:8px 18px;border-radius:999px;font-size:.78rem;color:var(--mute);border:1px solid var(--line);
+  transition:color .2s var(--e),border-color .2s var(--e)}
+.s2-all:hover{color:var(--text);border-color:var(--line-2)}
+.s2-recent{padding:2px var(--sp-3,12px) 10px}
+.s2-rh{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:8px;font-size:.78rem;color:var(--mute)}
+.s2-link{font-size:.76rem;color:var(--mute)}
+.s2-link:hover{color:var(--text);text-decoration:underline}
+.s2-chips{display:flex;flex-wrap:wrap;gap:8px}
+.s2-chip{display:inline-flex;align-items:center;height:34px;max-width:100%;border-radius:999px;background:var(--surf-2);border:1px solid var(--line);overflow:hidden;
+  transition:border-color .2s var(--e)}
+.s2-chip:hover{border-color:var(--line-2)}
+.s2-chip>button:first-child{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:260px;height:100%;padding:0 2px 0 12px;font-size:.8rem;color:var(--text)}
+.s2-chip>button:first-child>span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s2-chip .material-symbols-rounded{color:var(--mute)}
+.s2-x{display:grid;place-items:center;flex:none;width:30px;height:100%;color:var(--mute)}
+.s2-x:hover{color:var(--text)}
+.s2-h{margin:14px var(--sp-3,12px) 4px;font-size:1.04rem;font-weight:650;letter-spacing:-.012em}
+.s2-more{padding-bottom:2px}
+.s2-more .hs-shelf:first-child{padding-top:2px}
+.s2-note{margin:-6px auto 0;max-width:52ch;text-align:center;font-size:.76rem;color:var(--mute)}
+/* A long line under a card (artist: «Исполнитель • 19,8 млн слушателей») was
+   centred wider than the card and clipped on both sides. */
+.hs-card small{max-width:100%}
+.s2-filt{display:flex;flex-wrap:wrap;gap:8px;padding:0 var(--sp-3,12px) 6px}
+.s2-filt button{height:32px;padding:0 14px;border-radius:999px;font-size:.78rem;font-weight:520;color:var(--text);
+  background:var(--surf-2);border:1px solid var(--line);transition:background-color .2s var(--e),color .2s var(--e),border-color .2s var(--e)}
+.s2-filt button:hover{border-color:var(--line-2)}
+.s2-filt button[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:transparent}
+.s2-alltr{display:inline-flex;align-items:center;gap:6px;margin:8px var(--sp-3,12px) 4px;padding:8px 16px;border-radius:999px;font-size:.78rem;
+  color:var(--mute);border:1px solid var(--line);transition:color .2s var(--e),border-color .2s var(--e)}
+.s2-alltr:hover{color:var(--text);border-color:var(--line-2)}
+#sres[data-s2f="all"] #hits .row:nth-child(n+9){display:none}
+#sres[data-s2f]:not([data-s2f="all"]) .s2-alltr{display:none}
+#sres[data-s2f="tracks"] .s2-sec{display:none}
+#sres[data-s2f="artists"] :is(#hits,.s2-h,.s2-sec:not([data-sec="artists"])),
+#sres[data-s2f="playlists"] :is(#hits,.s2-h,.s2-sec:not([data-sec="playlists"])),
+#sres[data-s2f="albums"] :is(#hits,.s2-h,.s2-sec:not([data-sec="albums"])){display:none}
+/* One kind on its own: a grid instead of a row that scrolls sideways. */
+#sres:is([data-s2f="artists"],[data-s2f="playlists"],[data-s2f="albums"]) .s2-sec .hs-row{
+  grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));row-gap:20px;overflow:visible}
+#sres:is([data-s2f="artists"],[data-s2f="playlists"],[data-s2f="albums"]) .s2-sec .hs-nav{display:none}
+
+/* ═══ profile2.js: one profile layout, banner styles and the banner picker ═══
+   Avatars: the picture is enlarged by moving its edges out (inset −4 %), not
+   with transform: a transformed child is composited on its own layer and the
+   round clip of that layer is anti-aliased separately — at 125 / 150 % Windows
+   scaling that left light hairlines along the rim, and an avatar saved by an
+   old build (white corners, pale fringe) showed its fringe right at the edge.
+   Without a transform the clip is painted in one pass and the fringe sits
+   outside the circle. */
+.avatar.has-img>img{position:absolute;inset:-4%;width:108%;height:108%;max-width:none;object-fit:cover;transform:none}
+.avat.has-img>.avat-img{inset:-4%;width:108%;height:108%;max-width:none;transform:none;border-radius:0}
+.avatar.has-img,.avat.has-img{background:transparent!important;border-color:transparent}
+
+.pf2 .banner{aspect-ratio:auto;height:clamp(150px,21vw,220px);max-height:none;min-height:0;border-bottom:0}
+.pf2 .banner.noimg{height:118px}
+.pf2 .banner.has-style{background-size:cover}
+.pf2 .banner::after{content:"";position:absolute;inset:auto 0 0 0;height:46%;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgb(0 0 0/.22))}
+.pf2 .pf-main{padding:0 var(--sp-6) var(--sp-6)}
+.pf2 .profhead{align-items:flex-end;gap:18px;row-gap:12px}
+.pf2 .profhead>.avatar,.pf2 .profhead>.avatar-holder{margin-top:-58px;position:relative;z-index:1}
+.pf2 .avatar{width:124px;height:124px}
+.pf2 .profhead .avatar,.pf2 .profhead .avatar.has-img{box-shadow:0 0 0 5px var(--bg),0 10px 30px rgb(0 0 0/.35)}
+.pf2 .avatar-holder>.status-indicator{right:8px;bottom:8px;width:18px;height:18px}
+.pf2 .pf-id{min-width:min(100%,220px);flex:1;padding-top:14px}
+.pf2 .unview{font-size:1.5rem;font-weight:650;letter-spacing:-.02em;line-height:1.15}
+.pf2 .pbio{font-size:.88rem;line-height:1.45;color:var(--text);opacity:.9;max-width:62ch}
+.pf2 .pmail{font-size:.76rem}
+.pf2 .pf-acts{display:flex;flex-wrap:wrap;gap:8px;flex:none;margin-left:auto;padding-bottom:4px}
+.pf2 .pf-acts .btn{display:inline-flex;align-items:center;gap:6px}
+.pf2 .stats{display:flex;flex-wrap:wrap;gap:0;margin-top:20px;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  background:color-mix(in oklab,var(--surf-2,transparent) 60%,transparent)}
+.pf2 .stat{flex:1 1 140px;min-width:0;padding:12px 16px;border:0;border-radius:0;border-right:1px solid var(--line)}
+.pf2 .stat:last-child{border-right:0}
+.pf2 .stat b{font-size:1.18rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf2 .stat span{font-size:.72rem}
+@media (max-width:640px){
+  .pf2 .pf-main{padding:0 16px 18px}
+  .pf2 .avatar{width:104px;height:104px}
+  .pf2 .profhead>.avatar,.pf2 .profhead>.avatar-holder{margin-top:-48px}
+  .pf2 .pf-acts{margin-left:0}
+}
+
+/* The picker */
+.pb-dlg.mdd{width:min(680px,calc(100vw - 32px))}
+.pb{display:flex;flex-direction:column;gap:16px}
+.pb-prev{position:sticky;top:0;z-index:1;padding-bottom:2px;background:inherit}
+.pb-prev-b{display:block;height:92px;border-radius:14px;border:1px solid var(--line);
+  background:linear-gradient(135deg,rgba(167,139,250,0.35),rgba(20,20,30,0.9));transition:background .25s var(--e)}
+.pb section{display:flex;flex-direction:column;gap:8px}
+.pb-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pb-h b{font-size:.86rem;font-weight:600}
+.pb-h small{font-size:.74rem;color:var(--mute)}
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.pb-wrap{position:relative;display:block}
+.pb-tile{position:relative;display:flex;align-items:flex-end;width:100%;aspect-ratio:3/1.15;padding:6px 8px;border-radius:10px;
+  border:1px solid var(--line);overflow:hidden;color:#fff;text-align:left;transition:transform .2s var(--e),border-color .2s var(--e),box-shadow .2s var(--e)}
+.pb-tile:hover{transform:translateY(-1px);border-color:var(--line-2)}
+.pb-tile[aria-current="true"]{border-color:transparent;box-shadow:0 0 0 2px var(--accent,var(--text))}
+.pb-l{font-size:.7rem;font-weight:600;text-shadow:0 1px 3px rgb(0 0 0/.6)}
+.pb-x{position:absolute;top:4px;right:4px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;
+  color:#fff;background:rgb(0 0 0/.55);opacity:0;transition:opacity .2s var(--e)}
+.pb-wrap:hover .pb-x,.pb-x:focus-visible{opacity:1}
+.pb-sw{display:flex;flex-wrap:wrap;gap:8px}
+.pb-dot{position:relative;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--line-2);
+  cursor:pointer;transition:transform .2s var(--e)}
+.pb-dot:hover{transform:scale(1.08)}
+.pb-dot[aria-current="true"]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent,var(--text))}
+.pb-own{background:conic-gradient(from 0deg,#ef4444,#f59e0b,#22c55e,#06b6d4,#6366f1,#d946ef,#ef4444);color:#fff}
+.pb-own input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.pb-gr{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pb-gr input[type=color]{width:40px;height:32px;padding:0;border:1px solid var(--line-2);border-radius:8px;background:none;cursor:pointer}
+.pb-ang{display:flex;align-items:center;gap:8px;font-size:.76rem;color:var(--mute)}
+.pb-ang input{width:120px}
+.pb-ang output{min-width:36px;font-variant-numeric:tabular-nums;color:var(--text)}
+.pb-gr .btn,.pb-row .btn{display:inline-flex;align-items:center;gap:6px}
+.pb-row{display:flex;flex-wrap:wrap;gap:8px}
+.pf2 .banner .cam{z-index:1}
+.pb-prev{position:static}
