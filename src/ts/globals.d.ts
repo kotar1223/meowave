@@ -173,21 +173,38 @@ interface MwMessenger {
 }
 
 interface Window {
-  __TAURI__?: { core?: TauriCore };
+  __TAURI__?: { core?: TauriCore; webview?: { getCurrentWebview?: () => { setZoom(scale: number): Promise<void> } } };
   /** m3.js: the one Material 3 dialog every module uses. */
   mwDialog?: (options: MwDialogOptions) => MwDialogHandle;
-  /** custom.js: a particle colour picked in the interface designer. */
-  CZ_FIELD?: [number, number, number] | null;
+  /** m3.js: Material 3 helpers; copyText falls back to execCommand where the Clipboard API is refused. */
+  MW3?: { copyText?: (text: string) => Promise<boolean>; [key: string]: unknown };
   /** app.js: the service search is narrowed to ("" — all of them). */
   searchScope?: () => string;
   /** discover.js: the home sheet; its shelf renderer registers the cards for its own click handler. */
   MWDISC?: { shelvesHTML?: (shelves: MwShelf[]) => string; [key: string]: unknown };
 }
 
+/** A value of the interface designer (custom.ts): #rrggbb, a number, or one of an item's options. */
+type MwCzValue = string | number;
+/** The designer's values: a — shared, d — dark theme colours, l — light theme colours. */
+interface MwCzStore {
+  a: Record<string, MwCzValue>;
+  d: Record<string, MwCzValue>;
+  l: Record<string, MwCzValue>;
+}
+/** S.x: the settings saved with S that have no field of their own. */
+interface MwStateX {
+  /** custom.ts: the interface designer */
+  cz?: MwCzStore;
+  /** custom.ts: the preset applied last ("" once something is changed by hand) */
+  czp?: string;
+  [key: string]: unknown;
+}
+
 /* app.js */
 declare const I18N: Record<string, Record<string, string>> & { ru: Record<string, string>; en: Record<string, string> };
 declare const t: (key: string) => string;
-declare const S: { pspeed?: number | string; view?: string; banner?: string; current?: MwTrack | null; [key: string]: unknown };
+declare const S: { pspeed?: number | string; view?: string; banner?: string; current?: MwTrack | null; x: MwStateX; [key: string]: unknown };
 declare const AB: { bass: number; mid: number; high: number; lvl: number; beat: number; [key: string]: number };
 declare const BOOT: { done: boolean; reduce: boolean };
 declare const TAURI: TauriCore | undefined;
@@ -207,6 +224,11 @@ declare function fieldAccent(): [number, number, number];
 declare function oklchOf(rgb: readonly number[]): [number, number, number];
 declare function oklchLin(L: number, C: number, H: number): [number, number, number];
 declare function save(): void;
+declare const askText: (title: string, value?: string, o?: Partial<MwModalOptions>) => Promise<string | null>;
+declare const askConfirm: (title: string, confirm: string, danger?: boolean, o?: Partial<MwModalOptions>) => Promise<true | null>;
+declare function paintSeg(seg: Element | null): void;
+declare function paintRange(r: HTMLInputElement): void;
+declare function paintRail(): void;
 declare function renderLib(): void;
 declare let LANG: string;
 declare const SERVICES: MwService[];

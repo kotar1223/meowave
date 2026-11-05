@@ -1,4 +1,4 @@
-/* custom.js — the interface designer (Settings → Appearance).
+/* custom.ts — the interface designer (Settings → Appearance).
 
    Round 8, "more detailed customisation, so that every element can be
    changed". One schema drives all of it: the editor is built from it, the
@@ -15,9 +15,75 @@
    reaches the CSS as text: colours must be #rrggbb, numbers are clamped to
    their slider, choices come from a fixed list. Loaded after app.js (defer),
    so S, t, I18N, save, pushPrefs, paintSeg … are in scope. */
-(()=>{
-"use strict";
-const $=id=>document.getElementById(id);
+
+/* custom.ts — was src/custom.js until step 2 of the stack rewrite
+   (HANDOFF.md); the schema, the editor, the stylesheet it writes and
+   window.MWCZ / customPrefs / czAdopt are unchanged. It reads app.js's
+   globals at start (I18N, S, t, save, pushPrefs, paintSeg, paintRange,
+   paintRail, toast, askText, askConfirm, esc — see globals.d.ts), so
+   initCustom() runs in afterLegacy(), right after initProfile(): where
+   custom.js stood among the old scripts, after profile2.js and before
+   update.js. app.js only reaches it through `typeof customPrefs` /
+   `typeof czAdopt` guards and window.CZ_FLAT / CZ_FIELD, all read later. */
+
+/** A designer value: #rrggbb for a colour, a number for a range or a switch
+    (0 / 1), one of `opts` for a choice. */
+type CzV = MwCzValue;
+type CzSlot = "a" | "d" | "l";
+/** What clean() reads from an imported theme or a stored blob. */
+type CzIn = { [slot: string]: { [key: string]: unknown } | undefined };
+interface CzCtx { A: number }
+interface CzItem {
+  k: string;
+  /** c colour · r range · s choice · t switch */
+  ty: "c" | "r" | "s" | "t";
+  /** 1: a colour kept per theme */
+  th?: number;
+  /** how an untouched colour is previewed: a CSS expression, or [selector, property, pseudo] */
+  pv?: string | string[];
+  /** the rules for value v under the prefix P. A method, so that each item's
+      callback can take the value type its `ty` stores. */
+  css?(v: CzV, P: string, c: CzCtx): string;
+  min?: number;
+  max?: number;
+  step?: number;
+  def?: CzV | null;
+  /** what an unset range shows when it has no default */
+  ph?: number;
+  u?: string;
+  hint?: number;
+  opts?: string[];
+  only?: () => boolean;
+  /** the group's id, filled in from G */
+  g?: string;
+}
+interface CzGroup { id: string; ic: string; only?: () => boolean; items: CzItem[] }
+interface CzPreset { id: string; v: Partial<MwCzStore> }
+interface CzApi {
+  apply(persist: boolean): void;
+  render(): void;
+  get(): MwCzStore;
+  set(o: unknown): boolean;
+  css(): string;
+  items(): string[];
+}
+
+declare global {
+  interface Window {
+    MWCZ?: CzApi;
+    /** pushPrefs() in app.js spreads this into the account's prefs. */
+    customPrefs?: () => { cz?: MwCzStore | null };
+    /** app.js hands it the account's look after sign-in. */
+    czAdopt?: (r: unknown) => void;
+    /** the designer's "wavy progress bar" switched off (app.js) */
+    CZ_FLAT?: boolean;
+    /** a particle colour picked in the designer (app.js fieldAccent, aura.ts) */
+    CZ_FIELD?: [number, number, number] | null;
+  }
+}
+
+export function initCustom(): void {
+const $=(id:string)=>document.getElementById(id);
 const de=document.documentElement;
 const HEX=/^#[0-9a-f]{6}$/i;
 
@@ -92,13 +158,13 @@ Object.assign(I18N.en,{
  "cz.tbBg":"Background","cz.tbBrand":"Name & icon"});
 
 /* ── colour helpers ── */
-const rgbOf=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
-const lum=h=>{const c=rgbOf(h).map(v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4});return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+const rgbOf=(h:string)=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)) as [number,number,number];
+const lum=(h:string)=>{const c=rgbOf(h).map(v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4});return .2126*c[0]!+.7152*c[1]!+.0722*c[2]!};
 /* Text that stays readable on a fill the user picked: whichever of near-black
    and white has the higher contrast ratio against it. */
-const onC=h=>{const L=lum(h);return (L+.05)/.05>=1.05/(L+.05)?"#111114":"#ffffff"};
-const mix=(h,p)=>p>=100?h:`color-mix(in srgb,${h} ${p}%,transparent)`;
-const px=v=>v+"px";
+const onC=(h:string)=>{const L=lum(h);return (L+.05)/.05>=1.05/(L+.05)?"#111114":"#ffffff"};
+const mix=(h:CzV,p:number)=>p>=100?h:`color-mix(in srgb,${h} ${p}%,transparent)`;
+const px=(v:CzV)=>v+"px";
 
 /* ── schema ──
    ty: c colour · r range · s choice · t switch. th: colour kept per theme.
@@ -106,91 +172,91 @@ const px=v=>v+"px";
    an untouched colour is previewed: a CSS expression, or [selector, property,
    pseudo] read from the live element. */
 const IS_TAURI_DESK=()=>de.dataset.shell==="tauri"&&!/android|ios/.test(de.dataset.os||"");
-const G=[
+const G:CzGroup[]=[
  {id:"base",ic:"format_paint",items:[
-  {k:"bg",ty:"c",th:1,pv:"var(--bg)",css:(v,P)=>`${P}{--bg:${v}!important}`},
-  {k:"text",ty:"c",th:1,pv:"var(--text)",css:(v,P)=>`${P}{--text:${v}!important}`},
-  {k:"mute",ty:"c",th:1,pv:"var(--mute)",css:(v,P)=>`${P}{--mute:${v}!important}`},
-  {k:"line",ty:"c",th:1,pv:"var(--line-2)",css:(v,P)=>`${P}{--line:${mix(v,24)}!important;--line-2:${mix(v,40)}!important;--glass-line:${mix(v,22)}!important;--dlg-line:${mix(v,24)}!important}`},
-  {k:"fontK",ty:"r",min:85,max:125,step:5,def:100,u:"%",css:(v,P)=>{const s=px((16*v/100).toFixed(2));return `${P}{font-size:${s}!important}${P} body{font-size:${s}!important}`}},
+  {k:"bg",ty:"c",th:1,pv:"var(--bg)",css:(v:string,P:string)=>`${P}{--bg:${v}!important}`},
+  {k:"text",ty:"c",th:1,pv:"var(--text)",css:(v:string,P:string)=>`${P}{--text:${v}!important}`},
+  {k:"mute",ty:"c",th:1,pv:"var(--mute)",css:(v:string,P:string)=>`${P}{--mute:${v}!important}`},
+  {k:"line",ty:"c",th:1,pv:"var(--line-2)",css:(v:string,P:string)=>`${P}{--line:${mix(v,24)}!important;--line-2:${mix(v,40)}!important;--glass-line:${mix(v,22)}!important;--dlg-line:${mix(v,24)}!important}`},
+  {k:"fontK",ty:"r",min:85,max:125,step:5,def:100,u:"%",css:(v:number,P:string)=>{const s=px((16*v/100).toFixed(2));return `${P}{font-size:${s}!important}${P} body{font-size:${s}!important}`}},
   {k:"zoom",ty:"r",min:80,max:150,step:5,def:100,u:"%",hint:1,only:()=>IS_TAURI_DESK()&&!!window.__TAURI__?.webview?.getCurrentWebview}]},
  {id:"panel",ic:"dashboard",items:[
   {k:"surf",ty:"c",th:1,pv:"var(--surf)"},
   {k:"surfA",ty:"r",min:0,max:100,step:1,def:null,ph:62,u:"%",hint:1},
-  {k:"search",ty:"c",th:1,pv:[".search","background-color"],css:(v,P,c)=>`${P} .search,${P} .search:hover,${P} .search:focus-within{background:${mix(v,c.A)}!important}`},
-  {k:"radius",ty:"r",min:0,max:36,step:1,def:24,u:"px",css:(v,P)=>`${P}{--r-lg:${px(v)}!important;--r:${px(Math.round(v*.58))}!important}${P} .app>footer.bar{border-radius:${px(v)}!important}`},
-  {k:"shadow",ty:"t",def:1,css:(v,P)=>v?"":`${P} :is(.pane,.app>footer.bar,.hsheet,.search,.mb,.ctx){box-shadow:none!important}`}]},
+  {k:"search",ty:"c",th:1,pv:[".search","background-color"],css:(v:string,P:string,c:CzCtx)=>`${P} .search,${P} .search:hover,${P} .search:focus-within{background:${mix(v,c.A)}!important}`},
+  {k:"radius",ty:"r",min:0,max:36,step:1,def:24,u:"px",css:(v:number,P:string)=>`${P}{--r-lg:${px(v)}!important;--r:${px(Math.round(v*.58))}!important}${P} .app>footer.bar{border-radius:${px(v)}!important}`},
+  {k:"shadow",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} :is(.pane,.app>footer.bar,.hsheet,.search,.mb,.ctx){box-shadow:none!important}`}]},
  {id:"rail",ic:"side_navigation",items:[
-  {k:"railBg",ty:"c",th:1,pv:[".rail","background-color"],css:(v,P,c)=>`${P} .rail.pane{background:${mix(v,c.A)}!important}`},
-  {k:"railAct",ty:"c",th:1,pv:[".rail","background-color","::before"],css:(v,P)=>`${P} .rail::before{background:${mix(v,18)}!important;box-shadow:inset 0 0 0 1px ${mix(v,28)}!important}${P} .navbtn[aria-current="true"] .nav-icon-box .material-symbols-rounded{color:${v}!important}`
+  {k:"railBg",ty:"c",th:1,pv:[".rail","background-color"],css:(v:string,P:string,c:CzCtx)=>`${P} .rail.pane{background:${mix(v,c.A)}!important}`},
+  {k:"railAct",ty:"c",th:1,pv:[".rail","background-color","::before"],css:(v:string,P:string)=>`${P} .rail::before{background:${mix(v,18)}!important;box-shadow:inset 0 0 0 1px ${mix(v,28)}!important}${P} .navbtn[aria-current="true"] .nav-icon-box .material-symbols-rounded{color:${v}!important}`
    /* the phone layout marks the current tab with a filled icon box instead */
    +`@media (max-width:700px){${P} .rail .navbtn[aria-current="true"] .nav-icon-box{background:${v}!important}${P} .rail .navbtn[aria-current="true"] .nav-icon-box .material-symbols-rounded{color:${onC(v)}!important}}`},
-  {k:"railIc",ty:"c",th:1,pv:['.navbtn:not([aria-current="true"])',"color"],css:(v,P)=>`${P} .navbtn:not([aria-current="true"]):not(:hover){color:${v}!important}`},
-  {k:"railLbl",ty:"t",def:1,css:(v,P)=>v?"":`${P} .navbtn>span[data-i18n]{display:none!important}${P} .navbtn{padding:9px 0!important}`},
-  {k:"railLogo",ty:"t",def:1,css:(v,P)=>v?"":`${P} .rail>.mark{display:none!important}`}]},
+  {k:"railIc",ty:"c",th:1,pv:['.navbtn:not([aria-current="true"])',"color"],css:(v:string,P:string)=>`${P} .navbtn:not([aria-current="true"]):not(:hover){color:${v}!important}`},
+  {k:"railLbl",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} .navbtn>span[data-i18n]{display:none!important}${P} .navbtn{padding:9px 0!important}`},
+  {k:"railLogo",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} .rail>.mark{display:none!important}`}]},
  {id:"bar",ic:"play_circle",items:[
-  {k:"barBg",ty:"c",th:1,pv:[".app>footer.bar","background-color"],css:(v,P,c)=>`${P} .app>footer.bar{background:${mix(v,c.A)}!important}`},
-  {k:"barR",ty:"r",min:0,max:36,step:1,def:24,u:"px",css:(v,P)=>`${P} .app>footer.bar{border-radius:${px(v)}!important}`},
-  {k:"seekC",ty:"c",th:1,pv:"var(--accent)",css:(v,P)=>`${P} #btrack .m3w{color:${v}!important}${P} #btrack .m3w-rest{background:${mix(v,24)}!important}${P} #btrack .f,${P} #btrack .h{background:${v}!important}`},
+  {k:"barBg",ty:"c",th:1,pv:[".app>footer.bar","background-color"],css:(v:string,P:string,c:CzCtx)=>`${P} .app>footer.bar{background:${mix(v,c.A)}!important}`},
+  {k:"barR",ty:"r",min:0,max:36,step:1,def:24,u:"px",css:(v:number,P:string)=>`${P} .app>footer.bar{border-radius:${px(v)}!important}`},
+  {k:"seekC",ty:"c",th:1,pv:"var(--accent)",css:(v:string,P:string)=>`${P} #btrack .m3w{color:${v}!important}${P} #btrack .m3w-rest{background:${mix(v,24)}!important}${P} #btrack .f,${P} #btrack .h{background:${v}!important}`},
   {k:"seekWave",ty:"t",def:1},
-  {k:"playBg",ty:"c",th:1,pv:[".app>footer.bar .play","background-color"],css:(v,P)=>`${P} .app>footer.bar .play{background:${v}!important;color:${onC(v)}!important}${P} .app>footer.bar .play .material-symbols-rounded{color:${onC(v)}!important}`},
-  {k:"barIc",ty:"c",th:1,pv:[".app>footer.bar .ctrls .ic","color"],css:(v,P)=>`${P} .app>footer.bar .ic:not([aria-pressed="true"]):not(:hover){color:${v}!important}${P} .app>footer.bar .seek .t{color:${v}!important}`},
-  {k:"artR",ty:"r",min:0,max:21,step:1,def:10,u:"px",css:(v,P)=>`${P} .app>footer.bar .np .art{border-radius:${px(v)}!important}`}]},
+  {k:"playBg",ty:"c",th:1,pv:[".app>footer.bar .play","background-color"],css:(v:string,P:string)=>`${P} .app>footer.bar .play{background:${v}!important;color:${onC(v)}!important}${P} .app>footer.bar .play .material-symbols-rounded{color:${onC(v)}!important}`},
+  {k:"barIc",ty:"c",th:1,pv:[".app>footer.bar .ctrls .ic","color"],css:(v:string,P:string)=>`${P} .app>footer.bar .ic:not([aria-pressed="true"]):not(:hover){color:${v}!important}${P} .app>footer.bar .seek .t{color:${v}!important}`},
+  {k:"artR",ty:"r",min:0,max:21,step:1,def:10,u:"px",css:(v:number,P:string)=>`${P} .app>footer.bar .np .art{border-radius:${px(v)}!important}`}]},
  {id:"cov",ic:"image",items:[
-  {k:"covR",ty:"r",min:0,max:40,step:1,def:24,u:"px",css:(v,P)=>`${P} :is(.plc,.plc .sq,.cover:not(.sm),.hs-art,.dc-cover){border-radius:${px(v)}!important}${P} :is(.art,.cover.sm,.fpq-art,.acc-row-art){border-radius:${px(Math.round(v*.42))}!important}`},
-  {k:"covSh",ty:"t",def:1,css:(v,P)=>v?"":`${P} :is(.plc .sq,.cover,.hs-art,.fpx-cover,.art,.dc-cover){box-shadow:none!important}`},
-  {k:"covLift",ty:"t",def:1,css:(v,P)=>v?"":`${P} :is(.plc:hover .sq,.hs-card:hover .hs-art){transform:none!important}`}]},
+  {k:"covR",ty:"r",min:0,max:40,step:1,def:24,u:"px",css:(v:number,P:string)=>`${P} :is(.plc,.plc .sq,.cover:not(.sm),.hs-art,.dc-cover){border-radius:${px(v)}!important}${P} :is(.art,.cover.sm,.fpq-art,.acc-row-art){border-radius:${px(Math.round(v*.42))}!important}`},
+  {k:"covSh",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} :is(.plc .sq,.cover,.hs-art,.fpx-cover,.art,.dc-cover){box-shadow:none!important}`},
+  {k:"covLift",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} :is(.plc:hover .sq,.hs-card:hover .hs-art){transform:none!important}`}]},
  {id:"ctl",ic:"toggle_on",items:[
-  {k:"shape",ty:"s",def:"pill",opts:["pill","round","square"],css:(v,P)=>{const r=v==="round"?12:v==="square"?6:0;if(!r)return "";
+  {k:"shape",ty:"s",def:"pill",opts:["pill","round","square"],css:(v:string,P:string)=>{const r=v==="round"?12:v==="square"?6:0;if(!r)return "";
    return `${P} :is(.btn,.primary,.m3b,.dlg-btn,.eqbtn,.seg button,.seg::before,.hs-tab,.cz-chip){border-radius:${px(r)}!important}${P} .seg{border-radius:${px(r+3)}!important}`}},
-  {k:"priBg",ty:"c",th:1,pv:[".primary","background-color"],css:(v,P)=>`${P} .primary:not(.danger){background:${v}!important;color:${onC(v)}!important}`},
-  {k:"selBg",ty:"c",th:1,pv:[".seg","background-color","::before"],css:(v,P)=>`${P} .seg::before{background:${v}!important}${P} .seg button[aria-pressed="true"]{color:${onC(v)}!important}`},
-  {k:"swOn",ty:"c",th:1,pv:['.sw[aria-pressed="true"]',"background-color"],css:(v,P)=>`${P} .sw[aria-pressed="true"]{background:${v}!important}${P} .sw[aria-pressed="true"]::after{background:${onC(v)}!important}`}]},
+  {k:"priBg",ty:"c",th:1,pv:[".primary","background-color"],css:(v:string,P:string)=>`${P} .primary:not(.danger){background:${v}!important;color:${onC(v)}!important}`},
+  {k:"selBg",ty:"c",th:1,pv:[".seg","background-color","::before"],css:(v:string,P:string)=>`${P} .seg::before{background:${v}!important}${P} .seg button[aria-pressed="true"]{color:${onC(v)}!important}`},
+  {k:"swOn",ty:"c",th:1,pv:['.sw[aria-pressed="true"]',"background-color"],css:(v:string,P:string)=>`${P} .sw[aria-pressed="true"]{background:${v}!important}${P} .sw[aria-pressed="true"]::after{background:${onC(v)}!important}`}]},
  {id:"rows",ic:"format_list_bulleted",items:[
-  {k:"dens",ty:"s",def:"normal",opts:["compact","normal","roomy"],css:(v,P)=>{if(v==="normal")return "";const p=v==="compact"?5:15;
+  {k:"dens",ty:"s",def:"normal",opts:["compact","normal","roomy"],css:(v:string,P:string)=>{if(v==="normal")return "";const p=v==="compact"?5:15;
    return `${P} .row{padding-top:${px(p)}!important;padding-bottom:${px(p)}!important;contain-intrinsic-size:auto ${px(43+2*p)}!important}`}},
-  {k:"hov",ty:"c",th:1,pv:"color-mix(in srgb,var(--text) 10%,transparent)",css:(v,P)=>`${P} .row:hover{background:${mix(v,14)}!important}`},
-  {k:"div",ty:"t",def:1,css:(v,P)=>v?"":`${P} .row{border-top-color:transparent!important}`}]},
+  {k:"hov",ty:"c",th:1,pv:"color-mix(in srgb,var(--text) 10%,transparent)",css:(v:string,P:string)=>`${P} .row:hover{background:${mix(v,14)}!important}`},
+  {k:"div",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} .row{border-top-color:transparent!important}`}]},
  {id:"home",ic:"home",items:[
-  {k:"heroK",ty:"r",min:60,max:150,step:5,def:100,u:"%",css:(v,P)=>`${P}{--cz-hero:${v/100}!important}`},
-  {k:"heroC",ty:"c",th:1,pv:[".hero h1","color"],css:(v,P)=>`${P} .hero h1{color:${v}!important;-webkit-text-fill-color:${v}!important}`},
-  {k:"heroSub",ty:"t",def:1,css:(v,P)=>v?"":`${P} #hero-s{display:none!important}`},
-  {k:"hsBg",ty:"c",th:1,pv:[".hsheet","background-color"],css:(v,P,c)=>`${P} .hsheet,${P} .hsheet[data-open="true"]{background:${mix(v,c.A)}!important}`},
+  {k:"heroK",ty:"r",min:60,max:150,step:5,def:100,u:"%",css:(v:number,P:string)=>`${P}{--cz-hero:${v/100}!important}`},
+  {k:"heroC",ty:"c",th:1,pv:[".hero h1","color"],css:(v:string,P:string)=>`${P} .hero h1{color:${v}!important;-webkit-text-fill-color:${v}!important}`},
+  {k:"heroSub",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} #hero-s{display:none!important}`},
+  {k:"hsBg",ty:"c",th:1,pv:[".hsheet","background-color"],css:(v:string,P:string,c:CzCtx)=>`${P} .hsheet,${P} .hsheet[data-open="true"]{background:${mix(v,c.A)}!important}`},
   {k:"fieldC",ty:"c",th:1,pv:"rgb(var(--pr) var(--pg) var(--pb))"},
-  {k:"fieldA",ty:"r",min:0,max:100,step:5,def:100,u:"%",css:(v,P)=>`${P}{--cz-fa:${v/100}!important}`}]},
+  {k:"fieldA",ty:"r",min:0,max:100,step:5,def:100,u:"%",css:(v:number,P:string)=>`${P}{--cz-fa:${v/100}!important}`}]},
  {id:"fp",ic:"fullscreen",items:[
-  {k:"fpCovR",ty:"r",min:0,max:48,step:1,def:null,ph:22,u:"px",css:(v,P)=>`${P} .fpx-cover{border-radius:${px(v)}!important}`},
-  {k:"lyA",ty:"c",pv:"#ffffff",css:(v,P)=>`${P} #fplyr[data-synced="true"] p[data-on="true"]{background:linear-gradient(90deg,${v} calc(var(--karaoke-pct,0%) - 3%),${mix(v,42)} calc(var(--karaoke-pct,0%) + 3%))!important;-webkit-background-clip:text!important;background-clip:text!important}${P} :is(#fplyr[data-synced="false"] p,#fplyr[data-karaoke="off"] p[data-on="true"]){color:${v}!important;-webkit-text-fill-color:${v}!important}`},
-  {k:"lyI",ty:"c",pv:"#ffffff",css:(v,P)=>`${P} :is(#fplyr[data-synced="true"] p:not([data-on="true"]),#fplyr[data-karaoke="off"] p:not([data-on="true"])){color:${v}!important;-webkit-text-fill-color:${v}!important;background:none!important}`}]},
+  {k:"fpCovR",ty:"r",min:0,max:48,step:1,def:null,ph:22,u:"px",css:(v:number,P:string)=>`${P} .fpx-cover{border-radius:${px(v)}!important}`},
+  {k:"lyA",ty:"c",pv:"#ffffff",css:(v:string,P:string)=>`${P} #fplyr[data-synced="true"] p[data-on="true"]{background:linear-gradient(90deg,${v} calc(var(--karaoke-pct,0%) - 3%),${mix(v,42)} calc(var(--karaoke-pct,0%) + 3%))!important;-webkit-background-clip:text!important;background-clip:text!important}${P} :is(#fplyr[data-synced="false"] p,#fplyr[data-karaoke="off"] p[data-on="true"]){color:${v}!important;-webkit-text-fill-color:${v}!important}`},
+  {k:"lyI",ty:"c",pv:"#ffffff",css:(v:string,P:string)=>`${P} :is(#fplyr[data-synced="true"] p:not([data-on="true"]),#fplyr[data-karaoke="off"] p:not([data-on="true"])){color:${v}!important;-webkit-text-fill-color:${v}!important;background:none!important}`}]},
  {id:"chat",ic:"chat",items:[
-  {k:"mOut",ty:"c",th:1,pv:"var(--m-out)",css:(v,P)=>`${P}{--m-out:${v}!important;--m-out-t:${onC(v)}!important}`},
-  {k:"mIn",ty:"c",th:1,pv:"var(--m-in)",css:(v,P)=>`${P}{--m-in:${v}!important}${P} .mrow:not(.out) .mb{color:${onC(v)}!important}`},
-  {k:"mPane",ty:"c",th:1,pv:"var(--m-pane)",css:(v,P,c)=>`${P}{--m-pane:${mix(v,c.A)}!important}`},
-  {k:"mR",ty:"r",min:2,max:26,step:1,def:18,u:"px",css:(v,P)=>`${P}{--m-r:${px(v)}!important}`},
-  {k:"mFs",ty:"r",min:80,max:140,step:5,def:100,u:"%",css:(v,P)=>`${P} .mb{font-size:${(.92*v/100).toFixed(3)}rem!important}`},
+  {k:"mOut",ty:"c",th:1,pv:"var(--m-out)",css:(v:string,P:string)=>`${P}{--m-out:${v}!important;--m-out-t:${onC(v)}!important}`},
+  {k:"mIn",ty:"c",th:1,pv:"var(--m-in)",css:(v:string,P:string)=>`${P}{--m-in:${v}!important}${P} .mrow:not(.out) .mb{color:${onC(v)}!important}`},
+  {k:"mPane",ty:"c",th:1,pv:"var(--m-pane)",css:(v:string,P:string,c:CzCtx)=>`${P}{--m-pane:${mix(v,c.A)}!important}`},
+  {k:"mR",ty:"r",min:2,max:26,step:1,def:18,u:"px",css:(v:number,P:string)=>`${P}{--m-r:${px(v)}!important}`},
+  {k:"mFs",ty:"r",min:80,max:140,step:5,def:100,u:"%",css:(v:number,P:string)=>`${P} .mb{font-size:${(.92*v/100).toFixed(3)}rem!important}`},
   /* Round 8: the log runs edge to edge now; these bring the column back. */
-  {k:"mSide",ty:"r",min:0,max:160,step:2,def:null,ph:14,u:"px",css:(v,P)=>`${P} .mlog{padding-inline:${px(v)}!important}`},
-  {k:"mMaxW",ty:"r",min:40,max:100,step:2,def:null,ph:78,u:"%",css:(v,P)=>`${P} .mb{max-width:${v}%!important}`},
-  {k:"mNarrow",ty:"t",def:0,css:(v,P)=>v?`${P} .mlog-in{max-width:820px!important}`:""}]},
+  {k:"mSide",ty:"r",min:0,max:160,step:2,def:null,ph:14,u:"px",css:(v:number,P:string)=>`${P} .mlog{padding-inline:${px(v)}!important}`},
+  {k:"mMaxW",ty:"r",min:40,max:100,step:2,def:null,ph:78,u:"%",css:(v:number,P:string)=>`${P} .mb{max-width:${v}%!important}`},
+  {k:"mNarrow",ty:"t",def:0,css:(v:number,P:string)=>v?`${P} .mlog-in{max-width:820px!important}`:""}]},
  {id:"menu",ic:"web_asset",items:[
-  {k:"menuBg",ty:"c",th:1,pv:"var(--menu-bg)",css:(v,P,c)=>`${P}{--menu-bg:${mix(v,Math.max(c.A,90))}!important}`},
-  {k:"dlgBg",ty:"c",th:1,pv:"var(--dlg-bg)",css:(v,P)=>`${P}{--dlg-bg:${mix(v,97)}!important}`},
-  {k:"dlgR",ty:"r",min:4,max:40,step:1,def:null,ph:16,u:"px",css:(v,P)=>`@media (min-width:701px){${P} :is(.modalbox,.mdd,#v-settings.setov-box){border-radius:${px(v)}!important}}`},
-  {k:"toast",ty:"c",th:1,pv:"var(--m3-inv-surf)",css:(v,P)=>`${P}{--m3-inv-surf:${v}!important;--m3-inv-on:${onC(v)}!important}`},
-  {k:"scrim",ty:"r",min:0,max:90,step:5,def:null,ph:45,u:"%",css:(v,P)=>`${P}{--dlg-scrim:rgb(0 0 0 / ${v}%)!important}`}]},
+  {k:"menuBg",ty:"c",th:1,pv:"var(--menu-bg)",css:(v:string,P:string,c:CzCtx)=>`${P}{--menu-bg:${mix(v,Math.max(c.A,90))}!important}`},
+  {k:"dlgBg",ty:"c",th:1,pv:"var(--dlg-bg)",css:(v:string,P:string)=>`${P}{--dlg-bg:${mix(v,97)}!important}`},
+  {k:"dlgR",ty:"r",min:4,max:40,step:1,def:null,ph:16,u:"px",css:(v:number,P:string)=>`@media (min-width:701px){${P} :is(.modalbox,.mdd,#v-settings.setov-box){border-radius:${px(v)}!important}}`},
+  {k:"toast",ty:"c",th:1,pv:"var(--m3-inv-surf)",css:(v:string,P:string)=>`${P}{--m3-inv-surf:${v}!important;--m3-inv-on:${onC(v)}!important}`},
+  {k:"scrim",ty:"r",min:0,max:90,step:5,def:null,ph:45,u:"%",css:(v:number,P:string)=>`${P}{--dlg-scrim:rgb(0 0 0 / ${v}%)!important}`}]},
  {id:"scroll",ic:"swap_vert",items:[
-  {k:"scW",ty:"s",def:"normal",opts:["thin","normal","none"],css:(v,P)=>v==="thin"?`${P} *::-webkit-scrollbar{width:7px!important;height:7px!important}`
+  {k:"scW",ty:"s",def:"normal",opts:["thin","normal","none"],css:(v:string,P:string)=>v==="thin"?`${P} *::-webkit-scrollbar{width:7px!important;height:7px!important}`
    :v==="none"?`${P} *::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}${P} *{scrollbar-width:none!important}`:""},
-  {k:"scC",ty:"c",th:1,pv:"var(--line-2)",css:(v,P)=>`${P} *::-webkit-scrollbar-thumb{background:${mix(v,60)}!important;background-clip:content-box!important}${P} *::-webkit-scrollbar-thumb:hover{background:${v}!important;background-clip:content-box!important}`}]},
+  {k:"scC",ty:"c",th:1,pv:"var(--line-2)",css:(v:string,P:string)=>`${P} *::-webkit-scrollbar-thumb{background:${mix(v,60)}!important;background-clip:content-box!important}${P} *::-webkit-scrollbar-thumb:hover{background:${v}!important;background-clip:content-box!important}`}]},
  {id:"tb",ic:"web",only:IS_TAURI_DESK,items:[
-  {k:"tbBg",ty:"c",th:1,pv:[".titlebar","background-color"],css:(v,P)=>`${P} .titlebar{background:${v}!important}`},
-  {k:"tbBrand",ty:"t",def:1,css:(v,P)=>v?"":`${P} .tb-brand{display:none!important}`}]}];
+  {k:"tbBg",ty:"c",th:1,pv:[".titlebar","background-color"],css:(v:string,P:string)=>`${P} .titlebar{background:${v}!important}`},
+  {k:"tbBrand",ty:"t",def:1,css:(v:number,P:string)=>v?"":`${P} .tb-brand{display:none!important}`}]}];
 const ITEMS=G.flatMap(g=>g.items.map(it=>(it.g=g.id,it)));
-const BY=Object.fromEntries(ITEMS.map(it=>[it.k,it]));
+const BY:Record<string,CzItem|undefined>=Object.fromEntries(ITEMS.map(it=>[it.k,it]));
 
 /* Presets replace the whole set. Colours only where a preset is about colour,
    and then for the theme it was drawn for. */
-const PRESETS=[
+const PRESETS:CzPreset[]=[
  {id:"std",v:{}},
  {id:"compact",v:{a:{fontK:90,dens:"compact",radius:16,barR:16,covR:12,artR:7,railLbl:0,scW:"thin",mR:12,dlgR:20}}},
  {id:"soft",v:{a:{radius:32,barR:32,covR:30,artR:16,fpCovR:40,mR:24,dlgR:36}}},
@@ -202,66 +268,67 @@ const PRESETS=[
   hsBg:"#f8f4ec",mPane:"#fbf8f1",mIn:"#ffffff",mOut:"#e9dfcd",menuBg:"#fbf8f1",dlgBg:"#f8f4ec",priBg:"#2a251f",selBg:"#2a251f"}}}];
 
 /* ── store ── */
-const empty=()=>({a:{},d:{},l:{}});
-function valid(it,v){
+const empty=():MwCzStore=>({a:{},d:{},l:{}});
+function valid(it:CzItem|undefined,v:unknown):CzV|undefined{
  if(v==null||!it)return undefined;
  if(it.ty==="c")return typeof v==="string"&&HEX.test(v)?v.toLowerCase():undefined;
  if(it.ty==="r"){const n=Number(v);if(!Number.isFinite(n))return undefined;const st=it.step||1;
-  return Math.min(it.max,Math.max(it.min,Math.round(n/st)*st))}
- if(it.ty==="s")return it.opts.includes(v)?v:undefined;
- if(it.ty==="t")return v===0||v===false||v==="0"?0:1}
+  return Math.min(it.max!,Math.max(it.min!,Math.round(n/st)*st))}
+ if(it.ty==="s")return it.opts!.includes(v as string)?v as string:undefined;
+ if(it.ty==="t")return v===0||v===false||v==="0"?0:1;
+ return undefined}
 /* Validated copy: unknown keys, wrong types and stock values are dropped. */
-function clean(o){
+function clean(o:unknown):MwCzStore|null{
  if(!o||typeof o!=="object"||Array.isArray(o))return null;
  const out=empty();
- for(const it of ITEMS)for(const s of it.th?["d","l"]:["a"]){
-  const v=valid(it,o[s]?.[it.k]);
+ for(const it of ITEMS)for(const s of it.th?["d","l"] as const:["a"] as const){
+  const v=valid(it,(o as CzIn)[s]?.[it.k]);
   if(v!==undefined&&v!==it.def)out[s][it.k]=v}
  return out}
-const isEmpty=c=>!c||!["a","d","l"].some(s=>c[s]&&Object.keys(c[s]).length);
-function CZ(){
+const isEmpty=(c:MwCzStore|null|undefined)=>!c||!["a","d","l"].some(s=>c[s as CzSlot]&&Object.keys(c[s as CzSlot]).length);
+function CZ():MwCzStore{
  if(!S.x.cz||typeof S.x.cz!=="object")S.x.cz=empty();
- for(const s of ["a","d","l"])if(!S.x.cz[s]||typeof S.x.cz[s]!=="object")S.x.cz[s]=empty()[s];
+ for(const s of ["a","d","l"] as const)if(!S.x.cz[s]||typeof S.x.cz[s]!=="object")S.x.cz[s]=empty()[s];
  return S.x.cz}
 const TK=()=>de.dataset.theme==="light"?"l":"d";
-const slot=it=>it.th?TK():"a";
-const getV=it=>CZ()[slot(it)][it.k];
-function setV(it,v){
+const slot=(it:CzItem)=>it.th?TK():"a";
+const getV=(it:CzItem)=>CZ()[slot(it)][it.k];
+function setV(it:CzItem,v:CzV|null|undefined):void{
  const c=CZ(),s=slot(it);
  if(v===undefined||v===null||v===it.def)delete c[s][it.k];else c[s][it.k]=v}
 
 /* ── stylesheet ── */
-const PANEL_BASE={d:"#1b1b23",l:"#fbfbfd"};
-function panelCSS(vals,A,P,th){
+const PANEL_BASE={d:"#1b1b23",l:"#fbfbfd"} as const;
+function panelCSS(vals:Record<string,CzV>,A:number|undefined,P:string,th:"d"|"l"):string{
  if(vals.surf==null&&A==null)return "";
  const b=vals.surf||PANEL_BASE[th],a=A??62;
  return `${P}{--surf:${mix(b,a)}!important;--surf-2:${mix(b,Math.min(100,a+14))}!important;--glass:${mix(b,a)}!important;--glass-hi:${mix(b,Math.min(100,a+28))}!important}`}
-function buildCSS(c){
- const A=c.a.surfA,ctx={A:A??88};
+function buildCSS(c:MwCzStore):string{
+ const A=c.a.surfA as number|undefined,ctx={A:A??88};
  let out="";
- for(const th of ["d","l"]){
+ for(const th of ["d","l"] as const){
   const P=`html[data-theme="${th==="d"?"dark":"light"}"]`,vals=c[th];
   out+=panelCSS(vals,A,P,th);
-  for(const it of ITEMS)if(it.th&&it.css&&vals[it.k]!=null)out+=it.css(vals[it.k],P,ctx)}
+  for(const it of ITEMS)if(it.th&&it.css&&vals[it.k]!=null)out+=it.css(vals[it.k]!,P,ctx)}
  const P="html[data-theme]";
- for(const it of ITEMS)if(!it.th&&it.css&&c.a[it.k]!=null){const s=it.css(c.a[it.k],P,ctx);if(s)out+=s}
+ for(const it of ITEMS)if(!it.th&&it.css&&c.a[it.k]!=null){const s=it.css(c.a[it.k]!,P,ctx);if(s)out+=s}
  return out.replace(/\}(?=\S)/g,"}\n")}
 let ZOOM=1;
 function zoomApply(){
- const it=BY.zoom,want=de.dataset.mini==="on"?1:(CZ().a.zoom||100)/100;
- if(!it.only()||Math.abs(want-ZOOM)<.001)return;
+ const it=BY.zoom!,want=de.dataset.mini==="on"?1:(CZ().a.zoom as number||100)/100;
+ if(!it.only!()||Math.abs(want-ZOOM)<.001)return;
  ZOOM=want;
- try{window.__TAURI__.webview.getCurrentWebview().setZoom(want)?.catch?.(e=>console.warn("[meowave] zoom:",e?.message||e))}
- catch(e){console.warn("[meowave] zoom:",e?.message||e)}}
+ try{window.__TAURI__!.webview!.getCurrentWebview!().setZoom(want)?.catch?.(e=>console.warn("[meowave] zoom:",e?.message||e))}
+ catch(e){console.warn("[meowave] zoom:",(e as Error)?.message||e)}}
 let RAF=0;
-function apply(persist){
+function apply(persist:boolean):void{
  cancelAnimationFrame(RAF);RAF=0;
  const c=CZ(),css=buildCSS(c);
  let st=$("cz-style");
  if(!st){st=document.createElement("style");st.id="cz-style";document.head.appendChild(st)}
  if(st.textContent!==css)st.textContent=css;
  window.CZ_FLAT=c.a.seekWave===0;
- const fc=c[TK()].fieldC;window.CZ_FIELD=fc?rgbOf(fc):null;
+ const fc=c[TK()].fieldC;window.CZ_FIELD=fc?rgbOf(fc as string):null;
  zoomApply();
  if(persist)try{css?localStorage.setItem("meowave_cz_css",css):localStorage.removeItem("meowave_cz_css")}catch(_){}
  requestAnimationFrame(()=>{try{paintRail()}catch(_){}})}
@@ -279,39 +346,39 @@ window.czAdopt=r=>{const v=clean(r);if(!v||isEmpty(v)||!isEmpty(CZ()))return;
 /* ── editor ── */
 const cv=document.createElement("canvas");cv.width=cv.height=1;
 const g2=cv.getContext("2d",{willReadFrequently:true});
-function toHex(col){
+function toHex(col:string):string{
  if(!col||!g2)return "#000000";
  g2.clearRect(0,0,1,1);g2.fillStyle="#000";g2.fillStyle=col;g2.fillRect(0,0,1,1);
  const d=g2.getImageData(0,0,1,1).data;
- return "#"+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,"0")).join("")}
-let PROBE=null;
+ return "#"+[d[0]!,d[1]!,d[2]!].map(v=>v.toString(16).padStart(2,"0")).join("")}
+let PROBE:HTMLElement|null=null;
 /* What an untouched element looks like right now, as a CSS colour. */
-function current(it){
+function current(it:CzItem):string{
  const pv=it.pv;
- if(Array.isArray(pv)){const el=document.querySelector(pv[0]);
-  return el?getComputedStyle(el,pv[2]||null).getPropertyValue(pv[1]).trim():""}
+ if(Array.isArray(pv)){const el=document.querySelector(pv[0]!);
+  return el?getComputedStyle(el,pv[2]||null).getPropertyValue(pv[1]!).trim():""}
  if(!PROBE||!pv)return "";
  PROBE.style.color="";PROBE.style.color=pv;
  return getComputedStyle(PROBE).color}
-const label=k=>t("cz."+k);
-const visible=it=>!it.only||it.only();
-function ctlHTML(it){
+const label=(k:string)=>t("cz."+k);
+const visible=(it:CzItem|CzGroup)=>!it.only||it.only();
+function ctlHTML(it:CzItem):string{
  const id="cz-"+it.k;
  if(it.ty==="c")return `<span class="cz-hex" aria-hidden="true"></span><label class="cz-sw"><input type="color" id="${id}" data-cz="${it.k}" aria-label="${esc(label(it.k))}"><i></i></label>`;
  if(it.ty==="r")return `<input type="range" id="${id}" data-cz="${it.k}" min="${it.min}" max="${it.max}" step="${it.step||1}" aria-label="${esc(label(it.k))}"><output class="cz-v" for="${id}"></output>`;
- if(it.ty==="s")return `<div class="seg" id="${id}" role="group" data-cz="${it.k}" aria-label="${esc(label(it.k))}">${it.opts.map(o=>`<button type="button" data-v="${o}" data-i18n="cz.${it.k}.${o}">${esc(t(`cz.${it.k}.${o}`))}</button>`).join("")}</div>`;
+ if(it.ty==="s")return `<div class="seg" id="${id}" role="group" data-cz="${it.k}" aria-label="${esc(label(it.k))}">${it.opts!.map(o=>`<button type="button" data-v="${o}" data-i18n="cz.${it.k}.${o}">${esc(t(`cz.${it.k}.${o}`))}</button>`).join("")}</div>`;
  return `<button type="button" class="sw" id="${id}" data-cz="${it.k}" aria-pressed="false" aria-label="${esc(label(it.k))}"></button>`}
-function rowHTML(it){
+function rowHTML(it:CzItem):string{
  const hint=it.hint?`<small data-i18n="cz.${it.k}.s">${esc(t(`cz.${it.k}.s`))}</small>`:"";
  return `<div class="field cz-it" data-k="${it.k}" data-ty="${it.ty}"><div><label${it.ty==="c"||it.ty==="r"?` for="cz-${it.k}"`:""} data-i18n="cz.${it.k}">${esc(label(it.k))}</label>${hint}</div>
   <div class="cz-c">${ctlHTML(it)}<button type="button" class="cz-rs" data-rs="${it.k}" data-i18n-title="cz.reset1" title="${esc(t("cz.reset1"))}" aria-label="${esc(t("cz.reset1"))}"><span class="material-symbols-rounded" aria-hidden="true">restart_alt</span></button></div></div>`}
-function groupHTML(gr){
+function groupHTML(gr:CzGroup):string{
  return `<details class="cz-g" data-g="${gr.id}"><summary><span class="cz-gi" aria-hidden="true"><span class="material-symbols-rounded">${gr.ic}</span></span>
   <span class="cz-gt"><b data-i18n="cz.g.${gr.id}">${esc(t("cz.g."+gr.id))}</b><small data-i18n="cz.g.${gr.id}.s">${esc(t(`cz.g.${gr.id}.s`))}</small></span>
   <span class="cz-n" aria-hidden="true"></span><span class="material-symbols-rounded cz-chev" aria-hidden="true">expand_more</span></summary>
   <div class="cz-body">${gr.items.filter(visible).map(rowHTML).join("")}
   <div class="cz-gfoot"><button type="button" class="btn ghost sm" data-rsg="${gr.id}" data-i18n="cz.resetg">${esc(t("cz.resetg"))}</button></div></div></details>`}
-function build(host){
+function build(host:HTMLElement):void{
  host.innerHTML=`<h3 data-i18n="cz.t">${esc(t("cz.t"))}</h3><p class="ph" data-i18n="cz.s">${esc(t("cz.s"))}</p>
   <div class="cz-presets" role="group" aria-label="${esc(t("cz.p"))}"><span class="cz-pl" data-i18n="cz.p">${esc(t("cz.p"))}</span>${PRESETS.map(p=>`<button type="button" class="cz-chip" data-czp="${p.id}" aria-pressed="false" data-i18n="cz.p.${p.id}">${esc(t("cz.p."+p.id))}</button>`).join("")}</div>
   <div class="cz-top"><label class="cz-find"><span class="material-symbols-rounded" aria-hidden="true">search</span><input type="search" id="cz-q" autocomplete="off" data-i18n-ph="cz.find" placeholder="${esc(t("cz.find"))}"></label>
@@ -321,22 +388,22 @@ function build(host){
   <p class="cz-note"><span class="material-symbols-rounded" aria-hidden="true">contrast</span><span id="cz-th"></span></p>
   <div class="cz-groups">${G.filter(visible).map(groupHTML).join("")}<p class="cz-empty" id="cz-none" hidden data-i18n="cz.none">${esc(t("cz.none"))}</p></div>
   <i class="cz-probe" aria-hidden="true"></i>`;
- PROBE=host.querySelector(".cz-probe")}
-function paintRow(row){
- const it=BY[row.dataset.k];if(!it)return;
+ PROBE=host.querySelector<HTMLElement>(".cz-probe")}
+function paintRow(row:HTMLElement):void{
+ const it=BY[row.dataset.k!];if(!it)return;
  const v=getV(it),set=v!==undefined;
  row.dataset.set=set?"1":"0";
- const el=row.querySelector("[data-cz]");
+ const el=row.querySelector<HTMLInputElement>("[data-cz]")!;
  if(it.ty==="c"){
-  const cur=set?v:current(it),hex=set?v:toHex(cur);
-  row.querySelector(".cz-sw").style.setProperty("--c",set?v:cur||"transparent");
+  const cur=set?v as string:current(it),hex=set?v as string:toHex(cur);
+  row.querySelector<HTMLElement>(".cz-sw")!.style.setProperty("--c",set?v as string:cur||"transparent");
   if(document.activeElement!==el)el.value=hex;
-  row.querySelector(".cz-hex").textContent=set?v.toUpperCase():t("cz.auto")}
+  row.querySelector(".cz-hex")!.textContent=set?(v as string).toUpperCase():t("cz.auto")}
  else if(it.ty==="r"){
   const n=set?v:(it.def??it.ph??it.min);
   if(document.activeElement!==el||!set)el.value=String(n);
   try{paintRange(el)}catch(_){}
-  row.querySelector(".cz-v").textContent=set||it.def!=null?n+(it.u==="%"?"%":" px"):t("cz.auto")}
+  row.querySelector(".cz-v")!.textContent=set||it.def!=null?n+(it.u==="%"?"%":" px"):t("cz.auto")}
  else if(it.ty==="s"){
   const cur=set?v:it.def;
   el.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===cur)));
@@ -345,25 +412,25 @@ function paintRow(row){
 function paintHead(){
  const host=$("cz-panel");if(!host||!host.firstElementChild)return;
  const th=$("cz-th");if(th)th.textContent=t(TK()==="l"?"cz.th.l":"cz.th.d");
- host.querySelectorAll(".cz-chip").forEach(b=>b.setAttribute("aria-pressed",String((S.x.czp||(isEmpty(CZ())?"std":""))===b.dataset.czp)));
+ host.querySelectorAll<HTMLElement>(".cz-chip").forEach(b=>b.setAttribute("aria-pressed",String((S.x.czp||(isEmpty(CZ())?"std":""))===b.dataset.czp)));
  const c=CZ();
- host.querySelectorAll(".cz-g").forEach(gd=>{
-  const n=G.find(x=>x.id===gd.dataset.g).items.filter(it=>visible(it)&&c[slot(it)][it.k]!==undefined).length;
-  gd.querySelector(".cz-n").textContent=n?String(n):""})}
-function paintGroup(gd){gd.querySelectorAll(".cz-it").forEach(paintRow)}
+ host.querySelectorAll<HTMLElement>(".cz-g").forEach(gd=>{
+  const n=G.find(x=>x.id===gd.dataset.g)!.items.filter(it=>visible(it)&&c[slot(it)][it.k]!==undefined).length;
+  gd.querySelector(".cz-n")!.textContent=n?String(n):""})}
+function paintGroup(gd:Element):void{gd.querySelectorAll<HTMLElement>(".cz-it").forEach(paintRow)}
 function render(){
  const host=$("cz-panel");if(!host)return;
  if(!host.firstElementChild)build(host);
  host.querySelectorAll(".cz-g[open]").forEach(paintGroup);
  paintHead()}
-function find(q){
+function find(q:string|undefined):void{
  const host=$("cz-panel");if(!host)return;
  q=(q||"").trim().toLowerCase();
  let any=false;
- host.querySelectorAll(".cz-g").forEach(gd=>{
-  const gt=gd.querySelector(".cz-gt b").textContent.toLowerCase();
+ host.querySelectorAll<HTMLDetailsElement>(".cz-g").forEach(gd=>{
+  const gt=gd.querySelector(".cz-gt b")!.textContent!.toLowerCase();
   let hit=0;
-  gd.querySelectorAll(".cz-it").forEach(r=>{const ok=!q||gt.includes(q)||r.textContent.toLowerCase().includes(q);r.hidden=!ok;if(ok)hit++});
+  gd.querySelectorAll<HTMLElement>(".cz-it").forEach(r=>{const ok=!q||gt.includes(q)||r.textContent!.toLowerCase().includes(q);r.hidden=!ok;if(ok)hit++});
   gd.hidden=!!q&&!hit;
   if(q){if(hit&&!gd.open){gd.dataset.auto="1";gd.open=true}}
   else if(gd.dataset.auto){delete gd.dataset.auto;gd.open=false}
@@ -371,46 +438,46 @@ function find(q){
  const none=$("cz-none");if(none)none.hidden=!q||any}
 
 /* ── events ── */
-function onInput(e){
- const el=e.target.closest?.("[data-cz]");if(!el)return;
- const it=BY[el.dataset.cz];if(!it)return;
+function onInput(e:Event):void{
+ const el=(e.target as Element).closest?.<HTMLInputElement>("[data-cz]");if(!el)return;
+ const it=BY[el.dataset.cz!];if(!it)return;
  if(it.ty==="c"&&HEX.test(el.value))setV(it,el.value.toLowerCase());
  else if(it.ty==="r")setV(it,valid(it,el.value));
  else return;
- const row=el.closest(".cz-it");if(row){row.dataset.set=getV(it)!==undefined?"1":"0";
-  if(it.ty==="c"){row.querySelector(".cz-sw").style.setProperty("--c",el.value);row.querySelector(".cz-hex").textContent=el.value.toUpperCase()}
-  else row.querySelector(".cz-v").textContent=el.value+(it.u==="%"?"%":" px")}
+ const row=el.closest<HTMLElement>(".cz-it");if(row){row.dataset.set=getV(it)!==undefined?"1":"0";
+  if(it.ty==="c"){row.querySelector<HTMLElement>(".cz-sw")!.style.setProperty("--c",el.value);row.querySelector(".cz-hex")!.textContent=el.value.toUpperCase()}
+  else row.querySelector(".cz-v")!.textContent=el.value+(it.u==="%"?"%":" px")}
  applySoon();
  if(e.type==="change"){commit();if(row)paintRow(row)}}
-function resetKeys(keys){
+function resetKeys(keys:string[]):void{
  const c=CZ();
  keys.forEach(k=>{const it=BY[k];if(it)delete c[slot(it)][k]});
  commit();render()}
-async function onClick(e){
+async function onClick(e:MouseEvent):Promise<void>{
  const host=$("cz-panel");
- const rs=e.target.closest("[data-rs]");
- if(rs){resetKeys([rs.dataset.rs]);return}
- const rg=e.target.closest("[data-rsg]");
- if(rg){resetKeys(G.find(x=>x.id===rg.dataset.rsg).items.map(it=>it.k));return}
- const segB=e.target.closest(".cz-it .seg button");
- if(segB){const it=BY[segB.closest("[data-cz]").dataset.cz];setV(it,valid(it,segB.dataset.v));commit();paintRow(segB.closest(".cz-it"));return}
- const sw=e.target.closest(".cz-it .sw");
- if(sw){const it=BY[sw.dataset.cz];const on=sw.getAttribute("aria-pressed")!=="true";setV(it,on?1:0);commit();paintRow(sw.closest(".cz-it"));return}
- const chip=e.target.closest("[data-czp]");
+ const rs=(e.target as Element).closest<HTMLElement>("[data-rs]");
+ if(rs){resetKeys([rs.dataset.rs!]);return}
+ const rg=(e.target as Element).closest<HTMLElement>("[data-rsg]");
+ if(rg){resetKeys(G.find(x=>x.id===rg.dataset.rsg)!.items.map(it=>it.k));return}
+ const segB=(e.target as Element).closest<HTMLElement>(".cz-it .seg button");
+ if(segB){const it=BY[segB.closest<HTMLElement>("[data-cz]")!.dataset.cz!];setV(it!,valid(it,segB.dataset.v));commit();paintRow(segB.closest<HTMLElement>(".cz-it")!);return}
+ const sw=(e.target as Element).closest<HTMLElement>(".cz-it .sw");
+ if(sw){const it=BY[sw.dataset.cz!];const on=sw.getAttribute("aria-pressed")!=="true";setV(it!,on?1:0);commit();paintRow(sw.closest<HTMLElement>(".cz-it")!);return}
+ const chip=(e.target as Element).closest<HTMLElement>("[data-czp]");
  if(chip){const p=PRESETS.find(x=>x.id===chip.dataset.czp);if(!p)return;
   S.x.cz=clean(p.v)||empty();apply(true);S.x.czp=p.id;save();try{pushPrefs()}catch(_){}render();
   toast(t("cz.p.done").replace("{n}",t("cz.p."+p.id)),2200,{icon:"palette"});return}
- if(e.target.closest("#cz-exp")){
+ if((e.target as Element).closest("#cz-exp")){
   const c=CZ(),body=JSON.stringify({meowave:"theme",v:1,a:c.a,d:c.d,l:c.l});
   const ok=await (window.MW3?.copyText?window.MW3.copyText(body):navigator.clipboard.writeText(body).then(()=>true,()=>false));
   if(ok)toast(t("cz.exp.ok"),2600,{icon:"ios_share"});return}
- if(e.target.closest("#cz-imp")){
+ if((e.target as Element).closest("#cz-imp")){
   const raw=await askText(t("cz.imp.t"),"",{icon:"palette",label:t("cz.imp.l"),confirm:t("cz.imp.ok"),required:true,max:6000});
   if(!raw)return;
-  let v=null;try{const o=JSON.parse(raw);v=o&&(o.meowave==="theme"||o.a||o.d||o.l)?clean(o):null}catch(_){}
+  let v:MwCzStore|null=null;try{const o=JSON.parse(raw);v=o&&(o.meowave==="theme"||o.a||o.d||o.l)?clean(o):null}catch(_){}
   if(!v){toast(t("cz.imp.bad"),3000,{icon:"error"});return}
   S.x.cz=v;commit();render();toast(t("cz.imp.done"),2200,{icon:"check_circle"});return}
- if(e.target.closest("#cz-reset")){
+ if((e.target as Element).closest("#cz-reset")){
   if(isEmpty(CZ()))return;
   const ok=await askConfirm(t("cz.reset.q"),t("cz.reset.ok"),true,{icon:"restart_alt"});
   if(!ok)return;
@@ -425,15 +492,15 @@ function init(){
  host.addEventListener("input",onInput);
  host.addEventListener("change",onInput);
  host.addEventListener("click",onClick);
- host.addEventListener("toggle",e=>{const gd=e.target;if(gd.classList?.contains("cz-g")&&gd.open)paintGroup(gd)},true);
- host.addEventListener("input",e=>{if(e.target.id==="cz-q")find(e.target.value)});
+ host.addEventListener("toggle",e=>{const gd=e.target as HTMLDetailsElement;if(gd.classList?.contains("cz-g")&&gd.open)paintGroup(gd)},true);
+ host.addEventListener("input",e=>{if((e.target as HTMLInputElement).id==="cz-q")find((e.target as HTMLInputElement).value)});
  /* the settings search marks matching rows; open the sections holding them */
  $("setov-q")?.addEventListener("input",()=>requestAnimationFrame(()=>{
-  host.querySelectorAll(".cz-g").forEach(gd=>{const hit=!!gd.querySelector('[data-hit="true"]');
+  host.querySelectorAll<HTMLDetailsElement>(".cz-g").forEach(gd=>{const hit=!!gd.querySelector('[data-hit="true"]');
    if(hit&&!gd.open){gd.dataset.auto="1";gd.open=true}else if(!hit&&gd.dataset.auto){delete gd.dataset.auto;gd.open=false}})}));
  new MutationObserver(ms=>{
   if(ms.some(m=>m.attributeName==="data-mini")){zoomApply();return}
   apply(false);render()}).observe(de,{attributes:true,attributeFilter:["data-theme","lang","data-mini"]})}
 init();
-window.MWCZ={apply,render,get:()=>JSON.parse(JSON.stringify(CZ())),set:o=>{const v=clean(o);if(v){S.x.cz=v;commit();render()}return !!v},css:()=>buildCSS(CZ()),items:()=>ITEMS.map(it=>it.k)};
-})();
+window.MWCZ={apply,render,get:()=>JSON.parse(JSON.stringify(CZ())),set:(o:unknown)=>{const v=clean(o);if(v){S.x.cz=v;commit();render()}return !!v},css:()=>buildCSS(CZ()),items:()=>ITEMS.map(it=>it.k)};
+}

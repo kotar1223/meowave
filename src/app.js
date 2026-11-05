@@ -1493,7 +1493,7 @@ gl_FragColor=vec4(col*vA,a);}`;
 /* The field's accent: the in-between colour while a fade runs (the root
    already holds the final one, see applyAccentRgb), else the root's. */
 function fieldAccent(){
- /* a particle colour picked in the interface designer (custom.js) */
+ /* a particle colour picked in the interface designer (src/ts/custom.ts) */
  if(window.CZ_FIELD)return window.CZ_FIELD;
  if(ACC_RAF&&ACC_NOW)return ACC_NOW;
  const cs=getComputedStyle(document.documentElement);
@@ -7589,7 +7589,7 @@ async function loadProfile(){
     any device is on the server; an account that never synced one takes this
     machine's. */
  const rp=sbProfile?.prefs||{};
- /* the designer's look (custom.js) comes along to a machine without one */
+ /* the designer's look (src/ts/custom.ts) comes along to a machine without one */
  if(typeof czAdopt==="function")czAdopt(rp.cz);
  if(rp&&"profile_track" in rp){
   const remote=rp.profile_track&&rp.profile_track.t?rp.profile_track:null;

@@ -45,7 +45,7 @@
    else acc=pal[st.accent||"violet"]||""}
   if(/^\d{1,3} \d{1,3} \d{1,3}$/.test(acc||"")){de.style.setProperty("--boot-acc","rgb("+acc+")");de.setAttribute("data-boot-acc","1")}
  }catch(_){}
- /* The interface designer's stylesheet (custom.js keeps a copy of the last
+ /* The interface designer's stylesheet (custom.ts keeps a copy of the last
     one it generated): in place before the first paint, so a custom
     background is never preceded by the stock one. All of it is !important,
     so it wins over app.css even though it comes first. */

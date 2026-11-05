@@ -5859,7 +5859,7 @@ html[data-theme="light"] .pinned-track{background:oklch(20% 0.01 280 / .035)}
 .avatar.has-img>img{transform:scale(1.035)}
 .avatar.has-img .avat{border:0}
 
-/* ═══ Interface designer (custom.js, Settings → Appearance) ═════════════════
+/* ═══ Interface designer (src/ts/custom.ts, Settings → Appearance) ═════════════════
    Thirteen sections, each a disclosure row; inside, the ordinary settings
    rows. A colour is a swatch over a checkerboard (so translucent stock
    colours read as such) wrapping the native picker. */
