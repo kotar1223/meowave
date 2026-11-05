@@ -551,6 +551,7 @@ pub fn run() {
             spotify::spotify_liked_tracks,
             ymlib::ym_available,
             ymlib::ym_login_start,
+            ymlib::ym_login_window,
             ymlib::ym_playlists,
             ymlib::ym_playlist_tracks,
             ymlib::ym_liked_tracks,

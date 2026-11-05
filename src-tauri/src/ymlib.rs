@@ -31,6 +31,145 @@ fn client_id() -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+/* ───────────── sign-in in an app window (MarshalX's method) ─────────────
+
+   The way yandex-music-api documents it: the official Yandex Music client's
+   OAuth id, implicit flow. After sign-in Yandex redirects to
+   `https://music.yandex.ru/#access_token=…&token_type=bearer&expires_in=…`
+   and the music site rewrites the address a moment later — in a browser the
+   user has to be quick to copy it. An app window sees that navigation on its
+   way and keeps the token, so the user only signs in: no DevTools, no
+   cookies, no paste page. The window has a browser profile of its own (like
+   the other account windows, see accounts.rs) and no access to the app's IPC. */
+
+/// The Yandex Music app's own OAuth client, as used by yandex-music-api.
+const YM_APP_CLIENT: &str = "23cabbbdc6cd418abb4b39c32c41195d";
+const YM_WINDOW: &str = "acc-ym";
+
+/// The access token out of an OAuth redirect address — the fragment of the
+/// implicit flow, or the query if Yandex ever answers that way.
+pub(crate) fn token_from_url(url: &str) -> Option<String> {
+    let tail = url.split_once('#').map(|x| x.1).into_iter().chain(url.split_once('?').map(|x| x.1.split('#').next().unwrap_or("")));
+    for part in tail {
+        for kv in part.split('&') {
+            let Some((k, v)) = kv.split_once('=') else { continue };
+            if k != "access_token" {
+                continue;
+            }
+            let v = urlencoding::decode(v).map(|c| c.into_owned()).unwrap_or_else(|_| v.to_string());
+            let v = v.trim().to_string();
+            if v.len() >= 20 && v.chars().all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c)) {
+                return Some(v);
+            }
+        }
+    }
+    None
+}
+
+/// Checks the token with Yandex, keeps it and tells the frontend. Runs once
+/// per window: the navigation hook and the address poll may both see it.
+async fn ym_window_done(app: tauri::AppHandle, token: String) {
+    use tauri::{Emitter, Manager};
+    let status = match ym_api("/account/status", &token) {
+        Ok(rb) => rb.send().await.ok(),
+        Err(_) => None,
+    };
+    let mut user = String::new();
+    if let Some(r) = status {
+        if matches!(r.status().as_u16(), 401 | 403) {
+            let _ = app.emit("acc-changed", serde_json::json!({ "service": "ym", "ok": false, "error": "Yandex отклонил токен — попробуйте войти ещё раз" }));
+            if let Some(w) = app.get_webview_window(YM_WINDOW) {
+                let _ = w.close();
+            }
+            return;
+        }
+        if let Ok(v) = r.json::<serde_json::Value>().await {
+            user = ["/result/account/displayName", "/result/account/login", "/result/account/fullName"]
+                .iter()
+                .find_map(|p| v.pointer(p).and_then(|x| x.as_str()).filter(|x| !x.trim().is_empty()).map(str::to_string))
+                .unwrap_or_default();
+        }
+    }
+    // A network hiccup on the check is not a reason to throw a fresh token
+    // away: Yandex just issued it.
+    if let Err(e) = crate::tokens::set_service_token("ym".into(), token) {
+        let _ = app.emit("acc-changed", serde_json::json!({ "service": "ym", "ok": false, "error": e }));
+        return;
+    }
+    let _ = app.emit("acc-changed", serde_json::json!({ "service": "ym", "ok": true, "user": user }));
+    if let Some(w) = app.get_webview_window(YM_WINDOW) {
+        let _ = w.close();
+    }
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.set_focus();
+    }
+}
+
+#[tauri::command]
+pub async fn ym_login_window(app: tauri::AppHandle) -> Result<(), String> {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use tauri::{Emitter, Manager};
+    if let Some(w) = app.get_webview_window(YM_WINDOW) {
+        #[cfg(desktop)]
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    let cid = client_id().unwrap_or_else(|| YM_APP_CLIENT.to_string());
+    let url: tauri::Url = format!("https://oauth.yandex.ru/authorize?response_type=token&client_id={cid}")
+        .parse()
+        .map_err(|e| format!("bad sign-in address: {e}"))?;
+    let got = Arc::new(AtomicBool::new(false));
+    let (h, g) = (app.clone(), got.clone());
+    let mut b = tauri::WebviewWindowBuilder::new(&app, YM_WINDOW, tauri::WebviewUrl::External(url))
+        .title("Яндекс Музыка · Meowave")
+        .inner_size(480.0, 720.0)
+        .min_inner_size(380.0, 520.0)
+        .on_navigation(move |u| {
+            let Some(tok) = token_from_url(u.as_str()) else { return true };
+            if !g.swap(true, Ordering::SeqCst) {
+                tauri::async_runtime::spawn(ym_window_done(h.clone(), tok));
+            }
+            // The music site behind the redirect is not needed.
+            false
+        });
+    #[cfg(desktop)]
+    {
+        b = b.center().focused(true);
+    }
+    if let Ok(root) = crate::paths::root() {
+        b = b.data_directory(root.join("accounts").join("ym"));
+    }
+    b.build().map_err(|e| format!("could not open the sign-in window: {e}"))?;
+    // The address is polled too: a token that arrives as an in-page hash
+    // change never passes the navigation hook.
+    tauri::async_runtime::spawn(async move {
+        for _ in 0..1200u32 {
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            if got.load(Ordering::SeqCst) {
+                return;
+            }
+            let Some(win) = app.get_webview_window(YM_WINDOW) else {
+                let _ = app.emit("acc-changed", serde_json::json!({ "service": "ym", "ok": false, "closed": true }));
+                return;
+            };
+            let Ok(u) = win.url() else { continue };
+            if let Some(tok) = token_from_url(u.as_str()) {
+                if !got.swap(true, Ordering::SeqCst) {
+                    ym_window_done(app.clone(), tok).await;
+                }
+                return;
+            }
+        }
+        if let Some(w) = app.get_webview_window(YM_WINDOW) {
+            let _ = w.close();
+        }
+        let _ = app.emit("acc-changed", serde_json::json!({ "service": "ym", "ok": false, "error": "timeout" }));
+    });
+    Ok(())
+}
+
 /// Whether the one-click flow can run. Without a configured client id we fall
 /// back to the cookie-paste flow, which still beats DevTools — so this command
 /// exists for the UI to show the right hint, and both paths are "available".
@@ -552,6 +691,16 @@ pub async fn ym_playlist_tracks(kind: String) -> Result<Vec<serde_json::Value>, 
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn token_from_the_oauth_redirect() {
+        let u = "https://music.yandex.ru/#access_token=y0_AgAAAAAB-c_d.ef12345678901234&token_type=bearer&expires_in=31536000";
+        assert_eq!(super::token_from_url(u).as_deref(), Some("y0_AgAAAAAB-c_d.ef12345678901234"));
+        assert_eq!(super::token_from_url("https://music.yandex.ru/?access_token=AQAAAAAAAAAAAAAAAAAAAAAAAAAAAA").as_deref(), Some("AQAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+        assert_eq!(super::token_from_url("https://music.yandex.ru/home"), None);
+        assert_eq!(super::token_from_url("https://music.yandex.ru/#access_token=short"), None);
+        assert_eq!(super::token_from_url("https://music.yandex.ru/#access_token=bad<script>aaaaaaaaaaaaaaaa"), None);
+    }
+
     use super::*;
 
     #[test]
