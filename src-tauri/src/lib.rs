@@ -1,6 +1,7 @@
 mod accounts;
 mod am;
 mod api;
+mod audio;
 mod browser;
 mod config;
 mod discord;
@@ -589,6 +590,16 @@ pub fn run() {
             taskbar::taskbar_set_playing,
             fsguard::other_fullscreen,
             mpris::mpris_update,
+            audio::audio_caps,
+            audio::audio_subscribe,
+            audio::audio_open,
+            audio::audio_play,
+            audio::audio_pause,
+            audio::audio_seek,
+            audio::audio_stop,
+            audio::audio_set,
+            audio::audio_preload,
+            audio::audio_status,
         ])
         .on_window_event(|window, event| match event {
             WindowEvent::Focused(focused) => {

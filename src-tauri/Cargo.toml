@@ -83,6 +83,15 @@ zbus = "5"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2.10.1"
+# The native audio engine (src/audio): cpal for the output device (WASAPI,
+# CoreAudio, ALSA — Linux builds need libasound2-dev), symphonia to decode
+# (pure Rust: MP3, AAC-LC, FLAC, ALAC, Vorbis, WAV in MP4/WebM/Ogg/RIFF),
+# rtrb for the lock-free ring the device callback reads, realfft for the
+# convolution reverb and the visualiser's spectrum.
+cpal = "0.18"
+symphonia = { version = "0.5.5", default-features = false, features = ["mp3", "aac", "alac", "flac", "pcm", "vorbis", "adpcm", "isomp4", "mkv", "ogg", "wav", "aiff"] }
+rtrb = "0.3"
+realfft = "3.5"
 
 [profile.release]
 codegen-units = 1

@@ -56,13 +56,13 @@ jobs:
         with:
           workspaces: src-tauri
 
-      # Linux needs the webkit/gtk development headers; nothing else in the
-      # matrix has system prerequisites.
+      # Linux needs the webkit/gtk development headers, and ALSA's for the
+      # native audio engine; nothing else in the matrix has system prerequisites.
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config patchelf unzip
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev libasound2-dev pkg-config patchelf unzip
 
       - name: Tag matches tauri.conf.json version
         shell: pwsh
