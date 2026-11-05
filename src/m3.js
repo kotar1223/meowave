@@ -70,7 +70,7 @@ function dialog({icon,title,body,actions=[],cls=""}){
   const f=bodyEl.querySelector("input:not([type=hidden]):not([disabled]),textarea:not([disabled])");
   (f||box).focus({preventScroll:true})});
  return api}
-/* Shared with the later modules (update.js, chats) so every dialog is this one. */
+/* Shared with the later modules (src/ts/update.ts, chats) so every dialog is this one. */
 window.mwDialog=dialog;
 
 async function copyText(text){

@@ -4,7 +4,10 @@
   "version": "3.3.0",
   "identifier": "app.meowave.desktop",
   "build": {
-    "frontendDist": "../src"
+    "frontendDist": "../dist",
+    "beforeDevCommand": { "script": "node scripts/web.mjs watch", "wait": false },
+    "beforeBuildCommand": "node scripts/web.mjs build",
+    "additionalWatchFolders": ["../dist"]
   },
   "app": {
     "withGlobalTauri": true,

@@ -9,6 +9,10 @@
      Update with: npm i -D <pkg> && cp node_modules/<pkg>/dist/... src/vendor/ -->
 <script src="./vendor/m3-icons.js"></script>
 <script src="./vendor/supabase.js"></script>
+<!-- The TypeScript modules (src/ts, built by Vite — see vite.config.mjs).
+     A module script is deferred: it runs after parsing, before the deferred
+     classic scripts below; what needs their globals waits for ready.js. -->
+<script type="module" src="./ts/main.ts"></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -1190,7 +1194,6 @@
 
 <script src="./fx.js" defer></script>
 <script src="./e2e.js" defer></script>
-<script src="./naudio.js" defer></script>
 <script src="./app.js" defer></script>
 <script src="./m3.js" defer></script>
 <script src="./discover.js" defer></script>
@@ -1199,8 +1202,6 @@
 <script src="./chatplus.js" defer></script>
 <script src="./profile2.js" defer></script>
 <script src="./custom.js" defer></script>
-<script src="./update.js" defer></script>
-<script src="./covers.js" defer></script>
-<script src="./aura.js" defer></script>
+<script src="./ready.js" defer></script>
 </body>
 </html>

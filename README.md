@@ -69,7 +69,7 @@ third-party client, so Meowave plays the same recording from another service
 
 - **App shell:** [Tauri 2](https://tauri.app) (Rust)
 - **Backend / accounts:** [Supabase](https://supabase.com) (Postgres + RLS)
-- **Frontend:** `src/` — plain HTML/CSS/JS, no framework, no build step
+- **Frontend:** [Vite](https://vite.dev) + TypeScript, no framework. `src/` is the root: the classic scripts (`app.js`, `fx.js`, `m3.js`…) and `app.css` are copied as they are, the modules moved so far live in `src/ts/` (the stack is being rewritten one screen at a time — see `HANDOFF.md`). The window shows the build in `dist/`.
 
 ## Project Structure
 
@@ -77,8 +77,9 @@ third-party client, so Meowave plays the same recording from another service
 meowave/
 ├── brain/                # Project brain (Obsidian vault): architecture, how to run, request log, worklog
 ├── docs/                 # GitHub Pages landing page (+ a copy of the badge art)
-├── scripts/              # Helper scripts (ffmpeg fetch, badge sync, round-icons.py)
+├── scripts/              # Helper scripts (web.mjs: the frontend build, ffmpeg fetch, badge sync, round-icons.py)
 ├── src/                  # Frontend: index.html, app.css, app.js, assets/
+│   └── ts/               # TypeScript modules (Vite bundles them into dist/)
 ├── src-tauri/            # Rust backend and Tauri config
 │   └── ffmpeg/           # Bundled sidecar, fetched not committed
 ├── supabase/             # SQL migrations, schema entry point, seeding scripts
@@ -91,7 +92,7 @@ meowave/
 
 - [Rust](https://www.rust-lang.org/tools/install) and Cargo
 - [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS
-- [Node.js](https://nodejs.org/) ≥ 20.11 — for the Tauri CLI and the scripts;
+- [Node.js](https://nodejs.org/) 20.19+ or 22.12+ — Vite 8 builds the frontend;
   the app itself has no runtime JS dependencies
 
 Linux note: WebKitGTK plays audio through GStreamer, so a dev checkout needs
@@ -104,7 +105,9 @@ nix-shell --run 'npm run dev'
 - Optionally a [Supabase](https://supabase.com) project of your own; the build
   ships with working defaults
 
-There is nothing to `npm install`: every script uses only Node built-ins.
+The dev dependencies are the Tauri CLI, Vite and TypeScript. `npm run dev`
+installs them itself when `package-lock.json` changed (`npm install --no-save`),
+so a plain `npm install` is only needed when that step fails.
 
 ### Run
 
@@ -115,7 +118,9 @@ cd meowave
 # optional: point the app at your own Supabase project / set a Spotify client id
 cp .env.example .env
 
-npm run dev        # = tauri dev
+npm run dev        # installs changed deps, builds src/ → dist/, then tauri dev
+                   # (tauri dev watches dist/ and rebuilds the window on a change)
+npm run web        # the frontend alone in a browser: Vite dev server on 127.0.0.1:1420
 ```
 
 ### Build
@@ -127,7 +132,7 @@ publisher publishes alongside it):
 
 ```bash
 npm run ffmpeg         # -> src-tauri/ffmpeg/ffmpeg-<triple>[.exe]
-npx tauri build        # -> src-tauri/target/release/bundle/
+npx tauri build        # builds dist/ first (beforeBuildCommand), -> src-tauri/target/release/bundle/
 ```
 
 Windows and Linux get a bundled LGPL ffmpeg sidecar. BtbN publishes no macOS
@@ -140,8 +145,10 @@ system copy (`brew install ffmpeg`) — mp3 conversion works everywhere, but
 ### Checks
 
 ```bash
-npm run check      # cargo clippy -D warnings, cargo test
-npm run check:js   # syntax-checks src/app.js
+npm run check      # builds dist/, then cargo clippy -D warnings, cargo test
+npm run check:js   # syntax-checks app.js, fx.js and discover.js, type-checks src/ts
+npm run typecheck  # tsc over src/ts only
+npm run test:e2e   # the static e2e suite (tests/run-e2e.mjs)
 ```
 
 ### Database

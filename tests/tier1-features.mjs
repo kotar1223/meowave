@@ -892,6 +892,11 @@ export function buildTier1Suite() {
     sessionStorage setInterval setTimeout speechSynthesis structuredClone undefined unescape visualViewport webkitAudioContext
     window lucide`.split(/\s+/).filter(Boolean));
   const scripts = [...html.matchAll(/<script src="\.\/([a-z0-9]+\.js)"/g)].map(m => path.join(PATHS.root, "src", m[1]));
+  // The TypeScript modules (src/ts, built by Vite) are checked by tsc, not
+  // here; what they hand to the classic scripts is window.X = … .
+  const tsDir = path.join(PATHS.root, "src", "ts");
+  const tsFiles = fs.existsSync(tsDir) ? fs.readdirSync(tsDir).filter(f => f.endsWith(".ts")).map(f => path.join(tsDir, f)) : [];
+  const tsExports = new Set(tsFiles.filter(f => !f.endsWith(".d.ts")).flatMap(f => [...fs.readFileSync(f, "utf-8").matchAll(/\bwindow\.([A-Za-z_$][\w$]*)\s*=(?!=)/g)].map(m => m[1])));
   const und = spawnSync(process.execPath, ["--expose-internals", path.join(PATHS.root, "tests", "undef-names.cjs"), ...scripts], { encoding: "utf8", maxBuffer: 16 << 20 });
   let undRes = null;
   try { undRes = JSON.parse(und.stdout); } catch (_) { undRes = { skip: "checker output unreadable: " + (und.stderr || und.stdout).slice(0, 200) }; }
@@ -899,8 +904,29 @@ export function buildTier1Suite() {
   else suite.test("F27-01: [Static] Every identifier the frontend reads is declared or a platform global", () => {
     assert.ok(!undRes.error, "parse failed: " + undRes.error);
     assert.ok(scripts.length >= 10, "expected the app's scripts in index.html, found " + scripts.length);
-    const bad = Object.entries(undRes.unresolved).filter(([n]) => !PLATFORM.has(n));
+    const bad = Object.entries(undRes.unresolved).filter(([n]) => !PLATFORM.has(n) && !tsExports.has(n));
     assert.deepEqual(bad.map(([n, w]) => `${n} (${w.join(", ")})`), [], "names read but never defined — a ReferenceError at runtime");
+  });
+  // The other direction: the TypeScript modules read app.js's globals by name
+  // and src/ts/globals.d.ts only promises tsc they exist. Each promise must
+  // still be kept by a classic script, or the module throws at start-up.
+  const globalsDts = path.join(tsDir, "globals.d.ts");
+  if (undRes.skip || !fs.existsSync(globalsDts)) suite.skip("F27-02: [Static] Every legacy global the TypeScript modules rely on is still declared", undRes.skip || "no src/ts/globals.d.ts");
+  else suite.test("F27-02: [Static] Every legacy global the TypeScript modules rely on is still declared", () => {
+    const dts = fs.readFileSync(globalsDts, "utf-8");
+    const promised = [...dts.matchAll(/^declare\s+(?:const|let|var|function)\s+([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
+    const win = dts.match(/interface Window \{([\s\S]*?)\n\}/);
+    const winProps = win ? [...win[1].matchAll(/^\s*([A-Za-z_$][\w$]*)\??\s*:/gm)].map(m => m[1]).filter(n => n !== "__TAURI__") : [];
+    assert.ok(promised.length >= 10, "globals.d.ts declares " + promised.length + " names");
+    const have = new Set(undRes.declared || []);
+    assert.deepEqual([...promised, ...winProps].filter(n => !have.has(n)), [], "declared for TypeScript but defined by no classic script");
+  });
+  suite.test("F27-03: [Happy Path] The page loads the TypeScript entry and ends with ready.js", () => {
+    assert.match(html, /<script type="module" src="\.\/ts\/main\.ts"><\/script>/, "index.html must load src/ts/main.ts as a module");
+    const classic = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
+    assert.equal(classic[classic.length - 1], "ready", "ready.js must be the last classic script — the modules wait for it");
+    const main = fs.readFileSync(path.join(tsDir, "main.ts"), "utf-8");
+    for (const m of ["naudio", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
   });
 
   // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────

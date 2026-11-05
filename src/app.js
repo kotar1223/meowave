@@ -756,7 +756,7 @@ const fp=document.getElementById("fp");
 const A={ctx:null,src:null,audio:null,media:null,pre:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0,
  /* gen bumps on every track change; events from the previous src are dropped */
  gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0,pendingSeek:null,seekingUntil:0,watchdog:null,transitioning:false,_resumingSameTrack:false};
-/* The native audio engine (src-tauri/src/audio, driven through naudio.js).
+/* The native audio engine (src-tauri/src/audio, driven through src/ts/naudio.ts).
 
    Desktop builds play through it by default: the stream is read ahead into
    memory, decoded, equalised and sent to the output device by Rust, so the
@@ -846,7 +846,7 @@ function naPaintDev(){
  const d=NA.dev;
  el.textContent=d?`${d.name} · ${Math.round(d.sr/100)/10} ${ru?"кГц":"kHz"} · ${d.ch} ${ru?"кан.":"ch"}`:(ru?"Устройство вывода не найдено":"No output device")}
 /* Exactly one <audio> element for the whole app: the web engine's. The native
-   engine (naudio.js) has a stand-in with the same surface; A.audio is
+   engine (src/ts/naudio.ts) has a stand-in with the same surface; A.audio is
    whichever of the two plays the current track (useEngine). */
 function webAudioEl(){
  if(A.webEl)return A.webEl;
@@ -1625,7 +1625,7 @@ function resize(){
     2.4 megapixels. A 1440p or a scaled 4K window asked the GPU for 4–6 MP of
     blended sprites every frame for a glow too soft to show the difference. */
  if(F.w*F.h*F.dpr*F.dpr>2.4e6)F.dpr=Math.max(.6,Math.sqrt(2.4e6/(F.w*F.h)));
- /* Аура or no background (aura.js): the field is off, so its canvases give
+ /* Аура or no background (src/ts/aura.ts): the field is off, so its canvases give
     their backing store back instead of holding a full-window texture. */
  if(!particlesEnabled){
   if(GLF.ok&&GLF.c&&GLF.c.width!==1){GLF.c.width=GLF.c.height=1}
@@ -1925,7 +1925,7 @@ function frame(now){
   if(fp.dataset.open==="true"){
    fpBeat(dt);
   }else{
-   /* Background (aura.js): the wave, the light Аура, or nothing at all —
+   /* Background (src/ts/aura.ts): the wave, the light Аура, or nothing at all —
       "off" skips even the analyser read, so nothing under the glass moves. */
    const bgm=window.MWAura?.bg||"wave";
    /* Behind any other screen (round 10: "the wave must not stop in the
@@ -8646,7 +8646,7 @@ seg("dl-mode",v=>{S.dlMode=v});
   if(S[key]&&(key==="dlAutoFav"||key==="dlAutoPl")&&!S.dlDir)pickDownloadDir();
   renderDlSettings();save()})});
 
-/* Update check: update.js — the "Beta 3.2" label from the real version,
+/* Update check: src/ts/update.ts — the "Beta 3.2" label from the real version,
    signed releases for installed builds, git pull for a source checkout. */
 function checkUpdate(manual){return window.mwUpdate?.check(manual)}
 document.getElementById("upd-btn")?.addEventListener("click",()=>checkUpdate(true));
@@ -12561,7 +12561,7 @@ async function importRows(rows,svcId,name,asFavorites,src){
   }catch(e){console.warn("playlist_sync:",e.message||e)}
  }
  save();renderLib();renderWaveHint();
- /* Rows that came without a cover get one now (covers.js). */
+ /* Rows that came without a cover get one now (src/ts/covers.ts). */
  window.mwCovers?.repair?.();
  toast(t("sp.imported").replace("{ok}",ok).replace("{n}",take.length),5200)}
 

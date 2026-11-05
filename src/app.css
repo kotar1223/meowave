@@ -388,7 +388,7 @@ button{background:none;border:0;cursor:pointer}
      the canvas repainted the stacking context underneath it. */
   will-change:transform;transform:translateZ(0)}
 #field.dim,#fieldgl.dim{opacity:calc(.3 * var(--cz-fa,1))}
-/* Background in tabs (aura.js «Фон во вкладках»). Moving: behind every
+/* Background in tabs (src/ts/aura.ts «Фон во вкладках»). Moving: behind every
    screen but home the panels lose their backdrop blur — each update of the
    field would otherwise re-blur all of them — and are a shade more opaque
    instead, so the text reads the same. Off: the field is not there. */
@@ -400,7 +400,7 @@ html[data-tw="off"]:not([data-view="home"]) :is(#field,#fieldgl,#aura){opacity:0
 #fieldgl{display:none}
 html.glfield #fieldgl{display:block}
 html.glfield #field{display:none}
-/* Round 8: Аура (aura.js) — a tiny canvas stretched to the window; the
+/* Round 8: Аура (src/ts/aura.ts) — a tiny canvas stretched to the window; the
    bilinear upscale is the blur. With Аура or Выкл the field's canvases are
    not shown at all, and Выкл also stills the haze. */
 #aura{position:fixed;inset:0;z-index:0;width:100%;height:100%;display:none;pointer-events:none;
@@ -5954,13 +5954,14 @@ html[data-os="mac"] body{-webkit-font-smoothing:antialiased;-moz-osx-font-smooth
    Linux touchpads did); lists inside still scroll and bounce on their own. */
 html[data-shell="tauri"],html[data-shell="tauri"] body{overscroll-behavior:none}
 
-/* ── Updates (update.js): what's new in the incoming version ── */
+/* ── Updates (src/ts/update.ts): what's new in the incoming version ── */
 .upd-dlg .mdd-b p{margin:0 0 8px}
 .upd-dlg .upd-n{color:var(--text);font-weight:600}
 .upd-dlg .upd-h{margin-top:4px;color:var(--text);font-weight:600}
 .upd-dlg .upd-list{margin:0 0 10px;padding-left:18px;display:grid;gap:4px}
 .upd-dlg .upd-list li{line-height:1.4;overflow-wrap:anywhere}
 .upd-dlg .upd-warn{padding:10px 12px;border-radius:12px;background:var(--accent-soft);color:var(--text)}
+.upd-dlg .upd-log{margin:0;padding:10px 12px;border-radius:12px;background:var(--surf-2);color:var(--text);font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto}
 .ytc-sum .ytc-proxy{display:block;margin-top:2px;color:var(--mute);font-size:.8125rem}
 
 /* ── chats, round 8 (chatplus.js) ─────────────────────────────── */

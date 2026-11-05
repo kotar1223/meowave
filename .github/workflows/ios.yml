@@ -44,10 +44,11 @@ jobs:
           fi
           xcodebuild -version
 
+      # Node 22: Vite 8 (the interface build) needs 20.19+ or 22.12+.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Setup Rust toolchain
@@ -69,6 +70,11 @@ jobs:
         run: |
           mkdir -p src-tauri/ffmpeg
           touch src-tauri/ffmpeg/ffmpeg-aarch64-apple-ios
+
+      # The app embeds dist/ (Vite builds it from src/); the precompile below
+      # needs it in place.
+      - name: Build the interface (Vite → dist/)
+        run: npm run web:build
 
       - name: Precompile Rust core for iOS
         working-directory: src-tauri

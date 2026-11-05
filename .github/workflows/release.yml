@@ -75,6 +75,20 @@ jobs:
           }
           Write-Host "version $($conf.version) OK"
 
+      # The interface is built by Vite (src/ → dist/, embedded into the app):
+      # npm ci for Vite and the Tauri CLI, then the build — tauri build runs
+      # it again as beforeBuildCommand, and that run writes nothing new.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build the interface (Vite → dist/)
+        shell: bash
+        run: |
+          npm ci
+          npm run web:build
+
       # Publishing an unbuildable or failing revision as a release is worse than
       # a slow release.
       - name: Test

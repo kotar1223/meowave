@@ -46,6 +46,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev libasound2-dev pkg-config
 
+      # The app embeds dist/ (tauri::generate_context!), which Vite builds from
+      # src/ — so the interface is built on every OS, not only in the frontend
+      # job: a Windows path or line-ending problem in the build shows up here.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build the interface (Vite → dist/)
+        working-directory: .
+        shell: bash
+        run: |
+          npm ci
+          npm run web:build
+
       # No `cargo fmt --check`: the crate has never been rustfmt-formatted, and
       # enabling it would mean a whole-crate reformat that buries every real
       # change under whitespace. Worth doing as its own commit.
@@ -61,15 +76,30 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.3.0
 
-      # There is no build step and no dependencies; this catches the class of
-      # error that once shipped an unclosed string literal and left the app
-      # showing nothing but the splash screen.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The classic scripts are not compiled, so a syntax error in one of them
+      # reaches the window as is — this catches the class of error that once
+      # shipped an unclosed string literal and left the app showing nothing
+      # but the splash screen.
       - name: Syntax-check the frontend
         run: |
-          node --check src/app.js
-          for f in supabase/*.mjs scripts/*.mjs src/assets/badges/_gen.mjs; do
+          for f in src/*.js supabase/*.mjs scripts/*.mjs src/assets/badges/_gen.mjs vite.config.mjs; do
             node --check "$f"
           done
+
+      # src/ts is TypeScript (step 2 of the stack rewrite): Vite only strips
+      # the types, tsc checks them.
+      - name: Type-check src/ts
+        run: npm run typecheck
+
+      - name: Build the interface (Vite → dist/)
+        run: npm run web:build
 
       - name: Badge catalog is in sync with the generator
         run: |

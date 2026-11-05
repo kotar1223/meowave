@@ -2,7 +2,7 @@
 
 ## Стек
 - **Tauri 2 (Rust)**: окно, системная интеграция, сеть, локальный аудио-прокси.
-- **Фронтенд без сборки**: `src/index.html`, `src/app.js`, `src/app.css`, `src/fx.js` исполняются как есть, без Webpack или Vite.
+- **Фронтенд: Vite 8 + TypeScript 7** (шаг 2 переписывания стека, с 2026-11-05): окно показывает `dist/`, собранный из `src/`. Классические скрипты (`src/app.js`, `src/fx.js`, `src/m3.js`…) и `src/app.css` копируются байт в байт, перенесённые модули — ES-модули на TS в `src/ts/`. См. «Сборка интерфейса».
 - **Встроенный звуковой движок на Rust** (`src-tauri/src/audio`, раунд 10): на десктопе звук по умолчанию декодирует, обрабатывает и выводит он, см. «Звук: встроенный движок».
 - **Web Audio API**: запасной путь — граф обработки (EQ, нормализация, реверб, затухания) для треков, которые движок не откроет, и на телефоне.
 - **Supabase**: аккаунты, друзья, чаты, значки (`supabase/`).
@@ -11,7 +11,10 @@
 | Путь | Что там |
 |---|---|
 | `src/index.html` | разметка: окно, вкладки `#v-*`, плеер-бар, EQ-док, настройки `#v-settings`, полноэкранный плеер `#fp` |
-| `src/app.js` | вся логика интерфейса (~11 тыс. строк): состояние, сервисы, очередь, плеер, текст, люди, чаты, настройки |
+| `src/app.js` | почти вся логика интерфейса (≈12,7 тыс. строк): состояние, сервисы, очередь, плеер, текст, люди, чаты, настройки |
+| `src/ts/` | модули на TypeScript (Vite): `main.ts` подключает `naudio.ts` (обёртка встроенного движка), `update.ts` (версия и обновления), `covers.ts` (обложки старых треков), `aura.ts` (фон «Аура», FPS, фон во вкладках); `legacy.ts` — `afterLegacy()`; `globals.d.ts` — глобальные имена старых скриптов, которые читают модули |
+| `src/ready.js` | последний классический скрипт: `window.MW_LEGACY_READY` и событие `mw:legacy` — после него модули из `src/ts/` начинают работу |
+| `dist/` | сборка для окна (`npm run web:build`), не в git |
 | `src/app.css` | стили; новый полноэкранный плеер, настройки и список сервисов — ближе к концу; слой MD3 (раунд 4) и слой дизайна раунда 5 — последние, они перекрывают старые правила |
 | `src/fx.js` | визуальные эффекты: фон «Поток» (WebGL), обои плеера и приложения, физика обложки |
 | `src/discover.js` | Моя волна 2.0, шторка подборок, страницы подборок и артистов (`#v-discover`), drag & drop, настройки обоев приложения |
@@ -20,9 +23,20 @@
 | `src-tauri/src/` | Rust-модули (таблица ниже) |
 | `src-tauri/icons/` | иконки установщика и exe, генерируются `scripts/icon-variants.py --bundle` («Неон без фона») |
 | `tests/` | e2e-тесты: `run-e2e.mjs` запускает уровни tier1–tier4, oracle и adversarial |
-| `scripts/` | служебные скрипты: ffmpeg, сборки, промо, иконки |
+| `scripts/` | служебные скрипты: `web.mjs` (сборка интерфейса), ffmpeg, сборки, промо, иконки |
+| `vite.config.mjs`, `tsconfig.json` | настройки Vite (корень `src/`, плагин `meowave-legacy`) и проверки типов `src/ts` |
 | `supabase/` | SQL-схема, значки, коды |
 | `brain/` | этот Obsidian-мозг |
+
+## Сборка интерфейса (Vite + TypeScript)
+- `scripts/web.mjs build` — `vite.build({write:false})` по `vite.config.mjs` и синхронизация в `dist/`: пишутся только изменившиеся файлы, лишние удаляются (повторная сборка пишет 0 файлов). `watch` — то же при каждом изменении в `src/`. `--install` — сначала `npm install --no-save`, если SHA-256 `package-lock.json` не совпал с отметкой `node_modules/.meowave-deps`.
+- Плагин `meowave-legacy` в `vite.config.mjs`: метит каждый тег не-модуля `vite-ignore` (Vite их не трогает), dev-сервер отдаёт старые файлы как есть, при сборке копирует все файлы `src/` (кроме `index.html`, `ts/`, скрытых) под теми же именами. `src/index.html` подключает `./ts/main.ts` в `<head>`; Vite кладёт бандл в `dist/bundle/`.
+- Цель сборки `es2022, chrome100, safari15`: Safari 15 — чтобы поля классов стали `defineProperty` для WebKit на macOS 10.15. Без минификации.
+- Порядок: модуль (отложенный, в `<head>`) выполняется раньше отложенных классических скриптов — `naudio.ts` сразу ставит `window.MWNative` (его ждёт `app.js`), остальные модули ждут `mw:legacy` из `src/ready.js` (`afterLegacy`), то есть запускаются в той же задаче, что и прежние `aura.js`, `update.js`, `covers.js`.
+- **Tauri**: `frontendDist: ../dist`, `devUrl` нет. У зависимости `tauri` всегда включён `custom-protocol`, поэтому окно и в `tauri dev` показывает `dist/`, встроенный в бинарник (адрес `tauri://localhost`, на Windows `http://tauri.localhost`) — источник `localStorage` тот же, что был. `beforeDevCommand` — `web.mjs watch`, `build.additionalWatchFolders: ["../dist"]` — `tauri dev` пересобирает и перезапускает окно, когда меняется `dist/`. `beforeBuildCommand` — `web.mjs build`.
+- `npm run dev` = `web.mjs build --install && tauri dev`. Обновление из приложения (`update.rs::git_pull`): `git pull` → если изменились `src/`, `package*.json`, `vite.config.mjs`, `tsconfig.json` или `scripts/web*` — `node scripts/web.mjs build --install` (до 15 минут) → касание `main.rs` → `tauri dev` пересобирает окно. Если сборка не прошла, окно остаётся прежним, а диалог показывает конец вывода сборки (`Pulled.web_error`).
+- `src-tauri/build.rs`: если `dist/index.html` нет (свежая копия, обновление старым Meowave без шага сборки), сам запускает `web.mjs build --install`; не вышло — пишет страницу «Интерфейс не собран» с причиной и предупреждение cargo.
+- Проверки: `npm run typecheck` (tsc, strict), `npm run web:build`, `tests/run-e2e.mjs` (читает исходники в `src/` и `src/ts/`). Нужен Node.js 20.19+ или 22.12+.
 
 ## Rust-модули (`src-tauri/src`)
 | Модуль | Назначение |
@@ -62,7 +76,7 @@
   → кольцо rtrb (~60 мс) → output (cpal: WASAPI / CoreAudio / ALSA)
 ```
 - Потоки: рендер (единственный трогает сигнал), статус (позиция по меткам кольца), устройство (пересоздаёт поток при смене выхода), декодер на трек.
-- Страница управляет командами `audio_open/play/pause/seek/set/preload/stop/status/caps` и слушает канал `audio_subscribe`; `src/naudio.js` повторяет `<audio>`, поэтому логика плеера в `app.js` общая для обоих движков.
+- Страница управляет командами `audio_open/play/pause/seek/set/preload/stop/status/caps` и слушает канал `audio_subscribe`; `src/ts/naudio.ts` повторяет `<audio>`, поэтому логика плеера в `app.js` общая для обоих движков.
 - Коэффициенты фильтров — как в спецификации Web Audio, плавность параметров — как `setTargetAtTime`: пресет звучит одинаково в обоих движках. Подробнее — [[Features/Native audio engine]].
 
 ## Звук: граф Web Audio (запасной путь)
@@ -106,3 +120,4 @@ media -> pre -> EQ (10 полос) -+-> pan -> air -+-> dry ----------------+
 - Первый блок `prefers-reduced-motion` ограничивает `animation-iteration-count` и гасит `.fp[data-bg-mode="dynamic"] .fp-bg` и другие фоновые анимации.
 - Имена `@keyframes` уникальны (без учёта регистра), в keyframes нет свойств, вызывающих reflow, все используемые анимации определены.
 - `.prog3 i` не анимирует `width`, `.sw:active` не меняет `width`.
+- F27 (`tests/tier1-features.mjs`): ни одного необъявленного глобального имени в классических скриптах (`window.X =` в `src/ts/*.ts` считается объявлением); всё, что объявляет `src/ts/globals.d.ts`, действительно есть в классических скриптах; в `src/index.html` есть тег модуля `./ts/main.ts`, `ready.js` — последний классический скрипт, `main.ts` подключает все четыре модуля.

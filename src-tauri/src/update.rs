@@ -81,6 +81,9 @@ pub struct Pulled {
     pub schema_changed: bool,
     /// A rebuild was requested from `tauri dev` (it restarts the window).
     pub rebuild: bool,
+    /// dist/ could not be rebuilt from the pulled sources: the end of
+    /// scripts/web.mjs's output, or node_missing / web_timeout.
+    pub web_error: Option<String>,
 }
 
 /// The repository this binary was built from, when it is a debug build and
@@ -94,21 +97,22 @@ fn source_dir() -> Option<PathBuf> {
     dir.join(".git").exists().then_some(dir)
 }
 
-/// Runs git without a console window, without ever prompting (a credential
-/// prompt nobody can see would hang the check), with a hard time limit.
-fn git(dir: &Path, args: &[&str], limit: Duration) -> Result<String, String> {
+/// How a finished command ended.
+struct Ran {
+    ok: bool,
+    status: String,
+    out: String,
+    err: String,
+}
+
+/// Runs a command without a console window and with stdin closed, drains both
+/// pipes on their own threads (a chatty command must not fill a pipe and
+/// deadlock against the wait below), and kills it after `limit`. Err is
+/// "missing" (no such program), "timeout", or the spawn error.
+fn run(cmd: &mut std::process::Command, limit: Duration) -> Result<Ran, String> {
     use std::io::Read;
-    use std::process::{Command, Stdio};
-    let mut cmd = Command::new("git");
-    cmd.arg("-C")
-        .arg(dir)
-        .args(args)
-        .env("GIT_TERMINAL_PROMPT", "0")
-        .env("GCM_INTERACTIVE", "never")
-        .env("LC_ALL", "C")
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    use std::process::Stdio;
+    cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -116,15 +120,13 @@ fn git(dir: &Path, args: &[&str], limit: Duration) -> Result<String, String> {
     }
     let mut child = cmd.spawn().map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
-            "git_missing".to_string()
+            "missing".to_string()
         } else {
             e.to_string()
         }
     })?;
-    // Drain both pipes on their own threads: a chatty command must not fill
-    // a pipe and deadlock against the wait below.
-    let mut so = child.stdout.take().ok_or("git: no stdout")?;
-    let mut se = child.stderr.take().ok_or("git: no stderr")?;
+    let mut so = child.stdout.take().ok_or("no stdout")?;
+    let mut se = child.stderr.take().ok_or("no stderr")?;
     let t_out = std::thread::spawn(move || {
         let mut s = String::new();
         let _ = so.read_to_string(&mut s);
@@ -139,23 +141,95 @@ fn git(dir: &Path, args: &[&str], limit: Duration) -> Result<String, String> {
     loop {
         match child.try_wait() {
             Ok(Some(status)) => {
-                let out = t_out.join().unwrap_or_default();
-                let err = t_err.join().unwrap_or_default();
-                if status.success() {
-                    return Ok(out);
-                }
-                let msg = err.trim();
-                return Err(if msg.is_empty() { format!("git {}: {status}", args.first().unwrap_or(&"")) } else { msg.chars().take(400).collect() });
+                return Ok(Ran {
+                    ok: status.success(),
+                    status: status.to_string(),
+                    out: t_out.join().unwrap_or_default(),
+                    err: t_err.join().unwrap_or_default(),
+                });
             }
             Ok(None) if started.elapsed() > limit => {
                 let _ = child.kill();
                 let _ = child.wait();
-                return Err("git_timeout".into());
+                return Err("timeout".into());
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(40)),
             Err(e) => return Err(e.to_string()),
         }
     }
+}
+
+/// Runs git without ever prompting (a credential prompt nobody can see would
+/// hang the check), with a hard time limit.
+fn git(dir: &Path, args: &[&str], limit: Duration) -> Result<String, String> {
+    let mut cmd = std::process::Command::new("git");
+    cmd.arg("-C")
+        .arg(dir)
+        .args(args)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GCM_INTERACTIVE", "never")
+        .env("LC_ALL", "C");
+    let ran = run(&mut cmd, limit).map_err(|e| match e.as_str() {
+        "missing" => "git_missing".to_string(),
+        "timeout" => "git_timeout".to_string(),
+        _ => e,
+    })?;
+    if ran.ok {
+        return Ok(ran.out);
+    }
+    let msg = ran.err.trim();
+    Err(if msg.is_empty() { format!("git {}: {}", args.first().unwrap_or(&""), ran.status) } else { msg.chars().take(400).collect() })
+}
+
+/// Drops terminal colour codes (ESC [ … letter): the dialog shows plain text.
+fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == '\u{1b}' && it.peek() == Some(&'[') {
+            it.next();
+            for d in it.by_ref() {
+                if d.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// A pulled path the webview's build reads (scripts/web.mjs → dist/).
+fn web_input(path: &str) -> bool {
+    path.starts_with("src/")
+        || path.starts_with("scripts/web")
+        || matches!(path, "package.json" | "package-lock.json" | "vite.config.mjs" | "tsconfig.json")
+}
+
+/// Rebuilds dist/ from the pulled sources, installing dependencies first when
+/// package-lock.json changed. The window embeds dist/, so this has to be done
+/// before the rebuild `tauri dev` makes. Err is the end of the build's own
+/// output, which says what is wrong (an old Node, npm without network…).
+fn web_build(dir: &Path) -> Result<(), String> {
+    let mut cmd = std::process::Command::new("node");
+    cmd.current_dir(dir)
+        .arg(Path::new("scripts").join("web.mjs"))
+        .args(["build", "--install"])
+        .env("NO_COLOR", "1")
+        .env("npm_config_update_notifier", "false");
+    let ran = run(&mut cmd, Duration::from_secs(900)).map_err(|e| match e.as_str() {
+        "missing" => "node_missing".to_string(),
+        "timeout" => "web_timeout".to_string(),
+        _ => e,
+    })?;
+    if ran.ok {
+        return Ok(());
+    }
+    let text = strip_ansi(&format!("{}\n{}", ran.out, ran.err));
+    let lines: Vec<&str> = text.lines().map(str::trim_end).filter(|l| !l.trim().is_empty()).collect();
+    let tail = lines[lines.len().saturating_sub(10)..].join("\n");
+    Err(if tail.is_empty() { format!("node scripts/web.mjs: {}", ran.status) } else { tail })
 }
 
 const QUICK: Duration = Duration::from_secs(8);
@@ -232,16 +306,24 @@ fn git_pull(dir: &Path) -> Result<Pulled, String> {
         git(dir, &["diff", "--name-only", &before, &after], QUICK).unwrap_or_default()
     };
     let schema_changed = files.lines().any(|f| f.starts_with("supabase/"));
-    let app_changed = files.lines().any(|f| f.starts_with("src/") || f.starts_with("src-tauri/"));
-    // The frontend is embedded into the binary (custom-protocol), so even a
-    // change to src/ only shows after a rebuild. `tauri dev` rebuilds and
-    // restarts the window when something under src-tauri/ changes; touching
-    // main.rs (its time, not its content) asks for exactly that.
-    let mut rebuild = false;
-    if app_changed {
+    let rust_changed = files.lines().any(|f| f.starts_with("src-tauri/"));
+    let web_changed = files.lines().any(web_input);
+    // The window shows dist/ embedded into the binary (custom-protocol), so a
+    // change to src/ shows only after dist/ is rebuilt and then the binary.
+    // Build dist/ here, before anything restarts. `tauri dev` rebuilds and
+    // restarts the window when src-tauri/ or dist/ changes; touching main.rs
+    // (its time, not its content) asks for that even from a `tauri dev`
+    // started with an older tauri.conf.json that did not watch dist/.
+    // A failed build leaves dist/ and the window as they were.
+    let mut web_error = None;
+    if web_changed && dir.join("scripts").join("web.mjs").exists() {
+        web_error = web_build(dir).err();
+    }
+    let mut rebuild = rust_changed;
+    if (web_changed || rust_changed) && web_error.is_none() {
         let main_rs = dir.join("src-tauri").join("src").join("main.rs");
         if let Ok(f) = std::fs::OpenOptions::new().append(true).open(&main_rs) {
-            rebuild = f.set_modified(std::time::SystemTime::now()).is_ok();
+            rebuild |= f.set_modified(std::time::SystemTime::now()).is_ok();
         }
     }
     let version = std::fs::read_to_string(dir.join("src-tauri").join("tauri.conf.json"))
@@ -255,6 +337,7 @@ fn git_pull(dir: &Path) -> Result<Pulled, String> {
         version,
         schema_changed,
         rebuild,
+        web_error,
     })
 }
 
@@ -373,6 +456,33 @@ pub async fn update_install(_app: AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// git_pull on a real clone that is behind its origin (set up by hand or
+    /// by a script: the clone needs node_modules for the interface build).
+    /// Prints the result; the caller checks dist/ and main.rs.
+    #[test]
+    #[ignore = "needs MW_PULL_DIR: a clone behind its origin, with node_modules"]
+    fn itest_pull_builds_the_interface() {
+        let Some(dir) = std::env::var_os("MW_PULL_DIR") else { return };
+        let r = git_pull(Path::new(&dir));
+        println!("PULLED {}", serde_json::to_string(&r.map_err(|e| e.to_string())).unwrap_or_default());
+    }
+
+    #[test]
+    fn colour_codes_are_dropped_from_build_output() {
+        assert_eq!(strip_ansi("\u{1b}[38;5;246m╭\u{1b}[0m─ main.ts \u{1b}[1mModule not found\u{1b}[0m."), "╭─ main.ts Module not found.");
+        assert_eq!(strip_ansi("plain [text] stays"), "plain [text] stays");
+    }
+
+    #[test]
+    fn web_inputs_are_what_the_interface_build_reads() {
+        for p in ["src/app.js", "src/ts/naudio.ts", "src/index.html", "package.json", "package-lock.json", "vite.config.mjs", "tsconfig.json", "scripts/web.mjs"] {
+            assert!(web_input(p), "{p}");
+        }
+        for p in ["src-tauri/src/main.rs", "src-tauri/tauri.conf.json", "supabase/FULL_SCHEMA.sql", "README.md", "scripts/fetch-ffmpeg.mjs", "tests/e2e.mjs", "srcx/a.js"] {
+            assert!(!web_input(p), "{p}");
+        }
+    }
 
     #[test]
     fn labels_read_like_a_title() {

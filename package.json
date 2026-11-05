@@ -2,15 +2,20 @@
   "name": "meowave",
   "version": "3.3.0",
   "private": true,
-  "description": "Tooling for the Meowave desktop player: badge catalog, Supabase schema and seeding.",
+  "description": "Meowave desktop player: the frontend build (Vite + TypeScript), badge catalog, Supabase schema and seeding.",
   "type": "module",
   "engines": {
-    "node": ">=20.11"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
     "tauri": "tauri",
-    "dev": "tauri dev",
-    "android:dev": "bash -c 'source scripts/setup-android-env.sh && tauri android dev'",
+    "dev": "node scripts/web.mjs build --install && tauri dev",
+    "web": "vite",
+    "web:build": "node scripts/web.mjs build",
+    "web:watch": "node scripts/web.mjs watch",
+    "web:preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json",
+    "android:dev": "node scripts/web.mjs build --install && bash -c 'source scripts/setup-android-env.sh && tauri android dev'",
     "android:emulator": "./scripts/run-emulator.sh",
     "android:run": "./scripts/smart-install.sh",
     "android:build": "bash scripts/android-build.sh",
@@ -18,11 +23,11 @@
     "android:build:debug": "bash -c 'source scripts/setup-android-env.sh && tauri android build --apk --debug'",
     "android:build:x86": "bash -c 'source scripts/setup-android-env.sh && tauri android build --apk --target x86_64 --debug'",
     "ffmpeg": "node scripts/fetch-ffmpeg.mjs",
-    "build": "node scripts/fetch-ffmpeg.mjs && tauri build",
+    "build": "node scripts/web.mjs deps && node scripts/fetch-ffmpeg.mjs && tauri build",
     "build:appimage": "bash scripts/build-appimage.sh",
     "install:linux": "bash install.sh",
-    "check": "cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test",
-    "check:js": "node --check src/app.js && node --check src/fx.js && node --check src/discover.js",
+    "check": "node scripts/web.mjs build && cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test",
+    "check:js": "node --check src/app.js && node --check src/fx.js && node --check src/discover.js && tsc -p tsconfig.json",
     "test:e2e": "node tests/run-e2e.mjs",
     "badges": "node src/assets/badges/_gen.mjs",
     "badges:sql": "node supabase/make_badges_sql.mjs",
@@ -36,6 +41,7 @@
   "devDependencies": {
     "@supabase/supabase-js": "^2.112.4",
     "@tauri-apps/cli": "^2.11.4",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
   }
 }

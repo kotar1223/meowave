@@ -423,7 +423,9 @@ async function main() {
   const demo = await buildDemo();
   console.log(`  ${demo.catalog.length} tracks, hero: ${demo.hero.a} — ${demo.hero.t}`);
 
-  const server = spawn("python3", ["-m", "http.server", String(PORT), "--directory", path.join(ROOT, "src")], {
+  /* The window shows dist/ (Vite builds it from src/), so shoot what ships. */
+  execFileSync(process.execPath, [path.join(ROOT, "scripts", "web.mjs"), "build"], { stdio: "inherit" });
+  const server = spawn("python3", ["-m", "http.server", String(PORT), "--directory", path.join(ROOT, "dist")], {
     stdio: "ignore",
   });
   await sleep(900);

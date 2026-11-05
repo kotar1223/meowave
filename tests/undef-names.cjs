@@ -12,8 +12,9 @@
 //
 // Run with `node --expose-internals tests/undef-names.cjs <file>...`: the
 // parser is the acorn that Node itself bundles, so the check has no
-// dependencies (the CI frontend job installs none). Prints JSON
-// {unresolved:{name:[where,…]}} or {skip:reason}.
+// dependencies. Prints JSON {unresolved:{name:[where,…]}, declared:[name,…]}
+// or {skip:reason}. TypeScript modules (src/ts) are not parsed here: tsc
+// checks them, and tier1 F27 counts their window.X = … as declarations.
 "use strict";
 let acorn;
 try { acorn = require("internal/deps/acorn/acorn/dist/acorn"); }
@@ -200,4 +201,7 @@ for (const f of files) {
 for (const [f, ast] of asts) { FILE = f; visit(ast, GLOBAL); }
 const out = {};
 for (const [n, w] of [...unresolved].sort()) if (!assigned.has(n)) out[n] = w;
-console.log(JSON.stringify({ unresolved: out }));
+// `declared`: every global the classic scripts define (top-level names and
+// window.X = … assignments) — the TypeScript side's globals.d.ts is checked
+// against it (tier1 F27-02).
+console.log(JSON.stringify({ unresolved: out, declared: [...new Set([...GLOBAL.names, ...assigned])].sort() }));

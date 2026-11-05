@@ -32,38 +32,50 @@ sudo dnf install -y webkit2gtk4.1-devel gtk3-devel libsoup3-devel javascriptcore
 export RUSTUP_HOME=/data/.rust/rustup CARGO_HOME=/data/.rust/cargo PATH=/data/.rust/cargo/bin:$PATH CARGO_TARGET_DIR=/data/.rust/target
 curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path && rustup component add clippy
 
-# 3. Проверки, как в CI
+# 3. Интерфейс: Node 20.19+ или 22.12+ (Vite 8). Собери src/ → dist/ ДО cargo: окно встраивает dist/
+#    (у tauri фича custom-protocol включена всегда — даже `tauri dev` берёт dist/, а не devUrl).
+#    Без dist/ build.rs соберёт его сам, а если не выйдет — встроит страницу «Интерфейс не собран» с причиной.
+cd /data/meowave-beta && npm ci && npm run web:build
+
+# 4. Проверки, как в CI
 cd /data/meowave-beta/src-tauri && cargo clippy --all-targets -- -D warnings && cargo test
-cd /data/meowave-beta && for f in src/*.js; do node --check "$f"; done && node tests/run-e2e.mjs
+cd /data/meowave-beta && for f in src/*.js; do node --check "$f"; done && npm run typecheck && node tests/run-e2e.mjs
 ```
 
 - **Тесты звукового движка** (выключены по умолчанию, нужен ffmpeg): создай в папке файлы **длиннее 2 минут** (тест перематывает на 100 с) — `yt140.m4a` (фрагментированный AAC: `-movflags +dash+global_sidx -frag_duration 10000000`), `t_end.m4a`, `t.mp3`, `t48.flac` (48 кГц), `t.ogg` (Vorbis), `yt251.webm` (Opus) — и запусти `MW_ITEST_DIR=<папка> cargo test --lib itest -- --ignored --nocapture --test-threads 1`.
-- **Скриншоты интерфейса**: `cd src && python3 -m http.server 8777` + Playwright с системным Chromium (`/usr/local/bin/chromium`); подробности в `.agents/skills/meowave-ui-verify`.
+- **Скриншоты интерфейса** — со сборки, не с `src/` (там `index.html` грузит `./ts/main.ts`, обычный сервер его не выполнит): `npm run web:build && python3 -m http.server 8777 --directory dist` (пересобирай после каждой правки) или `npm run web` — Vite на http://127.0.0.1:1420 отдаёт `src/` вживую. Playwright с системным Chromium (`/usr/local/bin/chromium`); подробности в `.agents/skills/meowave-ui-verify`.
+- **Настоящее окно Tauri в песочнице** (Linux, WebKitGTK): `Xvfb :99 -screen 0 1440x900x24 &`, затем `DISPLAY=:99 WEBKIT_DISABLE_DMABUF_RENDERER=1 LIBGL_ALWAYS_SOFTWARE=1 dbus-run-session -- npm run dev`, снимок — `import -window root -display :99 shot.png`. Для звукового движка дай ALSA пустое устройство в `~/.asoundrc` (как — в `.agents/skills/meowave-rust-check`). Предупреждение «IPC custom protocol failed… postMessage» там бывает и со старой сборкой — команды работают.
+- **Второй checkout** (`git worktree`, клон в `/tmp`) — со своим `CARGO_TARGET_DIR`: хэш cargo не учитывает папку пакета, и один checkout может запустить чужой скомпилированный `build.rs`.
 - **Долгие команды** (cargo на 2 ядрах — 3–6 минут) запускай отдельно: `setsid -f bash script.sh > log 2>&1 < /dev/null`, потом читай лог. Не делай `pkill -f <шаблон>`, который совпадает с текстом твоей же команды — убьёшь сам себя.
 - **Сеть песочницы**: YouTube отвечает ей «подтвердите, что вы не бот», поэтому живые потоки и видео YouTube отсюда не проверить — только у владельца.
 
 ## Состояние сейчас
 
-_Обновлено: 2026-11-05, сессия «раунд 10: доделка»._
+_Обновлено: 2026-11-05 (ночь), сессия «шаг 2 стека: Vite + TypeScript»._
 
 | Что | Где |
 |---|---|
 | Версия | **Beta 3.3 (3.3.0)** с раунда 10 — источник правды `src-tauri/tauri.conf.json`, копии синхронизирует `node scripts/version.mjs` |
-| Ветки | `main` = `beta-redesign` = раунд 10 (Beta 3.3). `wip/round10` слита в обе (fast-forward). Новую работу начинай в `wip/<тема>` от `main` |
+| Ветки | `main` = `beta-redesign` = `wip/stack-vite` (шаг 2 стека, после слияния — см. журнал сессий). `wip/round10` слита раньше. Новую работу начинай в `wip/<тема>` от `main` |
 | PR #1 | слит (`beta-redesign` → `main`); с раунда 9 работа идёт пушем прямо в `beta-redesign` и `main` |
-| CI | `.github/workflows/ci.yml`: clippy + тесты на Windows/macOS/Ubuntu, фронтенд, e2e; `ios.yml`; `release.yml` по тегу |
-| Стек | Tauri 2 (Rust, `src-tauri/`) + фронтенд без сборки (`src/*.js` — классические скрипты, глобальные имена). Звук с раунда 10 — свой движок на Rust |
+| CI | `.github/workflows/ci.yml`: сборка `dist/` (Node 22) + clippy + тесты на Windows/macOS/Ubuntu; фронтенд (`node --check`, `npm run typecheck`, `npm run web:build`), e2e; `ios.yml`; `release.yml` по тегу |
+| Стек | Tauri 2 (Rust, `src-tauri/`) + интерфейс на **Vite 8 + TypeScript 7**: `src/` → `dist/` (`npm run web:build`). Классические скрипты (`src/*.js`, 12 шт., глобальные имена) копируются в `dist/` байт в байт; на TS уже 4 модуля в `src/ts/` (`naudio`, `update`, `covers`, `aura`). Звук с раунда 10 — свой движок на Rust |
 
 ## Сейчас в работе
 
 - [x] **Раунд 10 — доделка** (2026-11-05 вечер): проверки, `brain/` и README, Beta 3.3, слияние в `beta-redesign` и `main`. CI на `ce39c3b` зелёный: CI на `main`, `beta-redesign`, `wip/round10`; iOS Build на `main`.
-- [ ] **Шаг 2 переписывания стека — Vite + TypeScript** (начат 2026-11-05 ночью): ветка `wip/stack-vite`. Пока не слита — `main` и `beta-redesign` её не содержат. Подробности и что уже готово — в журнале сессий ниже.
+- [x] **Шаг 2 стека, часть 1 — Vite + TypeScript** (2026-11-05 ночь): сборка, Tauri, `build.rs`, кнопка обновления, CI, 4 модуля на TS; проверено в Chromium и в настоящем окне Tauri под Xvfb. Ветка `wip/stack-vite`; коммит, слияние и CI — в журнале сессий ниже.
+- [ ] **Шаг 2 стека, дальше** — перенос остальных экранов на TS по одному: см. «Очередь задач», пункт 1.
 
 ## Очередь задач (не доделано)
 
 Сверху — важнее. Каждый пункт: что, зачем, с чего начать.
 
-1. [ ] **Переписать интерфейс на другой стек** (просьба владельца в раундах 8, 9 и 10: «перепиши на другой лучший стек», «не index на js»). Шаг 1 — звук и потоки в Rust — сделан в раунде 10. Шаг 2 — фронтенд на **Vite + TypeScript**, по экрану за раз, без остановки беты: Vite с корнем `src/`, старые скрипты подключены как есть, новые экраны — ES-модули на TS; Tauri: `build.devUrl` + `beforeDevCommand`, `frontendDist` → `dist`; e2e-тесты (`tests/*.mjs` читают файлы из `src/`) перевести на собранный `dist` или оставить на исходниках. Начать с самых отдельных экранов: `search2.js`, `profile2.js`, `chatplus.js`, `aura.js`, `naudio.js`. Шаг 3 — общий слой состояния вместо глобальных переменных `app.js` (≈12,7 тыс. строк). Инвариант «Frontend No-build» в `AGENTS.md` поменять, когда перейдёшь.
+1. [ ] **Переписать интерфейс на другой стек** (просьба владельца в раундах 8, 9 и 10: «перепиши на другой лучший стек», «не index на js»). Шаг 1 — звук и потоки в Rust — сделан в раунде 10. Шаг 2 — фронтенд на **Vite + TypeScript**, по экрану за раз, без остановки беты:
+   - [x] 2026-11-05 — сборка: Vite с корнем `src/` → `dist/`, классические скрипты копируются байт в байт (плагин `meowave-legacy` в `vite.config.mjs`), `tsconfig.json`, `scripts/web.mjs` (build / watch / deps, `--install`); Tauri `frontendDist` → `../dist`, `beforeDevCommand` — watcher (план с `build.devUrl` отпал: `custom-protocol` включён всегда, окно берёт встроенный `dist/`); `build.rs` и кнопка обновления сами собирают интерфейс; CI собирает `dist/` перед cargo. e2e-тесты остались на исходниках `src/`, сборку проверяют F27-01…03. Инвариант 1 в `AGENTS.md`/`GEMINI.md` уже новый.
+   - [x] 2026-11-05 — на TS: `naudio.js`, `update.js`, `covers.js`, `aura.js` → `src/ts/*.ts`.
+   - [ ] Дальше по одному: `search2.js`, `profile2.js`, `chatplus.js`, затем `e2e.js`, `fx.js`, `custom.js`, `m3.js`, `discover.js`, `messenger.js`. Как: модуль в `src/ts/`, импорт в `main.ts`; если ему нужны глобальные имена `app.js` при старте — запуск через `afterLegacy()` из `legacy.ts`; что зовут классические скрипты — `window.X = …`; типы чужих глобальных — в `globals.d.ts` (F27-02 проверит, что они ещё объявлены); убрать `<script>` из `index.html` и имя из списка в F27-03. F27-01 ждёт ≥10 классических скриптов (сейчас 12) — снижай порог по мере переноса. После каждого: `npm run typecheck`, e2e, скриншоты (`meowave-ui-verify`), окно под Xvfb, если трогал старт.
+   - [ ] Шаг 3 — общий слой состояния вместо глобальных переменных `app.js` (≈12,7 тыс. строк), потом сам `app.js` по экранам.
 2. [ ] **Opus и HE-AAC во встроенном движке.** Сейчас такие треки (YouTube itag 251, часть SoundCloud и Яндекса) автоматически играет WebView, а для движка выбирается AAC-LC или MP3. Варианты: crate `opus` / `audiopus` (libopus, собирается из исходников) или чистый Rust-декодер Opus, если появится в symphonia; HE-AAC — SBR в symphonia нет. Начать с `src-tauri/src/audio/decode.rs` и `stream.rs` (`fmt == "aac"`).
 3. [ ] **Проверка у владельца** (из песочницы не проверить): звуковой движок на Windows/macOS/Linux (треск, переключение устройства, Bluetooth), клипы β на настоящем YouTube, фон во вкладках на мониторе 144 Гц, окно Tauri.
 4. [ ] **Настоящий кроссфейд** во встроенном движке: два декодера в одной цепочке на время перехода (раньше нельзя было из-за одного `<audio>`).
@@ -75,7 +87,7 @@ _Обновлено: 2026-11-05, сессия «раунд 10: доделка».
 
 ## Нужно от владельца
 
-- Обновиться: `git pull` в `beta-redesign` (или кнопка обновления в приложении), затем `npm install` и `npm run dev`.
+- Обновиться: кнопка обновления в приложении или `git pull` в `beta-redesign`, затем `npm run dev` — зависимости он теперь ставит сам. Нужен **Node.js 20.19+ или 22.12+** (проверить: `node -v`). Если окно показывает «Интерфейс не собран» — закрыть Meowave и запустить `npm run dev` в терминале: там будет причина.
 - Один раз выполнить `supabase/FULL_SCHEMA.sql` целиком в SQL Editor Supabase, если ещё не сделал после раунда 9.
 - Один раз `npm run android:rekey` — новый пароль Android-ключа (ключ лежит только у владельца).
 - Проверить встроенный звук: «Настройки → Качество → Звуковой движок: Встроенный / WebView». Если трещит или молчит — прислать, на какой ОС и какое устройство вывода.
@@ -115,3 +127,16 @@ _Обновлено: 2026-11-05, сессия «раунд 10: доделка».
 - Слито в `beta-redesign` и `main`; результат CI — следующей строкой.
 - CI на `ce39c3b`: всё зелёное — CI (clippy и тесты на Windows/macOS/Ubuntu, фронтенд, e2e) на `main`, `beta-redesign` и `wip/round10`, iOS Build на `main`.
 - Дальше в этой же сессии: шаг 2 стека (Vite + TypeScript) в ветке `wip/stack-vite` — отдельная запись ниже.
+
+### 2026-11-05 (ночь) — Claude (Notion AI, Anthropic) — шаг 2 стека: Vite + TypeScript
+- Сделано (ветка `wip/stack-vite` от `41d0f1f`; хэш коммита и CI — следующими строками):
+  - **Сборка**: Vite 8 + TypeScript 7 — `vite.config.mjs` (корень `src/`, выход `dist/`; плагин `meowave-legacy` копирует классические скрипты байт в байт и не трогает их порядок), `tsconfig.json`, `scripts/web.mjs` (`build` / `watch` / `deps`; `--install` ставит зависимости, если `package-lock.json` изменился с прошлой установки; проверка версии Node; ошибка сборки — одной понятной строкой).
+  - **На TypeScript** перенесены `naudio.js`, `update.js`, `covers.js`, `aura.js` → `src/ts/*.ts`; `main.ts` — вход, `legacy.ts` — `afterLegacy()` (старт после классических скриптов), `globals.d.ts` — типы глобальных имён `app.js`; `src/ready.js` — последний классический скрипт, событие `mw:legacy`.
+  - **Tauri**: `frontendDist` → `../dist`, `beforeDevCommand` — watcher, `beforeBuildCommand` — сборка, `additionalWatchFolders: ["../dist"]`. Находка: у `tauri` фича `custom-protocol` включена всегда, поэтому и `tauri dev` встраивает `dist/` (`tauri://localhost`) — `devUrl` не нужен.
+  - **`build.rs`**: нет `dist/index.html` — сам запускает `node scripts/web.mjs build --install` (лог в `OUT_DIR/web-build.log`, до 15 минут, выключается `MEOWAVE_NO_WEB_BUILD=1`); не вышло — встраивает страницу «Интерфейс не собран» с причиной и пишет предупреждение cargo.
+  - **Кнопка обновления** (`update.rs` → `git_pull`): изменились файлы интерфейса — сначала `web_build()` (до 15 минут), ошибка уходит в окно результата (`Pulled.web_error`, тексты `upd.web`, `upd.e.node`, `upd.e.webtime`), и тогда Rust зря не пересобирается.
+  - **`npm run dev`** сам ставит зависимости; CI (`ci.yml`, `release.yml`, `ios.yml`) ставит Node 22 и собирает `dist/` перед cargo; фронтенд-задача CI — `npm run typecheck` и `npm run web:build`.
+  - Тесты F27-01…03 и `tests/undef-names.cjs` видят TS-модули; документы: `AGENTS.md`/`GEMINI.md` (инвариант 1), `brain/` (Architecture, Decisions, Known issues, How to run, Features, Requests, Worklog), README, навыки `meowave-ui-verify`, `meowave-rust-check`, `meowave-ship`.
+- Проверки: `tsc` — 0 ошибок; e2e 311/311 (5 пропущены); clippy 0 замечаний; `cargo test` — 135 прошли, 24 пропущены. **Настоящее окно Tauri под Xvfb** (`npm run dev`): страница из `tauri://localhost`, все глобальные имена на месте, версия, «Аура», встроенный движок играет mp3 через `naudio.ts` (события, перемотка, скорость, пауза) — так же, как старая сборка `main`; правка в `src/` → watcher → `dist/` → пересборка (8,8 с) → новое окно; Ctrl+C гасит всё. `build.rs` без `dist/` и без Vite; `git_pull` на настоящих клонах: правка `src/`, сломанный импорт (понятная ошибка, Rust не трогается), изменённый lockfile (`npm install --no-save`, lockfile не меняется). Окно результата обновления — снимки в Chromium.
+- Не доделано: остальные экраны на TS (`search2.js`, `profile2.js`, `chatplus.js`, …) и шаг 3 — очередь, пункт 1. Окно на Windows/macOS и первое обновление кнопкой из Beta 3.3 — проверка у владельца (`brain/Known issues.md`).
+- Следующему: очередь, пункт 1 — начни с `search2.js` (самый отдельный экран).
