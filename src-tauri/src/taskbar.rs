@@ -193,7 +193,7 @@ mod win {
         if module.is_null() {
             return 96;
         }
-        let f = GetProcAddress(module, b"GetDpiForWindow\0".as_ptr());
+        let f = GetProcAddress(module, c"GetDpiForWindow".as_ptr().cast::<u8>());
         if f.is_null() {
             return 96;
         }

@@ -238,6 +238,9 @@ pub async fn acc_login(app: AppHandle, service: String) -> Result<(), String> {
     let sp = spec(&service)?;
     let label = format!("acc-{}", sp.id);
     if let Some(w) = app.get_webview_window(&label) {
+        // Desktop only: a mobile webview window has no minimised state
+        // (this line alone broke the iOS build).
+        #[cfg(desktop)]
         let _ = w.unminimize();
         let _ = w.set_focus();
         return Ok(());
@@ -247,8 +250,11 @@ pub async fn acc_login(app: AppHandle, service: String) -> Result<(), String> {
         .title(format!("{} · Meowave", name_of(sp.id)))
         .inner_size(500.0, 740.0)
         .min_inner_size(380.0, 520.0)
-        .center()
         .focused(true);
+    #[cfg(desktop)]
+    {
+        b = b.center();
+    }
     // A profile of its own per service: the app's storage is not shared
     // with a third-party page, and signing out can drop the whole session.
     if let Ok(root) = crate::paths::root() {
