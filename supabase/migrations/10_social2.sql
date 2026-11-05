@@ -222,6 +222,10 @@ grant execute on function public.approve_request(bigint) to authenticated;
 -- Lifetime hours from user_stats: weekly_stats belongs to 09_hardening, which
 -- not every installation has applied, and "total hours" is the number people
 -- actually compare. The privacy blob opts out.
+-- A database that already has a leaderboard(int) with other OUT columns (an
+-- older build or a snippet run by hand) fails CREATE OR REPLACE with 42P13
+-- "cannot change return type", and the whole paste rolls back with it.
+drop function if exists public.leaderboard(integer);
 create or replace function public.leaderboard(limit_ int default 50)
 returns table (user_id uuid, username text, avatar_url text, seconds bigint, privacy jsonb)
 language sql stable security definer set search_path = public as $$

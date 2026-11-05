@@ -1,6 +1,15 @@
 -- ==============================================================================
 -- Quasar ID Database Schema (PostgreSQL / Supabase Migration)
 -- ==============================================================================
+--
+-- SECURITY (Meowave round 8): these tables hold e-mail addresses, password
+-- hashes and private messages. In Supabase every table in `public` can be
+-- reached with the anon key that ships inside the app, so row level security
+-- is switched on at the end of this file with NO policies: only the service
+-- role — the Quasar server — can read or write them. Never add a policy with
+-- USING (true) or WITH CHECK (true) here; a copy of this schema with such
+-- policies made quasar_users (password hashes included) and every chat
+-- readable by anyone.
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -61,3 +70,9 @@ CREATE TABLE IF NOT EXISTS quasar_messenger_messages (
 CREATE INDEX IF NOT EXISTS idx_quasar_users_email ON quasar_users(email);
 CREATE INDEX IF NOT EXISTS idx_quasar_users_username ON quasar_users(username);
 CREATE INDEX IF NOT EXISTS idx_quasar_messages_chat ON quasar_messenger_messages(chat_id, created_at DESC);
+
+-- Row level security with no policies: closed to anon and authenticated.
+ALTER TABLE quasar_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quasar_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quasar_messenger_chats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quasar_messenger_messages ENABLE ROW LEVEL SECURITY;

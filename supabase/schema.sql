@@ -66,6 +66,9 @@
 \echo '== 16_messenger_e2e: edits, read receipts, replies, end-to-end encryption, three badges =='
 \ir migrations/16_messenger_e2e.sql
 
+\echo '== 17_chat_media: full-size pictures and GIFs in chats, encrypted on the device =='
+\ir migrations/17_chat_media.sql
+
 \echo ''
 \echo 'Schema applied. Next:'
 \echo '  SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/seed_badges.mjs'
