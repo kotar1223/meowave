@@ -1,5 +1,7 @@
 # Meowave Project Guidelines & Skill Routing Matrix
 
+> **Сначала прочитай [`HANDOFF.md`](HANDOFF.md)** — состояние проекта, что сейчас в работе, что не доделано и что нужно от владельца. Правило для всех агентов: в начале сессии добавь туда запись, по ходу и в конце допиши, что сделал и что осталось.
+
 Welcome to **Meowave**. This file defines project standards, architecture invariants, and dynamic skill routing for the agent.
 
 ---
@@ -30,6 +32,6 @@ Whenever the user gives a command or request, dynamically select and apply the c
 ## 🏗️ Архитектурные Принципы Meowave
 
 1. **Frontend No-build:** `src/app.js`, `src/fx.js`, `src/discover.js` и `src/app.css` исполняются напрямую без сборщиков Webpack/Vite. Новая логика экранов — в отдельных файлах (как `discover.js`), а не в `app.js`.
-2. **Аудио DSP:** Аудиопоток всегда проходит через Web Audio граф (`src/app.js:1230-1450`). Для предотвращения tainting контекста внешние потоки обязаны запрашиваться через локальный прокси `127.0.0.1:port/stream/?k=...`.
+2. **Звук:** на десктопе по умолчанию играет встроенный движок на Rust (`src-tauri/src/audio`; обёртка `src/naudio.js` повторяет `<audio>`): чтение наперёд через локальный прокси, декодер symphonia, эквалайзер и эффекты, вывод через cpal. WebView + Web Audio граф (`src/app.js`, `initAudio`) — запасной путь: Opus, HE-AAC, файлы-blob, мобильные и «Настройки → Качество → Звуковой движок: WebView». Внешние потоки в обоих случаях идут только через локальный прокси `127.0.0.1:port/stream/?k=...`.
 3. **Хранилище:** `STORE_FILES` в `src-tauri/src/paths.rs` определяет белый список файлов для сохранения на диск. Не превышать лимит 5 МБ в `localStorage`.
 4. **Второй Мозг (Obsidian):** Все архитектурные изменения, реестры багов и гайды разработчика ведутся в Obsidian-вольте `brain/` в корне репозитория: каждый запрос — в `brain/Log/Requests.md`, каждое действие — в `brain/Log/Worklog.md`, решения — в `brain/Decisions.md`. Секреты туда не пишем.
