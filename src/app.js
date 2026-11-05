@@ -2431,7 +2431,7 @@ const isCur=tr=>String(S.current?.id)===String(tr.id)&&S.current?.s===tr.s;
 function row(tr,extra="",removable=false,rmPid=null){
  return `<div class="row" data-track="${esc(tr.id)}" data-svc="${esc(tr.s)}" data-playing="${isCur(tr)}">
   <span class="art" ${coverStyle(tr.art,tr.l1,tr.l2)}></span>
-  <span class="meta"><b>${esc(tr.t)}</b><span>${esc(tr.a)}${tr.al?" · "+esc(tr.al):""}${extra?" · "+esc(extra):""}</span></span>
+  <span class="meta"><b>${esc(tr.t)}</b><span>${tr.a?artistLinksHTML(tr.a,"row-al"):""}${tr.al?" · "+esc(tr.al):""}${extra?" · "+esc(extra):""}</span></span>
   <span class="src">${SVC_ICONS[tr.s]||""}<span class="src-txt">${esc(svc(tr.s).name)}</span></span><span class="dur">${fmt(tr.d)}</span>
   <button class="heart" data-fav="${esc(tr.id)}" data-svc="${esc(tr.s)}" aria-pressed="${!!tr.fav}" aria-label="fav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span></button>
   ${removable?`<button class="heart rm" data-rmlocal="${esc(tr.id)}" aria-label="remove"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>`:""}
@@ -2443,9 +2443,11 @@ function row(tr,extra="",removable=false,rmPid=null){
 function artistList(){
  const by=new Map();
  TRACKS.filter(x=>x.mode!=="empty").forEach(x=>{
-  const k=(x.a||"—").trim();if(!k||k==="—")return;
-  if(!by.has(k))by.set(k,[]);
-  by.get(k).push(x)});
+  /* a collaboration belongs to each of its artists, not to a third artist
+     called "A, B" (round 9: "two artists, only one opens") */
+  for(const k of splitArtists(x.a)){if(!k||k==="—")continue;
+   if(!by.has(k))by.set(k,[]);
+   by.get(k).push(x)}});
  return [...by.entries()].map(([name,list])=>({
   name,list,
   art:list.find(x=>x.art)?.art||null,
@@ -2485,6 +2487,27 @@ function renderArtist(name){
   setTrack(a.list[0],true,true,"art:"+a.name)};
  icons()}
 
+/* "A, B & C feat. D" -> ["A", ", ", "B", " & ", "C", " feat. ", "D"]: names
+   at even positions, the original separators between them. Round 9 ("two
+   artists, only one opens"): the player printed the joined string as one
+   button, so only the first name was ever reachable. Every service joins
+   its artist list with ", "; "&", "feat.", "x" are how titles credit guests.
+   A lone "x" only counts between spaces, so "Lil Nas X" stays whole. */
+const ARTIST_SEP=/(\s*,\s*|\s+&\s+|\s+(?:[Ff](?:EAT|eat)\.?|[Ff][Tt]\.?|[Ff]eaturing|при\s+уч(?:\.|астии)?|x|×|[Vv][Ss]\.?)\s+)/;
+function artistParts(a){
+ const raw=String(a||"").split(ARTIST_SEP),out=[];
+ for(let i=0;i<raw.length;i++){
+  const v=raw[i];if(v==null)continue;
+  if(i%2){if(out.length&&out.length%2)out.push(v)}
+  else{const n=v.trim();if(n)out.push(n);else if(out.length%2===0&&out.length)out.pop()}}
+ if(out.length%2===0)out.pop();
+ return out.length?out:[String(a||"").trim()].filter(Boolean)}
+function splitArtists(a){return artistParts(a).filter((_,i)=>i%2===0)}
+/* Each name a link of its own, the separators kept as they were written. */
+function artistLinksHTML(a,cls){
+ const parts=artistParts(a);
+ if(!parts.length)return "—";
+ return parts.map((v,i)=>i%2?esc(v):`<span class="${cls}" data-art-link="${esc(v)}" role="link" tabindex="0">${esc(v)}</span>`).join("")}
 /* Artist page from anywhere (full player, context menu). Someone who is not in
    the library yet gets a search for their name instead of an empty page. */
 function openArtist(name){
@@ -2754,14 +2777,16 @@ function renderNP(){
  b.acts.hidden=empty;
 
  const ttl=empty?t("np.none"):(tr.t||"");
- const sub=empty?t("np.none.s")
-  :`${tr.a||""} · ${svc(tr.s).name}${S.quality==="lossless"&&svc(tr.s).lossless?" · lossless":""}`;
+ const tail=empty?"":` · ${svc(tr.s).name}${S.quality==="lossless"&&svc(tr.s).lossless?" · lossless":""}`;
+ const sub=empty?t("np.none.s"):`${tr.a||""}${tail}`;
  /* A real track change animates; a re-render caused by a favourite toggle or a
     language switch must not, or the bar would twitch constantly. The title is
     the signal, since that is the part the user reads. */
  const swapped=b.lastTtl!==null&&b.lastTtl!==ttl;
  if(b.lastTtl!==ttl){b.ttl.textContent=ttl;b.lastTtl=ttl}
- if(b.lastSub!==sub){b.sub.textContent=sub;b.lastSub=sub}
+ if(b.lastSub!==sub){b.lastSub=sub;
+  if(empty||!tr.a)b.sub.textContent=sub;
+  else b.sub.innerHTML=artistLinksHTML(tr.a,"np-al")+esc(tail)}
  if(swapped){
   b.host.removeAttribute("data-swap");void b.host.offsetWidth;b.host.dataset.swap="1"}
 
@@ -3209,7 +3234,7 @@ function fpxShell(fpc){
      <div class="fpx-meta">
       <div class="fpx-titles">
        <h2 class="fpx-title"><span class="fpx-tt"></span><span class="fpx-exp" hidden title="Explicit">E</span></h2>
-       <button class="fpx-artist" id="fpx-artist" type="button"></button>
+       <span class="fpx-artist" id="fpx-artist"></span>
       </div>
       <button class="fpx-like" id="fpx-like" data-fav="" data-svc="" aria-pressed="false" title="${esc(t("act.fav"))}" aria-label="${esc(t("act.fav"))}">${fpxI("favorite",22)}</button>
       <button class="fpx-ib fpx-more" id="fpx-more" title="${ru?"Ещё":"More"}" aria-label="${ru?"Ещё":"More"}">${fpxI("more_horiz",22)}</button>
@@ -3263,9 +3288,10 @@ function fpxShell(fpc){
  on("fp-eq-btn",e=>{e.stopPropagation();openDockSheet(true)});
  on("fp-sleep-btn",e=>{e.stopPropagation();sleepMenu(e.currentTarget)});
  on("fpx-mute",()=>document.getElementById("mute")?.click());
- on("fpx-artist",()=>{
+ on("fpx-artist",e=>{
   const tr=S.current;if(!tr||tr.mode==="empty"||!tr.a)return;
-  closeFP();openArtist(tr.a)});
+  const l=e.target.closest("[data-art-link]");if(!l)return;
+  closeFP();openArtist(l.dataset.artLink)});
  on("fpx-more",e=>{
   e.stopPropagation();const tr=S.current;if(!tr||tr.mode==="empty")return;
   const r=e.currentTarget.getBoundingClientRect();openCtx(r.left,r.bottom+6,tr)});
@@ -3319,7 +3345,7 @@ function fpxTitle(tr,animate){
  const tt=x.querySelector(".fpx-tt"),ar=x.querySelector(".fpx-artist"),ex=x.querySelector(".fpx-exp");
  if(k!==FPX.titleKey){
   FPX.titleKey=k;
-  tt.textContent=title;ar.textContent=artist;
+  tt.textContent=title;ar.innerHTML=tr?.a?artistLinksHTML(tr.a,"fpx-al"):"—";
   ar.title=artist;tt.parentElement.title=title;
   if(animate&&!RM&&x.animate){
    x.animate([{opacity:0,transform:"translateY(12px)",filter:"blur(6px)"},{opacity:1,transform:"none",filter:"blur(0)"}],
@@ -5060,6 +5086,9 @@ document.body.addEventListener("click",e=>{
   const tr=S.current;
   if(tr&&tr.mode!=="empty"){const r=e.target.closest("#npadd").getBoundingClientRect();openAddMenu(r.left,r.top,tr)}
   return}
+ /* an artist name inside a row opens that artist instead of playing the row */
+ const al=e.target.closest(".row [data-art-link]");
+ if(al){e.stopPropagation();openArtist(al.dataset.artLink);return}
  const r=e.target.closest("[data-track]");if(r){
   const tr=findTrack(r.dataset.track,r.dataset.svc);
   if(!tr)return;
@@ -5797,8 +5826,15 @@ function closeFP(){
 document.getElementById("expand").onclick=openFP;
 document.getElementById("np")?.addEventListener("click",e=>{
  if(e.target.closest(".npacts"))return;
+ const al=e.target.closest("[data-art-link]");
+ if(al){e.stopPropagation();openArtist(al.dataset.artLink);return}
  if(!S.current||S.current.mode==="empty")return;
  openFP()});
+
+document.addEventListener("keydown",e=>{
+ if(e.key!=="Enter"&&e.key!==" ")return;
+ const l=e.target instanceof Element&&e.target.closest("[data-art-link]");
+ if(l){e.preventDefault();l.click()}});
 
 /* Mobile touch gestures: bottom bar swipe to skip tracks */
 let barTouchStartX=0,barTouchStartY=0,barTouchStartTime=0,barSwipeArmed=false;
@@ -7981,7 +8017,9 @@ function openCtx(x,y,tr){
   <button data-ctx="qnext"><span class="material-symbols-rounded" style="font-size:16px">subdirectory_arrow_right</span>${t("ctx.qnext")}</button>
   <button data-ctx="qlast"><span class="material-symbols-rounded" style="font-size:16px">queue_music</span>${t("ctx.qlast")}</button>
   <button data-ctx="fav"><span class="material-symbols-rounded" style="font-size:16px">favorite</span>${tr.fav?t("ctx.unfav"):t("ctx.fav")}</button>
-  <button data-ctx="artist"><span class="material-symbols-rounded" style="font-size:16px">person</span>${t("ctx.artist")}</button>
+  ${(()=>{const as=splitArtists(tr.a);
+   return as.length>1?as.slice(0,6).map(n=>`<button data-ctx="artist" data-artist="${esc(n)}"><span class="material-symbols-rounded" style="font-size:16px">person</span>${esc(n)}</button>`).join("")
+    :`<button data-ctx="artist"><span class="material-symbols-rounded" style="font-size:16px">person</span>${t("ctx.artist")}</button>`})()}
   ${remote&&window.MWChat&&typeof sbUser!=="undefined"&&sbUser?`<button data-ctx="share"><span class="material-symbols-rounded" style="font-size:16px">send</span>${t("ctx.share")}</button>`:""}
   ${tr.s==="local"?`<button data-ctx="rmlocal"><span class="material-symbols-rounded" style="font-size:16px">delete</span>${t("ctx.rmlocal")}</button>`:""}
   ${remote?`<div class="sep"></div>
@@ -8188,7 +8226,7 @@ addEventListener("click",e=>{
  else if(act==="dl")downloadTrack(tr);
  else if(act==="dlfx")downloadProcessed(tr);
  else if(act==="rmlocal")removeLocal(tr.id);
- else if(act==="artist")openArtist(tr.a);
+ else if(act==="artist")openArtist(b.dataset.artist||splitArtists(tr.a)[0]||tr.a);
  else if(act==="share")window.MWChat?.shareTrack(tr);
  else if(act==="eq")pinPresetToTrack(tr,b.dataset.eq);
  else if(act==="eqoff")pinPresetToTrack(tr,null);
@@ -9357,6 +9395,23 @@ function peopleRow(p,sub){
     <span class="material-symbols-rounded" style="font-size:18px">chevron_right</span></button>`;
 }
 
+/* Who is a friend, who asked whom: id -> "friend" | "out" | "in". Cached for
+   a few seconds so typing in the search box does not refetch it per key. */
+const FRIEND_REL={at:0,map:new Map(),uid:""};
+async function friendRelations(){
+  if(!sb||!sbUser)return new Map();
+  if(FRIEND_REL.uid===sbUser.id&&Date.now()-FRIEND_REL.at<8000)return FRIEND_REL.map;
+  const me=sbUser.id,map=new Map();
+  try{
+    const {data,error}=await sb.from("friendships").select("requester,addressee,status").or(`requester.eq.${me},addressee.eq.${me}`);
+    if(error)throw error;
+    for(const r of data||[]){
+      const o=r.requester===me?r.addressee:r.requester;
+      map.set(o,r.status==="accepted"?"friend":r.requester===me?"out":"in")}
+    FRIEND_REL.map=map;FRIEND_REL.at=Date.now();FRIEND_REL.uid=me;
+  }catch(e){console.warn("friendships:",e.message||e);return FRIEND_REL.uid===me?FRIEND_REL.map:map}
+  return map}
+
 /* ── Find / Discover People ─────────────────────────────────────────── */
 async function renderPeopleFind(box){
   const isGuest=!sb||!sbUser;
@@ -9406,6 +9461,14 @@ async function renderPeopleFind(box){
           if(!error&&data)foundList=data.map(maskProf);
         }
       }catch(e){console.warn("fetch community profiles:",e)}
+      /* Round 9: "friends show up in People as strangers to add". The
+         community query returns bare profiles and the card read p.isFriend,
+         which only the demo data ever had — so every real friend got an
+         "Add" button. The relation now comes from friendships. */
+      if(foundList.length){
+        const rel=await friendRelations();
+        foundList=foundList.map(p=>({...p,rel:rel.get(p.id)||"",isFriend:rel.get(p.id)==="friend"}));
+      }
     }
 
     const mockAll=getMockFriends();
@@ -9424,6 +9487,7 @@ async function renderPeopleFind(box){
       });
     }
 
+    if(!results.isConnected)return;
     if(!combined.length){
       results.innerHTML=`<div style="text-align:center;padding:36px 16px;color:var(--mute)">
         <span class="material-symbols-rounded" style="font-size:32px;opacity:0.4;margin-bottom:8px">group</span>
@@ -9461,7 +9525,11 @@ async function renderPeopleFind(box){
         </div>
         <div class="people-find-grid">
           ${visible.map(p=>{
-            const isFr=!!p.isFriend;
+            const isFr=!!p.isFriend,rel=p.rel||(isFr?"friend":"");
+            const act=rel==="friend"?{cls:"",ico:"check",txt:LANG==="ru"?"В друзьях":"Friends"}
+             :rel==="out"?{cls:"",ico:"schedule",txt:t("people.pending"),dis:true}
+             :rel==="in"?{cls:"primary",ico:"how_to_reg",txt:LANG==="ru"?"Принять":"Accept"}
+             :{cls:"primary",ico:"person_add",txt:LANG==="ru"?"Добавить":"Add"};
             const banner=p.banner_url||"";
             const listeningChip=p.listening?`
               <div class="friend-listening-chip" style="margin-top:6px">
@@ -9475,8 +9543,8 @@ async function renderPeopleFind(box){
               <div class="people-find-body">
                 <div class="people-find-top">
                   ${avat(p, 46, presStatus(p.id)||p.status||null)}
-                  <button class="btn sm ${isFr?"":"primary"}" data-find-action="${esc(p.id)}" style="font-size:0.75rem">
-                    <span class="material-symbols-rounded" style="font-size:16px">${isFr?"check":"person_add"}</span> ${isFr?(LANG==="ru"?"В друзьях":"Friends"):(LANG==="ru"?"Добавить":"Add")}
+                  <button class="btn sm ${act.cls}" data-find-action="${esc(p.id)}" data-rel="${rel}" style="font-size:0.75rem"${act.dis?" disabled":""}>
+                    <span class="material-symbols-rounded" style="font-size:16px">${act.ico}</span> ${act.txt}
                   </button>
                 </div>
                 <div style="font-weight:600;font-size:0.92rem;cursor:pointer" data-person="${esc(p.id)}">${esc(p.username)}</div>
@@ -9511,11 +9579,20 @@ async function renderPeopleFind(box){
               renderCards();
             }
           }else{
+            /* a friend's button opens the profile instead of a second request */
+            if(target.rel==="friend")return renderPeopleProfile(pid);
             const {error}=await sb.rpc("add_friend_by_username",{name:target.username});
             if(error)return toast(error.message);
+            FRIEND_REL.at=0;
+            if(target.rel==="in"){
+              /* add_friend_by_username accepts a pending request from them */
+              target.rel="friend";target.isFriend=true;
+              toast(LANG==="ru"?"Теперь вы друзья":"You are friends now");
+              refreshFriendNotice();renderCards();return}
+            target.rel="out";
             notify(t("people.pending"),target.username||"",{icon:"user-plus"});
             btn.innerHTML=`<span class="material-symbols-rounded" style="font-size:16px">schedule</span> ${t("people.pending")}`;
-            btn.disabled=true;
+            btn.classList.remove("primary");btn.disabled=true;
             icons();
           }
         };
@@ -9625,6 +9702,9 @@ async function renderPeopleFriends(box){
     }));
   }
 
+  /* The queries above take a moment; a tab switch in the meantime must not be
+     overwritten by this list arriving late. */
+  if(PEOPLE_TAB!=="friends"||S.view!=="people")return;
   const listeningFriends=accepted.filter(f=>f.status==="listening");
   const onlineFriends=accepted.filter(f=>f.status==="online"||f.status==="listening");
 

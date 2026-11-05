@@ -4155,7 +4155,13 @@ html[data-wall] body{background:#000}
 .fpx-exp[hidden]{display:none}
 .fpx .fpx-artist{align-self:flex-start;max-width:100%;font-size:clamp(.92rem,1.15vw,1.05rem);font-weight:500;color:var(--t2);
   text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .2s var(--e)}
-.fpx .fpx-artist:hover{color:#fff;text-decoration:underline;text-underline-offset:3px}
+.fpx .fpx-artist .fpx-al,#np .np-al{cursor:pointer;border-radius:4px;transition:color .2s var(--e)}
+.fpx .fpx-artist .fpx-al:hover,.fpx .fpx-artist .fpx-al:focus-visible{color:#fff;text-decoration:underline;text-underline-offset:3px}
+#np .np-al:hover,#np .np-al:focus-visible{color:var(--t1,#fff);text-decoration:underline;text-underline-offset:2px}
+.row .row-al{cursor:pointer;border-radius:3px}
+/* .meta span{display:block} would otherwise stack every name on its own line */
+.meta span .row-al,.meta span .np-al,.fpx-artist .fpx-al{display:inline;font-size:inherit;color:inherit;overflow:visible}
+.row .row-al:hover,.row .row-al:focus-visible{color:var(--t1,#fff);text-decoration:underline;text-underline-offset:2px}
 .fpx-like{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;color:var(--t2);
   transition:color .2s var(--e),background-color .2s var(--e),transform .3s cubic-bezier(.34,1.56,.64,1)}
 .fpx-like:hover{background:rgb(255 255 255/.1);color:#fff}
@@ -5984,6 +5990,11 @@ html:not([data-accent="none"]) .s2-rank .row:nth-child(-n+3)::before{color:var(-
 .pf2 .pbio{font-size:.88rem;line-height:1.45;color:var(--text);opacity:.9;max-width:62ch}
 .pf2 .pmail{font-size:.76rem}
 .pf2 .pf-acts{display:flex;flex-wrap:wrap;gap:8px;flex:none;margin-left:auto;padding-bottom:4px}
+/* Round 9 ("the banner and avatar buttons moved to the middle"): the generic
+   `.profhead>div:not(.avatar){flex:1}` (specificity 0,2,1) outranked the line
+   above (0,2,0), so the button group grew to half the row and its buttons sat
+   at its left edge — the middle of the card. Same selector depth wins back. */
+.pf2 .profhead>.pf-acts{flex:none;margin-left:auto;justify-content:flex-end}
 .pf2 .pf-acts .btn{display:inline-flex;align-items:center;gap:6px}
 .pf2 .stats{display:flex;flex-wrap:wrap;gap:0;margin-top:20px;border:1px solid var(--line);border-radius:16px;overflow:hidden;
   background:color-mix(in oklab,var(--surf-2,transparent) 60%,transparent)}
@@ -5995,7 +6006,7 @@ html:not([data-accent="none"]) .s2-rank .row:nth-child(-n+3)::before{color:var(-
   .pf2 .pf-main{padding:0 16px 18px}
   .pf2 .avatar{width:104px;height:104px}
   .pf2 .profhead>.avatar,.pf2 .profhead>.avatar-holder{margin-top:-48px}
-  .pf2 .pf-acts{margin-left:0}
+  .pf2 .pf-acts,.pf2 .profhead>.pf-acts{margin-left:0;justify-content:flex-start}
 }
 
 /* The picker */
