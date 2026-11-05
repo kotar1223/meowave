@@ -11,7 +11,7 @@
 
 ## 🌟 Highlights
 
-- **Unified Multi-Service Library**: SoundCloud, Yandex Music, Spotify playlist import, YouTube Music, and local disk files (FLAC, MP3, WAV, AAC, OGG) behind a single queue and search bar.
+- **Unified Multi-Service Library**: SoundCloud, Yandex Music, YouTube Music, Spotify and Apple Music (catalogs, no keys needed), and local disk files (FLAC, MP3, WAV, AAC, OGG) behind a single queue and search bar.
 - **🎨 Material You & Material Expressive**:
   - Dynamic palette adapting in real-time to the current track's album art.
   - Calm accents: monochrome, ten soft pastel tones, the colour of the album art (kept muted in OKLCH, never neon) or your own HEX.
@@ -23,6 +23,7 @@
   - Built-in interactive lyrics timing editor to sync and edit your own lyrics.
 - **📺 Fullscreen Stage & Cover Drift (F11)**:
   - Cinema stage mode with customizable album cover zoom and organic slow drift motion.
+  - Clips β: the official YouTube music video plays muted behind the player, in sync with the track; without a clip, the album art stays.
 - **🔊 Audiophile DSP Pipeline**:
   - 10-band graphic equalizer with per-track and per-playlist saved presets.
   - 3D Spatial Audio: HRTF binaural head orbit panner with adjustable radius, speed, and elevation.
@@ -35,12 +36,14 @@
   - Colour, shape and visibility of every part of the interface — 13 sections, 56 controls, separate colours for the dark and light theme.
   - Presets (Standard, Compact, Soft, Sharp, Solid, OLED, Paper), per-item reset, theme export/import as JSON, synced with your account.
 - **👥 Social & Rooms**:
-  - Listening rooms with live playback synchronization and room chat.
+  - Listening rooms with a lobby, an on-air screen, a shared queue with listener requests, room chat, and playback synced to the host's clock.
   - Telegram-style direct messages with end-to-end encryption (per-device P-256 keys, AES-GCM): replies with quotes, edits, deletes, read receipts, photos, track cards and room invites.
   - User profiles with up to three worn badges and a profile song.
   - Banners: a solid colour, a gradient, a preset or your own picture, with «My banners» for one-click swapping.
   - Chats send any track (favourites, playlists, search), full-size photos and moving GIFs (encrypted on the device), with a zooming viewer and custom notification sounds.
-- **🔎 Search**: artists, playlists and albums next to tracks; with an empty field, «Trending» charts for Russia, the US or the whole world.
+- **🔎 Search**: artists, playlists and albums next to tracks; chips pick one service to search; with an empty field, «Trending» charts for Russia, the US or the whole world.
+- **📥 Downloads that work offline**: a downloaded track plays from the disk, with no traffic and no network; «My Files → Downloaded» lists them, and «Find earlier downloads» picks up files saved before.
+- **👋 First-run setup**: five animated steps (language, look, services with sign-in, account, summary) and one sign-in / sign-up card across the app.
 - **🌌 Home background**: the particle wave, the light «Aura» or a still background, at 60 or 30 fps (Settings → Appearance).
 - **⬆️ Versions and updates**: Beta 3.2 (3.2.0); the app checks for an update at launch, a source checkout updates with `git pull` from the dialog.
 
@@ -51,13 +54,15 @@
 | Service | Playback Status | Authentication |
 | :--- | :--- | :--- |
 | **SoundCloud** | ✅ Supported | Anonymous (public client) / OAuth |
-| **Yandex Music** | ✅ Supported | OAuth Token (stored in OS Keychain) |
+| **Yandex Music** | ✅ Supported | Sign-in window (OAuth) or token (stored in OS Keychain) |
 | **Local Files** | ✅ Supported | None (direct disk streaming, zero copying) |
-| **Spotify** | ✅ Playlist / Library Import | OAuth Authorization Code + PKCE |
+| **Spotify** | ✅ Search, catalog, playlist import | None (anonymous web token); OAuth + PKCE for your library |
+| **Apple Music** | ✅ Search, charts, albums | None (iTunes Search / RSS) |
 | **YouTube Music** | ⚠️ Experimental | InnerTube guest |
 
-Playback for Spotify is not implemented: the Web API does not serve full tracks
-to a third-party client.
+Spotify and Apple Music audio is DRM-protected and never served to a
+third-party client, so Meowave plays the same recording from another service
+(strict artist/title/length match); downloads take the audio from there too.
 
 ## Tech Stack
 
