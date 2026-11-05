@@ -1,6 +1,6 @@
 ---
 name: meowave-ui-verify
-description: Use after any change to src/index.html, src/app.css, src/app.js, src/fx.js, src/discover.js or src/ts/*.ts that affects what the user sees — verifies the UI with real screenshots in headless Chromium plus the static e2e suite.
+description: Use after any change to src/index.html, src/app.css, src/app.js, src/discover.js, src/m3.js or src/ts/*.ts (fx.ts included) that affects what the user sees — verifies the UI with real screenshots in headless Chromium plus the static e2e suite.
 ---
 
 # Verifying Meowave UI changes
@@ -9,7 +9,7 @@ The window shows `dist/`, which Vite builds from `src/` (`npm run web:build`; th
 
 ## 1. Static checks (always)
 ```
-node --check src/app.js && node --check src/fx.js && node --check src/discover.js
+for f in src/*.js; do node --check "$f"; done
 npm run typecheck        # src/ts (tsc; Vite only strips the types)
 node tests/run-e2e.mjs
 ```

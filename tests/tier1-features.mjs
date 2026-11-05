@@ -959,7 +959,7 @@ export function buildTier1Suite() {
     const classic = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
     assert.equal(classic[classic.length - 1], "ready", "ready.js must be the last classic script — the modules wait for it");
     const main = fs.readFileSync(path.join(tsDir, "main.ts"), "utf-8");
-    for (const m of ["naudio", "e2e", "search", "chat", "profile", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
+    for (const m of ["naudio", "e2e", "fx", "search", "chat", "profile", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
   });
 
   // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────
@@ -1047,7 +1047,7 @@ export function buildTier1Suite() {
     assert.match(fnSrc(c, "clipRelease"), /removeAttribute\("src"\);v\.load\(\)/);
     assert.match(fnSrc(c, "clipRefresh"), /setTimeout\(clipRelease,60000\)/);
     assert.match(c, /tier=\(S\.lite\|\|hqFlag\(\)===0\)\?0/);
-    const fx = readSrc("src/fx.js");
+    const fx = readSrc("src/ts/fx.ts");
     assert.match(fx, /m==="clips"&&fp\.dataset\.clip!=="on"/, "flowActive must stop drawing under a clip");
   });
   suite.test("F30-03: [Edge Case] A lookup waits out quick skips and every answer is remembered", () => {

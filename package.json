@@ -27,7 +27,7 @@
     "build:appimage": "bash scripts/build-appimage.sh",
     "install:linux": "bash install.sh",
     "check": "node scripts/web.mjs build && cd src-tauri && cargo clippy --all-targets -- -D warnings && cargo test",
-    "check:js": "node --check src/app.js && node --check src/fx.js && node --check src/discover.js && tsc -p tsconfig.json",
+    "check:js": "node --check src/app.js && node --check src/discover.js && tsc -p tsconfig.json",
     "test:e2e": "node tests/run-e2e.mjs",
     "badges": "node src/assets/badges/_gen.mjs",
     "badges:sql": "node supabase/make_badges_sql.mjs",

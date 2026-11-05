@@ -33,7 +33,7 @@ npm run build
 ## Проверки
 | Команда | Что делает |
 |---|---|
-| `npm run check:js` | проверка синтаксиса `src/app.js`, `src/fx.js`, `src/discover.js` и типов `src/ts` |
+| `npm run check:js` | проверка синтаксиса `src/app.js`, `src/discover.js` и типов `src/ts` |
 | `npm run typecheck` | проверка типов модулей на TypeScript (`src/ts`) |
 | `npm run web:build` | сборка интерфейса `src/` → `dist/` (Vite) |
 | `npm run web` | Vite dev-сервер http://127.0.0.1:1420 — интерфейс в браузере без Tauri |

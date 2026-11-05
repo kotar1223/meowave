@@ -3456,7 +3456,7 @@ function initComfortUI(){
      title; nothing else is rebuilt, so there is no flash, the lyrics keep their
      scroll position until the new ones arrive, and focus is not lost.
    - A layout change (stage <-> side pane with lyrics or the queue) moves the
-     cover on its spring (fx.js) and glides the controls from where they were,
+     cover on its spring (src/ts/fx.ts) and glides the controls from where they were,
      instead of tearing the DOM down and jumping.
    - The play button is an MD3 Expressive shape: a circle while paused that
      morphs into a rounded square while playing, and the glyph morphs between

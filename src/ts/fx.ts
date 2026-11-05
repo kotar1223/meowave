@@ -1,4 +1,4 @@
-/* Meowave visual effects: the fullscreen "flow" backdrop, wallpapers
+/* fx.ts — Meowave visual effects: the fullscreen "flow" backdrop, wallpapers
    (image / GIF / video) and the cover physics of the full player.
 
    Loaded before app.js and kept free of its globals at load time: everything
@@ -23,21 +23,49 @@
    - switching between the centred stage and the lyrics layout;
    - a track change: the new cover lands with a small bounce;
    - a gentle pull towards the pointer. */
-(function(){
-"use strict";
+
+/* fx.ts — was src/fx.js until step 2 of the stack rewrite; the code, the
+   shaders and window.MWFX are unchanged. It waits for nothing: main.ts
+   imports it before the classic scripts run (modules go first), so
+   window.MWFX is there when app.js's initFPSettings() wires the wallpaper
+   controls at start-up — the moment fx.js, the first deferred script, used
+   to run at. */
+
+/** The shader's uniforms, looked up once in glInit(). */
+interface FlowU { uA: WebGLUniformLocation | null; uB: WebGLUniformLocation | null; uMix: WebGLUniformLocation | null; uT: WebGLUniformLocation | null; uRes: WebGLUniformLocation | null }
+interface Tex { tex: HTMLCanvasElement; info: { lum: number; tint: number[] } }
+interface Flow {
+  cv: HTMLCanvasElement | null; gl: WebGLRenderingContext | null; g2: CanvasRenderingContext2D | null; prog: WebGLProgram | null;
+  u: FlowU; tA: WebGLTexture | null; tB: WebGLTexture | null;
+  mix: number; t: number; raf: number; last: number; url: string; cur: Tex | null; ok: boolean; speed: number; drawn: number;
+}
+/** mw.fx in localStorage: wallpaper look and the cover's pull towards the pointer. */
+interface FxSettings {
+  wallDim: number; wallBlur: number; wallApp: boolean; wallAppDim: number; wallAppBlur: number; wallLink: string; coverFollow: boolean;
+  [k: string]: unknown;
+}
+/** The stored wallpaper file (IndexedDB "meowave-fx", key "wallpaper"). */
+interface WallRec { blob: Blob; type?: string; name?: string }
+interface Spring { v: number; t: number; vel: number; k: number; c: number }
+interface Cov { el: HTMLElement | null; x: Spring; y: Spring; s: Spring; mx: Spring; my: Spring; raf: number; last: number; hold: boolean }
+
+declare global {
+  interface Window { MWFX?: typeof MWFX }
+}
+
 const RM=typeof matchMedia==="function"&&matchMedia("(prefers-reduced-motion:reduce)").matches;
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const clamp=(v:number,a:number,b:number):number=>Math.max(a,Math.min(b,v));
 
 /* ───────────────────────── colour helpers ───────────────────────── */
-function rgb2hsl(r,g,b){r/=255;g/=255;b/=255;
+function rgb2hsl(r:number,g:number,b:number):[number,number,number]{r/=255;g/=255;b/=255;
  const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,s=0;const l=(mx+mn)/2;
  if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
   h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h/=6}
  return [h,s,l]}
-function hsl2rgb(h,s,l){
+function hsl2rgb(h:number,s:number,l:number):[number,number,number]{
  if(!s){const v=Math.round(l*255);return [v,v,v]}
  const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;
- const f=t=>{t<0&&(t+=1);t>1&&(t-=1);
+ const f=(t:number):number=>{t<0&&(t+=1);t>1&&(t-=1);
   return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p};
  return [Math.round(f(h+1/3)*255),Math.round(f(h)*255),Math.round(f(h-1/3)*255)]}
 
@@ -49,7 +77,7 @@ function hsl2rgb(h,s,l){
    which costs next to nothing, and driven by real time, so the motion speed
    does not depend on the frame rate. A new cover cross-fades in over 1.2 s.
    Without WebGL the cover is drawn once, blurred, with no animation. */
-const FLOW={cv:null,gl:null,g2:null,prog:null,u:{},tA:null,tB:null,mix:1,t:Math.random()*60,
+const FLOW:Flow={cv:null,gl:null,g2:null,prog:null,u:{} as FlowU,tA:null,tB:null,mix:1,t:Math.random()*60,
  raf:0,last:0,url:"",cur:null,ok:false,speed:1,drawn:0};
 const VS="attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}";
 const FS=`precision mediump float;
@@ -72,7 +100,7 @@ void main(){
  col+=(h(gl_FragCoord.xy+fract(uT))-.5)*(1.6/255.);
  gl_FragColor=vec4(col,1.);}`;
 
-function flowCanvas(){
+function flowCanvas():HTMLCanvasElement|null{
  if(FLOW.cv&&FLOW.cv.isConnected)return FLOW.cv;
  const host=document.getElementById("fp");if(!host)return null;
  host.querySelectorAll(":scope>.fp-flow,:scope>.fp-grain").forEach(n=>n.remove());
@@ -86,20 +114,20 @@ function flowCanvas(){
  flowSize();
  addEventListener("resize",flowSize,{passive:true});
  return cv}
-function glInit(cv){
- let gl=null;
+function glInit(cv:HTMLCanvasElement):boolean{
+ let gl:WebGLRenderingContext|null=null;
  try{gl=cv.getContext("webgl",{alpha:false,antialias:false,depth:false,stencil:false,premultipliedAlpha:false,preserveDrawingBuffer:false,powerPreference:"low-power"})}catch(_){}
  if(!gl)return false;
- const sh=(type,src)=>{const o=gl.createShader(type);gl.shaderSource(o,src);gl.compileShader(o);
+ const sh=(type:number,src:string):WebGLShader|null=>{const o=gl.createShader(type)!;gl.shaderSource(o,src);gl.compileShader(o);
   if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)){console.warn("[fx] shader:",gl.getShaderInfoLog(o));return null}return o};
  const vs=sh(gl.VERTEX_SHADER,VS),fs=sh(gl.FRAGMENT_SHADER,FS);if(!vs||!fs)return false;
- const pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);gl.linkProgram(pr);
+ const pr=gl.createProgram()!;gl.attachShader(pr,vs);gl.attachShader(pr,fs);gl.linkProgram(pr);
  if(!gl.getProgramParameter(pr,gl.LINK_STATUS))return false;
  gl.useProgram(pr);
  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
  const loc=gl.getAttribLocation(pr,"p");gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
- for(const k of ["uA","uB","uMix","uT","uRes"])FLOW.u[k]=gl.getUniformLocation(pr,k);
+ for(const k of ["uA","uB","uMix","uT","uRes"] as const)FLOW.u[k]=gl.getUniformLocation(pr,k);
  const mk=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.MIRRORED_REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.MIRRORED_REPEAT);
@@ -109,7 +137,7 @@ function glInit(cv){
  cv.addEventListener("webglcontextlost",e=>{e.preventDefault();FLOW.ok=false});
  cv.addEventListener("webglcontextrestored",()=>{FLOW.ok=glInit(cv);if(FLOW.cur)upload(FLOW.tB,FLOW.cur.tex);flowKick()});
  FLOW.gl=gl;FLOW.prog=pr;return true}
-function upload(t,canvas){
+function upload(t:WebGLTexture|null,canvas:TexImageSource):void{
  const gl=FLOW.gl;if(!gl)return;
  gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas)}
 function flowSize(){
@@ -120,22 +148,22 @@ function flowSize(){
 
 /* Small, blurred, colour-corrected copy of the cover (128 px, a power of two,
    so the shader may mirror-repeat it). */
-function buildTexture(img){
+function buildTexture(img:CanvasImageSource):Tex{
  const n=24,t=document.createElement("canvas");t.width=t.height=n;
- const x=t.getContext("2d",{willReadFrequently:true});
+ const x=t.getContext("2d",{willReadFrequently:true})!;
  x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
  x.drawImage(img,0,0,n,n);
  let info={lum:.3,tint:[120,120,140]};
  try{
   const d=x.getImageData(0,0,n,n),px=d.data;
   let L=0,cnt=n*n,tr=0,tg=0,tb=0,tw=0;
-  for(let i=0;i<px.length;i+=4){const l=(.2126*px[i]+.7152*px[i+1]+.0722*px[i+2])/255;L+=l}
+  for(let i=0;i<px.length;i+=4){const l=(.2126*px[i]!+.7152*px[i+1]!+.0722*px[i+2]!)/255;L+=l}
   L/=cnt;
   /* Dark sleeves are lifted towards a mid tone; bright ones are pulled down
      a little so white text keeps its contrast. */
   const lift=L<.34?(.34-L)/.34:0,damp=L>.62?(L-.62)/.38:0;
   for(let i=0;i<px.length;i+=4){
-   let [h,s,l]=rgb2hsl(px[i],px[i+1],px[i+2]);
+   let [h,s,l]=rgb2hsl(px[i]!,px[i+1]!,px[i+2]!);
    l=l*(1+1.1*lift)+.1*lift;
    l=l*(1-.32*damp);
    s=Math.min(1,s*(1.06+.12*lift));
@@ -146,23 +174,23 @@ function buildTexture(img){
   info={lum:L,tint:[tr/tw|0,tg/tw|0,tb/tw|0]};
  }catch(_){/* cross-origin cover: draw it as-is */}
  const m=document.createElement("canvas");m.width=m.height=64;
- const mx=m.getContext("2d");mx.imageSmoothingEnabled=true;mx.imageSmoothingQuality="high";
+ const mx=m.getContext("2d")!;mx.imageSmoothingEnabled=true;mx.imageSmoothingQuality="high";
  mx.filter="blur(2px)";mx.drawImage(t,0,0,64,64);
  const o=document.createElement("canvas");o.width=o.height=128;
- const ox=o.getContext("2d");ox.imageSmoothingEnabled=true;ox.imageSmoothingQuality="high";
+ const ox=o.getContext("2d")!;ox.imageSmoothingEnabled=true;ox.imageSmoothingQuality="high";
  ox.filter="blur(3px)";ox.drawImage(m,-4,-4,136,136);
  return {tex:o,info}}
 
-function loadImage(url){
+function loadImage(url:string):Promise<HTMLImageElement>{
  return new Promise((res,rej)=>{
-  const tryLoad=cors=>{const im=new Image();if(cors)im.crossOrigin="anonymous";
+  const tryLoad=(cors:boolean):void=>{const im=new Image();if(cors)im.crossOrigin="anonymous";
    im.decoding="async";
    im.onload=()=>res(im);
    im.onerror=()=>cors?tryLoad(false):rej(new Error("cover"));
    im.src=url};
   tryLoad(/^https?:/i.test(url))})}
 
-function setCover(url){
+function setCover(url:string):void{
  flowCanvas();
  if(!url){FLOW.url="";return}
  if(url===FLOW.url)return;
@@ -180,8 +208,8 @@ function setCover(url){
   flowDraw(0);flowKick();
  }).catch(()=>{})}
 
-const easeIO=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
-function flowDraw(dt){
+const easeIO=(t:number):number=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function flowDraw(dt:number):void{
  const cv=FLOW.cv;if(!cv)return;
  if(FLOW.ok&&FLOW.gl){
   const gl=FLOW.gl;
@@ -203,8 +231,8 @@ function flowDraw(dt){
 /* The same canvas can be lent to another surface — the mini player shows the
    full-screen player's moving cover behind its card. One WebGL context, one
    texture pair; only the parent element changes. null gives it back. */
-let FLOW_HOST=null;
-function flowHost(el){
+let FLOW_HOST:Element|null=null;
+function flowHost(el?:Element|null):boolean{
  const cv=flowCanvas();if(!cv)return false;
  const grain=cv.nextElementSibling&&cv.nextElementSibling.classList.contains("fp-grain")?cv.nextElementSibling:null;
  const target=el||document.getElementById("fp");if(!target)return false;
@@ -224,7 +252,7 @@ function flowActive(){
 /* Drawn at up to 40 fps: the field moves a fraction of a pixel per frame, so
    more frames would not look any smoother, while every one of them makes the
    compositor re-blur a full-window layer. Time-based, so the speed holds. */
-function flowLoop(now){
+function flowLoop(now:number):void{
  FLOW.raf=0;
  if(!flowActive())return;
  if(FLOW.last&&now-FLOW.last<24){FLOW.raf=requestAnimationFrame(flowLoop);return}
@@ -241,27 +269,27 @@ document.addEventListener("visibilitychange",flowKick);
 const FX_KEY="mw.fx";
 /* wallDim/wallBlur: the full player. wallApp*: the same picture behind the
    whole interface. wallLink: an https:// wallpaper instead of a stored file. */
-const FXS=Object.assign({wallDim:35,wallBlur:0,wallApp:false,wallAppDim:55,wallAppBlur:0,wallLink:"",coverFollow:true},(()=>{try{return JSON.parse(localStorage.getItem(FX_KEY)||"{}")}catch(_){return {}}})());
+const FXS:FxSettings=Object.assign({wallDim:35,wallBlur:0,wallApp:false,wallAppDim:55,wallAppBlur:0,wallLink:"",coverFollow:true},(()=>{try{return JSON.parse(localStorage.getItem(FX_KEY)||"{}")}catch(_){return {}}})());
 const saveFx=()=>{try{localStorage.setItem(FX_KEY,JSON.stringify(FXS))}catch(_){}};
 const WALL={url:"",type:"",name:"",loaded:false};
-function idb(){
+function idb():Promise<IDBDatabase>{
  return new Promise((res,rej)=>{
   if(!window.indexedDB)return rej(new Error("no idb"));
   const r=indexedDB.open("meowave-fx",1);
   r.onupgradeneeded=()=>r.result.createObjectStore("kv");
   r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
-async function idbGet(k){const db=await idb();return new Promise((res,rej)=>{
+async function idbGet(k:string):Promise<WallRec|undefined>{const db=await idb();return new Promise((res,rej)=>{
  const q=db.transaction("kv").objectStore("kv").get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
-async function idbSet(k,v){const db=await idb();return new Promise((res,rej)=>{
+async function idbSet(k:string,v:unknown):Promise<void>{const db=await idb();return new Promise((res,rej)=>{
  const tx=db.transaction("kv","readwrite");v===undefined?tx.objectStore("kv").delete(k):tx.objectStore("kv").put(v,k);
  tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 
 const WALL_MAX=200*1024*1024;
-function wallKind(type,name){
+function wallKind(type:string,name:string):string{
  if(/^video\//.test(type)||/\.(mp4|webm|mov|m4v)$/i.test(name))return "video";
  return "image"}
-const linkName=u=>{try{const x=new URL(u);return decodeURIComponent(x.pathname.split("/").filter(Boolean).pop()||x.hostname)}catch(_){return u}};
-const linkKind=u=>/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u)?"video":"image";
+const linkName=(u:string):string=>{try{const x=new URL(u);return decodeURIComponent(x.pathname.split("/").filter(Boolean).pop()||x.hostname)}catch(_){return u}};
+const linkKind=(u:string):string=>/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u)?"video":"image";
 async function wallLoad(){
  if(WALL.loaded)return;WALL.loaded=true;
  if(FXS.wallLink){WALL.url=FXS.wallLink;WALL.type=linkKind(FXS.wallLink);WALL.name=linkName(FXS.wallLink);wallRender();return}
@@ -269,7 +297,7 @@ async function wallLoad(){
   if(rec&&rec.blob){WALL.url=URL.createObjectURL(rec.blob);WALL.type=wallKind(rec.type||rec.blob.type,rec.name||"");WALL.name=rec.name||""}
  }catch(_){}
  wallRender()}
-async function wallSetFile(file){
+async function wallSetFile(file?:File|null):Promise<boolean>{
  if(!file)return false;
  if(file.size>WALL_MAX){toastSafe(lang()==="ru"?"Файл слишком большой (до 200 МБ)":"File is too large (200 MB max)");return false}
  const kind=wallKind(file.type,file.name);
@@ -287,7 +315,7 @@ async function wallClear(){
  WALL.url="";WALL.type="";WALL.name="";wallRender()}
 /* A wallpaper from the web: only https, only something that looks like a
    picture or a video. The link is kept instead of a copy of the file. */
-async function wallSetUrl(raw){
+async function wallSetUrl(raw:unknown):Promise<boolean>{
  const u=String(raw||"").trim();
  let ok=false;try{ok=new URL(u).protocol==="https:"}catch(_){}
  if(!ok)return false;
@@ -296,14 +324,14 @@ async function wallSetUrl(raw){
  FXS.wallLink=u;saveFx();
  WALL.url=u;WALL.type=linkKind(u);WALL.name=linkName(u);WALL.loaded=true;
  wallRender();return true}
-function wallPick(){
+function wallPick():Promise<boolean>{
  return new Promise(res=>{
   const inp=document.createElement("input");inp.type="file";
   inp.accept="image/*,video/mp4,video/webm,.gif,.mp4,.webm,.mov";
   inp.onchange=async()=>{const f=inp.files&&inp.files[0];res(f?await wallSetFile(f):false)};
   inp.click()})}
-function wallNode(host,cls,dim,blur){
- let el=host.querySelector(":scope > ."+cls);
+function wallNode(host:Element,cls:string,dim?:number,blur?:number):HTMLElement{
+ let el=host.querySelector<HTMLElement>(":scope > ."+cls);
  if(!el){el=document.createElement("div");el.className=cls;el.setAttribute("aria-hidden","true");
   if(cls==="app-wall")host.insertBefore(el,host.firstChild);
   else{const ref=host.querySelector(":scope > .fp-grain")||host.firstChild;host.insertBefore(el,ref?ref.nextSibling:null)}}
@@ -337,44 +365,44 @@ function wallRender(){
   document.documentElement.removeAttribute("data-wall")}
  const st=document.getElementById("fp-wall-name");
  if(st)st.textContent=WALL.url?(WALL.name||(lang()==="ru"?"Обои выбраны":"Wallpaper set")):(lang()==="ru"?"Не выбраны":"None");
- const clr=document.getElementById("fp-wall-clear");if(clr)clr.disabled=!WALL.url;
+ const clr=document.getElementById("fp-wall-clear") as HTMLButtonElement|null;if(clr)clr.disabled=!WALL.url;
  try{dispatchEvent(new CustomEvent("mw:wall"))}catch(_){}}
-function playIf(el,on){
+function playIf(el:Element,on:boolean|null):void{
  const v=el.querySelector("video");if(!v)return;
- if(on&&!document.hidden){const p=v.play();p&&p.catch&&p.catch(()=>{})}else v.pause()}
+ if(on&&!document.hidden){const p:Promise<void>|undefined=v.play();p&&p.catch&&p.catch(()=>{})}else v.pause()}
 document.addEventListener("visibilitychange",()=>wallRender());
 const lang=()=>{try{return typeof LANG!=="undefined"?LANG:"ru"}catch(_){return "ru"}};
-function toastSafe(m){try{typeof toast==="function"?toast(m):console.warn(m)}catch(_){}}
+function toastSafe(m:string):void{try{typeof toast==="function"?toast(m):console.warn(m)}catch(_){}}
 
 /* ───────────────────────── cover physics ───────────────────────── */
 /* One spring per axis; k = stiffness, c = damping, unit mass. */
-function spring(v,k,c){return {v,t:v,vel:0,k,c}}
-function stepSpring(s,dt){
+function spring(v:number,k:number,c:number):Spring{return {v,t:v,vel:0,k,c}}
+function stepSpring(s:Spring,dt:number):boolean{
  const a=-s.k*(s.v-s.t)-s.c*s.vel;s.vel+=a*dt;s.v+=s.vel*dt;
  return Math.abs(s.v-s.t)>.0005||Math.abs(s.vel)>.0005}
-const COV={el:null,x:spring(0,240,22),y:spring(0,240,22),s:spring(1,260,20),
+const COV:Cov={el:null,x:spring(0,240,22),y:spring(0,240,22),s:spring(1,260,20),
  mx:spring(0,90,14),my:spring(0,90,14),raf:0,last:0,hold:false};
-function coverEl(){return document.querySelector("#fpc .fpx-cover")}
+function coverEl():HTMLElement|null{return document.querySelector<HTMLElement>("#fpc .fpx-cover")}
 function coverApply(){
  const el=COV.el;if(!el||!el.isConnected)return;
  const x=COV.x.v+COV.mx.v,y=COV.y.v+COV.my.v,s=COV.s.v;
  const still=Math.abs(x)<.05&&Math.abs(y)<.05&&Math.abs(s-1)<.0005;
  el.style.translate=still?"":`${x.toFixed(2)}px ${y.toFixed(2)}px`;
  el.style.scale=still?"":s.toFixed(4)}
-function coverLoop(now){
+function coverLoop(now:number):void{
  COV.raf=0;
  const dt=COV.last?Math.min(1/30,(now-COV.last)/1000):1/60;COV.last=now;
  let moving=false;
- for(const k of ["x","y","s","mx","my"]){
+ for(const k of ["x","y","s","mx","my"] as const){
   /* Sub-step for stability with stiff springs on slow frames. */
   const n=dt>1/50?2:1;for(let i=0;i<n;i++)moving=stepSpring(COV[k],dt/n)||moving}
  coverApply();
  if(moving||COV.hold)COV.raf=requestAnimationFrame(coverLoop);
- else{for(const k of ["x","y","s","mx","my"]){COV[k].v=COV[k].t;COV[k].vel=0}coverApply();COV.last=0}}
+ else{for(const k of ["x","y","s","mx","my"] as const){COV[k].v=COV[k].t;COV[k].vel=0}coverApply();COV.last=0}}
 function coverKick(){if(!COV.raf){COV.last=0;COV.raf=requestAnimationFrame(coverLoop)}}
-function setSpring(s,k,c){s.k=k;s.c=c}
+function setSpring(s:Spring,k:number,c:number):void{s.k=k;s.c=c}
 /* FLIP: the element is already at its final place; start it where `from` was. */
-function coverFlyFrom(from,opts={}){
+function coverFlyFrom(from?:DOMRectReadOnly|null,opts:{k?:number;c?:number}={}):void{
  const el=coverEl();if(!el||!from||RM)return;
  COV.el=el;
  const to=el.getBoundingClientRect();if(!to.width)return;
@@ -386,7 +414,7 @@ function coverFlyFrom(from,opts={}){
  COV.x.vel=COV.y.vel=COV.s.vel=0;
  coverApply();coverKick()}
 /* Reverse FLIP: from its place towards `to` (closing into the mini player). */
-function coverFlyTo(to){
+function coverFlyTo(to?:DOMRectReadOnly|null):void{
  const el=coverEl();if(!el||!to||RM)return;
  COV.el=el;
  const from=el.getBoundingClientRect();if(!from.width)return;
@@ -404,7 +432,7 @@ function coverLand(){
  setSpring(COV.y,260,18);COV.y.v=10;COV.y.t=0;COV.y.vel=0;COV.x.v=COV.x.t=0;
  coverKick()}
 function coverReset(){
- for(const k of ["x","y","s","mx","my"]){COV[k].t=k==="s"?1:0;COV[k].v=COV[k].t;COV[k].vel=0}
+ for(const k of ["x","y","s","mx","my"] as const){COV[k].t=k==="s"?1:0;COV[k].v=COV[k].t;COV[k].vel=0}
  const el=coverEl();if(el){el.style.translate="";el.style.scale=""}}
 /* Pointer pull: a few pixels towards the cursor, on a soft spring. */
 addEventListener("pointermove",e=>{
@@ -418,14 +446,15 @@ addEventListener("pointermove",e=>{
 document.addEventListener("pointerleave",()=>{COV.mx.t=0;COV.my.t=0;coverKick()});
 
 /* ───────────────────────── public API ───────────────────────── */
-window.MWFX={
- flow:{setCover,kick:flowKick,host:flowHost,speed:v=>{FLOW.speed=clamp(+v||0,0,3)}},
+export const MWFX={
+ flow:{setCover,kick:flowKick,host:flowHost,speed:(v:number)=>{FLOW.speed=clamp(+v||0,0,3)}},
  wall:{load:wallLoad,pick:wallPick,clear:wallClear,render:wallRender,settings:FXS,save:saveFx,has:()=>!!WALL.url,
   setFile:wallSetFile,setUrl:wallSetUrl,name:()=>WALL.name,kind:()=>WALL.type,isLink:()=>!!FXS.wallLink},
  cover:{el:coverEl,flyFrom:coverFlyFrom,flyTo:coverFlyTo,land:coverLand,reset:coverReset,
   rect:()=>{const e=coverEl();return e?e.getBoundingClientRect():null},
   /* The cursor pull can be switched off; the springs settle back to centre. */
-  follow:on=>{FXS.coverFollow=!!on;saveFx();if(!on){COV.mx.t=0;COV.my.t=0;coverKick()}},
+  follow:(on:unknown)=>{FXS.coverFollow=!!on;saveFx();if(!on){COV.mx.t=0;COV.my.t=0;coverKick()}},
   following:()=>FXS.coverFollow!==false}
 };
-})();
+
+window.MWFX=MWFX;
