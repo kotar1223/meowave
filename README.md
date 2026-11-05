@@ -38,6 +38,11 @@
   - Listening rooms with live playback synchronization and room chat.
   - Telegram-style direct messages with end-to-end encryption (per-device P-256 keys, AES-GCM): replies with quotes, edits, deletes, read receipts, photos, track cards and room invites.
   - User profiles with up to three worn badges and a profile song.
+  - Banners: a solid colour, a gradient, a preset or your own picture, with «My banners» for one-click swapping.
+  - Chats send any track (favourites, playlists, search), full-size photos and moving GIFs (encrypted on the device), with a zooming viewer and custom notification sounds.
+- **🔎 Search**: artists, playlists and albums next to tracks; with an empty field, «Trending» charts for Russia, the US or the whole world.
+- **🌌 Home background**: the particle wave, the light «Aura» or a still background, at 60 or 30 fps (Settings → Appearance).
+- **⬆️ Versions and updates**: Beta 3.2 (3.2.0); the app checks for an update at launch, a source checkout updates with `git pull` from the dialog.
 
 ---
 

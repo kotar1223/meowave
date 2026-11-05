@@ -38,6 +38,8 @@ Obsidian-хранилище с памяткой о проекте: как уст
 - [[Features/Interface designer|Конструктор интерфейса]]
 - [[Features/App icon|Иконка приложения]]
 - [[Features/Keyboard shortcuts|Горячие клавиши]]
+- [[Features/Search|Поиск: артисты, плейлисты, «В тренде»]]
+- [[Features/Updates|Версия и обновления]]
 
 ## Журнал
 - [[Log/Requests]] — все запросы владельца проекта со статусом
