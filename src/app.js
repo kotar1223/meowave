@@ -64,9 +64,9 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "set.lite":"Экономный режим","set.lite.s":"Для слабых ПК: меньше частиц, без блюра и дымки",
 "th.dark":"Тёмная","th.light":"Светлая","th.sys":"Системная","off":"Выкл","s.slow":"Медленно","s.mid":"Средне","s.fast":"Быстро","s.light":"Лёгкий","s.strong":"Сильно",
 "d.low":"Меньше","d.mid":"Средне","d.high":"Много",
-"ob.lang.t":"Язык интерфейса","ob.lang.s":"Меняется в любой момент в настройках.","ob.step2":"Шаг 2 из 3",
+"ob.hi.t":"Добро пожаловать в Meowave","ob.hi.s":"YouTube Music, Яндекс Музыка, SoundCloud, Spotify, Apple Music и ваши файлы — в одном плеере.","ob.look.t":"Внешний вид","ob.look.s":"Чёрно-белая основа и мягкий акцент. Всё меняется потом в настройках.","ob.svc.t":"Откуда слушать","ob.svc.s":"Включите площадки для поиска. Большинству вход не нужен — войдите, чтобы перенести свою библиотеку.","ob.svc.note":"Токены и сессии хранятся в системном keychain, не в файлах.","ob.svc.free":"Без входа","ob.svc.need":"Нужен вход","ob.svc.ok":"Подключено","ob.svc.lib":"Войти, чтобы перенести лайки и плейлисты","ob.acc.t":"Аккаунт Meowave","ob.acc.s":"Друзья, чаты, комнаты и синхронизация между устройствами. Можно и позже — в профиле.","ob.acc.as":"Вы вошли как {u}","ob.acc.as.s":"Избранное и история будут синхронизироваться","ob.acc.na":"Облачный аккаунт в этой сборке не настроен — всё остальное работает без него.","ob.step":"Шаг {n} из {m}","ob.start":"Начать","ob.skip":"Позже","ob.sum.svc":"Сервисов: {n}","ob.sum.none":"Сервисы выключены","ob.sum.guest":"Без аккаунта","au.p1":"Синхронизация","au.p1.s":"Избранное, плейлисты и история на всех устройствах","au.p2":"Друзья и чаты","au.p2.s":"Кто что слушает, личные и групповые чаты","au.p3":"Комнаты","au.p3.s":"Слушайте вместе — одна очередь на всех","au.p4":"Профиль и значки","au.p4.s":"Часы прослушивания, рейтинг и достижения","au.in.t":"Вход в Meowave","au.in.s":"С возвращением — войдите, чтобы продолжить","au.up.t":"Новый аккаунт","au.up.s":"Пара полей — и профиль готов","au.tab.up":"Регистрация","au.user":"Имя пользователя","au.email":"Почта","au.pass":"Пароль","au.show":"Показать пароль","au.hide":"Скрыть пароль","au.forgot":"Забыли пароль?","au.magic":"Войти по ссылке","au.go.up":"Создать аккаунт","au.guest":"Без аккаунта","au.quasar":"Quasar ID указан — введите пароль","au.reset.sent":"Письмо для сброса пароля отправлено","au.confirm":"Почти готово — подтвердите почту по ссылке из письма","au.back":"С возвращением!","au.e.cred":"Неверная почта или пароль","au.e.exists":"Такой аккаунт уже есть — войдите","au.e.confirm":"Почта не подтверждена — откройте письмо","au.e.short":"Пароль — минимум 6 символов","au.e.rate":"Слишком часто — попробуйте через минуту","au.e.net":"Нет связи с сервером — проверьте интернет","au.e.email":"Проверьте адрес почты","ob.lang.t":"Язык интерфейса","ob.lang.s":"Меняется в любой момент в настройках.","ob.step2":"Шаг 2 из 3",
 "ob.theme.t":"Тема","ob.theme.s":"Чёрно-белая основа. Цветной акцент опционален.",
-"ob.done.t":"Готово","ob.done.s":"Сервисы подключаются в настройках. Токены уходят в системный keychain, не в файлы.",
+"ob.done.t":"Всё готово","ob.done.s":"Поиск — сверху, волна — на главной. Настройки, сервисы и аккаунты — слева, в любой момент.",
 "ob.next":"Далее","ob.back":"Назад","ob.go":"Открыть",
 "s.idle.t":"Одна строка, четыре сервиса","s.idle.s":"Запросы уходят параллельно, у каждого результата виден источник.",
 "s.none.t":"Ничего не нашлось","s.none.s":"Попробуйте имя артиста или часть названия.","s.ing":"опрашиваем","s.found":"найдено",
@@ -198,9 +198,9 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "set.lite":"Lite mode","set.lite.s":"For weak PCs: fewer particles, no blur or haze",
 "th.dark":"Dark","th.light":"Light","th.sys":"System","off":"Off","s.slow":"Slow","s.mid":"Medium","s.fast":"Fast","s.light":"Light","s.strong":"Strong",
 "d.low":"Fewer","d.mid":"Medium","d.high":"Many",
-"ob.lang.t":"Interface language","ob.lang.s":"Changeable any time in settings.","ob.step2":"Step 2 of 3",
+"ob.hi.t":"Welcome to Meowave","ob.hi.s":"YouTube Music, Yandex Music, SoundCloud, Spotify, Apple Music and your own files — in one player.","ob.look.t":"Look","ob.look.s":"A black-and-white base with a soft accent. Everything can be changed later in settings.","ob.svc.t":"Where to listen","ob.svc.s":"Switch on the services to search. Most need no account — sign in to bring your library over.","ob.svc.note":"Tokens and sessions are kept in the system keychain, never in files.","ob.svc.free":"No account needed","ob.svc.need":"Needs sign-in","ob.svc.ok":"Connected","ob.svc.lib":"Sign in to bring likes and playlists over","ob.acc.t":"Meowave account","ob.acc.s":"Friends, chats, rooms and sync across devices. You can also do it later in the profile.","ob.acc.as":"Signed in as {u}","ob.acc.as.s":"Favourites and history will sync","ob.acc.na":"The cloud account is not configured in this build — everything else works without it.","ob.step":"Step {n} of {m}","ob.start":"Get started","ob.skip":"Later","ob.sum.svc":"Services: {n}","ob.sum.none":"Services are off","ob.sum.guest":"No account","au.p1":"Sync","au.p1.s":"Favourites, playlists and history on every device","au.p2":"Friends and chats","au.p2.s":"Who listens to what, direct and group chats","au.p3":"Rooms","au.p3.s":"Listen together — one queue for everyone","au.p4":"Profile and badges","au.p4.s":"Hours listened, rankings and achievements","au.in.t":"Sign in to Meowave","au.in.s":"Welcome back — sign in to continue","au.up.t":"New account","au.up.s":"A couple of fields and your profile is ready","au.tab.up":"Register","au.user":"Username","au.email":"Email","au.pass":"Password","au.show":"Show password","au.hide":"Hide password","au.forgot":"Forgot password?","au.magic":"Email me a link","au.go.up":"Create account","au.guest":"No account","au.quasar":"Quasar ID filled in — enter the password","au.reset.sent":"A password reset email is on its way","au.confirm":"Almost there — confirm your email with the link we sent","au.back":"Welcome back!","au.e.cred":"Wrong email or password","au.e.exists":"That account already exists — sign in","au.e.confirm":"Email not confirmed — open the message we sent","au.e.short":"The password needs at least 6 characters","au.e.rate":"Too many attempts — try again in a minute","au.e.net":"Cannot reach the server — check the connection","au.e.email":"Check the email address","ob.lang.t":"Interface language","ob.lang.s":"Changeable any time in settings.","ob.step2":"Step 2 of 3",
 "ob.theme.t":"Theme","ob.theme.s":"Black and white base. Color accent optional.",
-"ob.done.t":"Done","ob.done.s":"Connect services in settings. Tokens go to the system keychain, never to files.",
+"ob.done.t":"All set","ob.done.s":"Search is at the top, the wave on the home screen. Settings, services and accounts are on the left, any time.",
 "ob.next":"Next","ob.back":"Back","ob.go":"Open",
 "s.idle.t":"One field, four services","s.idle.s":"Queries fire in parallel, every result shows its source.",
 "s.none.t":"Nothing found","s.none.s":"Try an artist name or part of a title.","s.ing":"querying","s.found":"found",
@@ -430,7 +430,7 @@ function applyI18n(){
   const keep=["un-input","bd-code","au-email","q","pname","px-url"]
    .map(id=>[id,document.getElementById(id)?.value])
    .filter(([,v])=>v);
-  renderSrv();renderAccounts();renderNP();renderLib();renderPresets();renderSwatches();obThemes();renderProfile();
+  renderSrv();renderAccounts();renderNP();renderLib();renderPresets();renderSwatches();obRefresh();renderProfile();
   keep.forEach(([id,v])=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v});
   if(S.view==="search")search(document.getElementById("q").value,true);
   if(fp.dataset.open==="true")renderFP();
@@ -2059,6 +2059,7 @@ function accCard(id){
    <div class="acc-meta" title="${esc(t("acc.d."+id))}"><b>${esc(svc(id).name)}</b><small>${ava}<span>${esc(accStatus(id))}</span></small></div>
    <div class="acc-act">${act}</div></div>${hint||extra?`<div class="acc-sub">${hint}${extra}</div>`:""}</section>`}
 function renderAccounts(){
+ obServices();
  const host=document.getElementById("accounts");if(!host)return;
  host.innerHTML=ACC_ORDER.map(accCard).join("");
  icons()}
@@ -2235,6 +2236,12 @@ function ymGuide(){
    <button class="btn" data-open-url="https://music.yandex.ru">${t("ym.open")}</button>
    <button class="btn" data-open-url="https://yandex.ru/dev/music/">${t("ym.docs")}</button>
   </div></div>`}
+// short unique id for rows that arrive without one (imports, pasted lists)
+const mkId=()=>"x"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+// fade on the side of a horizontal strip that still has content to scroll to
+function stripEdge(el){
+ const max=el.scrollWidth-el.clientWidth;
+ el.dataset.edge=max<=8?"none":el.scrollLeft<=8?"start":el.scrollLeft>=max-8?"end":"mid"}
 function renderSwatches(){
  const meta={
   adaptive:{name:LANG==="ru"?"Адаптивная (Обложка)":"Adaptive (Artwork)",c:"#b3a6e8",grad:"conic-gradient(from 210deg,#e3a3ae,#b3a6e8,#8db7dd,#9cc7a4,#dcc196,#e3a3ae)"},
@@ -2311,7 +2318,9 @@ function renderSwatches(){
      e.preventDefault();
     }
    }, { passive: false });
+   el.addEventListener("scroll", () => stripEdge(el), { passive: true });
   }
+  if (el) requestAnimationFrame(() => stripEdge(el));
  });
  icons();
 
@@ -2421,6 +2430,7 @@ function pushPrefs(){
   catch(e){console.warn("prefs:",e.message||e)}},900)}
 /* A track is identified by (id, service): ids are unique per service only. */
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const msym=(n,s)=>`<span class="material-symbols-rounded" aria-hidden="true"${s?` style="font-size:${s}px"`:""}>${n}</span>`;
 const cssEsc=s=>window.CSS?.escape?CSS.escape(String(s)):String(s).replace(/[^\w-]/g,"\\$&");
 /* Cover URLs come from third-party CDNs and land in two nested contexts at
    once: a CSS url() inside an HTML attribute. esc() alone is not enough there —
@@ -6332,46 +6342,115 @@ addEventListener("keydown",e=>{
   if(e.shiftKey&&e.key==="ArrowRight")next(true);
   if(e.shiftKey&&e.key==="ArrowLeft")prev()});
 
-/* onboarding */
-const OB={step:0};
-document.getElementById("oblang").innerHTML=`
- <button class="opt" role="radio" aria-checked="true" data-v="ru" style="--i:0"><b>Русский</b><small>Полный интерфейс</small><span class="tick"><span class="material-symbols-rounded" style="font-size:18px">check</span></span></button>
- <button class="opt" role="radio" aria-checked="false" data-v="en" style="--i:1"><b>English</b><small>Full interface</small><span class="tick"><span class="material-symbols-rounded" style="font-size:18px">check</span></span></button>`;
+/* onboarding (round 9, E3)
+   Five steps: hello + language, the look, where to listen (with each
+   service's sign-in right there), the Meowave account, done. A step slides in
+   from the side it comes from, its parts rise one after another, and the card
+   eases to the new step's height instead of jumping. Everything here is shown
+   once per install, so nothing of it stays alive afterwards. */
+const OB={step:0,n:5,ht:0};
+const OB_SVCS=["ytm","ym","sc","sp","dz","am"];
+/* renderAccounts() and the i18n pass call in here; until this section has
+   run, the consts above are not there yet (a `var` is, as undefined). */
+var OB_READY=true;
+function obOpen(){if(!OB_READY)return false;const o=document.getElementById("ob");return !!o&&!o.hidden}
+function obLang(){
+ const box=document.getElementById("oblang");if(!box)return;
+ box.innerHTML=[["ru","Русский","Интерфейс на русском"],["en","English","English interface"]].map(([v,n,d],i)=>
+  `<button class="ob-pick" role="radio" aria-checked="${LANG===v}" data-v="${v}" style="--i:${i+4}"><b>${n}</b><small>${d}</small>${msym("check_circle",20)}</button>`).join("")}
 function obThemes(){
  const box=document.getElementById("obtheme");if(!box)return;
- box.innerHTML=[["dark",t("th.dark"),LANG==="ru"?"Почти чёрный фон, белые частицы":"Near-black canvas, white particles"],
-  ["light",t("th.light"),LANG==="ru"?"Белая основа, тёмные частицы":"White base, dark particles"],
-  ["system",t("th.sys"),LANG==="ru"?"Следовать за системой":"Follow the OS"]]
-  .map(([v,n,d],i)=>`<button class="opt" role="radio" aria-checked="${S.theme===v}" data-v="${v}" style="--i:${i}"><b>${n}</b><small>${d}</small><span class="tick"><span class="material-symbols-rounded" style="font-size:18px">check</span></span></button>`).join("");
- icons()}
-obThemes();renderSwatches();
+ box.innerHTML=[["dark",t("th.dark")],["light",t("th.light")],["system",t("th.sys")]]
+  .map(([v,n],i)=>`<button class="ob-th" role="radio" aria-checked="${S.theme===v}" data-v="${v}" style="--i:${i+2}"><span class="ob-th-pv is-${v}" aria-hidden="true"><i></i><i></i><i></i></span><span class="ob-th-l"><b>${esc(n)}</b>${msym("check_circle",18)}</span></button>`).join("")}
+function obServices(){
+ const box=document.getElementById("obsvc");if(!box||!obOpen())return;
+ box.innerHTML=OB_SVCS.map((id,i)=>{
+  const s=svc(id);if(!SERVICES.some(x=>x.id===id))return "";
+  const on=!!(s.conn&&s.on);
+  let signed=false;
+  try{signed=id==="ym"?!!s.conn:id==="sp"?!!SP?.me:accOn(id)}catch(_){}
+  const needs=id==="ym"&&!s.conn;
+  const canIn=TAURI&&!signed&&id!=="am";
+  const u=signed?accUser(id):"";
+  const sub=signed?(u?t("acc.as").replace("{u}",u):t("ob.svc.ok")):needs?t("ob.svc.need"):t("ob.svc.free");
+  const busy=accSt(id).busy==="login";
+  return `<div class="ob-svc" data-id="${id}" data-on="${on}" style="--i:${i+2}">
+   <span class="ob-svc-ic">${(SVC_ICONS[id]||"").replace('width="14" height="14"','width="18" height="18"')}</span>
+   <span class="ob-svc-meta"><b>${esc(s.name)}</b><small>${esc(sub)}</small></span>
+   <span class="ob-svc-act">${canIn?`<button class="ob-in${needs?" is-need":""}" data-obin="${id}"${busy?' aria-busy="true"':""} title="${esc(t(needs?"acc.d.ym":"ob.svc.lib"))}">${busy?msym("progress_activity",14):""}<span>${esc(t("acc.in"))}</span></button>`
+    :signed?`<span class="ob-ok" title="${esc(t("connected"))}">${msym("check_circle",18)}</span>`:""}
+    ${s.conn?`<button class="sw${on?" on":""}" data-obsw="${id}" role="switch" aria-checked="${on}" aria-pressed="${on}" aria-label="${esc(s.name)}"></button>`:""}</span></div>`}).join("")}
+function obAuth(){
+ const box=document.getElementById("obauth");if(!box||!obOpen())return;
+ if(sbUser){
+  const who=sbProfile?.username||sbUser.email||"";
+  box.innerHTML=`<div class="ob-signed">${msym("verified_user",22)}<span><b>${esc(t("ob.acc.as").replace("{u}",who))}</b><small>${esc(t("ob.acc.as.s"))}</small></span></div>`;return}
+ if(!sb){box.innerHTML=`<p class="ob-note">${msym("cloud_off",16)}<span>${esc(t("ob.acc.na"))}</span></p>`;return}
+ if(box.querySelector(".authx"))return;
+ authView(box,{prefix:"oau",compact:true,guest:false,onDone:()=>setTimeout(()=>{if(OB.step===3)obGo(4)},900)})}
+function obSummary(){
+ const box=document.getElementById("obsum");if(!box)return;
+ const on=SERVICES.filter(s=>s.conn&&s.on&&!s.local).length;
+ const chips=[["translate",LANG==="ru"?"Русский":"English"],
+  ["contrast",t(S.theme==="light"?"th.light":S.theme==="system"?"th.sys":"th.dark")],
+  ["graphic_eq",on?t("ob.sum.svc").replace("{n}",on):t("ob.sum.none")],
+  ["person",sbUser?(sbProfile?.username||sbUser.email||""):t("ob.sum.guest")]];
+ box.innerHTML=chips.map(([i,x],k)=>`<span class="ob-chip" style="--i:${k+4}">${msym(i,16)}<span>${esc(x)}</span></span>`).join("")}
+function obNav(){
+ const n=OB.step;
+ document.querySelectorAll("#obprog i").forEach((d,i)=>d.dataset.done=String(i<=n));
+ document.getElementById("obprog")?.setAttribute("aria-valuenow",String(n+1));
+ const c=document.getElementById("obcount");if(c)c.textContent=t("ob.step").replace("{n}",n+1).replace("{m}",OB.n);
+ const back=document.getElementById("obback");if(back)back.style.visibility=n?"visible":"hidden";
+ const skip=document.getElementById("obskip");if(skip)skip.hidden=!(n===2||(n===3&&!sbUser&&!!sb));
+ const l=document.getElementById("obnext-l");if(l)l.textContent=n===0?t("ob.start"):n===OB.n-1?t("ob.go"):t("ob.next")}
+function obRefresh(){obLang();obThemes();if(obOpen()){obServices();obSummary();obNav()}}
+function obGo(n){
+ n=Math.max(0,Math.min(OB.n-1,n));
+ const from=OB.step;OB.step=n;
+ const ob=document.getElementById("ob"),box=document.getElementById("obc");
+ const steps=[...document.querySelectorAll("#obc .obstep")];
+ const h0=box?.offsetHeight||0;
+ if(n===1)obThemes();if(n===2)obServices();if(n===3)obAuth();if(n===4)obSummary();
+ steps.forEach(st=>{const i=+st.dataset.step;st.dataset.on=String(i===n);st.dataset.pos=i<n?"before":i>n?"after":"now";st.inert=i!==n});
+ if(ob)ob.dataset.step=String(n);
+ /* The card follows the step's height: pinned at the old one, then eased. */
+ const h1=steps[n]?.offsetHeight||0;
+ if(box&&!BOOT.reduce&&h0&&h1&&Math.abs(h1-h0)>2&&from!==n){
+  clearTimeout(OB.ht);box.style.height=h0+"px";void box.offsetHeight;box.style.height=h1+"px";
+  OB.ht=setTimeout(()=>{box.style.height=""},520)}
+ obNav();
+ if(n===1){const a=document.getElementById("obaccent");if(a)requestAnimationFrame(()=>stripEdge(a))}
+ if(n===OB.n-1){ring();setTimeout(()=>burst(1.1),700)}else{F.mode="cloud";if(from!==n)burst(.3)}}
+const obNext=()=>OB.step<OB.n-1?obGo(OB.step+1):finish();
+obLang();obThemes();renderSwatches();
 document.getElementById("oblang").addEventListener("click",e=>{
  const b=e.target.closest("[data-v]");if(!b)return;
- [...b.parentElement.children].forEach(x=>x.setAttribute("aria-checked",x===b));
  LANG=b.dataset.v;applyI18n();
  document.querySelectorAll("#lang button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===LANG));
- burst(.5)});
+ obRefresh();burst(.5)});
 document.getElementById("obtheme").addEventListener("click",e=>{
  const b=e.target.closest("[data-v]");if(!b)return;
  [...b.parentElement.children].forEach(x=>x.setAttribute("aria-checked",x===b));
  setTheme(b.dataset.v);
  document.querySelectorAll("#theme button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===S.theme))});
-function obGo(n){
- OB.step=n;
- document.querySelectorAll(".obstep").forEach(s=>s.dataset.on=(+s.dataset.step===n));
- document.querySelectorAll("#obprog i").forEach((d,i)=>d.dataset.on=(i===n));
- document.getElementById("obback").style.visibility=n?"visible":"hidden";
- document.querySelector("#obnext span").textContent=n===2?t("ob.go"):t("ob.next");
- document.querySelectorAll(`.obstep[data-step="${n}"] .opt`).forEach(o=>{o.style.animation="none";o.offsetHeight;o.style.animation=""});
- if(n===2){ring();setTimeout(()=>burst(1.1),900)}else{F.mode="cloud";burst(.35)}}
-document.getElementById("obnext").onclick=()=>OB.step<2?obGo(OB.step+1):finish();
-document.getElementById("obback").onclick=()=>obGo(Math.max(0,OB.step-1));
+document.getElementById("obsvc")?.addEventListener("click",e=>{
+ const sw=e.target.closest("[data-obsw]");
+ if(sw){toggleService(sw.dataset.obsw);obServices();return}
+ const b=e.target.closest("[data-obin]");
+ if(b&&!b.hasAttribute("aria-busy")){accLogin(b.dataset.obin);setTimeout(obServices,60)}});
+document.getElementById("obnext").onclick=obNext;
+document.getElementById("obback").onclick=()=>obGo(OB.step-1);
+document.getElementById("obskip").onclick=()=>obGo(OB.step+1);
+document.getElementById("ob").addEventListener("keydown",e=>{
+ if(e.key!=="Enter"||e.target.closest?.("input,textarea,button,select,.authx"))return;
+ e.preventDefault();obNext()});
 function finish(){
  const ob=document.getElementById("ob");
  burst(2.2);F.mode="cloud";
- ob.classList.add("out");setTimeout(()=>ob.hidden=true,520);
+ ob.classList.add("out");setTimeout(()=>{ob.hidden=true;["obsvc","obauth","obsum"].forEach(k=>{const el=document.getElementById(k);if(el)el.innerHTML=""})},560);
  const app=document.getElementById("app");app.setAttribute("aria-hidden","false");app.classList.add("ready");
- obDone=true;save()}
+ obDone=true;save();pushPrefs?.()}
 
 /* tauri bridge */
 const TAURI=window.__TAURI__?.core;
@@ -6980,7 +7059,10 @@ async function initSupabase(){
    sbUser=sess?.user||null;sbProfile=null;sbStats=null;delArmed=false;
    if(!sbUser){OWNED=new Set()}
    if(sbUser){await loadProfile();checkSchema()}
-   renderProfile()});
+   renderProfile();
+   if(obOpen())obAuth();
+   /* A sign-in from a social screen's card repaints that screen. */
+   if(wasSignedIn!==!!sbUser&&["people","chats","rooms"].includes(S.view))go(S.view)});
  }catch(e){console.warn("supabase init:",e.message||e)}
  renderProfile()}
 /* Which FULL_SCHEMA the project runs. Round 9: listening hours, rooms and
@@ -7188,26 +7270,131 @@ window.addEventListener("beforeunload",()=>{saveNow();flushOnClose()});
    the updater; pagehide and the hidden transition do. */
 window.addEventListener("pagehide",()=>{saveNow();persistReport();flushListening(true)});
 document.addEventListener("visibilitychange",()=>{if(document.hidden){saveNow();persistReport();flushListening(true)}});
-function authMsg(msg,cls){const el=document.getElementById("authmsg");if(el){el.textContent=msg||"";el.className="authmsg "+(cls||"")}}
+function authMsg(msg,cls){const el=document.getElementById("authmsg")||document.getElementById("au-msg");if(el){el.textContent=msg||"";el.className="authx-msg "+(cls||"")}}
 async function doAuth(kind){
- const email=(document.getElementById("au-email")?.value||"").trim();
- const pass=document.getElementById("au-pass")?.value||"";
- const user=(document.getElementById("au-user")?.value||"").trim();
- if(!email)return authMsg(t("pr.email")+"?","err");
+ const box=document.querySelector(".authx");
+ if(box)return authSubmit(box,kind)}
+
+/* ─────────── sign-in / sign-up (round 9, E7) ───────────
+   One card for the profile tab, the social screens and onboarding — there
+   used to be two copies of the same form that had drifted apart (one set
+   sbUser by hand, the other waited for onAuthStateChange; only one had the
+   guest link). Tabs slide instead of re-rendering, so nothing typed is lost;
+   labels float; Supabase's English errors are said in the user's language. */
+const AUTH_ERR=[
+ [/invalid login credentials/i,"au.e.cred"],[/already registered|already exists/i,"au.e.exists"],
+ [/email not confirmed/i,"au.e.confirm"],[/at least 6|password should/i,"au.e.short"],
+ [/rate limit|security purposes|too many/i,"au.e.rate"],[/failed to fetch|network|load failed/i,"au.e.net"],
+ [/invalid.*email|unable to validate email/i,"au.e.email"]];
+const authErr=e=>{const m=String(e?.message||e||"");const hit=AUTH_ERR.find(([re])=>re.test(m));return hit?t(hit[1]):m};
+function authView(box,opts={}){
+ if(!box)return;
+ const P=opts.prefix||"au",saved=opts.saved||{},up=authTab==="up";
+ const id=k=>`${P}-${k}`;
+ box.innerHTML=`<div class="authx${opts.compact?" is-compact":""}${opts.wide?" is-wide":""}" data-tab="${up?"up":"in"}" data-prefix="${P}">
+  ${opts.compact?"":`<aside class="authx-side" aria-hidden="true">
+   <div class="authx-art"><span class="authx-glow"></span><span class="authx-disc"><i></i></span><span class="authx-arm"></span></div>
+   <ul class="authx-perks">
+    <li style="--i:1">${msym("sync",18)}<span><b>${esc(t("au.p1"))}</b><small>${esc(t("au.p1.s"))}</small></span></li>
+    <li style="--i:2">${msym("group",18)}<span><b>${esc(t("au.p2"))}</b><small>${esc(t("au.p2.s"))}</small></span></li>
+    <li style="--i:3">${msym("podcasts",18)}<span><b>${esc(t("au.p3"))}</b><small>${esc(t("au.p3.s"))}</small></span></li>
+    <li style="--i:4">${msym("military_tech",18)}<span><b>${esc(t("au.p4"))}</b><small>${esc(t("au.p4.s"))}</small></span></li>
+   </ul></aside>`}
+  <div class="authx-main">
+   ${opts.compact?"":`<header class="authx-head"><img src="./icons/app/classic.png" alt="" width="44" height="44"><div><h3 data-auh>${esc(t(up?"au.up.t":"au.in.t"))}</h3><p data-aus>${esc(t(up?"au.up.s":"au.in.s"))}</p></div></header>`}
+   <div class="authx-tabs" role="tablist"><span class="authx-pill" aria-hidden="true"></span>
+    <button type="button" role="tab" data-autab="in" aria-selected="${!up}">${esc(t("pr.signin"))}</button>
+    <button type="button" role="tab" data-autab="up" aria-selected="${up}">${esc(t("au.tab.up"))}</button></div>
+   <form class="authx-form" novalidate autocomplete="on">
+    <div class="authx-collapse" data-open="${up}"><div>
+     <label class="authx-f">${msym("person",19)}<input id="${id("user")}" type="text" autocomplete="username" placeholder=" " maxlength="32" value="${esc(saved.user||"")}"${up?"":" tabindex=\"-1\""}><span>${esc(t("au.user"))}</span></label></div></div>
+    <label class="authx-f">${msym("mail",19)}<input id="${id("email")}" type="email" autocomplete="email" placeholder=" " value="${esc(saved.email||"")}" required><span>${esc(t("au.email"))}</span></label>
+    <label class="authx-f">${msym("lock",19)}<input id="${id("pass")}" type="password" autocomplete="${up?"new-password":"current-password"}" placeholder=" " value="${esc(saved.pass||"")}" required><span>${esc(t("au.pass"))}</span>
+     <button type="button" class="authx-eye" data-aueye aria-label="${esc(t("au.show"))}" title="${esc(t("au.show"))}">${msym("visibility",18)}</button></label>
+    <div class="authx-row"><button type="button" class="authx-link" data-auforgot>${esc(t("au.forgot"))}</button><button type="button" class="authx-link" data-aumagic>${esc(t("au.magic"))}</button></div>
+    <button class="primary authx-go" type="submit" data-augo><span data-aulbl>${esc(t(up?"au.go.up":"pr.signin"))}</span><span class="authx-spin">${msym("progress_activity",18)}</span></button>
+    <p class="authx-msg" id="${P==="au"?"authmsg":id("msg")}" role="status" aria-live="polite"></p>
+   </form>
+   <div class="authx-alt">
+    <button type="button" class="authx-ghost" data-auquasar>${msym("auto_awesome",16)}<span>Quasar ID</span></button>
+    ${opts.guest?`<button type="button" class="authx-ghost" data-auguest>${msym("person_off",16)}<span>${esc(t("au.guest"))}</span></button>`:""}
+   </div>
+  </div></div>`;
+ const root=box.querySelector(".authx");
+ root._opts=opts;
+ const setTab=k=>{
+  authTab=k;const u=k==="up";root.dataset.tab=k;
+  root.querySelectorAll("[data-autab]").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.autab===k)));
+  root.querySelector(".authx-collapse").dataset.open=String(u);
+  const un=root.querySelector(`#${id("user")}`);if(un){if(u)un.removeAttribute("tabindex");else un.setAttribute("tabindex","-1")}
+  const h=root.querySelector("[data-auh]"),sub=root.querySelector("[data-aus]");
+  if(h)h.textContent=t(u?"au.up.t":"au.in.t");if(sub)sub.textContent=t(u?"au.up.s":"au.in.s");
+  root.querySelector("[data-aulbl]").textContent=t(u?"au.go.up":"pr.signin");
+  root.querySelector(`#${id("pass")}`)?.setAttribute("autocomplete",u?"new-password":"current-password");
+  authNote(root,"")};
+ root.addEventListener("click",e=>{
+  const tg=e.target instanceof Element?e.target:null;if(!tg)return;
+  const tb=tg.closest("[data-autab]");if(tb){setTab(tb.dataset.autab);return}
+  if(tg.closest("[data-aueye]")){const pi=root.querySelector(`#${id("pass")}`),b=tg.closest("[data-aueye]");
+   const show=pi.type==="password";pi.type=show?"text":"password";
+   b.innerHTML=msym(show?"visibility_off":"visibility",18);b.setAttribute("aria-label",t(show?"au.hide":"au.show"));return}
+  if(tg.closest("[data-auforgot]")){authSubmit(root,"forgot");return}
+  if(tg.closest("[data-aumagic]")){authSubmit(root,"magic");return}
+  if(tg.closest("[data-auguest]")){S.guest=true;save();toast(t("pr.auth.guest.ok")||"Гостевой профиль активен");renderProfile();return}
+  if(tg.closest("[data-auquasar]")){authQuasar(root);return}});
+ root.querySelector("form").addEventListener("submit",e=>{e.preventDefault();authSubmit(root,authTab)});
+ /* an error is about what was typed: typing again retires it */
+ root.querySelector("form").addEventListener("input",()=>{if(root.querySelector(".authx-msg.err"))authNote(root,"")});
+ if(opts.focus)setTimeout(()=>root.querySelector(`#${id(up?"user":"email")}`)?.focus({preventScroll:true}),60)}
+function authNote(root,msg,cls){
+ const el=root?.querySelector(".authx-msg");if(!el)return;
+ el.className="authx-msg"+(cls?" "+cls:"");
+ el.innerHTML=msg?`${msym(cls==="err"?"error":cls==="ok"?"check_circle":"info",16)}<span>${esc(msg)}</span>`:""}
+async function authQuasar(root){
+ const P=root.dataset.prefix;
+ const qId=await askText(t("dlg.quasar.t"),"",{icon:"badge",label:t("dlg.quasar.l"),confirm:t("dlg.next"),required:true});
+ if(!qId||!qId.trim())return;
+ const em=root.querySelector(`#${P}-email`);
+ if(em)em.value=qId.trim().includes("@")?qId.trim():`${qId.trim().toLowerCase()}@quasar.id`;
+ root.querySelector(`#${P}-pass`)?.focus();
+ authNote(root,t("au.quasar"),"ok")}
+async function authSubmit(root,kind){
+ if(!root||root.dataset.busy==="true")return;
+ const P=root.dataset.prefix,val=k=>root.querySelector(`#${P}-${k}`)?.value||"";
+ const email=val("email").trim(),pass=val("pass"),user=val("user").trim();
+ const opts=root._opts||{};
+ if(!sb)return authNote(root,t("pr.nosupa"),"err");
+ if(!email)return authNote(root,t("pr.err.email"),"err"),root.querySelector(`#${P}-email`)?.focus();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return authNote(root,t("au.e.email"),"err");
+ if((kind==="in"||kind==="up")&&!pass)return authNote(root,t("pr.err.pass"),"err"),root.querySelector(`#${P}-pass`)?.focus();
+ if(kind==="up"&&pass.length<6)return authNote(root,t("au.e.short"),"err");
+ const btn=root.querySelector("[data-augo]");
+ root.dataset.busy="true";btn?.setAttribute("aria-busy","true");if(btn)btn.disabled=true;
+ authNote(root,"");
+ const redirect=ANDROID?{emailRedirectTo:MOBILE.auth.redirectTo}:{};
  try{
   if(kind==="magic"){
-   const {error}=await sb.auth.signInWithOtp({email,...(ANDROID?{options:{emailRedirectTo:MOBILE.auth.redirectTo}}:{})});
+   const {error}=await sb.auth.signInWithOtp({email,options:{...redirect}});
    if(error)throw error;
-   return authMsg(t("pr.magic.sent"),"ok")}
-  if(!pass)return authMsg(t("pr.pass")+"?","err");
-  const {data,error}=kind==="in"
-   ?await sb.auth.signInWithPassword({email,password:pass})
-   :await sb.auth.signUp({email,password:pass,options:{data:{username:user||null,is_public:false},...(ANDROID?{emailRedirectTo:MOBILE.auth.redirectTo}:{})}});
+   authNote(root,t("pr.magic.sent"),"ok");return}
+  if(kind==="forgot"){
+   const {error}=await sb.auth.resetPasswordForEmail(email,ANDROID?{redirectTo:MOBILE.auth.redirectTo}:{});
+   if(error)throw error;
+   authNote(root,t("au.reset.sent"),"ok");return}
+  const {data,error}=kind==="up"
+   ?await sb.auth.signUp({email,password:pass,options:{data:{username:user||email.split("@")[0],is_public:false},...redirect}})
+   :await sb.auth.signInWithPassword({email,password:pass});
   if(error)throw error;
-  if(kind==="up"&&data?.user&&!data.session){
-   authMsg(t("pr.magic.sent"),"ok");
-  }
- }catch(e){authMsg(e.message||String(e),"err")}}
+  if(kind==="up"&&data?.user&&!data.session){authNote(root,t("au.confirm"),"ok");return}
+  if(data?.user){
+   /* onAuthStateChange repaints the profile and the social screens; the
+      card itself says it worked in the meantime. */
+   sbUser=data.user;
+   authNote(root,t(kind==="up"?"pr.welcome":"au.back"),"ok");
+   root.classList.add("is-done");
+   opts.onDone?.(data.user)}
+ }catch(e){authNote(root,authErr(e),"err")}
+ finally{root.dataset.busy="false";btn?.removeAttribute("aria-busy");if(btn)btn.disabled=false}}
 /* кроп по центру + ресайз до 256px на клиенте, затем в Storage bucket "avatars" */
 /* Avatars and banners.
    An animated GIF must be uploaded byte-for-byte: drawing it to a canvas keeps
@@ -8755,102 +8942,7 @@ function renderProfile(savedVals={}){
    icons();
    return}
 
-  box.innerHTML=`<div class="panel pane quasar-auth-card" style="position:relative;overflow:hidden">
-   <div class="auth-orb-1"></div>
-   <div class="auth-orb-2"></div>
-
-   <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
-    <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
-     <div style="position:absolute;inset:-3px;background:rgb(var(--accent-rgb) / .16);border-radius:16px;filter:blur(10px);opacity:.5"></div>
-     <img src="./icons/app/classic.png" style="position:relative;width:52px;height:52px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
-    </div>
-    <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
-    <p class="ph" style="margin:0;font-size:0.82rem">${LANG==="ru"?"Синхронизируйте любимые треки, историю прослушивания и достижения":"Sync your favorite tracks, listening history and badges"}</p>
-   </div>
-
-   <div class="auth-tabs" style="position:relative;z-index:2;margin-bottom:16px">
-    <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="au-tab-in">${LANG==="ru"?"Вход":"Sign In"}</button>
-    <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="au-tab-up">${LANG==="ru"?"Регистрация":"Register"}</button>
-   </div>
-
-   <div class="authform" style="position:relative;z-index:2">
-    ${authTab==="up"?`
-    <div class="auth-field">
-     <input id="au-user" type="text" placeholder="${t("pr.name.ph")||(LANG==="ru"?"Имя пользователя":"Username")}" autocomplete="username" value="${esc(savedVals?.user||"")}">
-    </div>`:""}
-    <div class="auth-field">
-     <input id="au-email" type="email" placeholder="${t("pr.email")||"Email"}" autocomplete="email" value="${esc(savedVals?.email||"")}">
-    </div>
-    <div class="auth-field">
-     <input id="au-pass" type="password" placeholder="${t("pr.pass")||"Пароль"}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(savedVals?.pass||"")}">
-    </div>
-    <div class="auth-actions" style="margin-top:14px">
-     <button class="primary auth-submit-btn" id="au-submit">${authTab==="in"?(t("pr.signin")||"Войти"):(t("pr.signup")||"Зарегистрироваться")}</button>
-     <button class="btn ghost sm" id="au-magic">${t("pr.magic")||"Magic link"}</button>
-    </div>
-    <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between">
-     <button class="btn text sm" id="au-guest" style="color:var(--mute);text-decoration:underline;font-size:0.78rem">${t("pr.auth.guest")||"Продолжить без аккаунта (Гость)"}</button>
-     <span style="font-size:0.72rem;color:#34d399;display:flex;align-items:center;gap:4px;font-family:monospace">
-      <span style="width:6px;height:6px;border-radius:50%;background:#34d399"></span>
-      Supabase RLS
-     </span>
-    </div>
-    <p class="authmsg" id="authmsg" style="margin-top:8px"></p>
-
-    <!-- Quasar ID SSO Button at the Bottom with Perks -->
-    <div class="quasar-sso-container">
-     <button class="quasar-sso-btn" id="au-quasar-btn" type="button">
-      <span class="material-symbols-rounded" style="font-size:20px;color:var(--accent)">auto_awesome</span>
-      <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
-     </button>
-     <div class="quasar-sso-perks">
-      <div class="quasar-sso-perk">
-       <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">chat_bubble</span>
-       <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
-      </div>
-      <div class="quasar-sso-perk">
-       <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">music_note</span>
-       <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
-      </div>
-      <div class="quasar-sso-perk">
-       <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">bolt</span>
-       <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
-      </div>
-     </div>
-    </div>
-   </div>
-  </div>`;
-  icons();
-  const rePaintProf=()=>{
-   const email=document.getElementById("au-email")?.value||"";
-   const user=document.getElementById("au-user")?.value||"";
-   const pass=document.getElementById("au-pass")?.value||"";
-   renderProfile({email,user,pass});
-  };
-  document.getElementById("au-tab-in")?.addEventListener("click",()=>{authTab="in";rePaintProf()});
-  document.getElementById("au-tab-up")?.addEventListener("click",()=>{authTab="up";rePaintProf()});
-  document.getElementById("au-submit")?.addEventListener("click",()=>doAuth(authTab));
-  document.getElementById("au-magic")?.addEventListener("click",()=>doAuth("magic"));
-  const onEnter=(e)=>{if(e.key==="Enter"){e.preventDefault();doAuth(authTab)}};
-  document.getElementById("au-email")?.addEventListener("keydown",onEnter);
-  document.getElementById("au-pass")?.addEventListener("keydown",onEnter);
-  document.getElementById("au-user")?.addEventListener("keydown",onEnter);
-  document.getElementById("au-guest")?.addEventListener("click",()=>{
-   S.guest=true;save();toast(t("pr.auth.guest.ok")||"Гостевой профиль активен");renderProfile();
-  });
-  document.getElementById("au-quasar-btn")?.addEventListener("click",async()=>{
-   const qId=await askText(t("dlg.quasar.t"),"",{icon:"badge",label:t("dlg.quasar.l"),confirm:t("dlg.next"),required:true});
-   if(!qId||!qId.trim())return;
-   const em=document.getElementById("au-email");
-   if(em){
-    em.value=qId.trim().includes("@")?qId.trim():`${qId.trim().toLowerCase()}@quasar.id`;
-   }
-   const pass=document.getElementById("au-pass");
-   if(pass){
-    pass.focus();
-    authMsg(LANG==="ru"?"Quasar ID указан. Введите пароль для входа.":"Quasar ID specified. Enter password.", "ok");
-   }
-  });
+  authView(box,{prefix:"au",saved:savedVals,guest:true,wide:true});
   return}
  const p=sbProfile||{},favs=TRACKS.filter(x=>x.fav).length;
  /* Whichever is larger: the account total the server has confirmed, or this
@@ -8975,134 +9067,7 @@ const socTimer=(k,fn,ms)=>{clearInterval(SOC.timers[k]);SOC.timers[k]=setInterva
 const socClear=k=>{clearInterval(SOC.timers[k]);delete SOC.timers[k]};
 const socClearAll=()=>{Object.keys(SOC.timers).forEach(socClear)};
 
-const needAuth=(box,saved={})=>{
- if(!box)return;
- box.innerHTML=`
- <div class="panel pane quasar-auth-card" style="position:relative;overflow:hidden">
-  <div class="auth-orb-1"></div>
-  <div class="auth-orb-2"></div>
-
-  <div class="auth-header" style="position:relative;z-index:2;text-align:center;margin-bottom:16px">
-   <div style="position:relative;width:52px;height:52px;margin:0 auto 12px">
-    <div style="position:absolute;inset:-3px;background:rgb(var(--accent-rgb) / .16);border-radius:16px;filter:blur(10px);opacity:.5"></div>
-    <img src="./icons/app/classic.png" style="position:relative;width:52px;height:52px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.4)" alt="Meowave">
-   </div>
-   <h3 style="margin:0 0 4px;font-size:1.22rem;font-weight:700">${authTab==="in"?(LANG==="ru"?"Вход в Meowave":"Sign In to Meowave"):(LANG==="ru"?"Создать аккаунт Meowave":"Create Meowave Account")}</h3>
-   <p class="ph" style="margin:0;font-size:0.82rem">${LANG==="ru"?"Синхронизация медиатеки, комнат, чатов и профиля":"Sync library, rooms, chats and profile"}</p>
-  </div>
-
-  <div class="auth-tabs" style="position:relative;z-index:2;margin-bottom:16px">
-   <button class="auth-tab-btn ${authTab==='in'?'active':''}" id="qau-tab-in">${LANG==="ru"?"Вход":"Sign In"}</button>
-   <button class="auth-tab-btn ${authTab==='up'?'active':''}" id="qau-tab-up">${LANG==="ru"?"Регистрация":"Register"}</button>
-  </div>
-
-  <div class="authform" style="position:relative;z-index:2">
-   ${authTab==="up"?`
-   <div class="auth-field">
-    <input id="qau-user" type="text" placeholder="${t("pr.name.ph")||(LANG==="ru"?"Имя пользователя":"Username")}" autocomplete="username" value="${esc(saved?.user||"")}">
-   </div>`:""}
-   <div class="auth-field">
-    <input id="qau-email" type="email" placeholder="${t("pr.email")||"Email"}" autocomplete="email" value="${esc(saved?.email||"")}">
-   </div>
-   <div class="auth-field">
-    <input id="qau-pass" type="password" placeholder="${t("pr.pass")||"Пароль"}" autocomplete="${authTab==='in'?'current-password':'new-password'}" value="${esc(saved?.pass||"")}">
-   </div>
-   <div class="auth-actions" style="margin-top:14px">
-    <button class="primary auth-submit-btn" id="qau-submit">${authTab==="in"?(t("pr.signin")||"Войти"):(t("pr.signup")||"Зарегистрироваться")}</button>
-    <button class="btn ghost sm" id="qau-magic">${t("pr.magic")||"Magic link"}</button>
-   </div>
-   <p class="authmsg" id="qauthmsg" style="margin-top:8px"></p>
-
-   <!-- Quasar ID SSO Button at the Bottom with Perks -->
-   <div class="quasar-sso-container">
-    <button class="quasar-sso-btn" id="qau-quasar-btn" type="button">
-     <span class="material-symbols-rounded" style="font-size:20px;color:var(--accent)">auto_awesome</span>
-     <span>${LANG==="ru"?"Вход по Quasar ID":"Sign in with Quasar ID"}</span>
-    </button>
-    <div class="quasar-sso-perks">
-     <div class="quasar-sso-perk">
-      <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">chat_bubble</span>
-      <span><b>${LANG==="ru"?"Интеграция с Messenger:":"Messenger Integration:"}</b> ${LANG==="ru"?"сохранение истории переписок и чатов":"saved conversation and message history"}</span>
-     </div>
-     <div class="quasar-sso-perk">
-      <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">music_note</span>
-      <span><b>${LANG==="ru"?"Музыка в профиле:":"Profile Music:"}</b> ${LANG==="ru"?"трансляция трека в статус и закрепление":"broadcast playing track to status and pin favorite music"}</span>
-     </div>
-     <div class="quasar-sso-perk">
-      <span class="material-symbols-rounded" style="font-size:16px;color:var(--accent);flex-shrink:0;margin-top:2px">bolt</span>
-      <span><b>${LANG==="ru"?"Единый Quasar ID:":"Single Quasar ID:"}</b> ${LANG==="ru"?"комнаты, личные чаты, друзья и облако":"rooms, direct chats, friends and cloud library"}</span>
-     </div>
-    </div>
-   </div>
-  </div>
- </div>`;
- icons();
- const rePaint=()=>{
-  const email=box.querySelector("#qau-email")?.value||"";
-  const user=box.querySelector("#qau-user")?.value||"";
-  const pass=box.querySelector("#qau-pass")?.value||"";
-  needAuth(box,{email,user,pass});
- };
- box.querySelector("#qau-tab-in")?.addEventListener("click",()=>{authTab="in";rePaint()});
- box.querySelector("#qau-tab-up")?.addEventListener("click",()=>{authTab="up";rePaint()});
- const submitAuth=async(kind)=>{
-  const email=box.querySelector("#qau-email")?.value?.trim();
-  const pass=box.querySelector("#qau-pass")?.value||"";
-  const user=box.querySelector("#qau-user")?.value?.trim();
-  const msg=box.querySelector("#qauthmsg");
-  if(!email){if(msg)msg.textContent=t("pr.err.email");return}
-  if(kind!=="magic"&&!pass){if(msg)msg.textContent=t("pr.err.pass");return}
-  const btn=box.querySelector("#qau-submit");
-  if(btn)btn.disabled=true;
-  if(msg)msg.textContent="...";
-  try{
-   if(kind==="magic"){
-    const {error}=await sb.auth.signInWithOtp({email});
-    if(error)throw error;
-    if(msg)msg.textContent=t("pr.magic.sent");
-   }else if(kind==="up"){
-    const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:user||email.split("@")[0]}}});
-    if(error)throw error;
-    if(data?.user){
-     sbUser=data.user;save();toast(t("pr.welcome")||"Добро пожаловать!");
-     renderProfile();
-     if(S.view==="people")renderPeople();
-     if(S.view==="rooms")renderRooms();
-    }
-   }else{
-    const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error)throw error;
-    if(data?.user){
-     sbUser=data.user;save();toast(t("pr.welcome")||"С возвращением!");
-     renderProfile();
-     if(S.view==="people")renderPeople();
-     if(S.view==="rooms")renderRooms();
-    }
-   }
-  }catch(e){if(msg)msg.textContent=String(e.message||e)}
-  finally{if(btn)btn.disabled=false}
- };
- box.querySelector("#qau-submit")?.addEventListener("click",()=>submitAuth(authTab));
- box.querySelector("#qau-magic")?.addEventListener("click",()=>submitAuth("magic"));
- box.querySelector("#qau-quasar-btn")?.addEventListener("click",async()=>{
-  const qId=await askText(t("dlg.quasar.t"),"",{icon:"badge",label:t("dlg.quasar.l"),confirm:t("dlg.next"),required:true});
-  if(!qId||!qId.trim())return;
-  const em=box.querySelector("#qau-email");
-  if(em){
-   em.value=qId.trim().includes("@")?qId.trim():`${qId.trim().toLowerCase()}@quasar.id`;
-  }
-  const pass=box.querySelector("#qau-pass");
-  if(pass){
-   pass.focus();
-   const msg=box.querySelector("#qauthmsg");
-   if(msg)msg.textContent=LANG==="ru"?"Quasar ID указан. Введите пароль для входа.":"Quasar ID specified. Enter password.";
-  }
- });
- const onEnter=(e)=>{if(e.key==="Enter"){e.preventDefault();submitAuth(authTab)}};
- box.querySelector("#qau-email")?.addEventListener("keydown",onEnter);
- box.querySelector("#qau-pass")?.addEventListener("keydown",onEnter);
- box.querySelector("#qau-user")?.addEventListener("keydown",onEnter);
-};
+const needAuth=(box,saved={})=>authView(box,{prefix:"qau",saved,guest:false,wide:true});
 
 /* Social screens fail soft. An unmigrated database (the chat_members policy
    recursion), a dropped request or a schema cache miss must produce a readable
@@ -11521,7 +11486,7 @@ async function importRows(rows,svcId,name,asFavorites,src){
    if(known){if(!known.art&&hit.art)known.art=hit.art;hit=known}else TRACKS.push(hit);
   }else if(r.s==="sp"||svcId==="sp"){
    /* Spotify tracks retain full metadata and resolve on play */
-   hit={id:String(r.id||uid()),s:"sp",t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"web"};
+   hit={id:String(r.id||mkId()),s:"sp",t:r.t,a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"web"};
    const known=TRACKS.find(y=>String(y.id)===String(hit.id)&&y.s===hit.s);
    if(known){if(!known.art&&hit.art)known.art=hit.art;hit=known}else TRACKS.push(hit);
   }else{
@@ -11536,7 +11501,7 @@ async function importRows(rows,svcId,name,asFavorites,src){
      .sort((p,q)=>(q.m+(SVC_PREF[q.x.s]||0))-(p.m+(SVC_PREF[p.x.s]||0)))[0]?.x||null;
    }
    if(!hit){
-    hit={id:String(r.id||uid()),s:svcId||"ytm",t:r.t||"—",a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"local"};
+    hit={id:String(r.id||mkId()),s:svcId||"ytm",t:r.t||"—",a:r.a||"—",al:r.al||"",d:r.d||0,art:r.art||null,mode:"local"};
     TRACKS.push(hit);
    }
   }
@@ -11708,7 +11673,7 @@ function initUIFont(){
  }
 }
 
-if(TAURI){setTimeout(renderSpotify,800);setTimeout(renderYmAcc,900);setTimeout(accRefreshAll,1600)}
+if(TAURI){setTimeout(renderSpotify,800);setTimeout(accRefreshAll,1600)}
 initSearchReveal();
 initUIFont();
 document.getElementById("quests-back-btn")?.addEventListener("click",()=>go("profile"));

@@ -59,35 +59,57 @@
 <!-- Splash: the mark, the name, and a hairline that only appears on a slow
      start. Same backdrop as the app, so leaving it is a dissolve, not a cut. -->
 <div class="splash" id="splash" role="status" aria-label="Meowave"><div class="splash-core" aria-hidden="true"><div class="splash-mark"><i class="splash-ring"></i></div><span class="splash-word">Meowave</span><div class="splash-bar"><i></i></div></div></div>
-<div class="ob" id="ob">
-  <div class="obc pane">
-    <section class="obstep" data-on="true" data-step="0">
-      <div class="eyebrow" style="margin-bottom:18px;display:inline-flex;align-items:center;gap:8px"><img src="./icons/app/classic.png" width="20" height="20" style="border-radius:5px" alt=""> Meowave</div>
-      <h1 data-i18n="ob.lang.t">Язык интерфейса</h1>
-      <p class="lead" data-i18n="ob.lang.s">Меняется в любой момент в настройках.</p>
-      <div class="opts" id="oblang" role="radiogroup"></div>
-    </section>
-    <section class="obstep" data-step="1">
-      <div class="eyebrow" style="margin-bottom:18px" data-i18n="ob.step2">Шаг 2 из 3</div>
-      <h1 data-i18n="ob.theme.t">Тема</h1>
-      <p class="lead" data-i18n="ob.theme.s">Чёрно-белая основа. Цветной акцент опционален.</p>
-      <div class="opts" id="obtheme" role="radiogroup"></div>
-      <div class="field field-palette" style="border-top:1px solid var(--line);margin-top:20px">
-        <div class="palette-header"><label data-i18n="set.accent">Акцентный цвет</label><small data-i18n="set.accent.s">По умолчанию без цвета</small></div>
-        <div class="swatches palette-strip" id="obaccent"></div>
-      </div>
-    </section>
-    <section class="obstep" data-step="2">
-      <div class="obdone">
-        <div class="ring"><span class="material-symbols-rounded" style="font-size:24px">check</span></div>
-      </div>
-      <h1 data-i18n="ob.done.t">Готово</h1>
-      <p class="lead" data-i18n="ob.done.s">Сервисы подключаются в настройках. Токены уходят в системный keychain, не в файлы.</p>
-    </section>
+<div class="ob" id="ob" data-step="0">
+  <div class="ob-shell pane">
+    <div class="ob-top">
+      <span class="ob-brand"><img src="./icons/app/classic.png" width="20" height="20" alt=""><span>Meowave</span></span>
+      <div class="ob-prog" id="obprog" role="progressbar" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1"><i></i><i></i><i></i><i></i><i></i></div>
+      <span class="ob-count" id="obcount"></span>
+    </div>
+    <div class="obc" id="obc">
+      <section class="obstep" data-on="true" data-step="0">
+        <div class="ob-hero" aria-hidden="true">
+          <span class="ob-orbit o1"><i></i></span><span class="ob-orbit o2"><i></i></span><span class="ob-orbit o3"><i></i></span>
+          <span class="ob-core"><img src="./icons/app/classic.png" alt=""></span>
+        </div>
+        <span class="ob-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <h1 data-i18n="ob.hi.t">Добро пожаловать в Meowave</h1>
+        <p class="lead" data-i18n="ob.hi.s">YouTube Music, Яндекс Музыка, SoundCloud, Spotify, Apple Music и ваши файлы — в одном плеере.</p>
+        <div class="ob-lang" id="oblang" role="radiogroup" aria-label="Language"></div>
+      </section>
+      <section class="obstep" data-step="1">
+        <h1 data-i18n="ob.look.t">Внешний вид</h1>
+        <p class="lead" data-i18n="ob.look.s">Чёрно-белая основа и мягкий акцент. Всё меняется потом в настройках.</p>
+        <div class="ob-themes" id="obtheme" role="radiogroup"></div>
+        <div class="ob-acc">
+          <div class="ob-acc-h"><b data-i18n="set.accent">Акцентный цвет</b><small data-i18n="set.accent.s">По умолчанию без цвета</small></div>
+          <div class="swatches palette-strip" id="obaccent"></div>
+        </div>
+      </section>
+      <section class="obstep" data-step="2">
+        <h1 data-i18n="ob.svc.t">Откуда слушать</h1>
+        <p class="lead" data-i18n="ob.svc.s">Включите площадки для поиска. Большинству вход не нужен — войдите, чтобы перенести свою библиотеку.</p>
+        <div class="ob-svcs" id="obsvc"></div>
+        <p class="ob-note"><span class="material-symbols-rounded" aria-hidden="true">lock</span><span data-i18n="ob.svc.note">Токены и сессии хранятся в системном keychain, не в файлах.</span></p>
+      </section>
+      <section class="obstep" data-step="3">
+        <h1 data-i18n="ob.acc.t">Аккаунт Meowave</h1>
+        <p class="lead" data-i18n="ob.acc.s">Друзья, чаты, комнаты и синхронизация между устройствами. Можно и позже — в профиле.</p>
+        <div id="obauth"></div>
+      </section>
+      <section class="obstep" data-step="4">
+        <div class="ob-done" aria-hidden="true"><svg viewBox="0 0 80 80" width="84" height="84"><circle class="ob-done-c" cx="40" cy="40" r="36"/><path class="ob-done-p" d="M25 41.5l10 10 20.5-22"/></svg></div>
+        <h1 data-i18n="ob.done.t">Готово</h1>
+        <p class="lead" data-i18n="ob.done.s">Поиск — сверху, волна — на главной. Настройки, сервисы и аккаунты — в любой момент слева.</p>
+        <div class="ob-sum" id="obsum"></div>
+      </section>
+    </div>
     <div class="obnav">
       <button class="ghost" id="obback" data-i18n="ob.back">Назад</button>
-      <div class="prog3" id="obprog"><i data-on="true"></i><i></i><i></i></div>
-      <button class="primary" id="obnext"><span data-i18n="ob.next">Далее</span></button>
+      <span class="ob-navr">
+        <button class="ghost" id="obskip" data-i18n="ob.skip" hidden>Позже</button>
+        <button class="primary" id="obnext"><span id="obnext-l" data-i18n="ob.start">Начать</span><span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span></button>
+      </span>
     </div>
   </div>
 </div>

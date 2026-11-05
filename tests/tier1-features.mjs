@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { 
   TestSuite, 
   loadSources, 
@@ -859,6 +860,70 @@ export function buildTier1Suite() {
   suite.test("F26-05: [Happy Path] FULL_SCHEMA carries migration 16 (messenger, E2EE, three badges)", () => {
     const full = readSrc("supabase/FULL_SCHEMA.sql");
     for (const s of ["create table if not exists public.e2e_devices", "function public.mark_read", "function public.dm_threads", "function public.e2e_add_keys", "function public.set_equipped_badges", "equipped_badges"]) assert.ok(full.toLowerCase().includes(s.toLowerCase()), s);
+  });
+
+  // ─── Feature 27: Every name the frontend reads is defined somewhere ────────
+  // A call left behind after its function was deleted is invisible to
+  // `node --check` and to every text test here, and at top level it throws
+  // and stops the rest of the script — setTimeout(renderYmAcc,900) did that
+  // to everything after it in app.js. tests/undef-names.cjs resolves every
+  // identifier of every <script> in index.html against all the scopes and
+  // reports what is left; the left-overs must all be platform globals.
+  const PLATFORM = new Set(`AbortController AbortSignal AggregateError Animation Array ArrayBuffer Atomics Audio AudioContext
+    BigInt BigInt64Array BigUint64Array Blob Boolean BroadcastChannel CSS CSSStyleSheet ClipboardItem CloseEvent Comment
+    CompressionStream CryptoKey CustomEvent DOMMatrix DOMParser DOMRect DataView Date DecompressionStream DocumentFragment
+    DocumentTimeline DragEvent Element Error ErrorEvent EvalError Event EventSource EventTarget File FileReader
+    FinalizationRegistry Float32Array Float64Array FocusEvent FontFace FormData Function Gamepad HTMLAudioElement
+    HTMLCanvasElement HTMLElement HTMLImageElement HTMLInputElement HTMLMediaElement HTMLTemplateElement HTMLVideoElement
+    Headers Image ImageBitmap ImageData Infinity InputEvent Int16Array Int32Array Int8Array IntersectionObserver Intl
+    Iterator JSON KeyboardEvent KeyframeEffect Map Math MediaMetadata MediaRecorder MediaSource MediaStream MessageChannel
+    MessageEvent MouseEvent MutationObserver NaN Node NodeList Notification Number Object OfflineAudioContext
+    OffscreenCanvas Option Path2D PerformanceObserver PointerEvent ProgressEvent Promise PromiseRejectionEvent Proxy
+    RTCPeerConnection Range RangeError ReadableStream ReferenceError Reflect RegExp Request ResizeObserver Response
+    SVGElement Selection Set ShadowRoot SharedArrayBuffer SpeechSynthesisUtterance StorageEvent String SubtleCrypto Symbol
+    SyntaxError Text TextDecoder TextEncoder TouchEvent TransformStream TypeError URIError URL URLSearchParams Uint16Array
+    Uint32Array Uint8Array Uint8ClampedArray WeakMap WeakRef WeakSet WebAssembly WebSocket WheelEvent Worker WritableStream
+    XMLSerializer addEventListener alert atob blur btoa caches cancelAnimationFrame cancelIdleCallback clearInterval
+    clearTimeout close confirm console createImageBitmap crossOriginIsolated crypto customElements decodeURI
+    decodeURIComponent devicePixelRatio dispatchEvent document encodeURI encodeURIComponent escape eval fetch focus
+    getComputedStyle getSelection globalThis history indexedDB innerHeight innerWidth isFinite isNaN isSecureContext
+    localStorage location matchMedia navigator open origin outerHeight outerWidth parseFloat parseInt performance prompt
+    queueMicrotask removeEventListener reportError requestAnimationFrame requestIdleCallback screen scrollBy scrollTo self
+    sessionStorage setInterval setTimeout speechSynthesis structuredClone undefined unescape visualViewport webkitAudioContext
+    window lucide`.split(/\s+/).filter(Boolean));
+  const scripts = [...html.matchAll(/<script src="\.\/([a-z0-9]+\.js)"/g)].map(m => path.join(PATHS.root, "src", m[1]));
+  const und = spawnSync(process.execPath, ["--expose-internals", path.join(PATHS.root, "tests", "undef-names.cjs"), ...scripts], { encoding: "utf8", maxBuffer: 16 << 20 });
+  let undRes = null;
+  try { undRes = JSON.parse(und.stdout); } catch (_) { undRes = { skip: "checker output unreadable: " + (und.stderr || und.stdout).slice(0, 200) }; }
+  if (undRes.skip) suite.skip("F27-01: [Static] Every identifier the frontend reads is declared or a platform global", undRes.skip);
+  else suite.test("F27-01: [Static] Every identifier the frontend reads is declared or a platform global", () => {
+    assert.ok(!undRes.error, "parse failed: " + undRes.error);
+    assert.ok(scripts.length >= 10, "expected the app's scripts in index.html, found " + scripts.length);
+    const bad = Object.entries(undRes.unresolved).filter(([n]) => !PLATFORM.has(n));
+    assert.deepEqual(bad.map(([n, w]) => `${n} (${w.join(", ")})`), [], "names read but never defined — a ReferenceError at runtime");
+  });
+
+  // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────
+  suite.test("F28-01: [Happy Path] Onboarding has five steps, a five-dot progress bar and a step counter", () => {
+    const steps = [...html.matchAll(/<section class="obstep"[^>]*data-step="(\d)"/g)].map(m => +m[1]);
+    assert.deepEqual(steps, [0, 1, 2, 3, 4]);
+    const prog = html.match(/<div[^>]*id="obprog"[^>]*>([\s\S]*?)<\/div>/);
+    assert.ok(prog, "#obprog missing");
+    assert.equal((prog[1].match(/<i\b/g) || []).length, 5);
+    for (const id of ["obcount", "obnext", "obback", "obsvc", "obauth", "obsum", "oblang", "obtheme", "obaccent"]) assert.ok(domHasElement(html, "#" + id), id);
+    assert.match(js, /function obGo\(n\)/);
+  });
+  suite.test("F28-02: [Happy Path] Profile, social gates and onboarding all render the same authView card", () => {
+    assert.match(js, /function authView\(box,opts=\{\}\)/);
+    assert.match(js, /needAuth=\(box,saved(=\{\})?\)=>authView\(/);
+    assert.match(js, /authView\(box,\{prefix:"oau"/);
+    assert.match(js, /authView\(box,\{prefix:"au"/);
+    assert.match(js, /resetPasswordForEmail/);
+    assert.match(js, /signInWithOtp/);
+  });
+  suite.test("F28-03: [Accessibility] Reduced motion stills the onboarding and the sign-in card", () => {
+    const blocks = extractMediaBlocks(css, /prefers-reduced-motion:\s*reduce/).map(b => b.content).join("\n");
+    for (const sel of [".ob-shell", ".authx"]) assert.ok(blocks.includes(sel), sel + " not covered by prefers-reduced-motion");
   });
 
   return suite;
