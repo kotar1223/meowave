@@ -75,6 +75,73 @@ fn cache_drop(key: &str) {
     }
 }
 
+/// Which file a track's stream is, per stream cache key (round 9: "very
+/// strong noise", "plays half, then another song").
+///
+/// A media element reads one file in many requests: the start, a seek, the
+/// rest after a dropped connection. Each request may resolve the track anew,
+/// and a new resolve is not always the same file — another YouTube client can
+/// sign the DRC or a re-encoded copy under the same itag, a refused YouTube
+/// track is answered from Yandex or SoundCloud, a SoundCloud preset can
+/// change. Bytes from the middle of another file are garbage to the decoder:
+/// AAC turns them into loud noise, WebM into a decode error and a skip.
+///
+/// So the first request (from byte 0) pins the file's identity, and a later
+/// request for a range inside the file is answered only from that same file.
+/// When the source really changed, the answer is 409 and the player reloads
+/// the track from the start and seeks by time — clean, instead of splicing.
+static PINS: Mutex<Option<HashMap<String, (String, std::time::Instant)>>> = Mutex::new(None);
+const PIN_TTL: std::time::Duration = std::time::Duration::from_secs(3 * 60 * 60);
+
+/// Identity of the file behind a resolved stream URL: googlevideo names it
+/// (itag, length, last-modified, extra tags), anything else by its service
+/// and size.
+fn file_ident(service: &str, url: &str, alt: Option<&str>, codec: Option<&str>, total: Option<u64>) -> String {
+    if url.contains("googlevideo.com") {
+        let p = |k: &str| crate::ytm::url_param(url, k).unwrap_or_default();
+        return format!("yt:{}:{}:{}:{}", p("itag"), p("clen"), p("lmt"), p("xtags"));
+    }
+    format!(
+        "{}:{}:{}",
+        alt.unwrap_or(service),
+        codec.unwrap_or(""),
+        total.map(|t| t.to_string()).unwrap_or_default()
+    )
+}
+
+/// May bytes from `start` of the file `ident` be served for `key`? A request
+/// from the start (re)pins; a later one must match the pin.
+fn pin_ok(key: &str, start: u64, ident: &str) -> bool {
+    let Ok(mut g) = PINS.lock() else { return true };
+    let m = g.get_or_insert_with(HashMap::new);
+    if m.len() > 256 {
+        m.retain(|_, (_, at)| at.elapsed() < PIN_TTL);
+        if m.len() > 256 {
+            m.clear();
+        }
+    }
+    if start > 0 {
+        if let Some((pinned, at)) = m.get(key) {
+            if at.elapsed() < PIN_TTL && pinned != ident {
+                eprintln!("[meowave] {key}: the source changed under the player ({pinned} -> {ident}); asking it to reload");
+                return false;
+            }
+        }
+    }
+    m.insert(key.to_string(), (ident.to_string(), std::time::Instant::now()));
+    true
+}
+
+/// The answer to a request for the middle of a file that is no longer the
+/// one being played: the player reloads from the start (see `pin_ok`).
+fn source_changed(origin: Option<&str>, request: tiny_http::Request) -> Result<(), String> {
+    let mut resp = Response::from_string("source changed: reload the track from the start").with_status_code(StatusCode(409));
+    for h in cors(origin) {
+        resp = resp.with_header(h);
+    }
+    request.respond(resp).map_err(|e| e.to_string())
+}
+
 /// Pipes an upstream response body straight to the client.
 ///
 /// The previous code called `resp.bytes()` and only then answered, so nothing
@@ -373,7 +440,8 @@ impl<'a> Upstream<'a> {
             f.left -= 1;
             crate::ytm::note_media_failure(&f.client, &format!("stopped at byte {offset}"));
             f.tried.push(f.client.clone());
-            let pick = self.rt.block_on(crate::ytm::stream_same_itag(&f.video_id, f.itag, &f.tried));
+            let same_as = self.upstream_url.clone();
+            let pick = self.rt.block_on(crate::ytm::stream_same_itag(&f.video_id, f.itag, &f.tried, &same_as));
             let Ok(pick) = pick else { break };
             let ua = crate::ytm::media_ua_for(&pick.client);
             if let Ok(r) = self.fetch_from(&pick.url, Some(ua), offset) {
@@ -479,6 +547,15 @@ impl HlsFile {
         }
         (self.parts.len(), 0)
     }
+}
+
+/// Identity of a measured HLS file for `pin_ok`: its rendition and size.
+fn hls_ident(file: &HlsFile) -> String {
+    let first = file.parts.first().map(|p| p.url.split('?').next().unwrap_or("").to_string()).unwrap_or_default();
+    // The CDN path names the transcoding; signatures in the query change on
+    // every resolve and say nothing about the bytes.
+    let rendition = first.rsplit('/').nth(1).unwrap_or("").to_string();
+    format!("hls:{}:{}:{rendition}", file.ctype, file.total.map(|t| t.to_string()).unwrap_or_default())
 }
 
 /// `KEY=value` / `KEY="value"` out of an HLS attribute list.
@@ -1366,6 +1443,9 @@ fn handle(
     // An HLS rendition measured earlier (the first request, a seek, the
     // prefetch): no resolve, no playlist, no HEADs.
     if let Some(file) = hls_get(&cache_key) {
+        if !head_only && !pin_ok(&cache_key, initial_offset, &hls_ident(&file)) {
+            return source_changed(origin.as_deref(), request);
+        }
         return serve_hls(rt, file, range.as_deref(), head_only, origin.as_deref(), request);
     }
     // The caller's range as numbers; `None` inside for the suffix and
@@ -1563,6 +1643,9 @@ fn handle(
                 if file.total.is_some() {
                     hls_put(&cache_key, file.clone());
                 }
+                if !head_only && !pin_ok(&cache_key, initial_offset, &hls_ident(&file)) {
+                    return source_changed(origin.as_deref(), request);
+                }
                 return serve_hls(rt, file, range.as_deref(), head_only, origin.as_deref(), request);
             }
             Err(e) => {
@@ -1591,6 +1674,19 @@ fn handle(
         }
     }
     let ua = is_google.then(|| secret.ua().to_string());
+    // The file this answer would come from must be the file the player has
+    // been reading (see `pin_ok`).
+    {
+        let total = crange
+            .as_deref()
+            .and_then(content_range_total)
+            .or_else(|| crate::ytm::url_param(&upstream, "clen").and_then(|v| v.parse::<u64>().ok()))
+            .or_else(|| if status == 200 { clen.map(|c| c as u64) } else { None });
+        let ident = file_ident(&service, &upstream, secret.alt.as_deref(), secret.codec.as_deref(), total);
+        if !head_only && !pin_ok(&cache_key, initial_offset, &ident) {
+            return source_changed(origin.as_deref(), request);
+        }
+    }
     let (body, final_status, final_clen, final_crange) = match win {
         // googlevideo, read in windows: the answer to the caller is built from
         // the file's real size, not from the first window's headers.
@@ -2805,5 +2901,36 @@ mod live_sc {
             let heads: Vec<&str> = txt.lines().filter(|l| l.starts_with("Content-") || l.starts_with("HTTP/")).collect();
             println!("{r}: {:?} in {:?} {}", heads, t0.elapsed(), txt.lines().last().unwrap_or(""));
         }
+    }
+}
+
+#[cfg(test)]
+mod pin_tests {
+    use super::{file_ident, pin_ok};
+
+    #[test]
+    fn a_mid_file_request_is_served_only_from_the_pinned_file() {
+        let k = "ytm/pin-test/hqwebm";
+        let gv = |host: &str, clen: u32, lmt: u32, extra: &str| {
+            file_ident("ytm", &format!("https://{host}.googlevideo.com/videoplayback?itag=251&clen={clen}&lmt={lmt}{extra}"), None, None, None)
+        };
+        let a = gv("r1", 100, 1, "&expire=5");
+        let same = gv("r9", 100, 1, "&expire=77&ip=1.2.3.4");
+        let other = gv("r2", 120, 2, "");
+        let drc = gv("r3", 100, 1, "&xtags=drc%3D1");
+        assert_eq!(a, same);
+        assert_ne!(a, other);
+        assert_ne!(a, drc);
+        assert!(pin_ok(k, 0, &a));
+        assert!(pin_ok(k, 5000, &same));
+        assert!(!pin_ok(k, 5000, &other));
+        assert!(!pin_ok(k, 5000, &drc));
+        // the same recording from another service: not in the middle of a file
+        let alt = file_ident("ytm", "https://s3.yandex.net/get-mp3/x.mp3", Some("ym"), None, Some(7_000_000));
+        assert!(!pin_ok(k, 5000, &alt));
+        // a fresh load from the start may switch, and the new file is the pin
+        assert!(pin_ok(k, 0, &alt));
+        assert!(pin_ok(k, 5000, &alt));
+        assert!(!pin_ok(k, 9000, &a));
     }
 }

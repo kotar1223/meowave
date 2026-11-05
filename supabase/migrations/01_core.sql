@@ -62,10 +62,23 @@ exception when others then
   return new;
 end $$;
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Created only when it is missing or points elsewhere. Dropping a trigger on
+-- auth.users needs ownership of that table, which a project's SQL editor
+-- role does not always have — the unconditional drop made every re-run fail
+-- there even though the trigger was already exactly right.
+do $trg$
+begin
+  if exists (select 1 from pg_trigger
+              where tgrelid = 'auth.users'::regclass and tgname = 'on_auth_user_created'
+                and not tgisinternal and tgfoid = 'public.handle_new_user()'::regprocedure) then
+    return;
+  end if;
+  drop trigger if exists on_auth_user_created on auth.users;
+  create trigger on_auth_user_created
+    after insert on auth.users
+    for each row execute function public.handle_new_user();
+end
+$trg$;
 
 -- ── friendships ─────────────────────────────────────────────
 -- Defined here rather than in 04_social because the profile visibility policy
@@ -134,39 +147,92 @@ create policy "owners manage tracks of own playlists"
 
 -- ── storage: bucket "avatars" ───────────────────────────────
 -- Публичное чтение; писать можно только в свою папку <uid>/...
-insert into storage.buckets (id, name, public)
-values ('avatars', 'avatars', true)
-on conflict (id) do nothing;
+do $bk$
+begin
+  insert into storage.buckets (id, name, public)
+  values ('avatars', 'avatars', true)
+  on conflict (id) do nothing;
+exception when insufficient_privilege then
+  if not exists (select 1 from storage.buckets where id = 'avatars') then
+    raise exception 'storage bucket "avatars" could not be created: % — create it in Dashboard → Storage (public)', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$bk$;
 
-drop policy if exists "avatar images are publicly readable" on storage.objects;
-create policy "avatar images are publicly readable"
-  on storage.objects for select
-  using (bucket_id = 'avatars');
+do $sp$
+begin
+  drop policy if exists "avatar images are publicly readable" on storage.objects;
+  create policy "avatar images are publicly readable"
+    on storage.objects for select
+    using (bucket_id = 'avatars');
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'avatar images are publicly readable') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'avatar images are publicly readable', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
-drop policy if exists "users upload own avatar" on storage.objects;
-create policy "users upload own avatar"
-  on storage.objects for insert
-  with check (bucket_id = 'avatars'
-              and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "users upload own avatar" on storage.objects;
+  create policy "users upload own avatar"
+    on storage.objects for insert
+    with check (bucket_id = 'avatars'
+                and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'users upload own avatar') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'users upload own avatar', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
 -- An UPDATE policy needs BOTH using and with check. `upsert: true` on an
 -- existing avatar is an UPDATE, and with check defaulting to the using clause
 -- is not enough here: Storage rewrites metadata on overwrite, so the row is
 -- re-validated against with check. Without it the second avatar upload failed
 -- while the first one appeared to work.
-drop policy if exists "users update own avatar" on storage.objects;
-create policy "users update own avatar"
-  on storage.objects for update
-  using (bucket_id = 'avatars'
-         and (storage.foldername(name))[1] = auth.uid()::text)
-  with check (bucket_id = 'avatars'
-         and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "users update own avatar" on storage.objects;
+  create policy "users update own avatar"
+    on storage.objects for update
+    using (bucket_id = 'avatars'
+           and (storage.foldername(name))[1] = auth.uid()::text)
+    with check (bucket_id = 'avatars'
+           and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'users update own avatar') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'users update own avatar', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
-drop policy if exists "users delete own avatar" on storage.objects;
-create policy "users delete own avatar"
-  on storage.objects for delete
-  using (bucket_id = 'avatars'
-         and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "users delete own avatar" on storage.objects;
+  create policy "users delete own avatar"
+    on storage.objects for delete
+    using (bucket_id = 'avatars'
+           and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'users delete own avatar') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'users delete own avatar', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
 -- ── удаление аккаунта из клиента ────────────────────────────
 -- anon key не может удалять auth.users напрямую, поэтому security definer rpc:

@@ -16,6 +16,8 @@ const VERSION_WORDS: &[&str] = &[
     "remix", "live", "cover", "karaoke", "instrumental", "nightcore", "sped", "slowed", "reverb",
     "acoustic", "mashup", "tribute", "8d", "bassboosted", "minus", "acapella", "demo", "orchestral",
     "piano", "lofi", "edit", "version", "rmx", "vip", "bootleg", "flip", "remake", "parody",
+    // Another track of the same name (round 9: "Numb" played "Numb/Encore").
+    "reprise", "interlude", "skit", "part", "pt", "medley", "megamix", "extended", "encore",
     // Cyrillic, already transliterated by `fold`.
     "remiks", "kaver", "karaoke", "minus", "lajv", "akustika",
 ];
@@ -231,6 +233,19 @@ pub fn score(want_t: &str, want_a: &str, want_d: u32, got_t: &str, got_a: &str, 
     known.extend(wa.iter().cloned());
     let extra = gt.iter().filter(|g| !known.iter().any(|k| k == *g)).count();
     let extra_pen = (extra as f32 * 0.04).min(0.25);
+    // Words the hit's song name has and the original's does not — brackets,
+    // "feat." and " - Remastered" set aside, and the artists' own names too
+    // (uploads are titled "Artist - Song"). "Numb" and "Numb/Encore" are two
+    // songs; only a near-exact length lets one such word through, and a
+    // short title gets none.
+    let core_extra = words(&core_title(got_t))
+        .into_iter()
+        .filter(|g| !known.iter().any(|k| k == g) && !ga.iter().any(|k| k == g))
+        .count();
+    let exact_len = matches!(gap, Some(g) if g <= 3);
+    if !exact_len && (core_extra >= 2 || (core_extra >= 1 && wt.len() <= 2)) {
+        return None;
+    }
 
     let bonus = match gap {
         Some(g) if g <= 3 => 0.15,
@@ -294,6 +309,16 @@ mod tests {
     #[test]
     fn wrong_artist_needs_exact_length() {
         assert!(score("Intro", "Artist A", 120, "Intro", "Artist B", 180).is_none());
+    }
+
+    #[test]
+    fn a_longer_song_name_is_another_song() {
+        assert!(score("Numb", "Linkin Park", 187, "Numb/Encore", "JAY-Z, Linkin Park", 205).is_none());
+        assert!(score("Numb", "Linkin Park", 187, "Numb Part 2", "Linkin Park", 190).is_none());
+        assert!(score("Numb", "Linkin Park", 187, "Numb", "Linkin Park", 188).is_some());
+        assert!(score("Numb", "Linkin Park", 187, "Linkin Park - Numb (Official Music Video)", "Linkin Park", 189).is_some());
+        assert!(score("Levitating", "Dua Lipa", 203, "Levitating (feat. DaBaby)", "Dua Lipa", 203).is_some());
+        assert!(score("Blinding Lights", "The Weeknd", 200, "Blinding Lights Reprise", "The Weeknd", 201).is_none());
     }
 
     #[test]

@@ -162,42 +162,104 @@ create or replace view public.leaderboard_weekly as
 -- after this line was ever applied.
 
 -- ── storage: banners ────────────────────────────────────────
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('banners', 'banners', true, 4194304,
-        array['image/jpeg','image/png','image/webp','image/gif'])
-on conflict (id) do update set
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
+do $bk$
+begin
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('banners', 'banners', true, 4194304,
+          array['image/jpeg','image/png','image/webp','image/gif'])
+  on conflict (id) do update set
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+exception when insufficient_privilege then
+  if not exists (select 1 from storage.buckets where id = 'banners') then
+    raise exception 'storage bucket "banners" could not be created: % — create it in Dashboard → Storage (public, 4 MB, images)', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$bk$;
 
 -- Avatars accept GIF too, so animated avatars work. 2 MB is plenty once the
 -- client has resized; the limit exists to stop someone parking a video here.
-update storage.buckets
-   set file_size_limit = 2097152,
-       allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif']
- where id = 'avatars';
+do $bk$
+begin
+  update storage.buckets
+     set file_size_limit = 2097152,
+         allowed_mime_types = array['image/jpeg','image/png','image/webp','image/gif']
+   where id = 'avatars';
+exception when insufficient_privilege then
+  if not exists (select 1 from storage.buckets where id = 'avatars') then
+    raise exception 'storage bucket "avatars" could not be created: % — create it in Dashboard → Storage (public, 2 MB, images)', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$bk$;
 
-drop policy if exists "banners are publicly readable" on storage.objects;
-create policy "banners are publicly readable"
-  on storage.objects for select using (bucket_id = 'banners');
+do $sp$
+begin
+  drop policy if exists "banners are publicly readable" on storage.objects;
+  create policy "banners are publicly readable"
+    on storage.objects for select using (bucket_id = 'banners');
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'banners are publicly readable') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'banners are publicly readable', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
-drop policy if exists "users upload own banner" on storage.objects;
-create policy "users upload own banner"
-  on storage.objects for insert
-  with check (bucket_id = 'banners'
-              and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "users upload own banner" on storage.objects;
+  create policy "users upload own banner"
+    on storage.objects for insert
+    with check (bucket_id = 'banners'
+                and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'users upload own banner') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'users upload own banner', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
 -- Same as avatars: upsert of an existing banner is an UPDATE and needs
 -- with check, or only the very first upload succeeds.
-drop policy if exists "users update own banner" on storage.objects;
-create policy "users update own banner"
-  on storage.objects for update
-  using (bucket_id = 'banners'
-         and (storage.foldername(name))[1] = auth.uid()::text)
-  with check (bucket_id = 'banners'
-         and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "users update own banner" on storage.objects;
+  create policy "users update own banner"
+    on storage.objects for update
+    using (bucket_id = 'banners'
+           and (storage.foldername(name))[1] = auth.uid()::text)
+    with check (bucket_id = 'banners'
+           and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'users update own banner') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'users update own banner', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
-drop policy if exists "users delete own banner" on storage.objects;
-create policy "users delete own banner"
-  on storage.objects for delete
-  using (bucket_id = 'banners'
-         and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "users delete own banner" on storage.objects;
+  create policy "users delete own banner"
+    on storage.objects for delete
+    using (bucket_id = 'banners'
+           and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'users delete own banner') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'users delete own banner', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;

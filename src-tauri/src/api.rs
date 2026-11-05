@@ -750,6 +750,7 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         .unwrap_or_default();
 
     // Filter out encrypted DRM transcodings (cbc-encrypted-hls, ctr-encrypted-hls, cenc, cbcs)
+    let offered = transcodings.len();
     let mut playable: Vec<serde_json::Value> = transcodings
         .into_iter()
         .filter(|t| {
@@ -766,6 +767,7 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
     //   3. HLS Opus, then anything else; the adaptive master last
     // and within a kind, the higher bitrate.
     playable.sort_by_key(|t| (sc_rank(t), std::cmp::Reverse(sc_kbps(t))));
+    let drm_only = offered > 0 && playable.is_empty();
     for t in playable.into_iter().filter(|_| !snipped) {
         if let Some(url) = t.get("url").and_then(|u| u.as_str()) {
             if let Ok(rb) = sc_req(&c, url, token).await {
@@ -791,15 +793,34 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         if artist != uploader && !uploader.is_empty() {
             queries.push(format!("{uploader} {title}"));
         }
-        for query in queries {
-            let Ok(hits) = ytm_search(&query).await else { continue };
-            if let Some(hit) = crate::matching::best(&hits, &title, &artist, orig_dur) {
-                if let Ok(stream_res) = crate::ytm::stream(&hit.id, true, "best").await {
-                    eprintln!(
-                        "[meowave] sc_stream_url: '{}' id={} has no full stream (snipped={snipped}); same recording on YTM id={}",
-                        raw_title, id, hit.id
-                    );
-                    return Ok(format!("{}#mwua={}&mwvid={}", stream_res.url, stream_res.client, hit.id));
+        // Most label tracks are DRM-only on SoundCloud now (cbc/ctr-encrypted
+        // HLS): without Widevine they cannot play here at all — round 9's
+        // "SoundCloud: the song does not play". YouTube Music first unless
+        // this IP was just bot-checked, Yandex Music (when connected) next.
+        if !crate::ytm::bot_checked_recently() {
+            for query in &queries {
+                let Ok(hits) = ytm_search(query).await else { continue };
+                if let Some(hit) = crate::matching::best(&hits, &title, &artist, orig_dur) {
+                    if let Ok(stream_res) = crate::ytm::stream(&hit.id, true, "best").await {
+                        eprintln!(
+                            "[meowave] sc_stream_url: '{}' id={} has no full stream (snipped={snipped}); same recording on YTM id={}",
+                            raw_title, id, hit.id
+                        );
+                        return Ok(format!("{}#mwua={}&mwvid={}", stream_res.url, stream_res.client, hit.id));
+                    }
+                }
+            }
+        }
+        if let Ok(Some(tok)) = crate::tokens::read_token("ym") {
+            if !tok.trim().is_empty() {
+                for query in &queries {
+                    let Ok(hits) = ym_search(&tok, query).await else { continue };
+                    if let Some(hit) = crate::matching::best(&hits, &title, &artist, orig_dur) {
+                        if let Ok(u) = ym_stream_url(&tok, &hit.id, true).await {
+                            eprintln!("[meowave] sc_stream_url: '{raw_title}' id={id} plays from Yandex Music id={}", hit.id);
+                            return Ok(if u.contains("#mw") { format!("{u}&mwalt=ym") } else { format!("{u}#mwalt=ym") });
+                        }
+                    }
                 }
             }
         }
@@ -808,6 +829,9 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
         }
     }
 
+    if drm_only {
+        return Err("SoundCloud serves this track only with DRM protection, and the same recording was not found on YouTube Music or Yandex Music".into());
+    }
     Err("SoundCloud did not return a playable stream URL".into())
 }
 

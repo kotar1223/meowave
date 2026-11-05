@@ -18,6 +18,8 @@ mod proxy;
 mod spanon;
 mod spotify;
 mod stream;
+#[cfg(test)]
+mod stream_probe;
 mod taskbar;
 mod tokens;
 mod update;

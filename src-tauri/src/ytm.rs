@@ -1458,10 +1458,18 @@ pub async fn stream(video_id: &str, hq: bool, fmt: &str) -> Result<StreamPick, S
     })
 }
 
-/// The same format from a client not yet tried, for resuming a stream that
-/// one client's URL stopped serving. Same itag means the same bytes, so the
-/// proxy continues at the very offset where the old URL failed.
-pub async fn stream_same_itag(video_id: &str, itag: u64, tried: &[String]) -> Result<StreamPick, String> {
+/// The same file from a client not yet tried, for resuming a stream that
+/// one client's URL stopped serving, at the very offset where it failed.
+///
+/// The same itag is not always the same bytes (round 9, "very strong
+/// noise"): clients can be handed the DRC copy, a dubbed audio track or a
+/// re-encode under one itag, and the middle of another file decodes as
+/// noise. So the length (`clen`) and the encode's timestamp (`lmt`) of the
+/// file being read must match too; a client that signs a different file is
+/// skipped.
+pub async fn stream_same_itag(video_id: &str, itag: u64, tried: &[String], same_as: &str) -> Result<StreamPick, String> {
+    let want = |k: &str| url_param(same_as, k);
+    let (clen, lmt, xtags) = (want("clen"), want("lmt"), want("xtags"));
     for (client, ua) in order() {
         if tried.iter().any(|t| t == client) {
             continue;
@@ -1470,8 +1478,14 @@ pub async fn stream_same_itag(video_id: &str, itag: u64, tried: &[String]) -> Re
         let audio = audio_formats(&resp);
         let found = audio
             .iter()
-            .find(|f| f.get("itag").and_then(|i| i.as_u64()) == Some(itag))
-            .and_then(|f| pick_of(f, client));
+            .filter_map(|f| {
+                (f.get("itag").and_then(|i| i.as_u64()) == Some(itag)).then(|| pick_of(f, client)).flatten()
+            })
+            .find(|p| {
+                let got = |k: &str| url_param(&p.url, k);
+                let same = |a: &Option<String>, b: Option<String>| a.is_none() || b.is_none() || *a == b;
+                same(&clen, got("clen")) && same(&lmt, got("lmt")) && xtags == got("xtags")
+            });
         if let Some(p) = found {
             diag_note(video_id, format!("{client}: resumed the stream with itag {itag}"));
             return Ok(p);
@@ -1648,6 +1662,21 @@ fn pick_format<'a>(audio: &[&'a Value], hq: bool, fmt: &str) -> Option<&'a Value
         }
         None => audio.to_vec(),
     };
+    // The original mix in the original language: not the "stable volume"
+    // (DRC) copy, not a dubbed track. Besides sounding as released, it makes
+    // every client pick the same file, so a stream resumed through another
+    // client continues the same bytes (`stream_same_itag`).
+    let plain = |f: &&Value| {
+        let drc = f.get("isDrc").and_then(|v| v.as_bool()).unwrap_or(false)
+            || f.get("url").and_then(|u| u.as_str()).is_some_and(|u| url_param(u, "xtags").is_some_and(|x| x.contains("drc")));
+        let dubbed = f
+            .pointer("/audioTrack/audioIsDefault")
+            .and_then(|v| v.as_bool())
+            .is_some_and(|d| !d);
+        !drc && !dubbed
+    };
+    let clean: Vec<&Value> = pool.iter().copied().filter(plain).collect();
+    let pool = if clean.is_empty() { pool } else { clean };
     if hq {
         pool.into_iter().max_by_key(|f| bitrate(f))
     } else {

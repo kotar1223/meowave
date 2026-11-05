@@ -888,8 +888,11 @@ function initAudio(){
  A.air=ctx.createBiquadFilter();A.air.type="lowpass";A.air.frequency.value=20000;A.air.Q.value=.5;
  /* Room reverb — regenerated when the mode changes so the IR always matches. */
  A.spatialRoom="hall";A.conv=ctx.createConvolver();A.conv.buffer=ir(ctx,A.spatialRoom);
- const out=A.bands[A.bands.length-1];out.connect(A.pan);out.connect(A.byp);
- A.pan.connect(A.air);A.air.connect(A.dry);A.air.connect(A.conv);A.conv.connect(A.wet);
+ /* The 3D branch (an HRTF panner plus a hall convolver) is wired only while
+    3D is on — see spatialWire(). Connected at zero gain it still ran both
+    convolutions on the audio thread for every sample, which is the CPU that
+    turned into crackles on weak machines. */
+ const out=A.bands[A.bands.length-1];out.connect(A.byp);A.spWired=false;
  A.dry.connect(A.gain);A.wet.connect(A.gain);A.byp.connect(A.gain);
  /* Volume -> levelling -> fades -> boost/limiter. The levelling meter taps
     the equaliser output, before the volume, so it measures the track. */
@@ -951,7 +954,10 @@ function load(tr,auto,resumePos=0){
   const gen=++A.gen;
   A.transitioning=true;
   au.pause();
-  au.src=url;
+  /* A reload mid-track (a dropped stream, a source that changed under the
+     player — the proxy's 409) asks for a fresh URL, so nothing between here
+     and the proxy can hand back bytes of the previous file. */
+  au.src=resumePos>0?`${url}&rs=${gen}`:url;
   A.transitioning=false;
   applyRate();
   updateMediaSession(tr);
@@ -1040,18 +1046,23 @@ function load(tr,auto,resumePos=0){
    if(gen!==A.gen)return;
    if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
    const curTime=au.currentTime;
-   const effectiveDur=(Number.isFinite(S.dur)&&S.dur>0)?S.dur:(tr?.d?+tr.d:0);
-   if(effectiveDur&&curTime>2&&curTime<(effectiveDur-4)){
-    console.warn(`[meowave] premature stream end at ${curTime.toFixed(1)}s (dur ${effectiveDur}s); attempting seamless resume`);
-    if(!A._resumingSameTrack){
-     A._resumingSameTrack=true;
-     load(tr,true,curTime);
-     setTimeout(()=>{A._resumingSameTrack=false},4000);
-     return;
-    }
-    fallbackResolveTrack(tr,true,curTime).then(rescued=>{
-     if(!rescued)next();
-    });
+   /* Did the song end, or the data? The file's own length is the judge when
+      the element knows it; the catalogue length only when it does not — the
+      catalogue is often a different edit, and trusting it over the file
+      made a finished song "end early" and replay its last seconds, then
+      jump to another copy (round 9: "plays half, then another song"). */
+   const fileDur=Number.isFinite(au.duration)&&au.duration>0?au.duration:0;
+   const metaDur=+tr?.d||0;
+   const cut=curTime>2&&(fileDur?curTime<fileDur-3:(metaDur>30&&curTime<metaDur-8));
+   if(cut){
+    console.warn(`[meowave] stream cut at ${curTime.toFixed(1)}s (file ${fileDur||"?"}s, catalogue ${metaDur||"?"}s); reconnecting`);
+    if(tryResumeStream(tr,curTime,true))return;
+    /* The same recording elsewhere, from the same second — only a copy of
+       the same length, or the rest of the song would be out of place. */
+    fallbackResolveTrack(tr,true,curTime,{sameLength:true}).then(rescued=>{
+     if(rescued||!sameTrack(tr,S.current))return;
+     toast(LANG==="ru"?"Сервис перестал отдавать трек — включаем следующий":"The service stopped sending the track — playing the next one",5000);
+     next()});
     return;
    }
    if(sleepAtTrackEnd())return;
@@ -1065,7 +1076,10 @@ function load(tr,auto,resumePos=0){
    /* Mid-track network/decode drop: the proxy re-resolves a fresh URL on a
       new request, so reconnecting at the same second usually just works. */
    const pos=au.currentTime||0;
-   if(au.error?.code!==4&&pos>1&&tryResumeStream(tr,pos,wasPlaying))return;
+   /* Mid-track every code means the same thing — the bytes stopped — and
+      WebKitGTK reports a refused range (the proxy's 409 "source changed") as
+      code 4. Only at the very start can 4 mean an unplayable format. */
+   if(pos>1&&tryResumeStream(tr,pos,wasPlaying))return;
    explainFailure(url,tr,wasPlaying,pos)};
   au.load();
   applyRate();
@@ -1088,10 +1102,19 @@ function load(tr,auto,resumePos=0){
    });
    A.started=true;
    clearTimeout(A.watchdog);
-   A.watchdog=setTimeout(async()=>{
+   /* Nothing playable yet. A YouTube track can take several seconds to
+      resolve (clients are asked in turn, the proxy may fetch the same
+      recording elsewhere) and a SoundCloud one is measured first, so while
+      the request is still open the player waits — up to 16 s — instead of
+      giving up at 4.5 s and starting another copy over a stream that was
+      about to arrive. */
+   const t0=Date.now();
+   const dog=async()=>{
     if(gen!==A.gen)return;
     const el=A.audio;
     if(!el||!S.playing)return;
+    if(el.currentTime===0&&el.readyState<2&&!el.error&&el.networkState===2&&Date.now()-t0<16000){
+     A.watchdog=setTimeout(dog,1500);return}
     if(el.currentTime===0&&el.readyState<2){
      console.warn(`[meowave] playback watchdog fired for "${tr.t}" (svc: ${tr.s})`);
      if(tr.s==="ytm"&&!codecRetry){
@@ -1108,7 +1131,8 @@ function load(tr,auto,resumePos=0){
       try{el.load();el.play().catch(()=>{})}catch(_){}
      }
     }
-   },4500);
+   };
+   A.watchdog=setTimeout(dog,5000);
   }
   return}
  const b=A.ctx.createBufferSource();b.buffer=loop(A.ctx,tr.root||1);b.loop=true;b.connect(A.bands[0]);A.src=b;
@@ -1194,8 +1218,17 @@ function applyBoost(){
  if(el)el.textContent=b<=1?t("snd.boost.off"):"+"+Math.round(20*Math.log10(b))+" dB";
  const sl=document.getElementById("boost");
  if(sl&&+sl.value!==Math.round(b*100)){sl.value=Math.round(b*100);paintRange(sl)}}
+function spatialWire(on){
+ if(!A.ctx||!A.out)return;
+ clearTimeout(A.spT);
+ if(on){if(!A.spWired){A.out.connect(A.pan);A.pan.connect(A.air);A.air.connect(A.dry);A.air.connect(A.conv);A.conv.connect(A.wet);A.spWired=true}return}
+ if(!A.spWired)return;
+ /* unplug after the gains have faded out, so switching off does not click */
+ A.spT=setTimeout(()=>{if(S.sp.on||!A.spWired)return;
+  for(const [a,b] of [[A.out,A.pan],[A.pan,A.air],[A.air,A.dry],[A.air,A.conv],[A.conv,A.wet]])try{a.disconnect(b)}catch(_){}
+  A.spWired=false},450)}
 function applySpatial(){
- if(!A.ctx)return;const on=S.sp.on,n=A.ctx.currentTime;limRoute();
+ if(!A.ctx)return;const on=S.sp.on,n=A.ctx.currentTime;limRoute();spatialWire(on);
  A.byp.gain.setTargetAtTime(on?0:1,n,.06);
  A.dry.gain.setTargetAtTime(on?.9:0,n,.06);
  A.wet.gain.setTargetAtTime(on?.15+.2*S.sp.rad:0,n,.06);
@@ -1709,6 +1742,12 @@ function onReducedMotionChange(reduced){
 }
 /* Advances the clock for non-local playback: rAF drives it while the window
    is visible, the orbit interval takes over while it is hidden. */
+/* Only a generated source (the demo tone) has no media element clock. A
+   streamed track whose `mode` was never set — rooms, chats, imports store
+   tracks without it — used to be clocked here too, on top of the element:
+   the position ran on through a buffering pause, the listening time was
+   counted twice and next() fired when this second clock reached the end. */
+function noMediaClock(){return !!S.current&&S.current.mode!=="empty"&&A.src!=null&&A.src!==A.audio}
 function advanceClock(dt){
  S.pos+=dt;S.listen+=dt;noteListening(dt);
  if(S.pos>=S.dur){S.repeat?S.pos=0:next()}
@@ -1741,7 +1780,13 @@ function frame(now){
    /* Background (aura.js): the wave, the light Аура, or nothing at all —
       "off" skips even the analyser read, so nothing under the glass moves. */
    const bgm=window.MWAura?.bg||"wave";
-   if(bgm!=="off"){
+   /* Behind any other screen the field now holds still (round 9: "the wave
+      lags in search, and other programs lag too"). At 30 % opacity under the
+      glass nobody follows its motion, yet every update made the compositor
+      re-blur each glass panel above it — 52 backdrop-filter rules — for the
+      whole time the user was in search, a playlist or the settings. The last
+      frame stays on the canvas; home picks up from there. */
+   if(bgm!=="off"&&S.view==="home"){
    const lvl=audioBands(dt).lvl;
    /* Glow dust does not need every frame the UI gets: 40 updates a second
       read the same, and every canvas repaint is CPU pixels under WebKitGTK.
@@ -1752,7 +1797,10 @@ function frame(now){
       every glass panel above it — the expensive part on WebKitGTK/WKWebView.
       «Частота фона: 30» and lite mode ask for the same on the home screen. */
    const aura=bgm==="aura";
-   const hz=S.view!=="home"||S.lite||window.MWAura?.fps===30?30:(GLF.ok||aura)?0:40;
+   /* While another program has the focus the field drops to 24 updates a
+      second: the window is still on screen, so it keeps moving, but it no
+      longer competes at full rate with the application the user works in. */
+   const hz=!FOCUSED?24:S.lite||window.MWAura?.fps===30?30:(GLF.ok||aura)?0:40;
    /* a whole number of loop frames per update, so the updates are evenly
       spaced too */
    const every=hz?Math.max(1,Math.round(1000/(vk*vsMs)/hz)):1;
@@ -1769,7 +1817,7 @@ function frame(now){
  }
  /* Non-local playback has no media element to read a clock from, so its
     position and listening time advance here instead. */
- if(S.playing&&S.current?.mode!=="local")advanceClock(dt)
+ if(S.playing&&noMediaClock())advanceClock(dt)
  const isSeeking = A.pendingSeek !== null && Date.now() < A.seekingUntil;
  const curPos=(A.audio&&!A.audio.paused&&Number.isFinite(A.audio.currentTime))?A.audio.currentTime:S.pos;
  if(S.playing && !isSeeking)syncKaraokeFrame(curPos);
@@ -1826,7 +1874,7 @@ setInterval(()=>{
  /* A hidden window gets no rAF, so for non-local tracks the position clock,
     listening time and auto-advance froze until the window came back. This
     timer is not throttled, so it drives them instead. */
- if(document.hidden&&S.playing&&S.current?.mode!=="local")advanceClock(dt)
+ if(document.hidden&&S.playing&&noMediaClock())advanceClock(dt)
 },1000/30);
 function setRender(on){
  /* on comes from Rust meaning "the window is visible"; document.hidden concurs */
@@ -1853,9 +1901,10 @@ function setRender(on){
 /* Visible window renders at full monitor refresh rate */
 /* Focus used to set the budget to 0 (uncapped). The wave and the cover
    animations run on the compositor now, so the main loop stays at 60. */
-function setFocused(f){}
+let FOCUSED=document.hasFocus?document.hasFocus():true;
+function setFocused(f){FOCUSED=!!f}
 document.addEventListener("visibilitychange",()=>setRender(!document.hidden));
-window.addEventListener("blur",()=>{/* Visible windows in tiling WMs keep smooth refresh */});
+window.addEventListener("blur",()=>{/* visible windows keep moving, at a lower rate (see frame) */setFocused(false)});
 window.addEventListener("focus",()=>{setFocused(true);setRender(true)});
 ["pointermove","pointerdown","keydown"].forEach(evt=>{
  window.addEventListener(evt,()=>{if(!renderOn&&!document.hidden)setRender(true)},{passive:true});
@@ -6365,7 +6414,7 @@ const fallbackAttempted = new Set();
    "another service" that outweighed everything else, which is how a fallback
    could swap a song for a different one. */
 const MWM=(()=>{
- const VER=new Set("remix live cover karaoke instrumental nightcore sped slowed reverb acoustic mashup tribute 8d bassboosted minus acapella demo orchestral piano lofi edit version rmx vip bootleg flip remake parody remiks kaver lajv akustika".split(" "));
+ const VER=new Set("remix live cover karaoke instrumental nightcore sped slowed reverb acoustic mashup tribute 8d bassboosted minus acapella demo orchestral piano lofi edit version rmx vip bootleg flip remake parody remiks kaver lajv akustika reprise interlude skit part pt medley megamix extended encore".split(" "));
  const NOISE=new Set("official video audio lyrics lyric music hd hq 4k mv clip visualizer visualiser the a feat ft featuring prod topic full original mix explicit clean single remastered remaster premiere with x and i klip oficialnyj premera tekst pesni ofitsialnyy".split(" "));
  const DECOR=/\b(remaster(ed)?|version|edit|mix|mono|stereo|deluxe|bonus|live|radio|single|from|soundtrack|anniversary|acoustic|demo|instrumental|remix|\d{4})\b/i;
  const TR={"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"e","э":"e","ж":"zh","з":"z","и":"i","й":"i","ы":"i","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"h","ц":"c","ч":"ch","ш":"sh","щ":"sch","ъ":"","ь":"","ю":"yu","я":"ya","і":"i","ї":"i","є":"e","ґ":"g"};
@@ -6400,6 +6449,12 @@ const MWM=(()=>{
   const ac=wa.length?cov(wa,gall):.7;
   if(known&&ac<.5&&!(tc>=.99&&gap!=null&&gap<=3&&wt.length>=2))return null;
   const kn=full.concat(wa),extra=gt.filter(g=>!kn.includes(g)).length;
+  /* Words the hit's song name adds (brackets, "feat." and the artists' own
+     names set aside): "Numb" and "Numb/Encore" are two songs. Mirrors
+     matching.rs — only a near-exact length lets one through, a short title
+     none. */
+  const cex=words(core(gt0)).filter(g=>!kn.includes(g)&&!ga.includes(g)).length;
+  if(!(gap!=null&&gap<=3)&&(cex>=2||(cex>=1&&wt.length<=2)))return null;
   const sc=.55*tc+.35*ac+(gap==null?.03:gap<=3?.15:gap<=8?.08:0)-Math.min(.25,extra*.04);
   return sc<.6?null:sc}
  const of=(want,h)=>want&&h?score(want.t,want.a,want.d,h.t,h.a,h.d):null;
@@ -6411,19 +6466,25 @@ window.MWM=MWM;
    stream a whole track anonymously first. Deezer last — on its own it only
    has a 30-second preview. */
 const SVC_PREF={ytm:.06,ym:.05,sc:.01,dz:-.08};
-function pickFallbackCandidate(hits, tr, attempted = new Set()) {
+function pickFallbackCandidate(hits, tr, attempted = new Set(), sameLength = false) {
  if(!hits||!hits.length)return null;
  let best=null,bs=-1;
  for(const h of hits){
   if(!h||!h.id||h.s==="sp"||h.s==="local")continue;
   if(attempted.has(trackKey(h))||(h.s===tr.s&&String(h.id)===String(tr.id)))continue;
+  if(sameLength&&!(+tr.d>0&&+h.d>0&&Math.abs(+tr.d-+h.d)<=4))continue;
+  /* Deezer without a match is a 30-second preview: never a rescue mid-song. */
+  if(sameLength&&h.s==="dz")continue;
   const m=MWM.of(tr,h);if(m==null)continue;
   const sc=m+(h.s!==tr.s?.2:0)+(SVC_PREF[h.s]||0);
   if(sc>bs){bs=sc;best=h}}
  return best}
 
-async function fallbackResolveTrack(tr, auto, resumePos=0){
+async function fallbackResolveTrack(tr, auto, resumePos=0, opt={}){
  if(!tr || tr.mode === "empty") return false;
+ /* Mid-song, another copy has to be the same length, or the rest of the song
+    would start in the wrong place. */
+ const sameLength=!!opt.sameLength||resumePos>5;
  const key = trackKey(tr);
  if(fallbackResolving === key) return false;
  fallbackResolving = key;
@@ -6439,7 +6500,7 @@ async function fallbackResolveTrack(tr, auto, resumePos=0){
    if(!sameTrack(tr,S.current)){fallbackResolving=null;return false}
    if(!hits || !hits.length) continue;
 
-   const candidate = pickFallbackCandidate(hits, tr, fallbackAttempted);
+   const candidate = pickFallbackCandidate(hits, tr, fallbackAttempted, sameLength);
    if(candidate && (String(candidate.id) !== String(tr.id) || candidate.s !== tr.s)){
     fallbackAttempted.add(trackKey(candidate));
     const resolved = {
@@ -6524,6 +6585,8 @@ function humanStreamError(why){
  const w=String(why||""),ru=LANG==="ru";
  if(/not a bot|LOGIN_REQUIRED|confirm you|bot check|Sign in to confirm/i.test(w))
   return ru?"YouTube просит подтвердить, что вы не бот. Обычно так бывает с VPN или общим IP — смените сервер VPN или выключите его":"YouTube wants to confirm you are not a bot. This usually happens behind a VPN or a shared IP — switch the VPN server or turn it off";
+ if(/DRM|encrypted/i.test(w))return ru?"Сервис отдаёт этот трек только с защитой DRM — его нельзя воспроизвести, ищем копию на других сервисах":"The service serves this track only with DRM protection — it can't be played here, looking for a copy elsewhere";
+ if(/source changed|\b409\b/i.test(w))return ru?"Сервис подменил файл посреди трека — переподключаемся к тому же файлу":"The service swapped the file mid-track — reconnecting to the same file";
  if(/\b429\b|Too Many Requests|rate.?limit/i.test(w))return ru?"Сервис временно ограничил запросы — попробуйте через минуту":"The service is rate-limiting requests — try again in a minute";
  if(/UNPLAYABLE|not available|unavailable|region|country|geo/i.test(w))return ru?"Трек недоступен в вашем регионе":"This track is not available in your region";
  if(/timeout|timed out/i.test(w))return ru?"Сервис не ответил вовремя":"The service did not answer in time";
@@ -6728,10 +6791,36 @@ async function initSupabase(){
    if(wasSignedIn&&!sess?.user)await flushFavorites();
    sbUser=sess?.user||null;sbProfile=null;sbStats=null;delArmed=false;
    if(!sbUser){OWNED=new Set()}
-   if(sbUser)await loadProfile();
+   if(sbUser){await loadProfile();checkSchema()}
    renderProfile()});
  }catch(e){console.warn("supabase init:",e.message||e)}
  renderProfile()}
+/* Which FULL_SCHEMA the project runs. Round 9: listening hours, rooms and
+   chats all "silently did not work" on a project where the schema had not
+   gone through, and nothing on screen said so. supabase/build_sql.mjs stamps
+   the version into public.meowave_schema_version(); an older or missing one
+   is said once per version, in words the owner can act on. */
+const SCHEMA_NEED=18;
+const SCHEMA={v:null,at:0};
+async function checkSchema(){
+ if(!sb||!sbUser||Date.now()-SCHEMA.at<600000)return SCHEMA.v;
+ SCHEMA.at=Date.now();
+ try{
+  const {data,error}=await sb.rpc("meowave_schema_version");
+  if(error){
+   /* only "the function is not there" means an old schema; a network error
+      says nothing about it */
+   if(/PGRST202|Could not find the function|does not exist|404/i.test(`${error.code||""} ${error.message||""}`))SCHEMA.v=0;
+   else{SCHEMA.at=0;return null}
+  }else SCHEMA.v=Number(data)||0;
+ }catch(_){SCHEMA.at=0;return null}
+ if(SCHEMA.v<SCHEMA_NEED){
+  const k="mw.schemaWarn."+SCHEMA_NEED;
+  if(!localStorage.getItem(k)){localStorage.setItem(k,"1");
+   toast(LANG==="ru"
+    ?`База Meowave на сервере устарела (схема ${SCHEMA.v||"старше 18"}, нужна ${SCHEMA_NEED}): часы прослушивания, комнаты и чаты могут не работать. Владельцу сервера — выполнить supabase/FULL_SCHEMA.sql в Supabase → SQL Editor`
+    :`The Meowave database on the server is outdated (schema ${SCHEMA.v||"older than 18"}, needs ${SCHEMA_NEED}): listening hours, rooms and chats may not work. Server owner: run supabase/FULL_SCHEMA.sql in Supabase → SQL Editor`,12000)}}
+ return SCHEMA.v}
 /* The server's own listening counter. The profile card used to print the
    in-memory S.listen, which is this session plus whatever localStorage had —
    so the hours read differently on every machine and looked "not saved". The
@@ -6835,36 +6924,48 @@ function noteTrackStart(tr){
     than a counter that never moves and a badge nobody can earn. */
  const g=(tr.al||"").trim().toLowerCase();
  if(g)REPORT.genres.add(g)}
+/* Unsent seconds survive a restart: they used to live in memory only, so an
+   evening offline or signed out never reached the account. */
+try{const r=JSON.parse(localStorage.getItem("mw.rep")||"null");
+ if(r&&r.s>0){REPORT.secs+=Math.min(+r.s||0,86400*7);REPORT.spatial+=Math.min(+r.sp||0,+r.s||0)}}catch(_){}
+function persistReport(){
+ try{localStorage.setItem("mw.rep",JSON.stringify({s:Math.floor(REPORT.secs),sp:Math.floor(REPORT.spatial)}))}catch(_){}}
 async function flushListening(force){
- const secs=Math.floor(REPORT.secs);
- if(!sb||!sbUser)return;
+ if(!sb||!sbUser||REPORT.busy)return;
+ let secs=Math.floor(REPORT.secs);
  if(!force&&secs<60&&!REPORT.tracks)return;
  if(!secs&&!REPORT.tracks)return;
- const hour=new Date().getHours();
- /* v2, not v1: the extra counters behind seven of the fourteen achievements
-    (streaks, early/late sessions, session length, variety) are only written by
-    this function, so on v1 those badges were unreachable. */
- const payload={seconds:secs,new_tracks:REPORT.tracks,
-  spatial:Math.floor(REPORT.spatial),
-  local_hour:hour,
-  session_minutes:Math.floor((Date.now()-REPORT.sessionStart)/60000),
-  genres:REPORT.genres.size,
-  liked:TRACKS.filter(x=>x.fav).length,
-  playlists:PLAYLISTS.length};
-  try{
+ REPORT.busy=true;
+ try{
+  /* report_listening_v2 clamps one call to two hours, so a backlog goes out
+     in two-hour pieces instead of being cut down to the first one */
+  let first=true;
+  while(first||secs>0){
+   const chunk=Math.min(secs,7200),sp=Math.min(chunk,Math.floor(REPORT.spatial));
+   const payload={seconds:chunk,new_tracks:first?REPORT.tracks:0,spatial:sp,
+    local_hour:new Date().getHours(),
+    session_minutes:Math.floor((Date.now()-REPORT.sessionStart)/60000),
+    genres:REPORT.genres.size,
+    liked:TRACKS.filter(x=>x.fav).length,
+    playlists:PLAYLISTS.length};
    const {error}=await sb.rpc("report_listening_v2",payload);
    if(error)throw error;
-   REPORT.secs-=secs;REPORT.spatial=0;REPORT.tracks=0;REPORT.ids.clear();REPORT.genres.clear();
-  /* Keep the card in step with what the server now holds. */
-  if(sbStats)sbStats.listen_seconds=(Number(sbStats.listen_seconds)||0)+secs;
+   REPORT.secs=Math.max(0,REPORT.secs-chunk);REPORT.spatial=Math.max(0,REPORT.spatial-sp);
+   if(first){REPORT.tracks=0;REPORT.ids.clear();REPORT.genres.clear()}
+   secs-=chunk;first=false;
+   /* Keep the card in step with what the server now holds. */
+   if(sbStats)sbStats.listen_seconds=(Number(sbStats.listen_seconds)||0)+chunk;
+  }
+  persistReport();
   if(S.view==="profile")renderProfile();
   syncAchievements();
- }catch(e){console.warn("report_listening:",e.message||e);
+ }catch(e){console.warn("report_listening:",e.message||e);persistReport();
   /* A failing RPC used to be a console line only, so listening hours just
      silently stayed at zero. Say it once per session. */
   if(!REPORT.errShown){REPORT.errShown=true;
    toast((LANG==="ru"?"Время прослушивания не сохранилось: ":"Listening time was not saved: ")+String(e.message||e).slice(0,140)
-    +(LANG==="ru"?". Выполните новый SQL из supabase/migrations (15_presence_listening.sql)":". Run the new SQL from supabase/migrations (15_presence_listening.sql)"),9000)}}}
+    +(LANG==="ru"?". Владельцу сервера — выполнить supabase/FULL_SCHEMA.sql в Supabase → SQL Editor (внизу будет таблица с результатом)":". Server owner: run supabase/FULL_SCHEMA.sql in Supabase → SQL Editor (a result table appears at the bottom)"),9000)}}
+ finally{REPORT.busy=false}}
 setInterval(()=>flushListening(false),60000);
 /* Presence refresh: the elapsed timestamp has to move even mid-track. */
 setInterval(()=>{if(S.playing)dcPush()},60000);
@@ -6872,7 +6973,7 @@ setInterval(()=>{if(S.playing)dcPush()},60000);
    save(). A long session that ended with a crash, a kill or an update lost every
    minute of it — which is exactly the "hours are not saved" report. A minute is
    cheap: this is one small JSON write. */
-setInterval(()=>save(),60000);
+setInterval(()=>{save();persistReport()},60000);
 /* A closing window must not lose the current batch. The flushes are awaited
    because a fire-and-forget POST dies mid-flight once the webview is torn
    down; the Rust side closes on CloseRequested, so ending the request first
@@ -6893,12 +6994,12 @@ async function flushOnClose(){
    ]):Promise.resolve()
   ]),
   new Promise(r=>setTimeout(r,2500))])}catch(_){}
- save()}
+ persistReport();save()}
 window.addEventListener("beforeunload",()=>{save();flushOnClose()});
 /* beforeunload does not fire reliably when a window is destroyed by the OS or
    the updater; pagehide and the hidden transition do. */
-window.addEventListener("pagehide",()=>{save();flushListening(true)});
-document.addEventListener("visibilitychange",()=>{if(document.hidden){save();flushListening(true)}});
+window.addEventListener("pagehide",()=>{save();persistReport();flushListening(true)});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){save();persistReport();flushListening(true)}});
 function authMsg(msg,cls){const el=document.getElementById("authmsg");if(el){el.textContent=msg||"";el.className="authmsg "+(cls||"")}}
 async function doAuth(kind){
  const email=(document.getElementById("au-email")?.value||"").trim();

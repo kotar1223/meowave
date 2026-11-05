@@ -14,12 +14,21 @@
 --
 -- Layout: chat-media/<uploader uuid>/<32 hex>.bin, application/octet-stream.
 
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('chat-media', 'chat-media', false, 10485760, array['application/octet-stream'])
-on conflict (id) do update set
-  public = false,
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
+do $bk$
+begin
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('chat-media', 'chat-media', false, 10485760, array['application/octet-stream'])
+  on conflict (id) do update set
+    public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+exception when insufficient_privilege then
+  if not exists (select 1 from storage.buckets where id = 'chat-media') then
+    raise exception 'storage bucket "chat-media" could not be created: % — create it in Dashboard → Storage (private, 10 MB, application/octet-stream)', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$bk$;
 
 -- Who may fetch a file: the uploader, their friends, and people who share a
 -- room or a group chat with them. The bytes are ciphertext either way; this
@@ -51,21 +60,54 @@ $$;
 revoke all on function public.can_see_chat_media(text) from public, anon;
 grant execute on function public.can_see_chat_media(text) to authenticated;
 
-drop policy if exists "chat media: upload into own folder" on storage.objects;
-create policy "chat media: upload into own folder"
-  on storage.objects for insert to authenticated
-  with check (bucket_id = 'chat-media'
-              and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "chat media: upload into own folder" on storage.objects;
+  create policy "chat media: upload into own folder"
+    on storage.objects for insert to authenticated
+    with check (bucket_id = 'chat-media'
+                and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'chat media: upload into own folder') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'chat media: upload into own folder', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
-drop policy if exists "chat media: friends and co-members read" on storage.objects;
-create policy "chat media: friends and co-members read"
-  on storage.objects for select to authenticated
-  using (bucket_id = 'chat-media'
-         and public.can_see_chat_media((storage.foldername(name))[1]));
+do $sp$
+begin
+  drop policy if exists "chat media: friends and co-members read" on storage.objects;
+  create policy "chat media: friends and co-members read"
+    on storage.objects for select to authenticated
+    using (bucket_id = 'chat-media'
+           and public.can_see_chat_media((storage.foldername(name))[1]));
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'chat media: friends and co-members read') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'chat media: friends and co-members read', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
 
 -- No update policy on purpose: a file is written once under a random name.
-drop policy if exists "chat media: delete own files" on storage.objects;
-create policy "chat media: delete own files"
-  on storage.objects for delete to authenticated
-  using (bucket_id = 'chat-media'
-         and (storage.foldername(name))[1] = auth.uid()::text);
+do $sp$
+begin
+  drop policy if exists "chat media: delete own files" on storage.objects;
+  create policy "chat media: delete own files"
+    on storage.objects for delete to authenticated
+    using (bucket_id = 'chat-media'
+           and (storage.foldername(name))[1] = auth.uid()::text);
+exception when insufficient_privilege then
+  -- No policy rights on storage.objects in this project: keep what exists.
+  if not exists (select 1 from pg_policies where schemaname = 'storage'
+                  and tablename = 'objects' and policyname = 'chat media: delete own files') then
+    raise exception 'storage policy "%" could not be created: % — add it in Dashboard → Storage → Policies', 'chat media: delete own files', sqlerrm
+      using errcode = 'insufficient_privilege';
+  end if;
+end
+$sp$;
