@@ -326,7 +326,10 @@ fn ym_track(v: &serde_json::Value) -> Option<Track> {
 
 /// Turns a track id into a direct mp3 URL. Yandex makes this a two-step dance:
 /// download-info -> an XML blob with host/path/ts/s -> an md5 signature.
-pub async fn ym_stream_url(token: &str, id: &str, hq: bool) -> Result<String, String> {
+/// `fmt` is the stream proxy's container wish; "aac" means the native audio
+/// engine, which is handed MP3 only: Yandex's AAC variants include HE-AAC,
+/// whose band replication the engine's decoder does not do.
+pub async fn ym_stream_url(token: &str, id: &str, hq: bool, fmt: &str) -> Result<String, String> {
     let c = client()?;
     let info: serde_json::Value = c
         .get(format!("{YM_API}/tracks/{id}/download-info"))
@@ -347,9 +350,11 @@ pub async fn ym_stream_url(token: &str, id: &str, hq: bool) -> Result<String, St
 
     // Best quality the account is entitled to. Without a Plus subscription
     // that's 128k no matter what we ask for.
+    let native = fmt == "aac";
+    let codec = |v: &&serde_json::Value| v.get("codec").and_then(|c| c.as_str()).unwrap_or("").to_string();
     let pick = variants
         .iter()
-        .filter(|v| v.get("codec").and_then(|c| c.as_str()) != Some("aac"))
+        .filter(|v| if native { !codec(v).contains("aac") } else { codec(v) != "aac" })
         .max_by_key(|v| v.get("bitrateInKbps").and_then(|b| b.as_u64()).unwrap_or(0))
         .or_else(|| variants.first())
         .ok_or("empty variant list")?;
@@ -358,6 +363,7 @@ pub async fn ym_stream_url(token: &str, id: &str, hq: bool) -> Result<String, St
     } else {
         variants
             .iter()
+            .filter(|v| !native || !codec(v).contains("aac"))
             .min_by_key(|v| v.get("bitrateInKbps").and_then(|b| b.as_u64()).unwrap_or(999))
             .unwrap_or(pick)
     };
@@ -686,7 +692,9 @@ fn sc_kbps(t: &serde_json::Value) -> u32 {
     }
 }
 
-pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
+/// `fmt` only matters to the rescue through YouTube Music / Yandex below:
+/// "aac" (the native engine) must not be handed Opus or HE-AAC.
+pub async fn sc_stream_url(token: &str, id: &str, fmt: &str) -> Result<String, String> {
     let c = client()?;
     let req_builder = sc_req(&c, &format!("{SC_API}/tracks/{id}"), token).await?;
     let mut resp = req_builder.send().await.map_err(|e| format!("network: {e}"))?;
@@ -801,7 +809,7 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
             for query in &queries {
                 let Ok(hits) = ytm_search(query).await else { continue };
                 if let Some(hit) = crate::matching::best(&hits, &title, &artist, orig_dur) {
-                    if let Ok(stream_res) = crate::ytm::stream(&hit.id, true, "best").await {
+                    if let Ok(stream_res) = crate::ytm::stream(&hit.id, true, fmt).await {
                         eprintln!(
                             "[meowave] sc_stream_url: '{}' id={} has no full stream (snipped={snipped}); same recording on YTM id={}",
                             raw_title, id, hit.id
@@ -816,7 +824,7 @@ pub async fn sc_stream_url(token: &str, id: &str) -> Result<String, String> {
                 for query in &queries {
                     let Ok(hits) = ym_search(&tok, query).await else { continue };
                     if let Some(hit) = crate::matching::best(&hits, &title, &artist, orig_dur) {
-                        if let Ok(u) = ym_stream_url(&tok, &hit.id, true).await {
+                        if let Ok(u) = ym_stream_url(&tok, &hit.id, true, fmt).await {
                             eprintln!("[meowave] sc_stream_url: '{raw_title}' id={id} plays from Yandex Music id={}", hit.id);
                             return Ok(if u.contains("#mw") { format!("{u}&mwalt=ym") } else { format!("{u}#mwalt=ym") });
                         }

@@ -19,15 +19,14 @@ const KEY: &str = "AIzaSyAOghZGza2MQSZkY_zfZ370N-PUdXEo8AI";
 /// Search speaks as the Android music app — it returns the nicest song shelves.
 const MUSIC_UA: &str = "com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 13) gzip";
 
-/// Playback used to speak as the standalone VR app: for a long time it was the
-/// only guest client that still answered anonymously with plain `url` fields
-/// (no signature cipher to undo).
-///
-/// It stopped. As of 2026 every video comes back LOGIN_REQUIRED — "Sign in to
-/// confirm you're not a bot" — with an empty `streamingData`, so this is now
-/// only a fallback (see `PLAYER_CLIENTS`). The version string is the same
-/// treadmill: YouTube ties its bot check to how current the client claims to
-/// be, so every entry here will need bumping again eventually.
+/// The standalone VR app. For a long time it was the only guest client that
+/// still answered anonymously with plain `url` fields (no signature cipher to
+/// undo); for a while in 2026 it answered LOGIN_REQUIRED — "Sign in to
+/// confirm you're not a bot" — for nearly everyone, and now (round 10) it is
+/// again the one whose URLs serve the whole file while the others' stop after
+/// the first megabyte. The version string is the same treadmill: YouTube ties
+/// its bot check to how current the client claims to be, so every entry here
+/// will need bumping again eventually.
 pub const VR_UA: &str =
     "com.google.android.apps.youtube.vr.oculus/1.61.48 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip";
 
@@ -62,17 +61,21 @@ pub const TV_UA: &str = "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/53
 /// below is only the starting point: `order()` puts the client that last
 /// worked first and the ones that recently failed last, for the session.
 ///
-/// ANDROID_VR is last: it answers LOGIN_REQUIRED ("confirm you're not a bot")
-/// for nearly everyone now, and that has nothing to do with the user's own
-/// YouTube Music sign-in — these are guest clients, YouTube does not accept a
-/// web sign-in for them. Asking it first only cost a refusal per track and
-/// put "sign-in required" in front of people who are signed in.
+/// ANDROID_VR is first (round 10): from the networks reported, it is the one
+/// whose URLs serve the whole file; SDK-less, iOS and Android answer OK with
+/// URLs that 403 past the first megabyte, and the test suite is refused. When
+/// it asks for a sign-in instead ("confirm you're not a bot" — a verdict on
+/// the IP, unrelated to the user's own YouTube Music sign-in: YouTube does not
+/// accept a web sign-in for guest clients), that costs one quick refusal,
+/// where a start-only client costs a player request and a deep probe. And
+/// whichever client last worked is asked first the next launch too
+/// (`preferred`).
 const PLAYER_CLIENTS: &[(&str, &str)] = &[
+    ("ANDROID_VR", VR_UA),
     ("ANDROID_SDKLESS", SDKLESS_UA),
     ("IOS", IOS_UA),
     ("ANDROID", ANDROID_UA),
     ("ANDROID_TESTSUITE", "Google-Test-Suite"),
-    ("ANDROID_VR", VR_UA),
 ];
 
 /// What the session has learned about each client: when it last produced a
@@ -117,6 +120,82 @@ fn health_set(client: &str, ok: bool) {
         } else {
             h.fail_at = Some(now);
             h.fails = h.fails.saturating_add(1);
+        }
+    }
+    if ok {
+        remember_preferred(name);
+    }
+}
+
+/// The client that last produced a whole-file URL, kept across launches.
+///
+/// `HEALTH` starts empty every session, so each launch used to walk the list
+/// from the top: on a network where only one client works that was four
+/// refusals and three deep probes — seconds — before the first song. A day
+/// old at most: past that the network or YouTube's rules have likely changed.
+const PREFERRED_FILE: &str = "ytm_client.json";
+const PREFERRED_MEMORY_SECS: u64 = 24 * 3600;
+
+struct Preferred {
+    loaded: bool,
+    name: Option<&'static str>,
+    written: Option<std::time::Instant>,
+}
+
+static PREFERRED: std::sync::Mutex<Preferred> = std::sync::Mutex::new(Preferred { loaded: false, name: None, written: None });
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn client_named(name: &str) -> Option<&'static str> {
+    PLAYER_CLIENTS.iter().map(|(n, _)| *n).find(|n| *n == name)
+}
+
+/// Reads the remembered client; tests never touch the user's data directory.
+fn load_preferred() -> Option<&'static str> {
+    if cfg!(test) {
+        return None;
+    }
+    let path = crate::paths::root().ok()?.join(PREFERRED_FILE);
+    let v: Value = serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
+    let at = v.get("at")?.as_u64()?;
+    if unix_now().saturating_sub(at) > PREFERRED_MEMORY_SECS {
+        return None;
+    }
+    client_named(v.get("client")?.as_str()?)
+}
+
+fn preferred() -> Option<&'static str> {
+    let mut g = PREFERRED.lock().ok()?;
+    if !g.loaded {
+        g.loaded = true;
+        g.name = load_preferred();
+    }
+    g.name
+}
+
+/// Rewritten when the client changes, and at most hourly while it keeps
+/// working, so a client in daily use never ages out.
+fn remember_preferred(name: &'static str) {
+    let write = {
+        let Ok(mut g) = PREFERRED.lock() else { return };
+        g.loaded = true;
+        let stale = g.written.is_none_or(|t| t.elapsed() > std::time::Duration::from_secs(3600));
+        let changed = g.name != Some(name);
+        g.name = Some(name);
+        if changed || stale {
+            g.written = Some(std::time::Instant::now());
+        }
+        changed || stale
+    };
+    if write && !cfg!(test) {
+        if let Ok(dir) = crate::paths::root() {
+            let body = json!({"client": name, "at": unix_now()}).to_string();
+            let _ = std::fs::write(dir.join(PREFERRED_FILE), body);
         }
     }
 }
@@ -168,7 +247,8 @@ fn order() -> Vec<(&'static str, &'static str)> {
             && h.ok_at.map(|ok| h.fail_at.is_some_and(|f| f > ok)).unwrap_or(true);
         let fresh_ok = h.ok_at.map(|t| t.elapsed() < FAIL_MEMORY).unwrap_or(false) && !failed;
         let media_bad = h.media_fail_at.is_some_and(|t| t.elapsed() < MEDIA_FAIL_MEMORY);
-        (media_bad as u8, failed as u8, !fresh_ok as u8, *i)
+        let pref = preferred() == Some(*name);
+        (media_bad as u8, failed as u8, !fresh_ok as u8, !pref as u8, *i)
     });
     list.into_iter().map(|(_, c)| c).collect()
 }
@@ -1612,6 +1692,15 @@ pub async fn ytm_selftest(video_id: Option<String>) -> Result<Vec<SelfTest>, Str
                 row.reason = e;
             }
         }
+        // What the check learned steers playback at once: a client whose URL
+        // served the deep range goes first, one that only served the start
+        // or was refused goes to the back.
+        match (row.status.as_str(), row.deep) {
+            ("OK", 200 | 206) => health_set(client, true),
+            ("OK", 401 | 403 | 410) => health_set(client, false),
+            ("LOGIN_REQUIRED" | "UNPLAYABLE" | "ERROR", _) => health_set(client, false),
+            _ => {}
+        }
         row.ms = t0.elapsed().as_millis() as u64;
         out.push(row);
     }
@@ -1637,31 +1726,21 @@ fn bitrate(f: &Value) -> u64 {
 /// video without the requested container falls back to whatever it does have:
 /// any audio beats an error.
 fn pick_format<'a>(audio: &[&'a Value], hq: bool, fmt: &str) -> Option<&'a Value> {
-    let want = match fmt {
-        "mp4" => Some("audio/mp4"),
-        "webm" => Some("audio/webm"),
-        _ => None,
+    let mime = |f: &&Value| f.get("mimeType").and_then(|m| m.as_str()).unwrap_or("").to_string();
+    // Narrowest wish first; a video without it falls back a step at a time.
+    // "aac" is the native engine's: AAC-LC in MP4 (itag 140/141) — it
+    // decodes neither Opus nor HE-AAC's spectral band replication (139).
+    let wishes: &[fn(&str) -> bool] = match fmt {
+        "aac" => &[|m| m.starts_with("audio/mp4") && m.contains("mp4a.40.2"), |m| m.starts_with("audio/mp4")],
+        "mp4" => &[|m| m.starts_with("audio/mp4")],
+        "webm" => &[|m| m.starts_with("audio/webm")],
+        _ => &[],
     };
-    let pool: Vec<&Value> = match want {
-        Some(prefix) => {
-            let filtered: Vec<&Value> = audio
-                .iter()
-                .copied()
-                .filter(|f| {
-                    f.get("mimeType")
-                        .and_then(|m| m.as_str())
-                        .map(|m| m.starts_with(prefix))
-                        .unwrap_or(false)
-                })
-                .collect();
-            if filtered.is_empty() {
-                audio.to_vec()
-            } else {
-                filtered
-            }
-        }
-        None => audio.to_vec(),
-    };
+    let pool: Vec<&Value> = wishes
+        .iter()
+        .map(|w| audio.iter().copied().filter(|f| w(&mime(f))).collect::<Vec<_>>())
+        .find(|v| !v.is_empty())
+        .unwrap_or_else(|| audio.to_vec());
     // The original mix in the original language: not the "stable volume"
     // (DRC) copy, not a dubbed track. Besides sounding as released, it makes
     // every client pick the same file, so a stream resumed through another
@@ -2050,6 +2129,21 @@ mod tests {
         assert_eq!(pick("mp4", false), "u2");
         assert_eq!(pick("webm", true), "u3");
         assert_eq!(pick("webm", false), "u4");
+    }
+
+    /// The native engine decodes AAC-LC but neither Opus nor HE-AAC: "aac"
+    /// is itag 140's kind at either quality, and only an MP4 without LC
+    /// falls back to the HE-AAC one.
+    #[test]
+    fn aac_means_aac_lc() {
+        assert_eq!(pick("aac", true), "u1");
+        assert_eq!(pick("aac", false), "u1", "low quality must not pick HE-AAC");
+        let he_only = [
+            json!({"mimeType":"audio/mp4; codecs=\"mp4a.40.5\"","bitrate":50152,"url":"he"}),
+            json!({"mimeType":"audio/webm; codecs=\"opus\"","bitrate":165002,"url":"op"}),
+        ];
+        let refs: Vec<&serde_json::Value> = he_only.iter().collect();
+        assert_eq!(pick_format(&refs, true, "aac").and_then(|f| f.get("url")).unwrap(), "he");
     }
 
     /// Without a preference the caller gets YouTube's own extremes, so

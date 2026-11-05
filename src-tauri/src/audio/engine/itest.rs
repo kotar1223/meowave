@@ -281,16 +281,14 @@ fn case(file: &str, ctype: &'static str, dev_sr: u32, min_snr: f64, window: Opti
     let (pos, end, s) = r.check_tail(&reference, 2.0, 22.25, &format!("{file} seek 20.25"));
     assert!(s > min_snr && (pos - end).abs() < 0.08, "{file}: back seek: SNR {s:.1}, position {pos} vs {end}");
     // 4. Pause: the position holds, and the audio resumes where it stopped.
-    r.out.ramp_ms.store(12, Ordering::Relaxed);
-    r.out.want.store(false, Ordering::Release);
+    r.tx.send(Cmd::Pause(12)).unwrap();
     std::thread::sleep(Duration::from_millis(300));
     let p1 = r.hub.position();
     std::thread::sleep(Duration::from_millis(700));
     let p2 = r.hub.position();
     assert!((p2 - p1).abs() < 0.002, "{file}: paused position moved {p1} → {p2}");
     let _ = r.take();
-    r.out.want.store(true, Ordering::Release);
-    r.tx.send(Cmd::Play).unwrap();
+    r.tx.send(Cmd::Play(12)).unwrap();
     let (_, end, s) = r.check_tail(&reference, 1.5, p2 + 1.5, &format!("{file} resume"));
     assert!(s > min_snr && (end - (p2 + 1.5)).abs() < 0.1, "{file}: resume: SNR {s:.1}, {end} vs {}", p2 + 1.5);
 }

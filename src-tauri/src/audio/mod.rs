@@ -111,28 +111,30 @@ pub fn audio_subscribe(channel: Channel<Value>) {
     let _ = channel;
 }
 
+/// `op` orders play / pause / open: IPC calls can overtake each other, and
+/// the engine drops one older than the newest it has seen.
 #[tauri::command]
-pub fn audio_open(url: String, gen: u64, at: f64, play: bool) {
+pub fn audio_open(url: String, gen: u64, at: f64, play: bool, op: Option<u64>) {
     #[cfg(desktop)]
-    engine::get().open(url, gen, at, play);
+    engine::get().open(url, gen, at, play, op);
     #[cfg(mobile)]
-    let _ = (url, gen, at, play);
+    let _ = (url, gen, at, play, op);
 }
 
 #[tauri::command]
-pub fn audio_play(fade: Option<f64>) {
+pub fn audio_play(fade: Option<f64>, op: Option<u64>) {
     #[cfg(desktop)]
-    engine::get().play(fade.unwrap_or(0.012));
+    engine::get().play(fade.unwrap_or(0.012), op);
     #[cfg(mobile)]
-    let _ = fade;
+    let _ = (fade, op);
 }
 
 #[tauri::command]
-pub fn audio_pause(fade: Option<f64>) {
+pub fn audio_pause(fade: Option<f64>, op: Option<u64>) {
     #[cfg(desktop)]
-    engine::get().pause(fade.unwrap_or(0.012));
+    engine::get().pause(fade.unwrap_or(0.012), op);
     #[cfg(mobile)]
-    let _ = fade;
+    let _ = (fade, op);
 }
 
 #[tauri::command]

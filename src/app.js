@@ -58,7 +58,7 @@ ru:{"nav.home":"Волна","nav.search":"Поиск","nav.library":"Медиа"
 "set.t":"Настройки","set.acc":"Аккаунты","set.acc.s":"Подключите свои аккаунты — лайки и плейлисты переедут в библиотеку, а ваши подборки появятся в шторке. Вход идёт на странице самого сервиса; Meowave хранит только ключ сессии, в системном keychain.",
 "set.sp":"Пространственный звук","set.sp.s":"PannerNode в режиме HRTF: источник летает вокруг головы по орбите и проходит над ней. Плюс ConvolverNode для комнаты.",
 "set.sp.on":"Движение вокруг головы","set.sp.hint":"Только в наушниках","set.sp.speed":"Скорость оборота","set.sp.rad":"Радиус орбиты","set.sp.elev":"Проход над головой",
-"set.q":"Качество","set.q.s":"Lossless там, где сервис его отдаёт.","set.q.l":"Поток","q.low":"Низкое","q.mid":"Среднее","q.high":"Высокое",
+"set.q":"Качество","set.q.s":"Lossless там, где сервис его отдаёт.","set.q.l":"Поток","set.eng":"Звуковой движок","set.eng.s":"Встроенный декодирует и выводит звук сам — без треска и провалов WebView","set.eng.nat":"Встроенный","set.eng.web":"WebView","q.low":"Низкое","q.mid":"Среднее","q.high":"Высокое",
 "set.look":"Вид","set.look.s":"Плотность частиц влияет на нагрузку сильнее всего остального.","set.theme":"Тема","set.accent":"Акцентный цвет","set.accent.s":"По умолчанию без цвета",
 "set.dens":"Плотность частиц","set.speed":"Скорость движения","set.glow":"Свечение волны","set.blur":"Блюр панелей","set.lang":"Язык","set.font.ui":"Шрифт интерфейса",
 "set.lite":"Экономный режим","set.lite.s":"Для слабых ПК: меньше частиц, без блюра и дымки",
@@ -192,7 +192,7 @@ en:{"nav.home":"Wave","nav.search":"Search","nav.library":"Media","nav.settings"
 "set.t":"Settings","set.acc":"Accounts","set.acc.s":"Connect your accounts: likes and playlists move into your library, and your own collections appear in the sheet. You sign in on the service’s own page; Meowave keeps only the session key, in the system keychain.",
 "set.sp":"Spatial audio","set.sp.s":"PannerNode in HRTF mode: the source orbits your head and passes overhead. Plus a ConvolverNode for room.",
 "set.sp.on":"Orbit around the head","set.sp.hint":"Headphones only","set.sp.speed":"Orbit speed","set.sp.rad":"Orbit radius","set.sp.elev":"Overhead arc",
-"set.q":"Quality","set.q.s":"Lossless where the service serves it.","set.q.l":"Stream","q.low":"Low","q.mid":"Medium","q.high":"High",
+"set.q":"Quality","set.q.s":"Lossless where the service serves it.","set.q.l":"Stream","set.eng":"Sound engine","set.eng.s":"Built-in decodes and plays the sound itself — no WebView crackle or dropouts","set.eng.nat":"Built-in","set.eng.web":"WebView","q.low":"Low","q.mid":"Medium","q.high":"High",
 "set.look":"Appearance","set.look.s":"Particle density costs more than everything else combined.","set.theme":"Theme","set.accent":"Accent color","set.accent.s":"No color by default",
 "set.dens":"Particle density","set.speed":"Movement speed","set.glow":"Wave glow","set.blur":"Panel blur","set.lang":"Language","set.font.ui":"UI font",
 "set.lite":"Lite mode","set.lite.s":"For weak PCs: fewer particles, no blur or haze",
@@ -431,6 +431,7 @@ function applyI18n(){
    .map(id=>[id,document.getElementById(id)?.value])
    .filter(([,v])=>v);
   renderSrv();renderAccounts();renderNP();renderLib();renderPresets();renderSwatches();obRefresh();renderProfile();
+  naPaintDev();
   keep.forEach(([id,v])=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v});
   if(S.view==="search")search(document.getElementById("q").value,true);
   if(fp.dataset.open==="true")renderFP();
@@ -755,42 +756,149 @@ const fp=document.getElementById("fp");
 const A={ctx:null,src:null,audio:null,media:null,pre:null,bands:[],pan:null,air:null,conv:null,dry:null,wet:null,byp:null,gain:null,an:null,data:null,started:false,theta:0,
  /* gen bumps on every track change; events from the previous src are dropped */
  gen:0,onMeta:null,onTime:null,onEnd:null,onErr:null,lastPos:0,pendingSeek:null,seekingUntil:0,watchdog:null,transitioning:false,_resumingSameTrack:false};
-/* Exactly one <audio> element for the whole app. */
-function ensureAudioEl(){
- if(A.audio)return A.audio;
- const au=A.audio=document.createElement("audio");
+/* The native audio engine (src-tauri/src/audio, driven through naudio.js).
+
+   Desktop builds play through it by default: the stream is read ahead into
+   memory, decoded, equalised and sent to the output device by Rust, so the
+   webview's media stack — the source of round 10's crackles, dropouts and
+   "plays a second, then silence" — is out of the path. It decodes MP3,
+   AAC-LC, FLAC, ALAC, Vorbis and WAV; a track it cannot open (Opus, HE-AAC,
+   a blob from the HTML file picker) plays through the webview instead, per
+   track, and Settings → Quality → Sound engine switches it off entirely. */
+const NA={ok:false,pend:null,el:null,active:false,caps:null,dev:null,webOnly:new Set(),fadeV:1,viz:null,data:new Uint8Array(256)};
+const naEnabled=()=>S.x.engine!=="web";
+/* In use, or about to be: the web graph is not built for nothing. */
+const naWanted=()=>naEnabled()&&(NA.ok||!!NA.pend);
+const naOn=()=>NA.ok&&naEnabled();
+const naFor=tr=>naOn()&&!!tr&&tr.s!=="mock"&&!tr.blob&&!NA.webOnly.has(trackKey(tr));
+function naBoot(){
+ if(NA.ok||NA.pend||!TAURI||!window.MWNative||!naEnabled())return NA.pend;
+ NA.pend=inv("audio_caps").then(async c=>{
+  NA.caps=c||null;
+  if(!c||!c.ok){console.warn("[meowave] native audio engine unavailable:",c?.why||c);return}
+  const el=new MWNative.NativeAudio();
+  await el.subscribe();
+  NA.el=el;NA.dev=c.dev||null;NA.ok=true;
+  wireAudio(el);
+  el.addEventListener("unsupported",e=>naUnsupported(e.detail?.msg));
+  el.addEventListener("devicechange",()=>{NA.dev=el.dev;naPaintDev()});
+  el.addEventListener("devicelost",e=>{NA.dev=null;naPaintDev();console.warn("[meowave] output device lost:",e.detail?.msg)});
+  el.set({...naParams(),rate:Math.max(.5,Math.min(1.5,S.rate||1)),norm:1,normTau:0});
+ }).catch(e=>{NA.ok=false;console.warn("[meowave] native audio engine:",e)})
+  .finally(()=>{NA.pend=null;naPaintDev()});
+ return NA.pend}
+/* The chain's settings, all of them, from S: cheap to send whole, and the
+   engine only glides what changed. */
+function naParams(){
+ const R=S.x;
+ return {pre:S.eqMode==="track"?Math.pow(10,(S.preamp||0)/20):1,
+  eq:FREQ.map((_,i)=>Number.isFinite(S.eq[i])?S.eq[i]:0),
+  vol:S.muted?0:Math.max(0,Math.min(1,S.vol??0.8)),
+  boost:Math.max(1,Math.min(3,S.boost||1)),lim:limNeed(),
+  sp:{on:!!S.sp.on,speed:+S.sp.speed||.1,rad:+S.sp.rad||0,elev:+S.sp.elev||0},
+  rv:{on:!!R.rvOn&&R.rvMix>0,mix:Math.max(0,Math.min(1,(+R.rvMix||0)/100)),size:Math.max(.3,+R.rvSize||2.4),tone:+R.rvTone||0,pre:+R.rvPre||0}}}
+let naQueued=false;
+/* Every apply*() calls this; one message per task however many changed. */
+function naSync(){
+ if(!NA.ok||naQueued)return;naQueued=true;
+ queueMicrotask(()=>{naQueued=false;if(NA.ok)NA.el.set(naParams())})}
+/* The element of the engine for the track about to load; the other one is
+   stopped, so the two never play over each other. */
+function useEngine(nat){
+ const el=nat?NA.el:webAudioEl();
+ if(A.audio!==el){
+  const old=A.audio;A.audio=el;
+  if(old){
+   A.transitioning=true;
+   try{old.pause()}catch(_){}
+   try{old.removeAttribute("src");if(!old.isNative)old.load()}catch(_){}
+   A.transitioning=false}}
+ NA.active=!!nat;
+ if(nat){A.an=el.an;A.data=NA.data}
+ else{initAudio(true);if(A.webAn){A.an=A.webAn;A.data=A.webData}}
+ naState();
+ return el}
+/* The engine could not open this file (Opus, HE-AAC): the webview plays it,
+   from where it was, and keeps doing so for this track. */
+function naUnsupported(msg){
+ const tr=S.current;if(!tr||!NA.active)return;
+ console.warn(`[meowave] the native engine cannot decode "${tr.t}" (${msg||"?"}); playing it through the webview`);
+ NA.webOnly.add(trackKey(tr));
+ const pos=NA.el.currentTime||0;
+ load(tr,S.playing||A.started,pos>1?pos:0)}
+/* While the native engine plays: the silent element that keeps the system
+   media controls alive, and the spectrum stream for the visuals (only while
+   it can be seen). */
+function naState(){
+ if(!NA.ok)return;
+ const on=NA.active&&S.playing;
+ window.MWNative?.keepAlive?.(on);
+ const viz=on&&!document.hidden;
+ if(viz!==NA.viz){NA.viz=viz;NA.el.set({viz})}}
+document.addEventListener("visibilitychange",()=>naState());
+function naPaintDev(){
+ const el=document.getElementById("eng-dev");if(!el)return;
+ const ru=LANG==="ru";
+ if(!TAURI){el.textContent="";return}
+ if(!naEnabled()){el.textContent=ru?"Звук идёт через WebView":"Sound plays through the WebView";return}
+ if(NA.pend){el.textContent=ru?"Запускается…":"Starting…";return}
+ if(!NA.ok){el.textContent=(ru?"Недоступен — звук идёт через WebView":"Unavailable — sound plays through the WebView")+(NA.caps?.why?` (${NA.caps.why})`:"");return}
+ const d=NA.dev;
+ el.textContent=d?`${d.name} · ${Math.round(d.sr/100)/10} ${ru?"кГц":"kHz"} · ${d.ch} ${ru?"кан.":"ch"}`:(ru?"Устройство вывода не найдено":"No output device")}
+/* Exactly one <audio> element for the whole app: the web engine's. The native
+   engine (naudio.js) has a stand-in with the same surface; A.audio is
+   whichever of the two plays the current track (useEngine). */
+function webAudioEl(){
+ if(A.webEl)return A.webEl;
+ const au=A.webEl=document.createElement("audio");
  au.id="meowave-audio";au.style.display="none";
  if(!document.body.contains(au))document.body.appendChild(au);
  au.crossOrigin="anonymous";au.preload="auto";au.autoplay=true;
- au.addEventListener("loadedmetadata",()=>A.onMeta?.());
- au.addEventListener("durationchange",()=>A.onMeta?.());
- au.addEventListener("canplay",()=>{if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}A.onMeta?.();applyRate()});
- au.addEventListener("timeupdate",()=>A.onTime?.());
- au.addEventListener("seeking",()=>{/* seek initiated */});
- au.addEventListener("seeked",()=>{A.pendingSeek=null;A.seekingUntil=0;if(RMX)roomNoteSeek();if(CLIP.pace)clipPace()});
- au.addEventListener("ended",()=>A.onEnd?.());
- au.addEventListener("error",()=>A.onErr?.());
+ wireAudio(au);
+ if(A.ctx&&!A.media){
+  try{
+   A.media=A.ctx.createMediaElementSource(au);
+   A.media.connect(A.pre||A.bands[0]);
+  }catch(e){console.warn("[meowave] createMediaElementSource in webAudioEl:",e)}
+ }
+ return au}
+function ensureAudioEl(){
+ if(!A.audio)A.audio=webAudioEl();
+ return A.audio}
+/* The player's media events, the same for both engines. An element that is
+   not the current engine's (the one just switched away from) is ignored: its
+   late "pause" would otherwise stop the track that replaced it. */
+function wireAudio(au){
+ const on=(type,fn)=>au.addEventListener(type,e=>{if(A.audio===au)fn(e)});
+ on("loadedmetadata",()=>A.onMeta?.());
+ on("durationchange",()=>A.onMeta?.());
+ on("canplay",()=>{if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}A.onMeta?.();applyRate()});
+ on("timeupdate",()=>A.onTime?.());
+ on("seeking",()=>{/* seek initiated */});
+ au.addEventListener("seeked",()=>{if(A.audio!==au)return;A.pendingSeek=null;A.seekingUntil=0;if(RMX)roomNoteSeek();if(CLIP.pace)clipPace()});
+ on("ended",()=>A.onEnd?.());
+ on("error",()=>A.onErr?.());
  /* The media load algorithm resets playbackRate to defaultPlaybackRate, and it
     runs again on every src swap. Re-asserting the rate once the new resource is
     actually ready is what stops slowed/nightcore reverting to 1x on skip. */
-  au.addEventListener("loadedmetadata",()=>applyRate());
+  on("loadedmetadata",()=>applyRate());
   /* WebKitGTK re-clamps the rate when playback actually starts, not only on
      load — the speed slider "did nothing" exactly there. Re-assert on both
      transport events. */
-  au.addEventListener("play",()=>applyRate());
-  au.addEventListener("playing",()=>{
+  on("play",()=>applyRate());
+  on("playing",()=>{
     if(A.watchdog){clearTimeout(A.watchdog);A.watchdog=null}
     /* First sound of a new track: soft-transition fade-in; later "playing"
        events are resumes (from anywhere), which must undo a pause fade. */
     if(A.fadeGen!==A.gen){A.fadeGen=A.gen;transStart()}else fadeResume();
     applyRate();S.playing=true;sync();
   });
-  au.addEventListener("stalled",()=>{
+  on("stalled",()=>{
     if(S.playing&&!au.ended){
       if(au.paused)au.play().catch(()=>{});
     }
   });
-  au.addEventListener("waiting",()=>{
+  on("waiting",()=>{
     if(S.playing&&!au.ended){
       if(au.paused)au.play().catch(()=>{});
       /* A stream that keeps "waiting" for 12 s mid-track is dead (expired
@@ -804,18 +912,12 @@ function ensureAudioEl(){
       },12000);
     }
   });
-  au.addEventListener("playing",()=>clearTimeout(A.stallTimer));
-  au.addEventListener("timeupdate",()=>{if(A.stallTimer&&au.readyState>=3){clearTimeout(A.stallTimer);A.stallTimer=0}});
- au.addEventListener("pause",()=>{if(!au.ended&&!A.transitioning){S.playing=false;sync()}});
- if(A.ctx&&!A.media){
-  try{
-   A.media=A.ctx.createMediaElementSource(au);
-   A.media.connect(A.pre||A.bands[0]);
-  }catch(e){console.warn("[meowave] createMediaElementSource in ensureAudioEl:",e)}
- }
- return au}
+  on("playing",()=>clearTimeout(A.stallTimer));
+  on("timeupdate",()=>{if(A.stallTimer&&au.readyState>=3){clearTimeout(A.stallTimer);A.stallTimer=0}});
+ on("pause",()=>{if(!au.ended&&!A.transitioning){S.playing=false;sync()}});
+}
 function unlockAudio(){
- if(!A.ctx)initAudio();
+ if(!A.ctx)initAudio();/* a no-op while the native engine is in use */
  if(A.ctx&&A.ctx.state==="suspended"){
   A.ctx.resume().then(()=>{applyEQ();applySpatial();applyBoost();}).catch(()=>{});
  }
@@ -863,8 +965,13 @@ function loop(ctx,root){
   const sw=.6+.4*Math.sin(tt*.8);L[i]+=v*sw;R[i]+=v*sw*.92}
  for(let i=0;i<len;i++){L[i]=Math.tanh(L[i]*1.1)*.85;R[i]=Math.tanh(R[i]*1.1)*.85}
  return b}
-function initAudio(){
- if(A.ctx)return;const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+/* The web engine's graph. Built only when a track plays through the webview:
+   with the native engine on, every click used to create an AudioContext the
+   app then never used (force: a track needs the web engine right now). */
+function initAudio(force){
+ if(A.ctx)return;
+ if(!force&&naWanted())return;
+ const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
  const ctx=new C();A.ctx=ctx;
  A.bands=FREQ.map((f,i)=>{const b=ctx.createBiquadFilter();
   b.type=i===0?"lowshelf":i===FREQ.length-1?"highshelf":"peaking";b.frequency.value=f;b.Q.value=1.05;b.gain.value=S.eq[i];return b});
@@ -878,7 +985,7 @@ function initAudio(){
  A.pan=ctx.createPanner();A.pan.panningModel="HRTF";A.pan.distanceModel="inverse";
  A.pan.refDistance=1;A.pan.maxDistance=12;A.pan.rolloffFactor=.6;
  A.dry=ctx.createGain();A.wet=ctx.createGain();A.byp=ctx.createGain();
- A.gain=ctx.createGain();A.an=ctx.createAnalyser();A.an.fftSize=512;A.an.smoothingTimeConstant=.84;
+ A.gain=ctx.createGain();const an=A.webAn=ctx.createAnalyser();an.fftSize=512;an.smoothingTimeConstant=.84;
  /* Boost stage. The volume slider alone cannot exceed 1.0, so quiet masters
     stayed quiet. A separate gain node can, but raw amplification clips hard,
     so it feeds a compressor acting as a limiter: loudness rises, the peaks
@@ -887,7 +994,8 @@ function initAudio(){
  A.lim=ctx.createDynamicsCompressor();
  A.lim.threshold.value=-1.5;A.lim.knee.value=0;A.lim.ratio.value=20;
  A.lim.attack.value=.003;A.lim.release.value=.25;
- A.data=new Uint8Array(A.an.frequencyBinCount);
+ A.webData=new Uint8Array(an.frequencyBinCount);
+ if(!NA.active){A.an=an;A.data=A.webData}
  A.air=ctx.createBiquadFilter();A.air.type="lowpass";A.air.frequency.value=20000;A.air.Q.value=.5;
  /* Room reverb — regenerated when the mode changes so the IR always matches. */
  A.spatialRoom="hall";A.conv=ctx.createConvolver();A.conv.buffer=ir(ctx,A.spatialRoom);
@@ -908,12 +1016,12 @@ function initAudio(){
     worse" was this node. It now sits on a parallel path that is only faded in
     when something can actually push the signal past full scale. */
  A.limWet=ctx.createGain();A.limDry=ctx.createGain();A.limWet.gain.value=0;A.limDry.gain.value=1;
- A.boost.connect(A.lim);A.lim.connect(A.limWet);A.limWet.connect(A.an);
- A.boost.connect(A.limDry);A.limDry.connect(A.an);
- A.an.connect(ctx.destination);
+ A.boost.connect(A.lim);A.lim.connect(A.limWet);A.limWet.connect(an);
+ A.boost.connect(A.limDry);A.limDry.connect(an);
+ an.connect(ctx.destination);
  if(ctx.listener.positionZ){ctx.listener.positionX.value=0;ctx.listener.positionY.value=0;ctx.listener.positionZ.value=0}
  A.gain.gain.value=S.muted?0:(S.vol??0.8);
- const au=ensureAudioEl();
+ const au=webAudioEl();
  if(!A.media){
   try{
    A.media=ctx.createMediaElementSource(au);
@@ -939,12 +1047,19 @@ function load(tr,auto,resumePos=0){
  /* Spotify is metadata only: find the sound elsewhere (see sprResolve) —
     unless it was downloaded, then the file is the sound. */
  if(tr.s==="sp"&&!offId(tr)){sprPlay(tr,auto,resumePos);return}
- initAudio();
- if(A.ctx&&A.ctx.state==="suspended"){A.ctx.resume().catch(()=>{})}
- /* Stop a generated source (test tone); the <audio> element keeps living. */
- if(A.src&&A.src!==A.audio){try{A.src.stop()}catch(e){}try{A.src.disconnect()}catch(e){}A.src=null}
+ /* The native engine is still starting (the first track of a session): the
+    track waits for it instead of starting on the other engine. */
+ if(NA.pend){NA.pend.then(()=>{if(sameTrack(tr,S.current))load(tr,auto,resumePos)});return}
+ let nat=naFor(tr);
+ if(!nat)initAudio(true);
+ if(!nat&&A.ctx&&A.ctx.state==="suspended"){A.ctx.resume().catch(()=>{})}
+ /* Stop a generated source (test tone); the media elements keep living. */
+ if(A.src&&typeof A.src.stop==="function"){try{A.src.stop()}catch(e){}try{A.src.disconnect()}catch(e){}A.src=null}
  if(tr?.mode!=="empty"&&tr?.s!=="mock"){
-  const url=streamUrl(tr)||tr.url||"";
+  let url=streamUrl(tr,nat)||tr.url||"";
+  /* The engine reads through the local proxy only (never a direct URL past
+     the user's proxy settings); anything else plays in the webview. */
+  if(nat&&url&&!/^http:\/\/127\.0\.0\.1:\d+\//.test(url)){nat=false;initAudio(true);url=streamUrl(tr,false)||tr.url||""}
   if(!url){/* the proxy port is unknown yet; without it src is empty and <audio> is mute */
    ensureStreamPort().then(p=>{
     if(!sameTrack(tr,S.current))return;
@@ -954,10 +1069,12 @@ function load(tr,auto,resumePos=0){
      S.playing=false;sync();toast(t("load.err"))}});
    return}
 
-  const au=ensureAudioEl();
+  const au=useEngine(nat);
   const gen=++A.gen;
   A.transitioning=true;
   au.pause();
+  /* The native engine opens the file right at the resume point. */
+  if(au.isNative)au.startAt=resumePos>0?resumePos:0;
   /* A reload mid-track (a dropped stream, a source that changed under the
      player — the proxy's 409) asks for a fresh URL, so nothing between here
      and the proxy can hand back bytes of the previous file. */
@@ -966,6 +1083,11 @@ function load(tr,auto,resumePos=0){
   applyRate();
   updateMediaSession(tr);
   A.src=au;A.lastPos=0;
+  /* The resume point is sought once. onMeta also runs on every canplay and
+     durationchange — after each buffering pause — and seeking there again
+     threw playback back to the resume point minutes later (or, on a stream
+     that cannot seek, round and round). */
+  let resumeDone=!(resumePos>0);
   A.onMeta=()=>{
    if(gen!==A.gen)return;
    const metaDur=au.duration;
@@ -995,12 +1117,15 @@ function load(tr,auto,resumePos=0){
    renderNP();paint();
    lyricsDurCheck();
    if(fp.dataset.open==="true")renderFP();
-   if(resumePos&&resumePos>0&&resumePos<(S.dur||au.duration||9999)){
-    try{
-     A.pendingSeek=resumePos;
-     A.seekingUntil=Date.now()+800;
-     au.currentTime=resumePos;
-    }catch(_){}
+   if(!resumeDone&&resumePos<(S.dur||au.duration||9999)){
+    resumeDone=true;
+    /* The native engine opened the file right there already. */
+    if(Math.abs(au.currentTime-resumePos)>=.5){
+     try{
+      A.pendingSeek=resumePos;
+      A.seekingUntil=Date.now()+800;
+      au.currentTime=resumePos;
+     }catch(_){}}
    }
   };
   A.onTime=()=>{
@@ -1084,6 +1209,11 @@ function load(tr,auto,resumePos=0){
    /* A downloaded file that will not open (moved, deleted, damaged): the
       service still has the track. */
    if(offFailed(tr,url)){toast(t("off.gone"),4200);load(tr,wasPlaying,pos);return}
+   /* The native engine could not decode what arrived: the webview may. And
+      a file the service swapped under the stream (the proxy's 409) is
+      simply opened again. */
+   if(au.isNative&&au.error?.code===3){NA.webOnly.add(trackKey(tr));load(tr,wasPlaying,pos);return}
+   if(au.isNative&&au.error?.kind==="changed"&&tryResumeStream(tr,pos,wasPlaying))return;
    /* Mid-track every code means the same thing — the bytes stopped — and
       WebKitGTK reports a refused range (the proxy's 409 "source changed") as
       code 4. Only at the very start can 4 mean an unplayable format. */
@@ -1125,7 +1255,7 @@ function load(tr,auto,resumePos=0){
      A.watchdog=setTimeout(dog,1500);return}
     if(el.currentTime===0&&el.readyState<2){
      console.warn(`[meowave] playback watchdog fired for "${tr.t}" (svc: ${tr.s})`);
-     if(tr.s==="ytm"&&!codecRetry){
+     if(tr.s==="ytm"&&!codecRetry&&!el.isNative){
       const alt=ytmFmt(tr)==="mp4"?"webm":"mp4";
       if(alt==="webm"?CAN.webm:CAN.mp4){
        codecRetry={key:trackKey(tr),fmt:alt};
@@ -1143,11 +1273,14 @@ function load(tr,auto,resumePos=0){
    A.watchdog=setTimeout(dog,5000);
   }
   return}
+ if(!A.ctx)return;
+ {const el=useEngine(false);A.transitioning=true;el.pause();A.transitioning=false}
  const b=A.ctx.createBufferSource();b.buffer=loop(A.ctx,tr.root||1);b.loop=true;b.connect(A.bands[0]);A.src=b;
  if(auto){A.ctx.resume();b.start();A.started=true}}
 /* EQ including preamp. When mode is "global" the preamp is fixed at 1 and only
    the bands move; when "track" the preamp belongs to the preset too. */
 function applyEQ(){
+ naSync();
  if(!A.ctx)return;
  limRoute();
  if(A.ctx.state==="suspended"&&S.playing){A.ctx.resume().catch(()=>{})}
@@ -1210,15 +1343,19 @@ function applyRate(){
 /* Extra loudness above the volume slider's ceiling, limited so it cannot clip. */
 /* Boost, a levelling gain above unity, the 3D mix and the reverb send can
    all clip; plain playback cannot, so it bypasses the limiter entirely. */
-function limRoute(){
- if(!A.ctx||!A.limWet)return;
+function limNeed(){
  const nb=!!S.x.norm&&NORM.db!=null&&(NORM_TARGET-NORM.db)>.1;
- const need=(S.boost||1)>1.001||nb||!!S.sp.on||(!!S.x.rvOn&&S.x.rvMix>0)||(S.eq||[]).some(g=>g>0.5)||(S.eqMode==="track"&&(S.preamp||0)>0);
+ return (S.boost||1)>1.001||nb||!!S.sp.on||(!!S.x.rvOn&&S.x.rvMix>0)||(S.eq||[]).some(g=>g>0.5)||(S.eqMode==="track"&&(S.preamp||0)>0)}
+function limRoute(){
+ naSync();
+ if(!A.ctx||!A.limWet)return;
+ const need=limNeed();
  if(A.limOn===need)return;A.limOn=need;
  const n=A.ctx.currentTime;
  A.limWet.gain.setTargetAtTime(need?1:0,n,.04);
  A.limDry.gain.setTargetAtTime(need?0:1,n,.04)}
 function applyBoost(){
+ naSync();
  const b=Math.max(1,Math.min(3,S.boost||1));
  if(A.boost&&A.ctx)try{A.boost.gain.setValueAtTime(b,A.ctx.currentTime)}catch(_){A.boost.gain.value=b}
  limRoute();
@@ -1236,16 +1373,19 @@ function spatialWire(on){
   for(const [a,b] of [[A.out,A.pan],[A.pan,A.air],[A.air,A.dry],[A.air,A.conv],[A.conv,A.wet]])try{a.disconnect(b)}catch(_){}
   A.spWired=false},450)}
 function applySpatial(){
- if(!A.ctx)return;const on=S.sp.on,n=A.ctx.currentTime;limRoute();spatialWire(on);
+ const on=!!S.sp.on;
+ document.getElementById("sp3d")?.setAttribute("aria-pressed",on);
+ document.getElementById("sp-on")?.setAttribute("aria-pressed",on);
+ naSync();
+ if(!A.ctx)return;const n=A.ctx.currentTime;limRoute();spatialWire(on);
  A.byp.gain.setTargetAtTime(on?0:1,n,.06);
  A.dry.gain.setTargetAtTime(on?.9:0,n,.06);
  A.wet.gain.setTargetAtTime(on?.15+.2*S.sp.rad:0,n,.06);
- document.getElementById("sp3d").setAttribute("aria-pressed",on);
- document.getElementById("sp-on").setAttribute("aria-pressed",on);
  if(!on){A.air.frequency.setTargetAtTime(20000,n,.1);
   if(A.pan.positionX){A.pan.positionX.setTargetAtTime(0,n,.1);A.pan.positionY.setTargetAtTime(0,n,.1);A.pan.positionZ.setTargetAtTime(-1,n,.1)}}}
 function orbit(dt){
- if(!A.ctx||!S.sp.on)return;
+ /* The native engine moves its own source, sample by sample. */
+ if(!A.ctx||!S.sp.on||NA.active)return;
  A.theta+=dt*S.sp.speed*Math.PI*2;
  const r=.6+S.sp.rad*3.4,th=A.theta;
  const x=Math.sin(th)*r, z=Math.cos(th)*r*.85, y=Math.sin(th*2)*r*.55*S.sp.elev;
@@ -3104,8 +3244,9 @@ async function spSourcePicker(btn){
      remembered per track so a replay starts at the right level;
    - a reverb send for the equaliser dock;
    - a sleep timer that fades out instead of cutting off. */
-const fadeOk=()=>!!(A.ctx&&A.fade&&A.media);
+const fadeOk=()=>NA.active||!!(A.ctx&&A.fade&&A.media);
 function fadeTo(v,sec){
+ if(NA.active){NA.fadeV=v;NA.el.set({fade:[v,Math.max(0,sec||0)]});return}
  if(!fadeOk())return;
  const g=A.fade.gain,t=A.ctx.currentTime;
  g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);
@@ -3121,7 +3262,7 @@ function fadeResume(sec){
  clearTimeout(fadePauseTimer);
  if(!fadeOk())return;
  if(!S.x.fadePP&&!(sec>0.3)){fadeTo(1,0);return}
- if(A.fade.gain.value>.98&&!(sec>0.3))return;
+ if((NA.active?NA.fadeV:A.fade.gain.value)>.98&&!(sec>0.3))return;
  fadeTo(1,sec||.28)}
 /* Soft transitions: called from timeupdate. */
 const TRANS={gen:-1,out:false,inNext:false};
@@ -3152,9 +3293,10 @@ function normSaveSoon(){clearTimeout(normSaveSoon.t);normSaveSoon.t=setTimeout((
  try{localStorage.setItem("mw.norm",JSON.stringify([...m]))}catch(_){}},4000)}
 const NORM_TARGET=-15;
 function normApply(sec){
- if(!A.ctx||!A.norm)return;
  let gdb=0;
  if(S.x.norm&&NORM.db!=null)gdb=Math.max(-12,Math.min(6,NORM_TARGET-NORM.db));
+ if(NA.ok)NA.el.set({norm:Math.pow(10,gdb/20),normTau:sec??1.2});
+ if(!A.ctx||!A.norm){limRoute();return}
  A.norm.gain.setTargetAtTime(Math.pow(10,gdb/20),A.ctx.currentTime,sec??1.2);limRoute()}
 function normTrack(tr){
  const k=trackKey(tr);if(NORM.key===k)return;
@@ -3162,12 +3304,17 @@ function normTrack(tr){
  const hit=normMap().get(k);NORM.db=hit??null;
  normApply(hit!=null?.05:.4)}
 function normTick(){
- if(!S.x.norm||!A.lvl||!S.playing)return;
+ if(!S.x.norm||!S.playing||(!NA.active&&!A.lvl))return;
  normTrack(S.current);
- const a=A.lvl;if(!NORM.buf||NORM.buf.length!==a.fftSize)NORM.buf=new Float32Array(a.fftSize);
- a.getFloatTimeDomainData(NORM.buf);
- let e=0;for(let i=0;i<NORM.buf.length;i++)e+=NORM.buf[i]*NORM.buf[i];
- const db=10*Math.log10(e/NORM.buf.length+1e-12);
+ let db;
+ /* The native engine measures the same thing — the mean square of the
+    equaliser output over 2048 samples — and reports it with the position. */
+ if(NA.active)db=NA.el.lv;
+ else{
+  const a=A.lvl;if(!NORM.buf||NORM.buf.length!==a.fftSize)NORM.buf=new Float32Array(a.fftSize);
+  a.getFloatTimeDomainData(NORM.buf);
+  let e=0;for(let i=0;i<NORM.buf.length;i++)e+=NORM.buf[i]*NORM.buf[i];
+  db=10*Math.log10(e/NORM.buf.length+1e-12)}
  /* Silence and fades say nothing about a track's loudness. */
  if(db<-45)return;
  NORM.n++;
@@ -3178,7 +3325,10 @@ function normTick(){
 function applyNorm(){
  clearInterval(NORM.timer);
  if(S.x.norm){NORM.timer=setInterval(normTick,250);NORM.key="";normTrack(S.current)}
- else if(A.norm&&A.ctx)A.norm.gain.setTargetAtTime(1,A.ctx.currentTime,.3)}
+ else{
+  if(NA.ok)NA.el.set({norm:1,normTau:.3});
+  if(A.norm&&A.ctx)A.norm.gain.setTargetAtTime(1,A.ctx.currentTime,.3);
+  limRoute()}}
 
 /* Reverb send: EQ output -> pre-delay -> convolver -> tone -> wet -> volume. */
 const RV_ROOMS={room:{size:.9,tone:62,pre:8},hall:{size:2.4,tone:52,pre:22},church:{size:4.8,tone:40,pre:34},plate:{size:1.6,tone:80,pre:0}};
@@ -3194,6 +3344,7 @@ function reverbIR(ctx,sec,tone){
    d[i]=i<ramp?y*i/ramp:y}}
  return b}
 function applyReverb(){
+ naSync();
  if(!A.ctx||!A.out)return;
  const R=S.x,ctx=A.ctx;
  if(!A.rvIn){
@@ -4241,7 +4392,7 @@ async function whisperPipe(onProgress){
    from the local proxy, so this is a same-origin fetch of bytes already on the
    machine or already in the proxy's cache. */
 async function trackPcm(tr){
- const url=streamUrl(tr)||tr.url;
+ const url=streamUrl(tr,false)||tr.url;
  if(!url)throw new Error("no stream url");
  const buf=await (await fetch(url)).arrayBuffer();
  const OfflineCtx=window.OfflineAudioContext||window.webkitOfflineAudioContext;
@@ -4620,8 +4771,12 @@ function prefetchNextSoon(pos){
  const k=trackKey(S.current);if(prefetchedFor===k)return;prefetchedFor=k;
  const nx=queue.find(x=>x&&x.mode!=="empty"&&!isDisliked(x)&&playOn(x.s));
  if(!nx||nx.s==="local"||nx.blob||offId(nx))return;
- const go=x=>inv("stream_prefetch",{service:x.s,id:String(x.id),hq:hqFlag(),fmt:x.s==="ytm"?ytmFmt(x):"best"}).catch(()=>{});
- if(nx.s==="sp")sprResolve(nx).then(rec=>{if(rec)go({s:rec.s,id:rec.id})}).catch(()=>{});
+ /* The native engine starts downloading the next file itself (which also
+    resolves it); the web engine only has the proxy resolve it ahead. */
+ const go=x=>{
+  if(naFor(x)){const u=streamUrl(x,true);if(u){NA.el.preloadUrl(u);return}}
+  inv("stream_prefetch",{service:x.s,id:String(x.id),hq:hqFlag(),fmt:x.s==="ytm"?ytmFmt(x):"best"}).catch(()=>{})};
+ if(nx.s==="sp")sprResolve(nx).then(rec=>{if(rec)go({...nx,s:rec.s,id:rec.id})}).catch(()=>{});
  else go(nx)}
 
 function stopAtEnd(){
@@ -4915,10 +5070,12 @@ function setVolume(v){
   mb.innerHTML=`<span class="material-symbols-rounded">${(S.muted||S.vol===0)?"volume_off":(S.vol<0.5?"volume_down":"volume_up")}</span>`;
  }
  if(A.gain)A.gain.gain.setTargetAtTime(S.muted?0:S.vol,A.ctx.currentTime,.02);
+ naSync();
  fpxVolume();
 }
 
 function sync(){
+  naState();
   /* Friends see play / pause within seconds, not at the next minute tick. */
   clearTimeout(sync.pt);sync.pt=setTimeout(()=>{if(typeof presBeat==="function")presBeat(false)},2500);
   const name=S.playing?"pause":"play";
@@ -6262,6 +6419,19 @@ function seg(id,fn){
   [...b.parentElement.children].forEach(x=>x.setAttribute("aria-pressed",x===b));fn(b.dataset.v,b);save()})}
 function setSeg(id,v){document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",b.dataset.v==String(v)))}
 seg("quality",v=>{S.quality=v;renderNP()});
+/* Sound engine (desktop). Switching moves the current track to the other
+   engine at the same moment, playing or paused as it was. */
+seg("engine",v=>{
+ S.x.engine=v==="web"?"web":"native";
+ const tr=S.current,playing=!!S.playing;
+ const pos=A.audio&&Number.isFinite(A.audio.currentTime)?A.audio.currentTime:(S.pos||0);
+ const again=()=>{
+  naPaintDev();
+  if(!tr||tr.mode==="empty"||!A.src||!sameTrack(tr,S.current)||naFor(tr)===NA.active)return;
+  load(tr,playing,pos>1?pos:0)};
+ const p=naEnabled()?naBoot():null;
+ naPaintDev();
+ if(p)p.then(again);else again()});
 /* Round 6, "remove all neon from the interface": the glow setting lights the
    background wave only (glFieldDraw / draw read S.glow); --glow, which gave
    buttons, avatars and lyrics their halos, stays 0. */
@@ -6800,7 +6970,8 @@ async function ensureStreamPort(){
 /* Three levels now: 0 smallest, 1 best lossy, 2 lossless. "lossless" only asks
    for 2 when this webview decodes FLAC — otherwise the proxy would fetch a
    file the player cannot open and the track would fall back anyway. */
-const hqFlag=()=>S.quality==="lossless"?(CAN.flac?2:1):(S.quality==="high"?1:0);
+/* The native engine decodes FLAC everywhere, whatever the webview can. */
+const hqFlag=()=>S.quality==="lossless"?((CAN.flac||naOn())?2:1):(S.quality==="high"?1:0);
 /* Which containers this webview can actually decode.
    A per-platform fact, and for YouTube Music it decides whether anything
    plays at all: the service hands out Opus-in-WebM by default, Chromium
@@ -6820,13 +6991,18 @@ let codecRetry=null;
 /* trackKey() is defined further down (per-track EQ); it is the same
    "service:id" identity everywhere, and it is only read from here at
    playback time — long after the script has finished evaluating. */
-function ytmFmt(tr){
+function ytmFmt(tr,nat){
+ /* The native engine: AAC-LC (itag 140) — it decodes neither Opus nor HE-AAC. */
+ if(tr&&(nat??naFor(tr)))return "aac";
  if(!tr||tr.s!=="ytm")return "best";
  if(codecRetry&&codecRetry.key!==trackKey(tr))codecRetry=null;
  if(codecRetry)return codecRetry.fmt;
  return CAN.webm?"webm":CAN.mp4?"mp4":"best";
 }
-function streamUrl(tr){
+/* nat: for the native engine (fmt=aac for every service: the proxy's rescues
+   through YouTube Music and Yandex must not pick Opus or HE-AAC either). */
+function streamUrl(tr,nat){
+ nat=nat??naFor(tr);
  /* HTML-picker files live in the page as a blob: the Rust proxy only knows
     disk paths, so handing it a loc_blob_* id answered "resolve failed" and the
     track never played. No blob means no proxy: callers fall back to tr.url. */
@@ -6836,7 +7012,7 @@ function streamUrl(tr){
     tracks (offId explains when it applies). */
  const off=offId(tr);
  if(off)return `http://127.0.0.1:${STREAM_PORT}/stream/local/${encodeURIComponent(off)}?k=${encodeURIComponent(STREAM_KEY)}&hq=${hqFlag()}`;
- const fmt=tr.s==="ytm"?`&fmt=${encodeURIComponent(ytmFmt(tr))}`:"";
+ const fmt=nat?"&fmt=aac":tr.s==="ytm"?`&fmt=${encodeURIComponent(ytmFmt(tr,false))}`:"";
  /* Title, artist and length ride along for YouTube: when YouTube refuses the
     track (its bot check behind VPNs), the proxy plays the same recording from
     Yandex Music or SoundCloud instead of failing. */
@@ -7025,7 +7201,7 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  /* Bytes arrived but this webview will not decode that container, and YouTube
     Music ships the other one too: swap and try exactly once before believing
     the track itself is broken. */
- if(tr?.s==="ytm"&&!codecRetry){
+ if(tr?.s==="ytm"&&!codecRetry&&!naFor(tr)){
   const cur=ytmFmt(tr);
   const alt=cur==="mp4"?"webm":"mp4";
   const playable=alt==="webm"?CAN.webm:CAN.mp4;
@@ -12095,6 +12271,10 @@ applyLite();
 document.documentElement.style.setProperty("--blur",S.blur+"px");
 build(innerWidth<900?Math.round(safeParticleDensity()*.45):safeParticleDensity());
 setSeg("theme",S.theme);setSeg("lang",LANG);setSeg("quality",S.quality);
+setSeg("engine",naEnabled()?"native":"web");
+/* The engine is desktop-only; the first track waits for it (load). */
+{const f=document.getElementById("eng-field");if(f)f.hidden=!TAURI}
+if(TAURI)naBoot();
 setSeg("dens",S.dens);setSeg("pspeed",S.pspeed);setSeg("glow",S.glow);setSeg("blur",S.blur);
 coverBgPrefs();coverBgUI();
 document.getElementById("vol").value=Math.round(S.vol*100);

@@ -97,12 +97,12 @@ fn probe(query: &str) {
                     }
                     if let Some(first) = tracks.first() {
                         let url = match service {
-                            "sc" => api::sc_stream_url(&token, &first.id).await,
+                            "sc" => api::sc_stream_url(&token, &first.id, "best").await,
                             "ytm" => ytm::stream(&first.id, true, "best").await.map(|p| {
                                 println!("   format: {} @ {} bps", p.mime, p.bitrate);
                                 p.url
                             }),
-                            _ => api::ym_stream_url(&token, &first.id, true).await,
+                            _ => api::ym_stream_url(&token, &first.id, true, "best").await,
                         };
                         match url {
                             Ok(u) => println!("   stream OK: {}…", &u[..60.min(u.len())]),

@@ -40,8 +40,12 @@ pub struct Marker {
 
 pub enum Cmd {
     Open { gen: u64, pcm: Arc<Pcm>, at: f64, play: bool },
-    Play,
-    Pause,
+    /// Play / pause with the ramp length in ms. The `want` flag the device
+    /// callback reads is only ever set here, on the render thread, in command
+    /// order: set from the IPC thread, a "play" could land before the "open
+    /// paused" queued ahead of it and be undone by it.
+    Play(u32),
+    Pause(u32),
     Seek { gen: u64, t: f64 },
     Stop,
     Set(Box<Set>),
@@ -85,6 +89,10 @@ pub struct Hub {
     pub dev: Mutex<Option<(String, u32, u16, String)>>,
     pub dev_seen: AtomicBool,
     note: Mutex<Sender<Note>>,
+    /// The newest play / pause / open the page has sent (see `Engine::fresh`).
+    op: AtomicU64,
+    /// Whether the page's latest word was "play".
+    req_play: AtomicBool,
 }
 
 impl Hub {
@@ -286,7 +294,9 @@ impl Render {
                 self.reset_markers(at);
                 self.resume_at = None;
             }
-            Cmd::Play => {
+            Cmd::Play(ramp) => {
+                self.out.ramp_ms.store(ramp, Ordering::Relaxed);
+                self.out.want.store(true, Ordering::Release);
                 if let Some(tr) = self.tr.as_mut() {
                     if !tr.waiting && tr.started {
                         self.hub.note(Note::Playing { gen: tr.gen });
@@ -295,7 +305,10 @@ impl Render {
                     }
                 }
             }
-            Cmd::Pause => {}
+            Cmd::Pause(ramp) => {
+                self.out.ramp_ms.store(ramp, Ordering::Relaxed);
+                self.out.want.store(false, Ordering::Release);
+            }
             Cmd::Seek { gen, t } => {
                 if self.tr.as_ref().is_some_and(|tr| tr.gen == gen) {
                     self.seek_to(t, true);
@@ -696,6 +709,8 @@ fn new_hub(out: Arc<Out>, ntx: Sender<Note>) -> Arc<Hub> {
         dev: Mutex::new(None),
         dev_seen: AtomicBool::new(false),
         note: Mutex::new(ntx),
+        op: AtomicU64::new(0),
+        req_play: AtomicBool::new(false),
     })
 }
 
@@ -783,7 +798,22 @@ impl Engine {
         }
     }
 
-    pub fn open(&self, url: String, gen: u64, at: f64, play: bool) {
+    /// IPC calls are not guaranteed to arrive in the order the page made
+    /// them, so play / pause / open carry a counter: one older than the newest
+    /// seen is stale and dropped.
+    fn fresh(&self, op: Option<u64>) -> bool {
+        op.is_none_or(|o| self.hub.op.fetch_max(o, Ordering::AcqRel) < o)
+    }
+
+    pub fn open(&self, url: String, gen: u64, at: f64, play: bool, op: Option<u64>) {
+        // A stale open still opens (it is the newest track), but plays or
+        // not as the page last asked.
+        let play = if self.fresh(op) {
+            self.hub.req_play.store(play, Ordering::Release);
+            play
+        } else {
+            self.hub.req_play.load(Ordering::Acquire)
+        };
         let pre = {
             let mut p = self.preload.lock().unwrap();
             p.iter().position(|(u, _)| *u == url).and_then(|i| p.remove(i)).map(|(_, s)| s)
@@ -792,16 +822,18 @@ impl Engine {
         self.cmd(Cmd::Open { gen, pcm, at: at.max(0.0), play });
     }
 
-    pub fn play(&self, fade: f64) {
-        self.hub.out.ramp_ms.store((fade * 1000.0).clamp(4.0, 2000.0) as u32, Ordering::Relaxed);
-        self.hub.out.want.store(true, Ordering::Release);
-        self.cmd(Cmd::Play);
+    pub fn play(&self, fade: f64, op: Option<u64>) {
+        if self.fresh(op) {
+            self.hub.req_play.store(true, Ordering::Release);
+            self.cmd(Cmd::Play(ramp_ms(fade)));
+        }
     }
 
-    pub fn pause(&self, fade: f64) {
-        self.hub.out.ramp_ms.store((fade * 1000.0).clamp(4.0, 2000.0) as u32, Ordering::Relaxed);
-        self.hub.out.want.store(false, Ordering::Release);
-        self.cmd(Cmd::Pause);
+    pub fn pause(&self, fade: f64, op: Option<u64>) {
+        if self.fresh(op) {
+            self.hub.req_play.store(false, Ordering::Release);
+            self.cmd(Cmd::Pause(ramp_ms(fade)));
+        }
     }
 
     pub fn seek(&self, gen: u64, t: f64) {
@@ -858,6 +890,10 @@ impl Engine {
         v["sr"] = json!(c.sr);
         v
     }
+}
+
+fn ramp_ms(fade: f64) -> u32 {
+    (fade * 1000.0).clamp(4.0, 2000.0) as u32
 }
 
 /// The render thread works tens of milliseconds ahead, but on a busy

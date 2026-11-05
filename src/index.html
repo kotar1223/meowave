@@ -372,6 +372,12 @@
               <button data-v="high" aria-pressed="true" data-i18n="q.high">Высокое</button><button data-v="lossless">Lossless</button>
             </div>
           </div>
+          <div class="field" id="eng-field">
+            <div><label data-i18n="set.eng">Звуковой движок</label><small><span data-i18n="set.eng.s">Встроенный декодирует и выводит звук сам — без треска и провалов WebView</span> · <span id="eng-dev"></span></small></div>
+            <div class="seg" id="engine" role="group">
+              <button data-v="native" aria-pressed="true" data-i18n="set.eng.nat">Встроенный</button><button data-v="web" data-i18n="set.eng.web">WebView</button>
+            </div>
+          </div>
         </div>
         </div>
 
@@ -1184,6 +1190,7 @@
 
 <script src="./fx.js" defer></script>
 <script src="./e2e.js" defer></script>
+<script src="./naudio.js" defer></script>
 <script src="./app.js" defer></script>
 <script src="./m3.js" defer></script>
 <script src="./discover.js" defer></script>

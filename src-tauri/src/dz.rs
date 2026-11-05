@@ -284,7 +284,7 @@ pub async fn stream_match(i: &Info, hq: u8, fmt: &str) -> Result<String, String>
                             return Ok(u);
                         }
                     }
-                    if let Ok(u) = crate::api::ym_stream_url(&tok, &h.id, hq > 0).await {
+                    if let Ok(u) = crate::api::ym_stream_url(&tok, &h.id, hq > 0, fmt).await {
                         return Ok(u);
                     }
                 }
@@ -300,7 +300,7 @@ pub async fn stream_match(i: &Info, hq: u8, fmt: &str) -> Result<String, String>
     }
     if let Ok(hits) = crate::api::sc_search("", &q).await {
         if let Some(h) = crate::matching::best(&hits, &i.t, &i.a, i.d) {
-            if let Ok(u) = crate::api::sc_stream_url("", &h.id).await {
+            if let Ok(u) = crate::api::sc_stream_url("", &h.id, fmt).await {
                 return Ok(u);
             }
         }

@@ -175,6 +175,13 @@ enum UpstreamKind {
 /// A refused window is therefore asked again at a quarter of the size, down
 /// to `GV_MIN_WINDOW`, and the size that worked is kept for the session so the
 /// next track starts with it instead of failing over to another client first.
+///
+/// Kept only once it *worked* (round 10): a URL that serves just the first
+/// megabyte refuses a deep window of any size, and lowering the shared cap on
+/// every refusal left every later stream — other clients' good URLs included
+/// — crawling in 64 KB requests for ten minutes. A refusal now shrinks the
+/// window of that one stream; `gv_learn` lowers the cap after a smaller
+/// window came through.
 const GV_FIRST_WINDOW: u64 = 512 * 1024;
 const GV_WINDOW: u64 = 2 * 1024 * 1024;
 const GV_MIN_WINDOW: u64 = 64 * 1024;
@@ -206,20 +213,29 @@ fn gv_first_window() -> u64 {
     GV_FIRST_WINDOW.min(gv_window())
 }
 
-/// A window of `size` was refused: the next request asks for a quarter of it.
-/// Returns the new size, or `None` when it is already as small as it goes
-/// (the refusal is then about the URL, not the size).
+/// A window of `size` was refused: the next request of this stream asks for
+/// a quarter of it. Returns the new size, or `None` when it is already as
+/// small as it goes (the refusal is then about the URL, not the size).
 fn gv_shrink(size: u64) -> Option<u64> {
     if size <= GV_MIN_WINDOW {
         return None;
     }
     let next = (size / 4).max(GV_MIN_WINDOW);
-    let _ = GV_CAP.fetch_min(next, std::sync::atomic::Ordering::Relaxed);
+    eprintln!("[meowave] googlevideo refused a {} KB window, asking for {} KB", size / 1024, next / 1024);
+    Some(next)
+}
+
+/// A shrunk window of `size` came through where a larger one was refused:
+/// from now on streams start with it.
+fn gv_learn(size: u64) {
+    if size >= gv_window() {
+        return;
+    }
+    let _ = GV_CAP.fetch_min(size.max(GV_MIN_WINDOW), std::sync::atomic::Ordering::Relaxed);
     if let Ok(mut g) = GV_CAP_AT.lock() {
         *g = Some(std::time::Instant::now());
     }
-    eprintln!("[meowave] googlevideo refused a {} KB window, asking for {} KB", size / 1024, next / 1024);
-    Some(next)
+    eprintln!("[meowave] googlevideo serves {} KB windows here; keeping that size", size / 1024);
 }
 
 /// A body pulled in bounded windows: the last byte the caller wants and how
@@ -375,6 +391,7 @@ impl<'a> Upstream<'a> {
     /// A ranged GET from `offset`. At offset 0 a 200 is as good as a 206; past
     /// it only a 206 is, since a 200 would restart the file mid-stream.
     fn fetch_from(&mut self, url: &str, ua: Option<&str>, offset: u64) -> Result<reqwest::Response, u16> {
+        let mut shrunk = false;
         loop {
             let range = self.range_from(offset);
             let got = self.rt.block_on(async {
@@ -401,8 +418,14 @@ impl<'a> Upstream<'a> {
                 if let Some(w) = self.window.as_mut() {
                     if let Some(next) = gv_shrink(w.size) {
                         w.size = next;
+                        shrunk = true;
                         continue;
                     }
+                }
+            }
+            if shrunk && got.is_ok() {
+                if let Some(w) = self.window {
+                    gv_learn(w.size);
                 }
             }
             return got;
@@ -1464,6 +1487,8 @@ fn handle(
     let mut max_attempts: u8 = if service == "ytm" || service == "ytv" { 3 } else { 2 };
     let mut alt_tried = false;
     let mut attempt = 0u8;
+    // This stream's first window once a full-size one was refused.
+    let mut first_cap: Option<u64> = None;
     let (status, ctype, crange, clen, resp, secret, win) = loop {
         attempt += 1;
 
@@ -1474,7 +1499,7 @@ fn handle(
                 // The IP was just bot-checked: go elsewhere first, YouTube after.
                 if let Some(h) = alt_hint {
                     if crate::ytm::bot_checked_recently() {
-                        if let Ok(u) = ytm_alternative(&id, h, hq).await {
+                        if let Ok(u) = ytm_alternative(&id, h, hq, &fmt).await {
                             return Ok(u);
                         }
                     }
@@ -1482,7 +1507,7 @@ fn handle(
                 match resolve_pub(&service, &id, hq, &fmt).await {
                     Ok(u) => Ok(u),
                     Err(e) => match alt_hint {
-                        Some(h) => ytm_alternative(&id, h, hq).await.map_err(|e2| format!("{e}; {e2}")),
+                        Some(h) => ytm_alternative(&id, h, hq, &fmt).await.map_err(|e2| format!("{e}; {e2}")),
                         None => Err(e),
                     },
                 }
@@ -1510,7 +1535,7 @@ fn handle(
         // one of Google's own players, and only in bounded ranges.
         let is_google = (service == "ytm" && secret.alt.is_none()) || fetch_url.contains("googlevideo.com");
         // (start, caller's end, end of the first window)
-        let first = gv_first_window();
+        let first = first_cap.unwrap_or_else(gv_first_window);
         let win: Option<(u64, Option<u64>, u64)> = match (&want, is_google && !is_hls_url) {
             (None, true) => Some((0, None, first - 1)),
             (Some(Some((s, e))), true) => Some((*s, *e, (s + first - 1).min(e.unwrap_or(u64::MAX)))),
@@ -1557,9 +1582,15 @@ fn handle(
                 }
                 // The first window refused while smaller ranges of the same
                 // URL pass: shrink it and ask again, the URL is fine.
-                if status == 403 && win.is_some() && gv_shrink(first).is_some() {
-                    max_attempts = max_attempts.saturating_add(1);
-                    continue;
+                if status == 403 && win.is_some() {
+                    if let Some(next) = gv_shrink(first) {
+                        first_cap = Some(next);
+                        max_attempts = max_attempts.saturating_add(1);
+                        continue;
+                    }
+                }
+                if status == 206 && first_cap.is_some() {
+                    gv_learn(first);
                 }
                 if status >= 400 {
                     cache_drop(&cache_key);
@@ -1577,7 +1608,7 @@ fn handle(
                     if service == "ytm" && alt_ok && !alt_tried && secret.alt.is_none() {
                         if let Some(h) = &hint {
                             alt_tried = true;
-                            if let Ok(u) = rt.block_on(ytm_alternative(&id, h, hq)) {
+                            if let Ok(u) = rt.block_on(ytm_alternative(&id, h, hq, &fmt)) {
                                 cache_put(cache_key.clone(), u);
                                 max_attempts += 1;
                                 continue;
@@ -2058,7 +2089,7 @@ fn with_frag(url: String, kv: &str) -> String {
 /// Strict matching only (`matching::best`): another song is worse than an
 /// honest error. Yandex first when connected — it streams in the quality the
 /// user picked — then SoundCloud.
-pub(crate) async fn ytm_alternative(video_id: &str, h: &Hint, hq: u8) -> Result<String, String> {
+pub(crate) async fn ytm_alternative(video_id: &str, h: &Hint, hq: u8, fmt: &str) -> Result<String, String> {
     if h.t.trim().is_empty() {
         return Err("no title to look for".into());
     }
@@ -2070,7 +2101,7 @@ pub(crate) async fn ytm_alternative(video_id: &str, h: &Hint, hq: u8) -> Result<
                     let lossless = if hq == 2 { crate::api::ym_lossless_url(&tok, &m.id).await.ok() } else { None };
                     let url = match lossless {
                         Some(u) => Ok(u),
-                        None => crate::api::ym_stream_url(&tok, &m.id, hq > 0).await,
+                        None => crate::api::ym_stream_url(&tok, &m.id, hq > 0, fmt).await,
                     };
                     if let Ok(u) = url {
                         note_alt(video_id, serde_json::json!({"s": "ym", "id": m.id, "t": m.t, "a": m.a}));
@@ -2082,7 +2113,7 @@ pub(crate) async fn ytm_alternative(video_id: &str, h: &Hint, hq: u8) -> Result<
     }
     if let Ok(hits) = crate::api::sc_search("", &q).await {
         if let Some(m) = crate::matching::best(&hits, &h.t, &h.a, h.d) {
-            if let Ok(u) = crate::api::sc_stream_url("", &m.id).await {
+            if let Ok(u) = crate::api::sc_stream_url("", &m.id, fmt).await {
                 note_alt(video_id, serde_json::json!({"s": "sc", "id": m.id, "t": m.t, "a": m.a}));
                 return Ok(with_frag(u, "mwalt=sc"));
             }
@@ -2108,11 +2139,11 @@ pub(crate) async fn resolve_pub(service: &str, id: &str, hq: u8, fmt: &str) -> R
                 // No subscription, a rotated key, a region without lossless:
                 // the 320 kbps file still plays.
                 eprintln!("[meowave] lossless for ym/{id} unavailable, falling back: {e}");
-                crate::api::ym_stream_url(&token, id, true).await
+                crate::api::ym_stream_url(&token, id, true, fmt).await
             }
         },
-        "ym" => crate::api::ym_stream_url(&token, id, hq > 0).await,
-        "sc" => crate::api::sc_stream_url(&token, id).await,
+        "ym" => crate::api::ym_stream_url(&token, id, hq > 0, fmt).await,
+        "sc" => crate::api::sc_stream_url(&token, id, fmt).await,
         "ytm" => crate::ytm::stream(id, hq > 0, fmt)
             .await
             .map(|p| format!("{}#mwua={}", p.url, p.client)),
@@ -2905,7 +2936,7 @@ mod live_sc {
         let id = std::env::var("MW_SC").unwrap_or_else(|_| "2152309329".into());
         let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
         let t0 = std::time::Instant::now();
-        let u = rt.block_on(crate::api::sc_stream_url("", &id));
+        let u = rt.block_on(crate::api::sc_stream_url("", &id, "best"));
         println!("resolve {:?}: {:?}", t0.elapsed(), u.as_ref().map(|u| u.split('?').next().unwrap_or("").to_string()));
         let port = super::spawn().unwrap();
         let tok = super::token();
