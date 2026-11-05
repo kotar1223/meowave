@@ -14,7 +14,7 @@
    text / music_card / listen_party_invite (+ image) — so moving to
    quasar.chat later swaps the transport functions, not the UI.
 
-   Encryption (e2e.js): the payload is sealed on this device for every device
+   Encryption (src/ts/e2e.ts): the payload is sealed on this device for every device
    of every participant; public.messages keeps ciphertext and wrapped keys.
    When someone in the conversation has no registered device yet (an older
    app), the message goes out unsealed as before, and the chat says so with an

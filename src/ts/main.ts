@@ -6,6 +6,7 @@
    right after the last classic script (src/ready.js). Order of the starts
    is the order the old scripts had on the page. */
 import "./naudio";
+import "./e2e";
 import { afterLegacy } from "./legacy";
 import { initSearch } from "./search";
 import { initChat } from "./chat";

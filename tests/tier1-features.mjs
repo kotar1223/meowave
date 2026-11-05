@@ -838,13 +838,19 @@ export function buildTier1Suite() {
     assert.doesNotMatch(html, /data-ptab="chats"/, "the broken People › Chats tab must not come back");
     assert.match(js, /extraTabs = \[[^\]]*"chats"/, "chats belongs to the extra rail group");
   });
-  suite.test("F26-02: [Happy Path] e2e.js loads before app.js and messenger.js after it", () => {
+  suite.test("F26-02: [Happy Path] The encryption module is there before the messenger needs it; messenger.js loads after app.js", () => {
+    // src/ts/e2e.ts (was the classic e2e.js) waits for nothing: main.ts imports it, so window.MWE2E is set
+    // while the module graph runs — before DOMContentLoaded, long before messenger.js seals anything.
     const order = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
-    assert.ok(order.indexOf("e2e") > -1 && order.indexOf("e2e") < order.indexOf("app"));
+    assert.equal(order.indexOf("e2e"), -1, "e2e.js moved to src/ts/e2e.ts — no classic copy may come back");
+    assert.match(readSrc("src/ts/main.ts"), /^import "\.\/e2e";$/m);
+    const mod = readSrc("src/ts/e2e.ts");
+    assert.match(mod, /^if \(typeof window !== "undefined"\) window\.MWE2E = MWE2E;$/m);
+    assert.doesNotMatch(mod, /afterLegacy|^import /m, "nothing to wait for: no DOM, no app state");
     assert.ok(order.indexOf("messenger") > order.indexOf("app"));
   });
   suite.test("F26-03: [Happy Path] Encryption uses ECDH P-256 + HKDF + AES-GCM with conversation-bound AAD", () => {
-    const e2e = readSrc("src/e2e.js");
+    const e2e = readSrc("src/ts/e2e.ts");
     assert.match(e2e, /P-256/);
     assert.match(e2e, /HKDF/);
     assert.match(e2e, /AES-GCM/);
@@ -860,6 +866,32 @@ export function buildTier1Suite() {
   suite.test("F26-05: [Happy Path] FULL_SCHEMA carries migration 16 (messenger, E2EE, three badges)", () => {
     const full = readSrc("supabase/FULL_SCHEMA.sql");
     for (const s of ["create table if not exists public.e2e_devices", "function public.mark_read", "function public.dm_threads", "function public.e2e_add_keys", "function public.set_equipped_badges", "equipped_badges"]) assert.ok(full.toLowerCase().includes(s.toLowerCase()), s);
+  });
+  // F26-06 — the real primitives, not their text: Node imports src/ts/e2e.ts (type stripping, Node 22.18+ / 23.6+)
+  // and round-trips real P-256 keys the way messenger.js uses them.
+  if (!process.features?.typescript) suite.skip("F26-06: [Happy Path] E2E primitives round-trip: seal for two devices, open, reject the wrong chat, rewrap", "this Node cannot import .ts (needs 22.18+ or 23.6+)");
+  else suite.test("F26-06: [Happy Path] E2E primitives round-trip: seal for two devices, open, reject the wrong chat, rewrap", async () => {
+    const { MWE2E: E } = await import(new URL("../src/ts/e2e.ts", import.meta.url).href);
+    assert.equal(E.supported(), true);
+    const a = await E.newDevice(), b = await E.newDevice(), c = await E.newDevice();
+    assert.match(a.id, /^[A-Za-z0-9_-]{22}$/);
+    assert.deepEqual(Object.keys(a.pub), ["kty", "crv", "x", "y"], "only the public half is published");
+    const key = async d => ({ priv: await E.importPriv(d.priv), pub: await E.importPub(d.pub) });
+    const ka = await key(a), kb = await key(b), kc = await key(c);
+    const msg = { type: "text", text: "мяу 🐱 " + "x".repeat(40000) };
+    const row = await E.seal([{ slot: "u1:a", pub: ka.pub }, { slot: "u2:b", pub: kb.pub }], msg, "dm|u1|u2");
+    assert.equal(row.e2e.v, 1);
+    assert.deepEqual(Object.keys(row.e2e.k).sort(), ["u1:a", "u2:b"]);
+    assert.ok(!row.ciphertext.includes("мяу") && !JSON.stringify(row).includes("x".repeat(64)), "nothing readable on the server");
+    assert.deepEqual(await E.open(row, "u1:a", ka.priv, "dm|u1|u2"), msg);
+    assert.deepEqual(await E.open(row, "u2:b", kb.priv, "dm|u1|u2"), msg);
+    await assert.rejects(E.open(row, "u1:a", ka.priv, "dm|u1|u3"), { name: "OperationError" }, "moved into another chat — must not open");
+    assert.equal(await E.open(row, "u3:c", kc.priv, "dm|u1|u2"), null, "no key for this device — null, not an error");
+    const more = await E.rewrap(row.e2e, "u1:a", ka.priv, [{ slot: "u1:c", pub: kc.pub }]);
+    assert.deepEqual(await E.open({ ...row, e2e: { ...row.e2e, k: { ...row.e2e.k, ...more } } }, "u1:c", kc.priv, "dm|u1|u2"), msg, "a new device reads the old history");
+    await assert.rejects(E.importPub({ kty: "EC", crv: "P-384", x: "a", y: "b" }), /bad public key/);
+    await assert.rejects(E.seal([], msg, ""), /no recipients/);
+    assert.match(await E.fingerprint(a.pub), /^[0-9A-F]{4}( [0-9A-F]{4}){3}$/);
   });
 
   // ─── Feature 27: Every name the frontend reads is defined somewhere ────────
@@ -927,7 +959,7 @@ export function buildTier1Suite() {
     const classic = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
     assert.equal(classic[classic.length - 1], "ready", "ready.js must be the last classic script — the modules wait for it");
     const main = fs.readFileSync(path.join(tsDir, "main.ts"), "utf-8");
-    for (const m of ["naudio", "search", "chat", "profile", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
+    for (const m of ["naudio", "e2e", "search", "chat", "profile", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
   });
 
   // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────
