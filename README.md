@@ -69,7 +69,7 @@ third-party client, so Meowave plays the same recording from another service
 
 - **App shell:** [Tauri 2](https://tauri.app) (Rust)
 - **Backend / accounts:** [Supabase](https://supabase.com) (Postgres + RLS)
-- **Frontend:** [Vite](https://vite.dev) + TypeScript, no framework. `src/` is the root: the classic scripts (`app.js`, `m3.js`, `discover.js`…) and `app.css` are copied as they are, the modules moved so far live in `src/ts/` (the stack is being rewritten one screen at a time — see `HANDOFF.md`). The window shows the build in `dist/`.
+- **Frontend:** [Vite](https://vite.dev) + TypeScript, no framework. `src/` is the root: the classic scripts (`app.js`, `discover.js`, `messenger.js`…) and `app.css` are copied as they are, the modules moved so far live in `src/ts/` (the stack is being rewritten one screen at a time — see `HANDOFF.md`). The window shows the build in `dist/`.
 
 ## Project Structure
 

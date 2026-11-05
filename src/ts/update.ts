@@ -8,8 +8,8 @@
    git pull, after which Rust rebuilds dist/ (scripts/web.mjs, installing
    dependencies if package-lock.json changed) and `tauri dev` rebuilds and
    restarts the window by itself.
-   Starts once app.js and m3.js have run (their globals t, inv, toast, esc,
-   TAURI, I18N, showModal, mwDialog). */
+   Starts once app.js has run and m3.ts has started (their globals t, inv,
+   toast, esc, TAURI, I18N, showModal, mwDialog; initM3 is first in main.ts). */
 
 /** src-tauri/src/update.rs → AppVersion */
 export interface AppVersion {

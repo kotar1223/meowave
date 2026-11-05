@@ -959,7 +959,7 @@ export function buildTier1Suite() {
     const classic = [...html.matchAll(/<script src="\.\/([a-z0-9]+)\.js" defer><\/script>/g)].map(m => m[1]);
     assert.equal(classic[classic.length - 1], "ready", "ready.js must be the last classic script — the modules wait for it");
     const main = fs.readFileSync(path.join(tsDir, "main.ts"), "utf-8");
-    for (const m of ["naudio", "e2e", "fx", "search", "chat", "profile", "custom", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
+    for (const m of ["naudio", "e2e", "fx", "m3", "search", "chat", "profile", "custom", "update", "covers", "aura"]) assert.match(main, new RegExp(`from "\\./${m}"|import "\\./${m}"`), m + " is imported by main.ts");
   });
 
   // ─── Feature 28: Onboarding in five steps, one sign-in card everywhere ─────
@@ -1085,7 +1085,7 @@ export function buildTier1Suite() {
     assert.match(su, /\/stream\/local\/\$\{encodeURIComponent\(off\)\}/);
     assert.match(fnSrc(js, "offId"), /S\.dlPlay===false\|\|tr\?\._net\?null:offLive\(tr\)/);
     assert.match(fnSrc(js, "load"), /if\(tr\.s==="sp"&&!offId\(tr\)\)\{sprPlay/);
-    assert.match(readSrc("src/m3.js"), /_resolvedSvc:h\.s,_net:true\}/, "an explicit source pick bypasses the file");
+    assert.match(readSrc("src/ts/m3.ts"), /_resolvedSvc:h\.s,_net:true\}/, "an explicit source pick bypasses the file");
   });
   suite.test("F31-02: [Happy Path] A plain download is remembered; Spotify downloads take the resolved source", () => {
     const dl = fnSrc(js, "downloadTrack");

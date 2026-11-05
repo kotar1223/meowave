@@ -1,4 +1,4 @@
-/* Globals of the classic scripts (app.js, m3.js, …) that the TypeScript
+/* Globals of the classic scripts (app.js, discover.js, …) that the TypeScript
    modules read. Top-level const/let/function of a classic script live in the
    page's global scope, and a module sees them by name — so these are only
    types, nothing is imported. tests/tier1-features.mjs (F27-02) checks that
@@ -28,6 +28,16 @@ interface MwTrack {
   favAt?: number;
   /** chat.ts: a hit from the services, not from the library */
   _remote?: boolean;
+  /** duration, seconds */
+  d?: number | string;
+  /** m3.ts: the track plays from another service than its own (a fallback or the user's pick) */
+  _resolved?: boolean;
+  _resolvedSvc?: string;
+  _resolvedId?: string | number;
+  /** a Spotify track played from another service: the Spotify original */
+  _spOrig?: MwTrack | null;
+  /** the user chose this service: a downloaded file does not stand in for it (app.js offId) */
+  _net?: boolean;
   [key: string]: unknown;
 }
 interface MwPlaylist {
@@ -85,16 +95,22 @@ interface MwToastOptions {
 interface MwToastHandle {
   dismiss?: () => void;
 }
+/* The dialog of m3.ts (window.mwDialog) — every module opens this one. */
 interface MwDialogAction {
   label: string;
+  /** a filled button (Enter presses it); tonal — a tonal one; else a text button */
   primary?: boolean;
+  tonal?: boolean;
   icon?: string;
-  run?: () => void;
+  id?: string;
+  /** false, or a promise of false, keeps the dialog open */
+  run?: (dialog: MwDialogHandle) => unknown;
 }
 interface MwDialogOptions {
   icon?: string;
   title: string;
-  body?: string;
+  /** HTML, or a node to put in */
+  body?: string | Node;
   cls?: string;
   actions?: MwDialogAction[];
 }
@@ -115,13 +131,13 @@ interface MwModalOptions {
   secret?: boolean;
 }
 
-/** What mwDialog() hands back (m3.js). */
+/** What mwDialog() hands back. */
 interface MwDialogHandle {
   el: HTMLElement;
   body: HTMLElement;
   closed: boolean;
   close(): void;
-  setActions(actions: MwDialogAction[]): void;
+  setActions(actions?: MwDialogAction[] | null): void;
 }
 /** The signed-in Supabase user (app.js sbUser). */
 interface MwUser {
@@ -172,12 +188,57 @@ interface MwMessenger {
   [key: string]: unknown;
 }
 
+/* The parts of Tauri's JavaScript API the modules use. */
+interface TauriPosition { x: number; y: number }
+interface TauriSize { width: number; height: number }
+interface TauriMonitor {
+  scaleFactor?: number;
+  position: TauriPosition;
+  size: TauriSize;
+  /** the monitor without the taskbar */
+  workArea?: { position: TauriPosition; size: TauriSize };
+}
+/** m3.ts: the mini player moves, resizes and pins the window; the icon picker sets its icon. */
+interface TauriWindow {
+  scaleFactor(): Promise<number>;
+  outerPosition(): Promise<TauriPosition>;
+  innerSize(): Promise<TauriSize>;
+  setPosition(position: object): Promise<void>;
+  setSize(size: object): Promise<void>;
+  setMinSize(size: object | null): Promise<void>;
+  setAlwaysOnTop(on: boolean): Promise<void>;
+  setFullscreen(on: boolean): Promise<void>;
+  isFullscreen(): Promise<boolean>;
+  isMaximized(): Promise<boolean>;
+  maximize(): Promise<void>;
+  unmaximize(): Promise<void>;
+  startDragging?(): Promise<void>;
+  setIcon?(icon: unknown): Promise<void>;
+}
+/** LogicalSize and PhysicalPosition: in __TAURI__.dpi, and in __TAURI__.window as well. */
+interface TauriDpi {
+  LogicalSize?: new (width: number, height: number) => object;
+  PhysicalPosition?: new (x: number, y: number) => object;
+}
+interface TauriWindowApi extends TauriDpi {
+  getCurrentWindow?(): TauriWindow;
+  /** the name in Tauri 1 */
+  getCurrent?(): TauriWindow;
+  currentMonitor?(): Promise<TauriMonitor | null>;
+}
+interface TauriGlobal {
+  core?: TauriCore;
+  webview?: { getCurrentWebview?: () => { setZoom(scale: number): Promise<void> } };
+  window?: TauriWindowApi;
+  dpi?: TauriDpi;
+  /** Image.new(rgba, width, height) */
+  image?: { Image?: { "new"?: (rgba: Uint8Array, width: number, height: number) => Promise<unknown> } };
+}
+
 interface Window {
-  __TAURI__?: { core?: TauriCore; webview?: { getCurrentWebview?: () => { setZoom(scale: number): Promise<void> } } };
-  /** m3.js: the one Material 3 dialog every module uses. */
-  mwDialog?: (options: MwDialogOptions) => MwDialogHandle;
-  /** m3.js: Material 3 helpers; copyText falls back to execCommand where the Clipboard API is refused. */
-  MW3?: { copyText?: (text: string) => Promise<boolean>; [key: string]: unknown };
+  __TAURI__?: TauriGlobal;
+  /** app.js: relabels the page in LANG; m3.ts and discover.js wrap it to relabel their own parts too. */
+  applyI18n?: () => void;
   /** app.js: the service search is narrowed to ("" — all of them). */
   searchScope?: () => string;
   /** discover.js: the home sheet; its shelf renderer registers the cards for its own click handler. */
@@ -192,19 +253,41 @@ interface MwCzStore {
   d: Record<string, MwCzValue>;
   l: Record<string, MwCzValue>;
 }
+/** m3.ts: the mini player — always on top or not, and the card's own size and place (physical px). */
+interface MwMiniCfg {
+  pin?: boolean;
+  w?: number;
+  h?: number;
+  x?: number;
+  y?: number;
+}
 /** S.x: the settings saved with S that have no field of their own. */
 interface MwStateX {
   /** custom.ts: the interface designer */
   cz?: MwCzStore;
   /** custom.ts: the preset applied last ("" once something is changed by hand) */
   czp?: string;
+  /** m3.ts */
+  mini?: MwMiniCfg;
+  /** m3.ts: false — a track YouTube refuses is not played from another service */
+  ytmAlt?: boolean;
+  /** m3.ts: the app icon (classic, clear-auto, ocean …) */
+  appIcon?: string;
+  [key: string]: unknown;
+}
+/** What app.js's lyricsFor() knows about a track's lyrics. */
+interface MwLyrics {
+  /** idle, loading, done, none … */
+  state: string;
+  synced?: boolean;
+  lines?: { at?: number | null; text?: string }[];
   [key: string]: unknown;
 }
 
 /* app.js */
 declare const I18N: Record<string, Record<string, string>> & { ru: Record<string, string>; en: Record<string, string> };
 declare const t: (key: string) => string;
-declare const S: { pspeed?: number | string; view?: string; banner?: string; current?: MwTrack | null; x: MwStateX; [key: string]: unknown };
+declare const S: { pspeed?: number | string; view?: string; banner?: string; current?: MwTrack | null; playing: boolean; pos: number; dur: number; x: MwStateX; [key: string]: unknown };
 declare const AB: { bass: number; mid: number; high: number; lvl: number; beat: number; [key: string]: number };
 declare const BOOT: { done: boolean; reduce: boolean };
 declare const TAURI: TauriCore | undefined;
@@ -253,7 +336,7 @@ declare const uploadBanner: (f: File) => Promise<unknown>;
 declare function fillProfileSettings(): void;
 declare function openSettings(tab?: string): void;
 declare const avat: (p: MwPeer | MwProfile | null | undefined, size?: number, status?: unknown) => string;
-declare const svc: (id: string) => MwService | undefined;
+declare const svc: (id: string | undefined) => MwService | undefined;
 declare let queue: MwTrack[];
 declare const cssEsc: (s: unknown) => string;
 declare const coverStyle: (url?: string | null, l1?: unknown, l2?: unknown) => string;
@@ -262,6 +345,43 @@ declare function autoDownload(tr: MwTrack, playlistName: string | null): unknown
 declare function renderWaveHint(): void;
 declare function searchRemote(query: string, only?: unknown): Promise<MwTrack[] | null | undefined>;
 declare function stripTrack(tr: MwTrack | null | undefined): MwTrack | null;
+/* … read by m3.ts */
+declare const A: { audio: { paused: boolean; currentTime: number } | null; [key: string]: unknown };
+/** how far ahead of the audio a synced line lights up, seconds */
+declare const LY_LEAD: number;
+/** track matching: of(a, b) — how surely b is the same recording as a (0…1), null when it is not */
+declare const MWM: { of(a: MwTrack, b: MwTrack): number | null; [key: string]: unknown };
+/** where the queue came from ("wave" — the wave) */
+declare let PLAYCTX: { key?: string; [key: string]: unknown };
+/** service id → its logo, as HTML */
+declare const SVC_ICONS: Record<string, string>;
+/** trackKey()s a silent fallback has been tried for */
+declare const fallbackAttempted: Set<string>;
+/** the full-screen player */
+declare const fp: HTMLElement;
+declare const fmt: (s: number) => string;
+declare const sprKey: (tr: MwTrack) => string;
+declare function cleanMusicTitle(artist?: string, title?: string): { query: string; [key: string]: unknown };
+declare function closeFP(): void;
+declare function closeSettings(instant?: boolean): void;
+declare function settingsIsOpen(): boolean;
+declare function fetchLyrics(tr: MwTrack): Promise<unknown>;
+declare function getLyricOffset(tr: MwTrack): number;
+declare function lyricsFor(tr: MwTrack): MwLyrics | null | undefined;
+declare function humanStreamError(why: string): string;
+declare function load(tr: MwTrack, auto?: boolean, resumePos?: number): unknown;
+declare function next(userInitiated?: boolean): unknown;
+declare function prev(): unknown;
+declare function toggle(): unknown;
+declare function seekSeconds(pos: number): void;
+declare function paint(): void;
+declare function renderNP(): void;
+declare function sync(): void;
+declare function sameTrack(a: MwTrack | null | undefined, b: MwTrack | null | undefined): boolean;
+declare function trackKey(tr: MwTrack): string;
+/** Spotify tracks resolved to another service, by sprKey() */
+declare function sprMap(): Map<string, unknown>;
+declare function sprSave(): void;
 
 /* messenger.js */
 declare const MS: MwMessenger;

@@ -7290,7 +7290,7 @@ async function explainFailure(url,tr,wasPlaying=true,resumePos=0){
  if(!sameTrack(tr,S.current))return;
  const why=await probeStream(url);
  S.playing=false;sync();
- /* m3.js turns this into a snackbar with "Details" and "Other source". */
+ /* m3.ts turns this into a snackbar with "Details" and "Other source". */
  if(typeof window.mwFailSnack==="function"){try{window.mwFailSnack(tr,url,why);return}catch(e){console.warn(e)}}
  toast(why.ok?t("load.err"):`${t("load.err")} — ${humanStreamError(why.why)}`,6500);
 }

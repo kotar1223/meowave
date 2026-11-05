@@ -1,6 +1,6 @@
 ---
 name: meowave-ui-verify
-description: Use after any change to src/index.html, src/app.css, src/app.js, src/discover.js, src/m3.js or src/ts/*.ts (fx.ts included) that affects what the user sees — verifies the UI with real screenshots in headless Chromium plus the static e2e suite.
+description: Use after any change to src/index.html, src/app.css, src/app.js, src/discover.js, src/messenger.js or src/ts/*.ts (fx.ts and m3.ts included) that affects what the user sees — verifies the UI with real screenshots in headless Chromium plus the static e2e suite.
 ---
 
 # Verifying Meowave UI changes

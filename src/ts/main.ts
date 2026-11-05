@@ -9,6 +9,7 @@ import "./naudio";
 import "./e2e";
 import "./fx";
 import { afterLegacy } from "./legacy";
+import { initM3 } from "./m3";
 import { initSearch } from "./search";
 import { initChat } from "./chat";
 import { initProfile } from "./profile";
@@ -17,6 +18,8 @@ import { initUpdate } from "./update";
 import { initCovers } from "./covers";
 import { initAura } from "./aura";
 
+/* m3 first: window.mwDialog is there for every module after it. */
+afterLegacy(initM3);
 afterLegacy(initSearch);
 afterLegacy(initChat);
 afterLegacy(initProfile);

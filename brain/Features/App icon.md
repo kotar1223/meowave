@@ -12,12 +12,12 @@
 - Настройки → Вид → **Иконка приложения**. Выбор сразу меняет значок окна (панель задач, Alt+Tab; `setIcon`, право `core:window:allow-set-icon`) и логотипы внутри приложения: боковое меню, заголовок, заставку, «О приложении». Хранится в `S.x.appIcon`.
 - Установщик и exe теперь с «Неон без фона» (вариант по умолчанию). Ярлыки на рабочем столе, в «Пуске» и закреплённый значок берут иконку из exe: обновятся после установки новой сборки, выбор в настройках на них не влияет.
 - Скрипт: `python scripts/icon-variants.py` — варианты в `src/icons/app/*.png` (256 px). С `--bundle` он ещё пересобирает иконки установщика в `src-tauri/icons` и `src/icons/icon.png`; в кадрах до 48 px рисунок толще. Знак вырезается по яркости из `scripts/assets/icon-square.png`. `round-icons.py` остался для плитки-сквиркла и стал общим писателем ico и icns.
-- Код: `src/m3.js` — `APP_ICONS`, `iconPicker`, `iconApply`, `iconWindow`; стили `.appicons` и `.appicon` в `app.css`.
+- Код: `src/ts/m3.ts` — `APP_ICONS`, `iconPicker`, `iconApply`, `iconWindow`; стили `.appicons` и `.appicon` в `app.css`.
 
 ## Раунд 6: без неона, «Классика» по умолчанию
 Запрос: «иконки не убирай, но убери неон и по классике классическую ставь».
 - Варианты «Неон» и «Неон без фона» удалены (12 вариантов). Если был выбран неон, ставится «Классика».
-- По умолчанию, в установщике и в exe — «Классика» (`ICON_DEFAULT` в `m3.js`; `python scripts/icon-variants.py --bundle` пересобирает `src-tauri/icons` и `src/icons/icon.png` из неё).
+- По умолчанию, в установщике и в exe — «Классика» (`ICON_DEFAULT` в `m3.ts`; `python scripts/icon-variants.py --bundle` пересобирает `src-tauri/icons` и `src/icons/icon.png` из неё).
 
 ## Раунд 8: иконка на таскбаре не мылится
 - В `icon.ico` первым идёт кадр 256 px: Windows часто берёт первый кадр и масштабирует его.
