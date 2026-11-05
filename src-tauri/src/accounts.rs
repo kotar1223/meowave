@@ -249,11 +249,12 @@ pub async fn acc_login(app: AppHandle, service: String) -> Result<(), String> {
     let mut b = tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::External(url))
         .title(format!("{} · Meowave", name_of(sp.id)))
         .inner_size(500.0, 740.0)
-        .min_inner_size(380.0, 520.0)
-        .focused(true);
+        .min_inner_size(380.0, 520.0);
+    // Placement and focus are desktop window calls; Tauri has no
+    // `center()` / `focused()` on mobile, where the window is full screen.
     #[cfg(desktop)]
     {
-        b = b.center();
+        b = b.center().focused(true);
     }
     // A profile of its own per service: the app's storage is not shared
     // with a third-party page, and signing out can drop the whole session.
