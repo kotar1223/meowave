@@ -2284,7 +2284,8 @@ fn serve_img(
         // client() could sever a large image on a slow link.
         let c = crate::api::media_client()?;
         c.get(&url)
-            .header("User-Agent", crate::api::UA)
+            .header("User-Agent", crate::api::BROWSER_UA)
+            .header("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
             .send()
             .await
             .map_err(|e| e.to_string())

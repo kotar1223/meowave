@@ -7873,7 +7873,7 @@ const CROP={img:null,shape:"square",scale:1,min:1,x:0,y:0,drag:null,resolve:null
 function cropFrameSize(){
  const box=document.getElementById("crop-stage");
  if(!box)return {w:320,h:320};
- const w=box.clientWidth;
+ const w=Math.max(120,box.clientWidth||320);
  /* The frame's aspect matches where the image is going: square for avatars and
     playlist covers, 3:1 for banners. */
  return {w,h:CROP.shape==="banner"?Math.round(w/3):w};
@@ -7938,9 +7938,11 @@ async function cropResult(){
  x.imageSmoothingQuality="high";
  /* One transform maps frame space to output space, so the exported pixels are
     the previewed pixels — no second, subtly different crop calculation. */
- const k=out.w/f.w;
- x.drawImage(CROP.img,CROP.x*k,CROP.y*k,
-  CROP.img.width*CROP.scale*k,CROP.img.height*CROP.scale*k);
+ const k=out.w/Math.max(1,f.w);
+ if(CROP.img){
+  x.drawImage(CROP.img,CROP.x*k,CROP.y*k,
+   CROP.img.width*CROP.scale*k,CROP.img.height*CROP.scale*k);
+ }
 
  /* An avatar is exported square and every surface masks it into a circle.
     Cutting the circle into the file (a feathered transparent rim) was the
@@ -7956,8 +7958,15 @@ async function cropResult(){
  const type=webp?"image/webp":(round?"image/png":"image/jpeg");
  const ext=webp?"webp":(round?"png":"jpg");
  const q=type==="image/png"?undefined:.88;
- const blob=await new Promise(r=>c.toBlob(r,type,q));
- return {blob,ext,type,dataUrl:c.toDataURL(type,q)}}
+ const dataUrl=c.toDataURL(type,q);
+ let blob=await new Promise(r=>c.toBlob(r,type,q));
+ if(!blob){
+  try{
+   const res=await fetch(dataUrl);
+   blob=await res.blob();
+  }catch(_){}
+ }
+ return {blob,ext,type,dataUrl}}
 
 /* Opens the editor. Resolves with the crop result, or null if cancelled. */
 async function openCropper(file,shape){
@@ -7968,12 +7977,23 @@ async function openCropper(file,shape){
   return {blob:file,ext:"gif",type:"image/gif",dataUrl:await fileDataUrl(file),animated:true};
  let bmp;
  try{bmp=await createImageBitmap(file)}
- catch(e){toast(t("img.fail"));return null}
+ catch(e){
+  try{
+   const durl=await fileDataUrl(file);
+   const img=new Image();
+   await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=durl});
+   bmp=img;
+  }catch(_){
+   toast(t("img.fail"));return null;
+  }
+ }
  CROP.img=bmp;CROP.shape=shape;
  const el=document.getElementById("cropper");
+ if(!el)return null;
  el.hidden=false;
  el.dataset.shape=shape;
- document.getElementById("crop-title").textContent=
+ const titleEl=document.getElementById("crop-title");
+ if(titleEl)titleEl.textContent=
   shape==="banner"?t("crop.banner"):shape==="cover"?t("crop.cover"):t("crop.avatar");
  requestAnimationFrame(()=>{el.dataset.open="true";cropReset()});
  return new Promise(r=>{CROP.resolve=r})}
@@ -8052,7 +8072,7 @@ async function prepImage(file,kind){
 async function uploadImage(file,kind){
  if(!file)return;
  const cropped=await openCropper(file,kind==="avatar"?"square":"banner");
- if(!cropped)return;
+ if(!cropped||!cropped.blob)return;
  const {blob,ext,type,dataUrl}=cropped;
  if(blob.size>IMG_MAX[kind]){toast(t(kind==="avatar"?"img.big":"img.big.gif"));return}
  const col=kind==="avatar"?"avatar_url":"banner_url";
@@ -9503,7 +9523,8 @@ function renderProfile(savedVals={}){
  if(!sbUser){
   if(S.guest){
    const favs=TRACKS.filter(x=>x.fav).length;
-   const ava=S.avatar||sbProfile?.avatar_url||"./icons/app/classic.png";
+   const avaRaw=S.avatar||sbProfile?.avatar_url||"";
+    const ava=avaRaw?(cssUrlRaw(avaRaw)||avaRaw):"./icons/app/classic.png";
    const ban=S.banner||sbProfile?.banner_url||"";
    /* profile.ts: a colour / gradient banner, or the picture. */
    const bs=window.MWProf?MWProf.attrs(MWProf.myStyle()):{cls:"",style:""};
@@ -9517,7 +9538,7 @@ function renderProfile(savedVals={}){
      <div class="pf-main">
      <div class="profhead">
       <label class="avatar has-img" title="${t("pr.ava.hint")}">
-       <img src="${esc(ava)}" alt="" id="prof-ava-img">
+       <img src="${esc(ava)}"${avaRaw&&avaRaw!==ava?` data-direct="${esc(avaRaw)}"`:""} alt="" id="prof-ava-img" onerror="this.parentElement.classList.remove('has-img');this.style.display='none'">
        <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
        <input type="file" id="prof-ava-input" accept="image/*">
       </label>
@@ -9567,7 +9588,8 @@ function renderProfile(savedVals={}){
  /* Badges count what the catalog can actually show, not raw rows: a legacy id
     with no tile would otherwise read as "owned but dark". */
  const ownedShown=(BADGES||[]).filter(b=>OWNED.has(b.id)).length;
- const ava=p.avatar_url||S.avatar||"";
+ const avaRaw=p.avatar_url||S.avatar||"";
+  const ava=avaRaw?(cssUrlRaw(avaRaw)||avaRaw):"";
  const ban=p.banner_url||S.banner||"";
  const bs=window.MWProf?MWProf.attrs(MWProf.myStyle()):{cls:"",style:""};
  const useImg=!!ban&&!bs.cls;
@@ -9580,7 +9602,7 @@ function renderProfile(savedVals={}){
    <div class="pf-main">
    <div class="profhead">
     <label class="avatar${ava?" has-img":""}" title="${t("pr.ava.hint")}">
-     ${ava?`<img src="${esc(ava)}" alt="" id="prof-ava-img">`:`<span class="avatar-ph">${esc(((p.username||sbUser.email||"M")[0]||"M").toUpperCase())}</span>`}
+     ${ava?`<img src="${esc(ava)}"${avaRaw&&avaRaw!==ava?` data-direct="${esc(avaRaw)}"`:""} alt="" id="prof-ava-img" onerror="this.parentElement.classList.remove('has-img');this.style.display='none'">`:`<span class="avatar-ph">${esc(((p.username||sbUser.email||"M")[0]||"M").toUpperCase())}</span>`}
      <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
      <input type="file" id="prof-ava-input" accept="image/*">
     </label>
@@ -9759,7 +9781,10 @@ window.addEventListener("pagehide",presBye);
 const avat=(p,size=34,status=null)=>{
  const pid=String(p?.id||p?.user_id||"");
  const link=pid&&!/^(g:|grp)/.test(pid)?` data-profile="${esc(pid)}"`:"";
- const raw=String(p?.avatar_url||"").trim();
+ let raw=String(p?.avatar_url||"").trim();
+ if((!raw||raw==="undefined"||raw==="null")&&(isMe(pid)||pid===(sbUser?.id||"")||!pid)){
+  raw=String(S.avatar||sbProfile?.avatar_url||"").trim();
+ }
  const u=raw?cssUrlRaw(raw):"";
  const direct=/^https?:\/\//i.test(raw)?raw:"";
  const un=(p?.username||"").trim();
@@ -11196,7 +11221,7 @@ async function refreshRoomState(){
   }
   SOC.roomMembers=mem.map(m=>{
    let prof=RMX.prof.get(m.user_id);
-   if(!prof&&m.user_id===me)prof={id:me,username:S.username||sbUser.email?.split("@")[0]||t("ms.you.n"),avatar_url:S.avatarUrl||null};
+   if(!prof&&m.user_id===me)prof={id:me,username:S.username||sbUser.email?.split("@")[0]||t("ms.you.n"),avatar_url:S.avatar||sbProfile?.avatar_url||null};
    return {...m,profile:prof||{id:m.user_id,username:t(m.role==="owner"?"rm.host":"rm.listener"),avatar_url:null}}})
    .sort((a,b)=>(a.role==="owner"?-1:b.role==="owner"?1:0)||(a.role==="dj"?-1:b.role==="dj"?1:0));
  }catch(e){console.warn("room state:",e?.message||e)}}
@@ -11567,7 +11592,7 @@ async function renderTop(){
     user_id:me,
     seconds:mySecs,
     username:(sbProfile?.username)||(sbUser?.email?.split("@")[0])||(LANG==="ru"?"Вы":"You"),
-    avatar_url:sbProfile?.avatar_url||null,
+    avatar_url:sbProfile?.avatar_url||S.avatar||null,
     equipped_badge:myBadges()[0]||null,
     equipped_badges:myBadges()
    });
@@ -12289,7 +12314,19 @@ function fillProfileSettings(){
  un.value=sbProfile?.username||"";
  bio.value=sbProfile?.bio||"";
  const hint=document.getElementById("set-ava-hint");
- if(hint)hint.textContent=(sbProfile?.avatar_url||S.avatar)?t("sprof.set"):"";
+ const ava=sbProfile?.avatar_url||S.avatar||"";
+ if(hint)hint.textContent=ava?t("sprof.set"):"";
+ const prev=document.getElementById("set-ava-preview");
+ if(prev){
+  if(ava){
+   const u=cssUrlRaw(ava)||ava;
+   prev.innerHTML=`<img src="${esc(u)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;display:block">`;
+   prev.style.display="inline-flex";
+  }else{
+   prev.innerHTML="";
+   prev.style.display="none";
+  }
+ }
  un.onchange=async()=>{
   if(!un.value.trim())return;
   if(!sbUser){

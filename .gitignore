@@ -88,3 +88,26 @@ __pycache__/
 
 # Installers are published as GitHub Release assets, not committed
 installer/
+
+# AI assistants, neural IDE configs, instructions & prompts
+.gemini/
+.antigravity/
+.freebuff/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.codeium/
+.claude/
+.copilot/
+.continue/
+.aider*
+.ai/
+*.prompt
+*.prompts
+*ai_instructions*
+*ai-instructions*
+copilot-instructions.md
+.github/copilot-instructions.md
+ai-rules/
+*.chat

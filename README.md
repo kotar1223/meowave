@@ -1,210 +1,294 @@
-# meowave 🐾
+# Meowave
 
-> A modern, lightweight multi-service desktop music player for Windows, macOS and Linux. Built with **Tauri 2**, **Rust**, and **Material You**.
+> High-fidelity, ultra-lightweight multi-service desktop music player for Windows, Linux, and macOS.
+> Built with Tauri 2, Rust, Vite, TypeScript, and Google Material You Expressive design tokens.
 
-[![Official Landing Page](https://img.shields.io/badge/Website-kotar1223.github.io%2Fmeowave-blue?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kotar1223.github.io/meowave/)
-[![Download Latest](https://img.shields.io/badge/Download-Latest%20Release-success?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/kotar1223/meowave/releases/latest)
-[![Built with Tauri](https://img.shields.io/badge/Tauri_v2-Rust-FFC131?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app)
-[![Design System](https://img.shields.io/badge/Material_You-Expressive_2025-a855f7?style=for-the-badge)](https://m3.material.io/)
-
----
-
-## 🌟 Highlights
-
-- **Unified Multi-Service Library**: SoundCloud, Yandex Music, YouTube Music, Spotify and Apple Music (catalogs, no keys needed), and local disk files (FLAC, MP3, WAV, AAC, OGG) behind a single queue and search bar.
-- **🎨 Material You & Material Expressive**:
-  - Dynamic palette adapting in real-time to the current track's album art.
-  - Calm accents: monochrome, ten soft pastel tones, the colour of the album art (kept muted in OKLCH, never neon) or your own HEX.
-  - Concentric corner radii, ambient particle canvas, and fluid spring motion tokens.
-- **🪟 Windows 11 Taskbar Thumbnail Controls**:
-  - Hover over the taskbar icon to play/pause, skip, and go back right from the Windows thumbnail toolbar (native Win32 `ITaskbarList3`), just like Spotify.
-- **🎤 Karaoke & Synced Lyrics with Calibrator**:
-  - Real-time synced lyrics from LRCLIB & Genius.
-  - Built-in interactive lyrics timing editor to sync and edit your own lyrics.
-- **📺 Fullscreen Stage & Cover Drift (F11)**:
-  - Cinema stage mode with customizable album cover zoom and organic slow drift motion.
-  - Clips β: the official YouTube music video plays muted behind the player, in sync with the track; without a clip, the album art stays.
-- **🔊 Native audio engine (Beta 3.3)**: on desktop the sound is read ahead, decoded (MP3, AAC, FLAC, ALAC, Vorbis, WAV), equalised and sent to the output device by Rust (symphonia + cpal) — no WebView crackle or dropouts, and the equaliser and speed work the same on Windows, macOS and Linux. Opus and HE-AAC tracks fall back to the WebView engine by themselves; Settings → Sound → Quality → Sound engine switches it.
-- **🔊 Audiophile DSP Pipeline**:
-  - 10-band graphic equalizer with per-track and per-playlist saved presets.
-  - 3D Spatial Audio: HRTF binaural head orbit panner with adjustable radius, speed, and elevation.
-  - Nightcore & slowed-and-reverbed speed shifting (0.5×–1.5× with pitch coupling).
-  - Loudness boost up to +9 dB via clean limiter.
-- **🚀 Ultra-Lightweight & Private**:
-  - Powered by Rust & Tauri 2: uses less than 15 MB of RAM in background (10× less than Electron).
-  - Zero telemetry or third-party ads. Tokens are saved securely in the native OS Keychain (Windows Credential Manager).
-- **🎛️ Interface designer** (Settings → Appearance):
-  - Colour, shape and visibility of every part of the interface — 13 sections, 56 controls, separate colours for the dark and light theme.
-  - Presets (Standard, Compact, Soft, Sharp, Solid, OLED, Paper), per-item reset, theme export/import as JSON, synced with your account.
-- **👥 Social & Rooms**:
-  - Listening rooms with a lobby, an on-air screen, a shared queue with listener requests, room chat, and playback synced to the host's clock.
-  - Telegram-style direct messages with end-to-end encryption (per-device P-256 keys, AES-GCM): replies with quotes, edits, deletes, read receipts, photos, track cards and room invites.
-  - User profiles with up to three worn badges and a profile song.
-  - Banners: a solid colour, a gradient, a preset or your own picture, with «My banners» for one-click swapping.
-  - Chats send any track (favourites, playlists, search), full-size photos and moving GIFs (encrypted on the device), with a zooming viewer and custom notification sounds.
-- **🔎 Search**: artists, playlists and albums next to tracks; chips pick one service to search; with an empty field, «Trending» charts for Russia, the US or the whole world.
-- **📥 Downloads that work offline**: a downloaded track plays from the disk, with no traffic and no network; «My Files → Downloaded» lists them, and «Find earlier downloads» picks up files saved before.
-- **👋 First-run setup**: five animated steps (language, look, services with sign-in, account, summary) and one sign-in / sign-up card across the app.
-- **🌌 Home background**: the particle wave, the light «Aura» or a still background, at 60 or 30 fps (Settings → Appearance); in the other tabs it keeps moving (panels drop their blur, so it stays light) or is hidden.
-- **⬆️ Versions and updates**: Beta 3.3 (3.3.0); the app checks for an update at launch, a source checkout updates with `git pull` from the dialog.
+[![Official Landing Page](https://img.shields.io/badge/Website-kotar1223.github.io%2Fmeowave-blue?style=flat-square&logo=googlechrome&logoColor=white)](https://kotar1223.github.io/meowave/)
+[![Download Latest](https://img.shields.io/badge/Download-Latest_Release-success?style=flat-square&logo=windows&logoColor=white)](https://github.com/kotar1223/meowave/releases/latest)
+[![Built with Tauri](https://img.shields.io/badge/Tauri_v2-Rust-orange?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app)
+[![Design System](https://img.shields.io/badge/Material_You-Expressive_2025-blueviolet?style=flat-square)](https://m3.material.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)](LICENSE)
 
 ---
 
-## 🎧 Supported Services
+## Overview
 
-| Service | Playback Status | Authentication |
-| :--- | :--- | :--- |
-| **SoundCloud** | ✅ Supported | Anonymous (public client) / OAuth |
-| **Yandex Music** | ✅ Supported | Sign-in window (OAuth) or token (stored in OS Keychain) |
-| **Local Files** | ✅ Supported | None (direct disk streaming, zero copying) |
-| **Spotify** | ✅ Search, catalog, playlist import | None (anonymous web token); OAuth + PKCE for your library |
-| **Apple Music** | ✅ Search, charts, albums | None (iTunes Search / RSS) |
-| **YouTube Music** | ⚠️ Experimental | InnerTube guest |
+Meowave brings SoundCloud, Yandex Music, YouTube Music, Spotify, Apple Music catalogs, and local files into a single unified queue and search engine. Unlike resource-heavy Electron players, Meowave is powered by Rust and Tauri 2, consuming under 15 MB of RAM in background playback while offering an audiophile-grade DSP chain, real-time synchronized karaoke lyrics, and an adaptive Material You interface.
 
-Spotify and Apple Music audio is DRM-protected and never served to a
-third-party client, so Meowave plays the same recording from another service
-(strict artist/title/length match); downloads take the audio from there too.
+```
++-------------------------------------------------------------------------------+
+|                                  MEOWAVE UI                                   |
+|               (Vite + TypeScript + Material You M3 Expressive)                |
++-------------------------------------------------------------------------------+
+       |                                                    |
+       v                                                    v
++-----------------------------+              +----------------------------------+
+|      RUST NATIVE ENGINE     |              |       WEBVIEW AUDIO ENGINE       |
+|    (Default Desktop Path)   |              |         (Fallback Path)          |
+|  - Symphonia Audio Decoders |              |  - Web Audio Context Graph       |
+|  - 10-Band Graphic EQ       |              |  - HRTF 3D PannerNode (Binaural) |
+|  - CPAL Hardware Output     |              |  - Opus, HE-AAC, Blob Formats    |
++-----------------------------+              +----------------------------------+
+       |                                                    |
+       +----------------------------+-----------------------+
+                                    |
+                                    v
+                     +------------------------------+
+                     |   LOCAL STREAMING PROXY      |
+                     |  (127.0.0.1:port/stream/)    |
+                     |  - Token & DNS Rebind Guard  |
+                     |  - Rate-Limited Media Buffer |
+                     +------------------------------+
+```
 
-## Tech Stack
+---
 
-- **App shell:** [Tauri 2](https://tauri.app) (Rust)
-- **Backend / accounts:** [Supabase](https://supabase.com) (Postgres + RLS)
-- **Frontend:** [Vite](https://vite.dev) + TypeScript, no framework. `src/` is the root: the classic scripts (`boot.js`, `app.js`, `ready.js`) and `app.css` are copied as they are, the modules moved so far live in `src/ts/` (the stack is being rewritten one screen at a time — see `HANDOFF.md`). The window shows the build in `dist/`.
+## Interface Gallery
+
+### Main Screen & Ambient Particle Field
+Interactive particle field responding dynamically to musical beats, queue events, and album palette shifts.
+
+<p align="center">
+  <img src="docs/assets/promo/desktop-home.jpg" alt="Meowave Desktop Home Screen" width="100%">
+</p>
+
+---
+
+### Fullscreen Player & Synced Karaoke Lyrics
+Real-time line-by-line synchronized lyrics powered by LRCLIB and Genius with built-in timing calibrator and focus blur effects.
+
+<p align="center">
+  <img src="docs/assets/promo/desktop-player.jpg" alt="Meowave Fullscreen Player with Synced Lyrics" width="100%">
+</p>
+
+---
+
+### Stage Mode & Live Waveform
+Alternative visual layout featuring cinematic artwork presentation with animated audio wave ribbons.
+
+<p align="center">
+  <img src="docs/assets/promo/desktop-player-stage.jpg" alt="Meowave Player Stage Mode" width="100%">
+</p>
+
+---
+
+### Unified Multi-Service Search
+Instant cross-service queries returning tracks, artists, albums, and playlists from YouTube Music, SoundCloud, and Yandex Music in a single list.
+
+<p align="center">
+  <img src="docs/assets/promo/desktop-search.jpg" alt="Meowave Multi-Service Search" width="100%">
+</p>
+
+---
+
+### Media Library & Local Audio
+Playlists, favorites, listening history, and local audio files (FLAC, MP3, WAV, AAC, OGG) unified under one roof.
+
+<p align="center">
+  <img src="docs/assets/promo/desktop-library.jpg" alt="Meowave Media Library" width="100%">
+</p>
+
+---
+
+### Material You & Sound Settings
+29 tonal color roles derived dynamically from artwork, with full control over audio engines, DSP filters, and appearance.
+
+<p align="center">
+  <img src="docs/assets/promo/desktop-settings.jpg" alt="Meowave Appearance and Settings" width="100%">
+</p>
+
+---
+
+### Responsive & Mobile Adaptations
+Full-featured touch navigation, 100dvh viewport compliance, and gesture controls for mobile viewports.
+
+<p align="center">
+  <img src="docs/assets/promo/mobile-home.jpg" alt="Meowave Mobile Home" width="48%">
+  &nbsp;
+  <img src="docs/assets/promo/mobile-player.jpg" alt="Meowave Mobile Player" width="48%">
+</p>
+
+---
+
+## Material You Expressive Design
+
+Meowave implements Google's **Material Design 3 (Material You) Expressive** specifications. Instead of static themes, the interface dynamically generates 29 tonal color roles in the OKLCH color space directly from the dominant tones of the active track's album art.
+
+### Dynamic Tonal Swatches
+
+```
++-------------------------------------------------------------------------------------------------------+
+|  Tone 95     |  Tone 90     |  Tone 80     |  Tone 70     |  Tone 50     |  Tone 30     |  Tone 10    |
+|  Surface     |  Container   |  Accent Soft |  Secondary   |  Primary M3  |  Surface Dim |  Base Dark  |
+|  #F5EDFF     |  #EAD7FF     |  #D0A7FF     |  #B87AFF     |  #9A46FF     |  #4A1282     |  #1A0038    |
++-------------------------------------------------------------------------------------------------------+
+```
+
+### Material 3 Architecture Tokens
+
+- **Dynamic Contrast Roles:** Guaranteed WCAG AAA compliance between `onPrimary`, container surfaces, and background cards.
+- **Concentric Corner Radii:** Geometric nesting where inner elements match outer card curvature formulas (`R_inner = R_outer - padding`).
+- **Surface Elevation Containers:** 5-step elevation layering using `surfaceContainerLowest` through `surfaceContainerHighest` without noisy drop shadows.
+- **Adaptive Ambient Wave:** Subtle background glow matching the album art hue, rendered with GPU-accelerated canvas particles at 30/60 fps.
+- **Custom Accent Engine:** Built-in palette selector providing soft pastels, monochrome, or custom seed color HEX inputs with instant re-theming.
+
+---
+
+## Core Capabilities
+
+### Unified Streaming & Local Audio
+- **Multi-Service Catalog:** SoundCloud, Yandex Music, YouTube Music, Spotify, Apple Music, and local storage.
+- **No API Keys Required:** Anonymous catalogs and stream resolution out of the box.
+- **Offline Storage:** Download tracks to disk with zero DRM locks. Local files are played directly from storage without cloud roundtrips.
+
+### Dual Audio Architecture
+- **Native Rust Audio Engine (Default):** Read-ahead buffering, Symphonia multi-format decoding (MP3, AAC, FLAC, ALAC, Vorbis, WAV), hardware-synced 10-band equalizer, and CPAL audio endpoint delivery. Eliminates WebView dropouts and audio glitches.
+- **Web Audio Engine (Fallback):** Web Audio context graph powering Opus, HE-AAC, blob media, and mobile environments.
+
+### Audiophile DSP Suite
+- **10-Band Graphic Equalizer:** Custom frequency curves with per-track and per-playlist preset assignment.
+- **3D Spatial Audio:** HRTF binaural head-orbit panner with customizable orbit radius, rotation frequency, and height elevation.
+- **Nightcore & Slowed+Reverb:** Continuous speed shifting from 0.5x to 1.5x with pitch coupling and ConvolverNode room reverberation.
+- **Smart Loudness Management:** Clean peak limiter offering up to +9 dB loudness boost and track-to-track volume normalization.
+
+### Native System Integration
+- **Windows 11 Thumbnail Toolbar:** Play, pause, and skip tracks straight from the taskbar thumbnail preview (`ITaskbarList3`), matching Spotify behavior.
+- **Linux Desktop & MPRIS:** Full integration with D-Bus MPRIS (`playerctl`), desktop media keys, and system sound panels.
+- **Discord Rich Presence:** Displays current track, album art, elapsed time, and service origin on your Discord profile.
+
+### Social Layer & Listening Rooms
+- **Synchronized Listening Rooms:** Real-time host-synchronized playback with shared queues, guest request voting, and room chat.
+- **End-to-End Encrypted Messenger:** Direct messaging with P-256 ECDH key exchange and AES-GCM payload encryption. Supports quoted replies, track sharing, images, and delivery receipts.
+- **Quasar ID Profiles:** Customizable profile with bio, pinned track, and up to three displayable achievement badges.
+
+---
+
+## Service Matrix
+
+| Service | Audio Playback | Search & Catalog | Authentication | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **SoundCloud** | Supported | Supported | Anonymous / OAuth | Direct streaming through local proxy |
+| **Yandex Music** | Supported | Supported | OAuth Sign-in / Token | High-quality HQ audio streams |
+| **Local Files** | Supported | Supported | None | FLAC, MP3, WAV, AAC, OGG from local drive |
+| **Spotify** | Matched Stream | Supported | Anonymous / PKCE OAuth | Matched against lossless/clean providers |
+| **Apple Music** | Matched Stream | Supported | None | Public iTunes & RSS catalog search |
+| **YouTube Music** | Supported | Supported | InnerTube Guest | Full track catalog resolution |
+
+*Note on Spotify and Apple Music:* Audio streams from Spotify and Apple Music are protected by DRM and cannot be played directly by third-party desktop players. Meowave matches track metadata against clean audio providers to play the exact recording seamlessly.
+
+---
+
+## Security & Privacy Invariants
+
+- **Zero Telemetry:** No user activity tracking, analytics pings, or marketing SDKs.
+- **Local Secret Storage:** Service credentials and authentication tokens are stored exclusively in the OS native credential store (Windows Credential Manager / macOS Keychain / Secret Service API).
+- **Strict Network Proxy:** All audio and image streams pass through a hardened local loopback proxy (`127.0.0.1:port/stream/?k=...`) protected by ephemeral session keys to prevent DNS rebinding and timing attacks.
+- **Row-Level Security (RLS):** All backend interactions with Postgres are enforced by database-level security policies; stats and badges are verifiable only via security-definer procedures.
+
+---
+
+## Installation & Updates
+
+### Download Releases
+Official standalone installers and portable builds are published on GitHub Releases:
+- **Repository:** [https://github.com/kotar1223/meowave](https://github.com/kotar1223/meowave)
+- **Latest Release:** [https://github.com/kotar1223/meowave/releases/latest](https://github.com/kotar1223/meowave/releases/latest)
+
+### Automatic In-App Updates
+- **Installed Builds:** The app periodically queries the release endpoint for signed update bundles verified via Minisign public key signatures.
+- **Source Checkouts (`npm run dev`):** The application detects local git repository checkout state and provides one-click `git pull` updates directly from the settings dialog.
+
+---
+
+## Development & Building
+
+### Prerequisites
+- [Rust](https://www.rust-lang.org/tools/install) (latest stable) and Cargo
+- [Node.js](https://nodejs.org/) 20.19+ or 22.12+ (npm 10+)
+- [Tauri Prerequisites](https://tauri.app/start/prerequisites/) for your operating system
+
+Linux users require GStreamer development packages:
+```bash
+# Debian / Ubuntu
+sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
+```
+
+### Running Locally
+
+```bash
+# Clone the repository
+git clone https://github.com/kotar1223/meowave.git
+cd meowave
+
+# Optional: configure local environment overrides
+cp .env.example .env
+
+# Start desktop development mode (auto-installs dependencies and launches Tauri)
+npm run dev
+
+# Start frontend development server in browser only
+npm run web
+```
+
+### Building Release Bundles
+
+```bash
+# Fetch bundled FFmpeg sidecar (verified with official publisher checksum)
+npm run ffmpeg
+
+# Build optimized production bundle
+npm run build
+```
+
+Production installers will be located in:
+`src-tauri/target/release/bundle/`
+
+### Test & Verification Commands
+
+```bash
+# Run complete verification suite (build, Rust clippy, cargo tests)
+npm run check
+
+# Check frontend JavaScript syntax and TypeScript types
+npm run check:js
+npm run typecheck
+
+# Run end-to-end automated smoke tests
+npm run test:e2e
+```
+
+---
 
 ## Project Structure
 
 ```
 meowave/
-├── brain/                # Project brain (Obsidian vault): architecture, how to run, request log, worklog
-├── docs/                 # GitHub Pages landing page (+ a copy of the badge art)
-├── scripts/              # Helper scripts (web.mjs: the frontend build, ffmpeg fetch, badge sync, round-icons.py)
-├── src/                  # Frontend: index.html, app.css, app.js, assets/
-│   └── ts/               # TypeScript modules (Vite bundles them into dist/)
-├── src-tauri/            # Rust backend and Tauri config
-│   └── ffmpeg/           # Bundled sidecar, fetched not committed
-├── supabase/             # SQL migrations, schema entry point, seeding scripts
-└── .env.example          # Optional environment overrides
+|-- brain/               # Developer second brain (Obsidian vault: architecture, logs, specs)
+|-- docs/                # GitHub Pages showcase site & promo assets
+|   |-- assets/promo/    # High-resolution application screenshots and demo clip
+|-- scripts/             # Build scripts (web bundler, FFmpeg downloader, schema generator)
+|-- src/                 # Application frontend root
+|   |-- app.js           # Core player state machine and UI logic
+|   |-- app.css          # Design system styles and Material You custom properties
+|   |-- index.html       # Application DOM layout and overlays
+|   +-- ts/              # TypeScript modules (naudio, discover, search, messenger, aura)
+|-- src-tauri/           # Native Rust backend
+|   |-- src/audio/       # Native Symphonia decoder, DSP pipeline, and CPAL output
+|   |-- src/stream.rs    # Local streaming proxy and media resolver
+|   |-- src/update.rs    # Dual update engine (signed releases & git pull)
+|   +-- Cargo.toml       # Rust crate dependencies
++-- supabase/            # Database schemas, migrations, and achievement definitions
 ```
 
-## Getting Started
+---
 
-### Prerequisites
+## License & Credits
 
-- [Rust](https://www.rust-lang.org/tools/install) and Cargo
-- [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS
-- [Node.js](https://nodejs.org/) 20.19+ or 22.12+ — Vite 8 builds the frontend;
-  the app itself has no runtime JS dependencies
-
-Linux note: WebKitGTK plays audio through GStreamer, so a dev checkout needs
-the plugins installed (`gst-plugins-base`, `gst-plugins-good`, `gst-libav`).
-On NixOS the repo ships a ready shell — one command, no arguments to remember:
-
-```bash
-nix-shell --run 'npm run dev'
-```
-- Optionally a [Supabase](https://supabase.com) project of your own; the build
-  ships with working defaults
-
-The dev dependencies are the Tauri CLI, Vite and TypeScript. `npm run dev`
-installs them itself when `package-lock.json` changed (`npm install --no-save`),
-so a plain `npm install` is only needed when that step fails.
-
-### Run
-
-```bash
-git clone https://github.com/kotar1223/meowave.git
-cd meowave
-
-# optional: point the app at your own Supabase project / set a Spotify client id
-cp .env.example .env
-
-npm run dev        # installs changed deps, builds src/ → dist/, then tauri dev
-                   # (tauri dev watches dist/ and rebuilds the window on a change)
-npm run web        # the frontend alone in a browser: Vite dev server on 127.0.0.1:1420
-```
-
-### Build
-
-ffmpeg ships with the app as a Tauri sidecar, so mp3 conversion and the
-processed export work on a clean machine. It is 110 MB and therefore not
-committed — fetch it first (the download is verified against the checksum the
-publisher publishes alongside it):
-
-```bash
-npm run ffmpeg         # -> src-tauri/ffmpeg/ffmpeg-<triple>[.exe]
-npx tauri build        # builds dist/ first (beforeBuildCommand), -> src-tauri/target/release/bundle/
-```
-
-Windows and Linux get a bundled LGPL ffmpeg sidecar. BtbN publishes no macOS
-builds, so there the script succeeds without downloading and the app uses a
-system copy (`brew install ffmpeg`) — mp3 conversion works everywhere, but
-"download with processing" needs that local install on a Mac.
-
-`npm run build` does both in order. The installer comes out at about 40 MB.
-
-### Checks
-
-```bash
-npm run check      # builds dist/, then cargo clippy -D warnings, cargo test
-npm run check:js   # syntax-checks app.js, type-checks src/ts
-npm run typecheck  # tsc over src/ts only
-npm run test:e2e   # the static e2e suite (tests/run-e2e.mjs)
-```
-
-### Database
-
-`supabase/schema.sql` is the entry point for psql; for the dashboard SQL editor
-use the generated single file:
-
-```bash
-npm run schema     # -> supabase/FULL_SCHEMA.sql, paste and Run
-```
-
-Then seed the badge catalog (needs a service_role key, which never ships in the
-app):
-
-```bash
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npm run badges:seed
-```
-
-`supabase/README.md` has the details, including promo codes.
-
-## Roadmap
-
-- [ ] Spotify: saved-library import (playlist import ships — matched against
-  YouTube Music, since the Web API never serves full tracks to a third-party
-  client)
-- [x] Social layer (friends, chats, listening rooms) — schema **and** UI; the
-  social migrations are separate files and still have to be applied by hand
-  (`supabase/migrations/09`…`12`, or one paste of `supabase/FULL_SCHEMA.sql`)
-- [x] macOS and Linux builds
-- [ ] Real badge art — 35 of 36 badges have PNG art; `party_boykisser` still
-  falls back to the generated placeholder SVG
-
-## Third-party
-
-ffmpeg is redistributed with the installer under the LGPL v3: the LGPL build,
-without x264/x265, since nothing here touches video. Its licence text is
-installed as `FFMPEG-LICENSE.txt` next to the executable, and the exact build and
-its checksum are recorded in `scripts/fetch-ffmpeg.mjs`. Source is available from
-<https://github.com/BtbN/FFmpeg-Builds> and <https://ffmpeg.org>.
-
-## Security
-
-The Supabase publishable key is compiled into the binary on purpose: it is not a
-secret, and every table is guarded by Row Level Security instead. Statistics,
-badges and pinned badges are written only by `security definer` functions — the
-client cannot write them directly. See `supabase/migrations/09_hardening.sql`.
-
-Service tokens live in the OS credential store, never in a file.
-
-## License
-
-*No license specified yet.*
-
-## Author
-
-Made by [kotar1223](https://kotar1223.github.io/kotyarbio/)
-
-Telegram: [Meowave](https://t.me/meowaveplayer) ·
-[dev chat](https://t.me/techupdate_chat)
+- **Author:** [kotar1223](https://github.com/kotar1223)
+- **Telegram Channel:** [@meowaveplayer](https://t.me/meowaveplayer)
+- **Developer Chat:** [@techupdate_chat](https://t.me/techupdate_chat)
+- **Third-Party Libraries:** Built with [Tauri](https://tauri.app), [Symphonia](https://github.com/pdeljanov/Symphonia), [cpal](https://github.com/RustAudio/cpal), and [Vite](https://vite.dev).
+- **FFmpeg:** Distributed under LGPL v3 as a sidecar binary. See `FFMPEG-LICENSE.txt` for details.
+- **License:** MIT License. See [LICENSE](LICENSE) for details.

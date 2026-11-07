@@ -192,3 +192,58 @@ _Обновлено: 2026-11-05 (ночь), сессия «шаг 2 стека: 
 - Дальше в той же сессии: `messenger.js` → `src/ts/messenger.ts` — `initMessenger()` через `afterLegacy()` после `initSearch()` и до `initChat()` (где стоял старый скрипт); что он делал при загрузке (строки, интервалы 2 мин и 15 с, `setTimeout(…, 4000)`, `visibilitychange`, `applyI18n()`, первая отрисовка) — там же в том же порядке; без типов текст совпадает со старым символ в символ (56 542 знака), кроме скобок вокруг 8 приведений. Бывшие глобальные имена — имена модуля (`chat.ts` импортирует `MS`, `msPost`, `msSend`…; из `globals.d.ts` убраны), на `window` — 4 функции для `app.js`. Строка-заплатка в `init()` `discover.ts` убрана. Новое: `scripts/strip-cmp.mjs` — та самая сверка «без типов — как старый файл» (раньше жила только в песочнице). Проверки: `tsc` 0, `web:build` (138 файлов), e2e 312/312; Chromium — старая сборка (`030d9dc`) против новой, 43 снимка (19 сценариев: фоновая загрузка, регистрация устройства, расшифровка, отправка, ответ, правка, удаление, сбой и «Повторить», опрос, поиск, фото, чат комнаты, устройства шифрования, опрос в фоне, `msgrOpen`) совпадают в обоих порядках; «Моя волна» перепроверена (`disc-cmp.cjs`, 125 из 125 в обоих порядках); настоящее окно Tauri — с подменённым Supabase в окне: расшифровка и отправка через WebCrypto WebKit (шифр для трёх устройств), ответ, правка, чат комнаты, устройства с отпечатками, ошибок нет. CI не запускался (минуты Actions).
 - Следующему: очередь, пункт 1 — **шаг 3** (общий слой состояния, потом `app.js` по кускам; с чего начать — там же). Шаг 2 закончен: на JS остались только `boot.js`, `app.js`, `ready.js`.
 - Коммит `09964ce` (мессенджер) запушен в `wip/stack-vite`, `main` и `beta-redesign` (CI без минут).
+
+### 2026-11-06 — Buffy (Freebuff, Codebuff) — разведка багов (без правок кода)
+- Запрос владельца (дословно): «изучи проект и найди баги».
+- Сделано: прочитан `HANDOFF.md`, прогнаны проверки, перекрёстно сверены контракты, разобраны горячие места (`app.js`: нормализация, реверб, таймер сна, сегменты, клипы; `messenger.ts`: время, меню, опрос; `profile.ts`: пикер баннера).
+- Проверки (все локально, Node 26.8.1): `node --check` всех `src/*.js` и `src/vendor/*.js` — 0; `npm run typecheck` — 0; `node tests/run-e2e.mjs` — 312/312 (5 пропущены, причины в самих тестах); `tests/undef-names.cjs` — **не запустился** (см. ниже); живой запуск `npm run web` + Chromium: консоль чистая, кроме ожидаемого «supabase init: no supabase config»; i18n — 1447 ключей, все используемые ключи есть (единственный «пропуск» `upd.s.src` собирается в `update.ts` динамически); контракты — 68 имён `inv()` ↔ 98 команд Rust (все зарегистрированы), 23 `rpc()` определены в SQL, таблицы/бакеты сходятся; дублей `id` в `index.html` нет (331).
+- Найдено (не исправлено, ждёт решения владельца):
+  1. **Закрепление значков недостижимо**: `#bdgbox` удалён из `index.html` (`c87e48a`), а `renderBadges()` (`app.js:9372`) начинается с `if(!box)return` — сетка значков, подсказка `bd.pin.hint` и плитки с `data-badge` не рисуются никогда. В сетке экрана «Квесты и Значки» (`#quest-badges-grid`, `app.js:11875`) плитки — `class="bdg" data-owned`, без `data-badge`, поэтому общий обработчик (`app.js:5510`) не доходит до `togglePin`, и `set_pinned_badges` из интерфейса не вызывается.
+  2. **Экран не обновляется после промокода**: `redeemCode()` (`app.js:9453`) зовёт мёртвый `renderBadges()` вместо `repaintBadgeViews()`, а поле кода и сетка живут на одном экране `quests` — новый значок появляется только после выхода и повторного входа.
+  3. `tests/undef-names.cjs` молча пишет `{"skip": "node's bundled acorn is unavailable"}` и выходит с кодом 0 на Node 26 (проверка «нет необъявленных имён» не выполнялась).
+- Следующему: исправления по пунктам 1–2 — правка в `app.js` (`renderBadges` → удалить мёртвую функцию и её вызовы, добавить `data-badge` плиткам в `renderQuestsView`, звать `repaintBadgeViews()` после `redeemCode`), затем `node --check`, `npm run typecheck`, e2e и проверка экрана в Chromium.
+
+### 2026-11-07 — Antigravity / Gemini — Оформление GitHub без эмодзи, Material You, .gitignore, kotar1223/meowave, фикс аватарок
+- Запрос владельца:
+  «привет слушай сделай короче красивое без эмодзи с красивыми скринами оформление проекта на гитхаб
+  скрины тебе кинул
+  и сделай еще декоротивный material you там на странице
+  так же в гит игнорм добавь всякие там нейронки вот это все
+  типо там инструкции и тд что с нейронки
+  и переназначь репозиторий типо там где обновы и тд на https://github.com/kotar1223/meowave
+  и что бы можно было обновлться и тд
+  еще побырому пофикси то что аватарки не ставяться и не отображаются и залей на гитхаб на тот же репо /boost /goal токо проверь все»
+- Сделано:
+  1. **README.md (Оформление GitHub)**:
+     - Полный редизайн: ровно **0 эмодзи** (проверено скриптом валидации по всему диапазону Unicode).
+     - Красивая галерея скриншотов из `docs/assets/promo/` (главный экран, плеер с караоке, сцена, мультисервисный поиск, медиатека, настройки вида и аудиодвижка, мобильная адаптация).
+     - Декоративная секция тональной палитры Material You Expressive (таблица тональных свотчей, токены и контрастные роли).
+     - Все ссылки на репозиторий и обновления переведены на `https://github.com/kotar1223/meowave`.
+  2. **docs/index.html (Landing page)**:
+     - В секцию `#design` добавлены интерактивные Material 3 Expressive демонстрационные карточки (M3 Dynamic Card с elevation и чипами, Live Spectrum Aura с анимированным эквалайзером, сетка 29 M3 Design Tokens).
+     - В `docs/assets/sections.css` добавлены стили анимации `m3wave` и карточек.
+  3. **.gitignore**:
+     - Добавлены шаблоны для нейросетей, инструкций и промптов: `.gemini/`, `.antigravity/`, `.freebuff/`, `.cursor/`, `.cursorrules`, `.windsurf/`, `.windsurfrules`, `.codeium/`, `.claude/`, `.copilot/`, `.continue/`, `.aider*`, `.ai/`, `*.prompt`, `*.prompts`, `*ai_instructions*`, `copilot-instructions.md`, `.github/copilot-instructions.md`, `ai-rules/`, `*.chat`.
+  4. **Репозиторий и обновления**:
+     - `origin` перенаправлен на `https://github.com/kotar1223/meowave.git`, `beta` на `https://github.com/kotar1223/meowave-beta.git`.
+     - `src-tauri/tauri.conf.json` updater endpoints уже указывают на `kotar1223/meowave/releases/latest/download/latest.json`.
+     - `update.rs` (`git_pull`) подтягивает обновления из текущего upstream branch (`origin`).
+     - В `src-tauri/src/api.rs` UA обновлён на `Meowave/0.1 (+https://github.com/kotar1223/meowave)`.
+  5. **Аватарки (Root Cause и фикс)**:
+     - В `src-tauri/src/stream.rs`: прокси `serve_img` отправлял `User-Agent: Meowave/0.1`, из-за чего Supabase Storage и Cloudflare блокировали запросы к аватаркам кодом 403 Forbidden. Заменено на `BROWSER_UA` с полным `Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8`.
+     - В `src/app.js` `cropFrameSize()`: `box.clientWidth` мог быть 0 при скрытом элементе, приводя к делению на 0 (`k = Infinity`) и поломке canvas / null blob. Добавлен guard `Math.max(120, box.clientWidth || 320)`.
+     - В `openCropper()`: добавлен fallback через `new Image()` при сбое `createImageBitmap(file)`.
+     - В `cropResult()`: добавлен fallback через fetch dataUrl, если `toBlob()` вернул null.
+     - В `uploadImage()`: добавлена проверка наличия blob перед чтением `blob.size`.
+     - В `avat()`: добавлена подгрузка `S.avatar || sbProfile?.avatar_url` для текущего пользователя.
+     - В комнатах и лидерборде исправлены опечатки (`S.avatarUrl` -> `S.avatar`, fallback на `S.avatar`).
+     - В `fillProfileSettings()` и `src/index.html`: добавлен элемент живого предпросмотра выбранной аватарки в Настройках (`#set-ava-preview`).
+- Проверки:
+  - `node --check src/app.js` -> 0 ошибок.
+  - `npm run typecheck` -> 0 ошибок.
+  - `npm run web:build` -> 138 файлов собрано успешно.
+  - `tests/run-e2e.mjs` -> 312/312 тестов успешно пройдено (100.0%).
+  - Проверка валидации эмодзи в `README.md` -> 0 эмодзи.
+  - `cargo check` -> завершён успешно без ошибок.
+
+

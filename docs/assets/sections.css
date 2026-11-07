@@ -539,3 +539,16 @@ footer{position:relative;z-index:2;border-top:1px solid var(--line);margin-top:v
   .shots{grid-template-columns:1fr}
   .shot.wide{grid-column:auto}
 }
+
+/* Material 3 Expressive Showcase */
+@keyframes m3wave {
+  0%, 100% { transform: scaleY(0.25); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+.m3-demo-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.m3-demo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+}

@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const UA: &str = "Meowave/0.1 (+https://github.com/meowave)";
+pub const UA: &str = "Meowave/0.1 (+https://github.com/kotar1223/meowave)";
 pub const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36";
 
 /// One track shape for the frontend, whichever service it came from.
