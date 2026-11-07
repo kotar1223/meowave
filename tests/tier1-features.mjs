@@ -1142,5 +1142,38 @@ export function buildTier1Suite() {
     assert.ok(domHasElement(html, "#dl-play") && domHasElement(html, "#dl-find"));
   });
 
+  // ─── Feature 32: Avatar Upload & Display Pipeline ────────────────────────
+  suite.test("F32-01: [Happy Path] Avatar and banner inputs exist in DOM with cropper modal and controls", () => {
+    assert.ok(domHasElement(html, "#set-ava"), "#set-ava file input");
+    assert.ok(domHasElement(html, "#set-ava-pick"), "#set-ava-pick button");
+    assert.ok(domHasElement(html, "#set-ava-preview"), "#set-ava-preview element");
+    assert.ok(domHasElement(html, "#cropper"), "#cropper modal");
+    assert.ok(domHasElement(html, "#crop-stage"), "#crop-stage viewport");
+    assert.ok(domHasElement(html, "#crop-canvas"), "#crop-canvas preview");
+    assert.ok(domHasElement(html, "#crop-zoom"), "#crop-zoom range slider");
+    assert.ok(domHasElement(html, "#crop-ok"), "#crop-ok button");
+  });
+
+  suite.test("F32-02: [Happy Path] uploadImage immediately persists avatar dataUrl locally and repaints", () => {
+    assert.match(js, /S\[sProp\]=dataUrl;/);
+    assert.match(js, /save\(\);/);
+    assert.match(js, /renderProfile\(\);/);
+    assert.match(js, /fillProfileSettings\(\);/);
+  });
+
+  suite.test("F32-03: [Edge Case] Avatar error recovery includes data-direct fallback and placeholder", () => {
+    assert.match(js, /data-direct/);
+    assert.match(js, /this\.dataset\.direct/);
+    assert.match(js, /im\.classList\.contains\("avat-img"\)\|\|im\.id==="prof-ava-img"/);
+  });
+
+  suite.test("F32-04: [Static] stream.rs proxies supabase.co storage with browser UA and Accept header", () => {
+    const st = readSrc("src-tauri/src/stream.rs");
+    assert.match(st, /"supabase\.co"/);
+    assert.match(st, /"supabase\.in"/);
+    assert.match(st, /crate::api::BROWSER_UA/);
+    assert.match(st, /"image\/avif,image\/webp/);
+  });
+
   return suite;
 }

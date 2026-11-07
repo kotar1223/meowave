@@ -132,74 +132,95 @@ Meowave implements Google's **Material Design 3 (Material You) Expressive** spec
   <img src="docs/assets/promo/material-you-palette.svg" alt="Meowave Material You M3 Expressive Architecture" width="100%">
 </p>
 
-### Dynamic Tonal Swatches
+### Dynamic Tonal Swatches & Roles
 
 <table>
   <thead>
     <tr>
       <th align="center">Tone Level</th>
       <th align="left">Material Role</th>
-      <th align="center">HEX Code</th>
+      <th align="center">Color Swatch</th>
       <th align="left">Interface Context</th>
       <th align="center">Elevation Layer</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td align="center"><code>Tone 98</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-98-FAF5FF?style=flat-square&labelColor=191524&color=FAF5FF" alt="Tone 98"></td>
       <td><strong>Surface Lowest</strong></td>
-      <td align="center"><code>#FAF5FF</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23FAF5FF-FAF5FF?style=flat-square" height="18" alt="#FAF5FF">&nbsp;<code>#FAF5FF</code></td>
       <td>Window root canvas and bottom-most viewport surface</td>
-      <td align="center">Level 0 (Flat)</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_0-0dp_(Flat)-38BDF8?style=flat-square&labelColor=0f172a" alt="Level 0"></td>
     </tr>
     <tr>
-      <td align="center"><code>Tone 95</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-95-F5EDFF?style=flat-square&labelColor=191524&color=F5EDFF" alt="Tone 95"></td>
       <td><strong>Surface</strong></td>
-      <td align="center"><code>#F5EDFF</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23F5EDFF-F5EDFF?style=flat-square" height="18" alt="#F5EDFF">&nbsp;<code>#F5EDFF</code></td>
       <td>Primary background and base layer for views</td>
-      <td align="center">Level 0 (Base)</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_0-0dp_(Base)-38BDF8?style=flat-square&labelColor=0f172a" alt="Level 0"></td>
     </tr>
     <tr>
-      <td align="center"><code>Tone 90</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-92-EFE4FF?style=flat-square&labelColor=191524&color=EFE4FF" alt="Tone 92"></td>
+      <td><strong>Surface Container Low</strong></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23EFE4FF-EFE4FF?style=flat-square" height="18" alt="#EFE4FF">&nbsp;<code>#EFE4FF</code></td>
+      <td>Persistent navigation rails, sidebars, docked tabs</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_1-1dp_(Low)-A78BFA?style=flat-square&labelColor=191524" alt="Level 1"></td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-90-EAD7FF?style=flat-square&labelColor=191524&color=EAD7FF" alt="Tone 90"></td>
       <td><strong>Surface Container</strong></td>
-      <td align="center"><code>#EAD7FF</code></td>
-      <td>Standard cards, list rows, navigation rails</td>
-      <td align="center">Level 1 (Card)</td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23EAD7FF-EAD7FF?style=flat-square" height="18" alt="#EAD7FF">&nbsp;<code>#EAD7FF</code></td>
+      <td>Standard media cards, list rows, queue rows</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_2-3dp_(Card)-C084FC?style=flat-square&labelColor=191524" alt="Level 2"></td>
     </tr>
     <tr>
-      <td align="center"><code>Tone 80</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-85-DEC1FF?style=flat-square&labelColor=191524&color=DEC1FF" alt="Tone 85"></td>
+      <td><strong>Surface Container High</strong></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23DEC1FF-DEC1FF?style=flat-square" height="18" alt="#DEC1FF">&nbsp;<code>#DEC1FF</code></td>
+      <td>Dialog modals, bottom sheets, tune slider drawer</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_3-6dp_(High)-E879F9?style=flat-square&labelColor=191524" alt="Level 3"></td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-80-D0A7FF?style=flat-square&labelColor=191524&color=D0A7FF" alt="Tone 80"></td>
       <td><strong>Accent Soft / Container</strong></td>
-      <td align="center"><code>#D0A7FF</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23D0A7FF-D0A7FF?style=flat-square" height="18" alt="#D0A7FF">&nbsp;<code>#D0A7FF</code></td>
       <td>Active filter chips, secondary button containers</td>
-      <td align="center">Level 2 (Active)</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_4-8dp_(Top)-F43F5E?style=flat-square&labelColor=191524" alt="Level 4"></td>
     </tr>
     <tr>
-      <td align="center"><code>Tone 70</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-70-B87AFF?style=flat-square&labelColor=191524&color=B87AFF" alt="Tone 70"></td>
       <td><strong>Secondary Tonal</strong></td>
-      <td align="center"><code>#B87AFF</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23B87AFF-B87AFF?style=flat-square" height="18" alt="#B87AFF">&nbsp;<code>#B87AFF</code></td>
       <td>Muted accent badges, icon accents, secondary text</td>
-      <td align="center">Level 2 (Muted)</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_2-Tonal_Accent-B87AFF?style=flat-square&labelColor=191524" alt="Level 2"></td>
     </tr>
     <tr>
-      <td align="center"><code>Tone 50</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-50-9A46FF?style=flat-square&labelColor=191524&color=9A46FF" alt="Tone 50"></td>
       <td><strong>Primary M3</strong></td>
-      <td align="center"><code>#9A46FF</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%239A46FF-9A46FF?style=flat-square" height="18" alt="#9A46FF">&nbsp;<code>#9A46FF</code></td>
       <td>Play controls, active slider fill, primary buttons</td>
-      <td align="center">Level 3 (Action)</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_3-Primary_Action-9A46FF?style=flat-square&labelColor=191524" alt="Level 3"></td>
     </tr>
     <tr>
-      <td align="center"><code>Tone 30</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-100-FFFFFF?style=flat-square&labelColor=191524&color=FFFFFF" alt="Tone 100"></td>
+      <td><strong>On-Primary</strong></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%23FFFFFF-FFFFFF?style=flat-square" height="18" alt="#FFFFFF">&nbsp;<code>#FFFFFF</code></td>
+      <td>High-contrast text and icons on primary actions</td>
+      <td align="center"><img src="https://img.shields.io/badge/Contrast-WCAG_AAA-10B981?style=flat-square&labelColor=0f172a" alt="WCAG AAA"></td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-30-4A1282?style=flat-square&labelColor=191524&color=4A1282" alt="Tone 30"></td>
       <td><strong>Surface Dim</strong></td>
-      <td align="center"><code>#4A1282</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%234A1282-4A1282?style=flat-square" height="18" alt="#4A1282">&nbsp;<code>#4A1282</code></td>
       <td>Overlays, scrims, active lyrics highlight frame</td>
-      <td align="center">Level 4 (Overlay)</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_4-Overlay_Scrim-4A1282?style=flat-square&labelColor=191524" alt="Level 4"></td>
     </tr>
     <tr>
-      <td align="center"><code>Tone 10</code></td>
-      <td><strong>Base Dark</strong></td>
-      <td align="center"><code>#1A0038</code></td>
+      <td align="center"><img src="https://img.shields.io/badge/Tone-10-1A0038?style=flat-square&labelColor=191524&color=1A0038" alt="Tone 10"></td>
+      <td><strong>Base Dark Floor</strong></td>
+      <td align="center"><img src="https://img.shields.io/badge/-%231A0038-1A0038?style=flat-square" height="18" alt="#1A0038">&nbsp;<code>#1A0038</code></td>
       <td>Root contrast floor ensuring guaranteed WCAG AAA rating</td>
-      <td align="center">Level 5 (Floor)</td>
+      <td align="center"><img src="https://img.shields.io/badge/Level_5-Contrast_Floor-1A0038?style=flat-square&labelColor=191524" alt="Level 5"></td>
     </tr>
   </tbody>
 </table>

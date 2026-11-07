@@ -10015,6 +10015,7 @@ async function renderPeopleProfile(id){
   }
 
   const view=mine?p:(typeof maskProf==="function"?maskProf(p):p);
+  if(mine&&S.avatar&&!view.avatar_url)view.avatar_url=S.avatar;
   const showHours=true;
   let secs=p.listen_seconds||0;
   if(!isMock&&sb&&sbUser){

@@ -317,3 +317,12 @@ Rust
   - Git: `main` переведена на отслеживание `origin/main` (`kotar1223/meowave.git`).
   - Проверки: `node tests/run-e2e.mjs` (312/312 pass), `npm run typecheck` (0 errors), `cargo clippy --all-targets -- -D warnings` (0 warnings), `cargo test` (128 pass, 0 fail), Unicode scanner (0 emojis в README и SVG).
 
+- **Аудит и исправление предыдущей попытки (Antigravity Reviewer Fix)**:
+  - `.gitignore`: устранён конфликт между правилами `.agents/*` и `.agents/`; добавлен `brain/` в список игнорируемых нейро-артефактов.
+  - Git Index: ранее файлы `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, `HANDOFF.md`, `TEST_READY.md` и `.agents/` были закоммичены в git и продолжали отслеживаться несмотря на `.gitignore`. Выполнен `git rm --cached -r` для полного снятия их с отслеживания в репозитории без удаления с локального диска.
+  - `README.md`: в секцию Material You добавлена расширенная и декоративная таблица с цветовыми свотчами-чипами shields.io (`Tone 98`..`Tone 10`, `On-Primary`, `Surface Container Low/High`, бейджи уровней Elevation Level 0-5), с сохранением строгого правила 0 эмодзи.
+  - `src/app.js`: в `renderPeopleProfile()` добавлен фоллбек `if(mine&&S.avatar&&!view.avatar_url)view.avatar_url=S.avatar;` для гарантированного отображения локально установленной аватарки пользователя при просмотре своего профиля.
+  - `tests/tier1-features.mjs`: добавлен блок тестов Feature 32 (F32-01..F32-04) для сквозной проверки DOM элементов аватарки, кроппера, локального сохранения в `S.avatar`, восстановления через `data-direct` и разрешения домена `supabase.co` в Rust прокси.
+  - Проверки: `node tests/run-e2e.mjs` (316/316 pass, 100%), `npm.cmd run typecheck` (0 errors), `npm.cmd run web:build` (138 files), `cargo clippy` (0 warnings), `cargo test` (128 pass, 0 fail), 0 emojis в `README.md`.
+
+
