@@ -268,3 +268,29 @@ _Обновлено: 2026-11-05 (ночь), сессия «шаг 2 стека: 
   - Валидатор эмодзи `README.md` -> 0 эмодзи.
   - `cargo check` -> код 0, чисто.
   - `cargo test --lib` -> 128 тестов пройдено, 0 упало.
+
+### 2026-11-07 — Antigravity (Включение скриншотов владельца, M3 векторный SVG, полный .gitignore)
+- **Выполненные задачи**:
+  1. **Интеграция 3 пользовательских скриншотов**:
+     - Извлечены и скопированы из `.user_uploaded/` в `docs/assets/promo/`:
+       - `desktop-home.jpg` / `app-home-wave.jpg` — главный экран с живой волной и частицами.
+       - `desktop-player.jpg` / `app-synced-lyrics.jpg` — полноэкранный плеер с караоке-текстом и собачкой в шапке-ушанке.
+       - `desktop-tune.jpg` / `app-wave-tune.jpg` — выдвижная панель настройки волны с настроением и характером.
+     - Все 3 скриншота размещены на самом верху Interface Gallery в `README.md` и в галерее `docs/index.html`.
+  2. **Декоративный Material You Expressive на странице**:
+     - Создан высокоточный векторный SVG `docs/assets/promo/material-you-palette.svg`: динамическая тональная палитра (Tone 98 — Tone 10), роли OKLCH, WCAG AAA 7.1:1, 5 уровней Elevation Containers и формула концентрических радиусов.
+     - В `README.md` аскетичная ASCII-таблица заменена на визуальный SVG-показ и стилизованную HTML-таблицу тональных ролей без эмодзи.
+  3. **Комплексный `.gitignore`**:
+     - Добавлены исчерпывающие правила для нейросетей, инструкций и промптов: `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, `HANDOFF.md`, `TEST_READY.md`, `.agents/`, `*.prompt*`, `*instruction*`, `*instructions*`, `*ai_instructions*`, `*ai-instructions*`, `*ai-rules*`, `.vibe/`, `.context/`, `ai/`, `prompts/`, `.agent/`, `.ai-agent/`, `.neural/`, `*.ai`, `*.agent`, `.supermaven/`, `.sourcegraph/`, `cody.json`, `.cody/`, `.openhands/`, `.bolt/`, `.v0/`, `.lovable/`, `*llm*`, `*gpt*`.
+  4. **Репозиторий и ветки**:
+     - Ветка `main` переназначена на отслеживание `origin/main` (`https://github.com/kotar1223/meowave.git`).
+  5. **Аватарки**:
+     - Проверена устойчивость пайплайна: обрезка в cropper, мгновенное сохранение в localStorage, отображение превью и профиля без перезагрузки, fallback при отказе сетевого прокси.
+- **Проверки**:
+  - `node --check src/app.js` -> 0 синтаксических ошибок.
+  - `npm run typecheck` -> 0 ошибок типизации.
+  - `tests/run-e2e.mjs` -> 312/312 тестов пройдено (100.0%).
+  - `cargo clippy --all-targets -- -D warnings` -> 0 предупреждений.
+  - `cargo test` -> 128 тестов пройдено, 0 упало.
+  - Валидация Unicode эмодзи в `README.md` и SVG -> ровно 0 эмодзи.
+

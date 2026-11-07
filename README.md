@@ -64,6 +64,15 @@ Real-time line-by-line synchronized lyrics powered by LRCLIB and Genius with bui
 
 ---
 
+### My Wave & Algorithmic Recommendation Tuning
+Interactive mood and tempo tuning drawer allowing real-time personalization between high-energy and calm vibes, familiar favorites and new discoveries.
+
+<p align="center">
+  <img src="docs/assets/promo/desktop-tune.jpg" alt="Meowave My Wave Tuning Drawer" width="100%">
+</p>
+
+---
+
 ### Stage Mode & Live Waveform
 Alternative visual layout featuring cinematic artwork presentation with animated audio wave ribbons.
 
@@ -117,15 +126,83 @@ Full-featured touch navigation, 100dvh viewport compliance, and gesture controls
 
 Meowave implements Google's **Material Design 3 (Material You) Expressive** specifications. Instead of static themes, the interface dynamically generates 29 tonal color roles in the OKLCH color space directly from the dominant tones of the active track's album art.
 
+### Dynamic Tonal Architecture & Elevation Matrix
+
+<p align="center">
+  <img src="docs/assets/promo/material-you-palette.svg" alt="Meowave Material You M3 Expressive Architecture" width="100%">
+</p>
+
 ### Dynamic Tonal Swatches
 
-```
-+-------------------------------------------------------------------------------------------------------+
-|  Tone 95     |  Tone 90     |  Tone 80     |  Tone 70     |  Tone 50     |  Tone 30     |  Tone 10    |
-|  Surface     |  Container   |  Accent Soft |  Secondary   |  Primary M3  |  Surface Dim |  Base Dark  |
-|  #F5EDFF     |  #EAD7FF     |  #D0A7FF     |  #B87AFF     |  #9A46FF     |  #4A1282     |  #1A0038    |
-+-------------------------------------------------------------------------------------------------------+
-```
+<table>
+  <thead>
+    <tr>
+      <th align="center">Tone Level</th>
+      <th align="left">Material Role</th>
+      <th align="center">HEX Code</th>
+      <th align="left">Interface Context</th>
+      <th align="center">Elevation Layer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><code>Tone 98</code></td>
+      <td><strong>Surface Lowest</strong></td>
+      <td align="center"><code>#FAF5FF</code></td>
+      <td>Window root canvas and bottom-most viewport surface</td>
+      <td align="center">Level 0 (Flat)</td>
+    </tr>
+    <tr>
+      <td align="center"><code>Tone 95</code></td>
+      <td><strong>Surface</strong></td>
+      <td align="center"><code>#F5EDFF</code></td>
+      <td>Primary background and base layer for views</td>
+      <td align="center">Level 0 (Base)</td>
+    </tr>
+    <tr>
+      <td align="center"><code>Tone 90</code></td>
+      <td><strong>Surface Container</strong></td>
+      <td align="center"><code>#EAD7FF</code></td>
+      <td>Standard cards, list rows, navigation rails</td>
+      <td align="center">Level 1 (Card)</td>
+    </tr>
+    <tr>
+      <td align="center"><code>Tone 80</code></td>
+      <td><strong>Accent Soft / Container</strong></td>
+      <td align="center"><code>#D0A7FF</code></td>
+      <td>Active filter chips, secondary button containers</td>
+      <td align="center">Level 2 (Active)</td>
+    </tr>
+    <tr>
+      <td align="center"><code>Tone 70</code></td>
+      <td><strong>Secondary Tonal</strong></td>
+      <td align="center"><code>#B87AFF</code></td>
+      <td>Muted accent badges, icon accents, secondary text</td>
+      <td align="center">Level 2 (Muted)</td>
+    </tr>
+    <tr>
+      <td align="center"><code>Tone 50</code></td>
+      <td><strong>Primary M3</strong></td>
+      <td align="center"><code>#9A46FF</code></td>
+      <td>Play controls, active slider fill, primary buttons</td>
+      <td align="center">Level 3 (Action)</td>
+    </tr>
+    <tr>
+      <td align="center"><code>Tone 30</code></td>
+      <td><strong>Surface Dim</strong></td>
+      <td align="center"><code>#4A1282</code></td>
+      <td>Overlays, scrims, active lyrics highlight frame</td>
+      <td align="center">Level 4 (Overlay)</td>
+    </tr>
+    <tr>
+      <td align="center"><code>Tone 10</code></td>
+      <td><strong>Base Dark</strong></td>
+      <td align="center"><code>#1A0038</code></td>
+      <td>Root contrast floor ensuring guaranteed WCAG AAA rating</td>
+      <td align="center">Level 5 (Floor)</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Material 3 Architecture Tokens
 

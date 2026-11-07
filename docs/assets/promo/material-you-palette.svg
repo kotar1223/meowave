@@ -1,0 +1,158 @@
+<svg viewBox="0 0 960 380" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="m3bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#121019" />
+      <stop offset="100%" stop-color="#191524" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9A46FF" stop-opacity="0.25" />
+      <stop offset="50%" stop-color="#38BDF8" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#F43F5E" stop-opacity="0.2" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="960" height="380" rx="18" fill="url(#m3bg)" stroke="#2b263b" stroke-width="1.5" />
+  <rect x="20" y="20" width="920" height="70" rx="12" fill="url(#glow)" />
+
+  <!-- Header -->
+  <text x="40" y="48" fill="#D0A7FF" font-size="11" font-weight="700" letter-spacing="1.8">MATERIAL DESIGN 3 EXPRESSIVE</text>
+  <text x="40" y="74" fill="#FFFFFF" font-size="19" font-weight="600">Dynamic OKLCH Tonal Hierarchy &amp; Elevation Matrix</text>
+
+  <!-- Badges in Header -->
+  <g transform="translate(620, 38)">
+    <rect width="94" height="26" rx="13" fill="#292042" stroke="#4A3470" stroke-width="1" />
+    <text x="47" y="17" fill="#EAD7FF" font-size="11" font-weight="600" text-anchor="middle">29 Color Roles</text>
+  </g>
+  <g transform="translate(724, 38)">
+    <rect width="104" height="26" rx="13" fill="#1b283d" stroke="#2a4569" stroke-width="1" />
+    <text x="52" y="17" fill="#7dd3fc" font-size="11" font-weight="600" text-anchor="middle">WCAG AAA 7.1:1</text>
+  </g>
+  <g transform="translate(838, 38)">
+    <rect width="82" height="26" rx="13" fill="#2d1c2a" stroke="#522947" stroke-width="1" />
+    <text x="41" y="17" fill="#fda4af" font-size="11" font-weight="600" text-anchor="middle">OKLCH Space</text>
+  </g>
+
+  <!-- Tonal Swatches Row (8 chips) -->
+  <g transform="translate(40, 110)">
+    <!-- Swatch 1: Tone 98 -->
+    <g transform="translate(0, 0)">
+      <rect width="100" height="120" rx="12" fill="#FAF5FF" stroke="#EAD7FF" stroke-width="1" />
+      <text x="50" y="30" fill="#1A0038" font-size="10" font-weight="700" text-anchor="middle">TONE 98</text>
+      <text x="50" y="60" fill="#1A0038" font-size="13" font-weight="700" text-anchor="middle">Surface Lowest</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#1A0038" fill-opacity="0.08" />
+      <text x="50" y="100" fill="#1A0038" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#FAF5FF</text>
+    </g>
+
+    <!-- Swatch 2: Tone 95 -->
+    <g transform="translate(111, 0)">
+      <rect width="100" height="120" rx="12" fill="#F5EDFF" stroke="#D0A7FF" stroke-width="1" />
+      <text x="50" y="30" fill="#1A0038" font-size="10" font-weight="700" text-anchor="middle">TONE 95</text>
+      <text x="50" y="60" fill="#1A0038" font-size="13" font-weight="700" text-anchor="middle">Surface</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#1A0038" fill-opacity="0.08" />
+      <text x="50" y="100" fill="#1A0038" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#F5EDFF</text>
+    </g>
+
+    <!-- Swatch 3: Tone 90 -->
+    <g transform="translate(222, 0)">
+      <rect width="100" height="120" rx="12" fill="#EAD7FF" />
+      <text x="50" y="30" fill="#2A0054" font-size="10" font-weight="700" text-anchor="middle">TONE 90</text>
+      <text x="50" y="60" fill="#2A0054" font-size="13" font-weight="700" text-anchor="middle">Container</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#2A0054" fill-opacity="0.1" />
+      <text x="50" y="100" fill="#2A0054" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#EAD7FF</text>
+    </g>
+
+    <!-- Swatch 4: Tone 80 -->
+    <g transform="translate(333, 0)">
+      <rect width="100" height="120" rx="12" fill="#D0A7FF" />
+      <text x="50" y="30" fill="#38006E" font-size="10" font-weight="700" text-anchor="middle">TONE 80</text>
+      <text x="50" y="60" fill="#38006E" font-size="13" font-weight="700" text-anchor="middle">Accent Soft</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#38006E" fill-opacity="0.12" />
+      <text x="50" y="100" fill="#38006E" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#D0A7FF</text>
+    </g>
+
+    <!-- Swatch 5: Tone 70 -->
+    <g transform="translate(444, 0)">
+      <rect width="100" height="120" rx="12" fill="#B87AFF" />
+      <text x="50" y="30" fill="#1A0038" font-size="10" font-weight="700" text-anchor="middle">TONE 70</text>
+      <text x="50" y="60" fill="#1A0038" font-size="13" font-weight="700" text-anchor="middle">Secondary</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#1A0038" fill-opacity="0.12" />
+      <text x="50" y="100" fill="#1A0038" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#B87AFF</text>
+    </g>
+
+    <!-- Swatch 6: Tone 50 (Primary M3) -->
+    <g transform="translate(555, 0)">
+      <rect width="100" height="120" rx="12" fill="#9A46FF" stroke="#D0A7FF" stroke-width="1.5" />
+      <text x="50" y="30" fill="#FFFFFF" font-size="10" font-weight="700" text-anchor="middle">TONE 50</text>
+      <text x="50" y="60" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">Primary M3</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#000000" fill-opacity="0.25" />
+      <text x="50" y="100" fill="#FFFFFF" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#9A46FF</text>
+    </g>
+
+    <!-- Swatch 7: Tone 30 -->
+    <g transform="translate(666, 0)">
+      <rect width="100" height="120" rx="12" fill="#4A1282" />
+      <text x="50" y="30" fill="#EAD7FF" font-size="10" font-weight="700" text-anchor="middle">TONE 30</text>
+      <text x="50" y="60" fill="#EAD7FF" font-size="13" font-weight="700" text-anchor="middle">Surface Dim</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#FFFFFF" fill-opacity="0.12" />
+      <text x="50" y="100" fill="#EAD7FF" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#4A1282</text>
+    </g>
+
+    <!-- Swatch 8: Tone 10 -->
+    <g transform="translate(777, 0)">
+      <rect width="100" height="120" rx="12" fill="#1A0038" stroke="#3A1C60" stroke-width="1" />
+      <text x="50" y="30" fill="#D0A7FF" font-size="10" font-weight="700" text-anchor="middle">TONE 10</text>
+      <text x="50" y="60" fill="#D0A7FF" font-size="13" font-weight="700" text-anchor="middle">Base Dark</text>
+      <rect x="15" y="86" width="70" height="20" rx="6" fill="#FFFFFF" fill-opacity="0.1" />
+      <text x="50" y="100" fill="#D0A7FF" font-size="11" font-family="monospace" font-weight="600" text-anchor="middle">#1A0038</text>
+    </g>
+  </g>
+
+  <!-- Elevation & Architecture Footer Cards -->
+  <g transform="translate(40, 250)">
+    <!-- Container 1 -->
+    <g transform="translate(0, 0)">
+      <rect width="166" height="96" rx="12" fill="#1b1725" stroke="#2d263d" stroke-width="1" />
+      <text x="16" y="28" fill="#7dd3fc" font-size="11" font-weight="700">LEVEL 0 · FLAT</text>
+      <text x="16" y="48" fill="#FFFFFF" font-size="12" font-weight="600">Base Surface</text>
+      <text x="16" y="68" fill="#9f9aa8" font-size="10.5">Window root canvas</text>
+      <text x="16" y="84" fill="#696472" font-size="9.5">Elevation 0dp</text>
+    </g>
+
+    <!-- Container 2 -->
+    <g transform="translate(178, 0)">
+      <rect width="166" height="96" rx="12" fill="#201b2c" stroke="#352c47" stroke-width="1" />
+      <text x="16" y="28" fill="#a78bfa" font-size="11" font-weight="700">LEVEL 1 · LOW</text>
+      <text x="16" y="48" fill="#FFFFFF" font-size="12" font-weight="600">Sidebar &amp; Nav</text>
+      <text x="16" y="68" fill="#9f9aa8" font-size="10.5">SurfaceContainerLow</text>
+      <text x="16" y="84" fill="#696472" font-size="9.5">Elevation 1dp</text>
+    </g>
+
+    <!-- Container 3 -->
+    <g transform="translate(356, 0)">
+      <rect width="166" height="96" rx="12" fill="#262035" stroke="#403457" stroke-width="1" />
+      <text x="16" y="28" fill="#c084fc" font-size="11" font-weight="700">LEVEL 2 · CARD</text>
+      <text x="16" y="48" fill="#FFFFFF" font-size="12" font-weight="600">Media Cards</text>
+      <text x="16" y="68" fill="#9f9aa8" font-size="10.5">SurfaceContainer</text>
+      <text x="16" y="84" fill="#696472" font-size="9.5">Elevation 3dp</text>
+    </g>
+
+    <!-- Container 4 -->
+    <g transform="translate(534, 0)">
+      <rect width="166" height="96" rx="12" fill="#2d253f" stroke="#4a3c66" stroke-width="1" />
+      <text x="16" y="28" fill="#e879f9" font-size="11" font-weight="700">LEVEL 3 · HIGH</text>
+      <text x="16" y="48" fill="#FFFFFF" font-size="12" font-weight="600">Dialogs &amp; Drawers</text>
+      <text x="16" y="68" fill="#9f9aa8" font-size="10.5">SurfaceContainerHigh</text>
+      <text x="16" y="84" fill="#696472" font-size="9.5">Elevation 6dp</text>
+    </g>
+
+    <!-- Container 5 -->
+    <g transform="translate(712, 0)">
+      <rect width="166" height="96" rx="12" fill="#362a4d" stroke="#564377" stroke-width="1" />
+      <text x="16" y="28" fill="#f43f5e" font-size="11" font-weight="700">LEVEL 4 · TOP</text>
+      <text x="16" y="48" fill="#FFFFFF" font-size="12" font-weight="600">Toasts &amp; Popovers</text>
+      <text x="16" y="68" fill="#9f9aa8" font-size="10.5">SurfaceContainerHighest</text>
+      <text x="16" y="84" fill="#696472" font-size="9.5">Elevation 8dp</text>
+    </g>
+  </g>
+</svg>

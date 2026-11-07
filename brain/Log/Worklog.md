@@ -310,10 +310,10 @@ Rust
   - `cargo check --manifest-path src-tauri/Cargo.toml` -> завершён успешно без ошибок.
 
 
-- **Ревью и устранение недочётов (Antigravity)**:
-  - `src/app.js`: в `renderProfile()` добавлен `<span class="avatar-ph">` плейсхолдер для гостевого и авторизованного пользователя, чтобы при сетевых сбоях/ошибках прокси не оставался пустой блок; в `onerror` и в глобальный перехватчик `error` добавлена авто-попытка загрузки по `data-direct` (напрямую из Supabase Storage) для профиля и превью в настройках.
-  - `README.md`: в галерею скриншотов добавлен `desktop-playlist.jpg` (вид плейлиста).
-  - `.gitignore`: добавлены паттерны `.trae/`, `.cline/`, `.roo/`, `.devin/`, `*.prompt.md`, `*.prompt.txt`.
-  - `docs/index.html`: исправлена захардкоженная версия `0.1.0` -> `3.3.0`.
-  - Git: ветка `main` синхронизирована (fast-forward) с `beta-redesign` и запушена в `origin` (`kotar1223/meowave`) и `beta` (`kotar1223/meowave-beta`).
-  - Проверки: `node tests/run-e2e.mjs` (312/312 pass), `npm run typecheck` (0 errors), `npm run web:build` (138 files), `cargo test --lib` (128 pass, 0 fail), Unicode scanner (0 emojis).
+- **Включение скриншотов владельца, M3 векторный SVG, полный .gitignore (Antigravity)**:
+  - Скриншоты: извлечены 3 присланных пользователем скриншота из `.user_uploaded/` и интегрированы в `docs/assets/promo/` (`desktop-home.jpg`, `desktop-player.jpg`, `desktop-tune.jpg`, `app-home-wave.jpg`, `app-synced-lyrics.jpg`, `app-wave-tune.jpg`); представлены на первом месте в `README.md` и в галерее `docs/index.html`.
+  - Material You Expressive: создан векторный SVG `docs/assets/promo/material-you-palette.svg` с тональной сеткой (Tone 98 - Tone 10), индикаторами OKLCH, WCAG AAA 7.1:1 и 5 уровнями Elevation Containers; в `README.md` текстовая таблица заменена на визуальный SVG-показ и полнофункциональную HTML-таблицу.
+  - `.gitignore`: добавлены все классы инструкций, промптов и сред искусственного интеллекта (`AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, `HANDOFF.md`, `TEST_READY.md`, `.agents/`, `*.prompt*`, `*instruction*`, `.vibe/`, `.context/`, `ai/`, `prompts/`, `.supermaven/`, `.sourcegraph/`, `cody.json`, `.cody/`, `.openhands/`, `.bolt/`, `.v0/`, `.lovable/`, `*llm*`, `*gpt*`).
+  - Git: `main` переведена на отслеживание `origin/main` (`kotar1223/meowave.git`).
+  - Проверки: `node tests/run-e2e.mjs` (312/312 pass), `npm run typecheck` (0 errors), `cargo clippy --all-targets -- -D warnings` (0 warnings), `cargo test` (128 pass, 0 fail), Unicode scanner (0 emojis в README и SVG).
+

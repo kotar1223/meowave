@@ -90,6 +90,12 @@ __pycache__/
 installer/
 
 # AI assistants, neural IDE configs, instructions & prompts
+AGENTS.md
+GEMINI.md
+CLAUDE.md
+HANDOFF.md
+TEST_READY.md
+.agents/
 .gemini/
 .antigravity/
 .freebuff/
@@ -105,8 +111,12 @@ installer/
 .ai/
 *.prompt
 *.prompts
+*.prompt.*
+*instruction*
+*instructions*
 *ai_instructions*
 *ai-instructions*
+*ai-rules*
 copilot-instructions.md
 .github/copilot-instructions.md
 ai-rules/
@@ -115,5 +125,23 @@ ai-rules/
 .cline/
 .roo/
 .devin/
-*.prompt.md
-*.prompt.txt
+.vibe/
+.context/
+ai/
+prompts/
+.agent/
+.ai-agent/
+.neural/
+*.ai
+*.agent
+*.instructions.*
+.supermaven/
+.sourcegraph/
+cody.json
+.cody/
+.openhands/
+.bolt/
+.v0/
+.lovable/
+*llm*
+*gpt*
