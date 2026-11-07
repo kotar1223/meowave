@@ -111,3 +111,9 @@ copilot-instructions.md
 .github/copilot-instructions.md
 ai-rules/
 *.chat
+.trae/
+.cline/
+.roo/
+.devin/
+*.prompt.md
+*.prompt.txt

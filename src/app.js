@@ -9537,8 +9537,9 @@ function renderProfile(savedVals={}){
      </label>
      <div class="pf-main">
      <div class="profhead">
-      <label class="avatar has-img" title="${t("pr.ava.hint")}">
-       <img src="${esc(ava)}"${avaRaw&&avaRaw!==ava?` data-direct="${esc(avaRaw)}"`:""} alt="" id="prof-ava-img" onerror="this.parentElement.classList.remove('has-img');this.style.display='none'">
+      <label class="avatar${ava?" has-img":""}" title="${t("pr.ava.hint")}">
+       ${ava?`<img src="${esc(ava)}"${avaRaw&&avaRaw!==ava?` data-direct="${esc(avaRaw)}"`:""} alt="" id="prof-ava-img" onerror="if(this.dataset.direct&&this.src!==this.dataset.direct){this.src=this.dataset.direct;delete this.dataset.direct;return;}this.parentElement.classList.remove('has-img');this.style.display='none';this.parentElement.querySelector('.avatar-ph')?.removeAttribute('style');">`:""}
+       <span class="avatar-ph"${ava?` style="display:none"`:""}>${esc(((S.username||"M")[0]||"M").toUpperCase())}</span>
        <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
        <input type="file" id="prof-ava-input" accept="image/*">
       </label>
@@ -9602,7 +9603,8 @@ function renderProfile(savedVals={}){
    <div class="pf-main">
    <div class="profhead">
     <label class="avatar${ava?" has-img":""}" title="${t("pr.ava.hint")}">
-     ${ava?`<img src="${esc(ava)}"${avaRaw&&avaRaw!==ava?` data-direct="${esc(avaRaw)}"`:""} alt="" id="prof-ava-img" onerror="this.parentElement.classList.remove('has-img');this.style.display='none'">`:`<span class="avatar-ph">${esc(((p.username||sbUser.email||"M")[0]||"M").toUpperCase())}</span>`}
+     ${ava?`<img src="${esc(ava)}"${avaRaw&&avaRaw!==ava?` data-direct="${esc(avaRaw)}"`:""} alt="" id="prof-ava-img" onerror="if(this.dataset.direct&&this.src!==this.dataset.direct){this.src=this.dataset.direct;delete this.dataset.direct;return;}this.parentElement.classList.remove('has-img');this.style.display='none';this.parentElement.querySelector('.avatar-ph')?.removeAttribute('style');">`:""}
+     <span class="avatar-ph"${ava?` style="display:none"`:""}>${esc(((p.username||sbUser.email||"M")[0]||"M").toUpperCase())}</span>
      <span class="cam"><span class="material-symbols-rounded" style="font-size:24px">photo_camera</span></span>
      <input type="file" id="prof-ava-input" accept="image/*">
     </label>
@@ -9824,10 +9826,21 @@ document.addEventListener("click",e=>{
  openProfile(id)},true);
 document.addEventListener("error",e=>{
  const im=e.target;
- if(!(im instanceof HTMLImageElement)||!im.classList.contains("avat-img"))return;
- const d=im.dataset.direct;
- if(d&&im.src!==d){im.removeAttribute("data-direct");im.src=d;return}
- im.parentElement?.classList.remove("has-img");im.remove()},true);
+ if(!(im instanceof HTMLImageElement))return;
+ if(im.classList.contains("avat-img")||im.id==="prof-ava-img"||im.closest("#set-ava-preview")){
+  const d=im.dataset.direct;
+  if(d&&im.src!==d){im.removeAttribute("data-direct");im.src=d;return}
+  im.parentElement?.classList.remove("has-img");
+  if(im.id==="prof-ava-img"){
+   im.style.display="none";
+   im.parentElement?.querySelector(".avatar-ph")?.removeAttribute("style");
+  }else if(im.classList.contains("avat-img")){
+   im.remove();
+  }else{
+   im.style.display="none";
+  }
+ }
+},true);
 
 /* ── Social Mock Store & Community Directory ─────────────────────────
    Allows guest and offline users to explore profiles, interact with friends,
@@ -12320,7 +12333,8 @@ function fillProfileSettings(){
  if(prev){
   if(ava){
    const u=cssUrlRaw(ava)||ava;
-   prev.innerHTML=`<img src="${esc(u)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;display:block">`;
+   const direct=/^https?:\/\//i.test(ava)?ava:"";
+   prev.innerHTML=`<img src="${esc(u)}"${direct&&direct!==u?` data-direct="${esc(direct)}"`:""} alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;display:block" onerror="if(this.dataset.direct&&this.src!==this.dataset.direct){this.src=this.dataset.direct;delete this.dataset.direct;return;}this.style.display='none'">`;
    prev.style.display="inline-flex";
   }else{
    prev.innerHTML="";

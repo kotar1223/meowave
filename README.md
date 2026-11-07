@@ -82,11 +82,13 @@ Instant cross-service queries returning tracks, artists, albums, and playlists f
 
 ---
 
-### Media Library & Local Audio
+### Media Library & Curated Playlists
 Playlists, favorites, listening history, and local audio files (FLAC, MP3, WAV, AAC, OGG) unified under one roof.
 
 <p align="center">
-  <img src="docs/assets/promo/desktop-library.jpg" alt="Meowave Media Library" width="100%">
+  <img src="docs/assets/promo/desktop-library.jpg" alt="Meowave Media Library" width="48%">
+  &nbsp;
+  <img src="docs/assets/promo/desktop-playlist.jpg" alt="Meowave Curated Playlist View" width="48%">
 </p>
 
 ---

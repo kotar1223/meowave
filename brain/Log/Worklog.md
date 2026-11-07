@@ -309,3 +309,11 @@ Rust
   - Проверка валидации эмодзи в `README.md` -> 0 эмодзи.
   - `cargo check --manifest-path src-tauri/Cargo.toml` -> завершён успешно без ошибок.
 
+
+- **Ревью и устранение недочётов (Antigravity)**:
+  - `src/app.js`: в `renderProfile()` добавлен `<span class="avatar-ph">` плейсхолдер для гостевого и авторизованного пользователя, чтобы при сетевых сбоях/ошибках прокси не оставался пустой блок; в `onerror` и в глобальный перехватчик `error` добавлена авто-попытка загрузки по `data-direct` (напрямую из Supabase Storage) для профиля и превью в настройках.
+  - `README.md`: в галерею скриншотов добавлен `desktop-playlist.jpg` (вид плейлиста).
+  - `.gitignore`: добавлены паттерны `.trae/`, `.cline/`, `.roo/`, `.devin/`, `*.prompt.md`, `*.prompt.txt`.
+  - `docs/index.html`: исправлена захардкоженная версия `0.1.0` -> `3.3.0`.
+  - Git: ветка `main` синхронизирована (fast-forward) с `beta-redesign` и запушена в `origin` (`kotar1223/meowave`) и `beta` (`kotar1223/meowave-beta`).
+  - Проверки: `node tests/run-e2e.mjs` (312/312 pass), `npm run typecheck` (0 errors), `npm run web:build` (138 files), `cargo test --lib` (128 pass, 0 fail), Unicode scanner (0 emojis).
