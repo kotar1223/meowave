@@ -8395,7 +8395,28 @@ function fpTint(a,b){
  const el=document.getElementById("fp");if(!el||!a)return;
  el.style.setProperty("--fp-tint",a.join(" "));
  if(b)el.style.setProperty("--fp-tint-2",b.join(" "))}
+/* The whole shell sits on the current cover, blurred — the same backdrop as
+   the full-screen player. Two stacked layers crossfade on a track change. */
+let AB_FRONT=0,AB_URL="";
+function artBg(tr){
+ /* No track: keep the last cover, so the shell never drops to a flat void. */
+ let raw=tr?.art||"";
+ try{if(raw)localStorage.setItem("mw.lastArt",String(raw));else raw=localStorage.getItem("mw.lastArt")||""}catch{}
+ const u=raw?cssUrlRaw(raw):"";
+ if(u===AB_URL)return;AB_URL=u;
+ let box=document.getElementById("artbg");
+ if(!box){box=document.createElement("div");box.id="artbg";box.className="artbg";box.setAttribute("aria-hidden","true");
+  box.innerHTML="<i></i><i></i><b></b>";document.body.prepend(box)}
+ if(!u){box.querySelectorAll("i").forEach(i=>i.dataset.on="false");return}
+ const want=`url("${u.replace(/"/g,"%22")}")`;
+ const show=()=>{if(AB_URL!==u)return;
+  const L=box.querySelectorAll("i"),next=L[AB_FRONT^1],cur=L[AB_FRONT];
+  next.style.backgroundImage=want;next.dataset.on="true";cur.dataset.on="false";AB_FRONT^=1};
+ const img=new Image();img.onload=show;img.onerror=show;img.src=u}
+/* At start the last cover goes up at once, before any track is restored. */
+setTimeout(()=>{try{if(!AB_URL)artBg(typeof S!=="undefined"?S.current:null)}catch{}},0);
 function adaptAccent(tr){
+ artBg(tr);
  if(!tr||!tr.art){coverTint(null);return}
  const hit=accentAdaptCache[trackKey(tr)];
  if(hit){

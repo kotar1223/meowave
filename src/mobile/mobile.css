@@ -1,0 +1,134 @@
+/* Meowave on phones — the look half of the mobile layer (mobile.js is the
+   behaviour). Every rule here is scoped to html[data-mobile], which only
+   detect.js sets (iOS / Android, or ?mobile=1 in a browser), so nothing in
+   this file can touch the desktop app. Tuned on an iPhone 16 (393×852 pt,
+   Dynamic Island, 59 pt top / 34 pt bottom safe areas).
+
+   Loaded after app.css, so equal-specificity rules here win. */
+
+/* ══ base: a phone app, not a web page ═════════════════════════════════ */
+html[data-mobile]{--tb:0px!important;-webkit-text-size-adjust:100%}
+html[data-mobile],html[data-mobile] body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+html[data-mobile] .titlebar{display:none!important}
+html[data-mobile] :is(button,a,.navbtn,.row,.np,img){-webkit-touch-callout:none}
+html[data-mobile] :is(button,.navbtn,.row){-webkit-user-select:none;user-select:none}
+/* below 16px iOS zooms the whole page when a field gets focus */
+html[data-mobile] :is(input,textarea,select){font-size:16px!important}
+/* no hover on glass: :hover sticks after a tap on iOS */
+@media (hover:none){
+  html[data-mobile] .np .npic{opacity:1}
+}
+
+/* ══ main shell, portrait: the full-screen player's frame, folded ══════
+   The band runs under the status bar / Dynamic Island and holds the mini
+   player and the tab bar at the bottom, down into the home-indicator area;
+   the content sits on the cover in one rounded opening between them. */
+html[data-mobile][data-orient="port"] .app{gap:0;
+  padding:max(6px,env(safe-area-inset-top,0px)) max(6px,env(safe-area-inset-right,0px)) 0 max(6px,env(safe-area-inset-left,0px))}
+html[data-mobile][data-orient="port"] .app::before{content:"";position:absolute;grid-area:main;inset:0;z-index:0;pointer-events:none;
+  border-radius:var(--fr-r,22px);box-shadow:0 0 0 200vmax var(--fr-glass,rgb(8 8 12/.44))}
+html[data-mobile][data-orient="port"] .main{background:transparent;border:0;box-shadow:none;border-radius:var(--fr-r,22px);padding:10px 10px 0;
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+html[data-mobile][data-orient="port"] :is(.rail.pane,.bar){background:transparent;border:0;border-radius:0;box-shadow:none;margin:0;
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+html[data-mobile][data-orient="port"] .bar{padding:6px 12px 2px}
+/* the search: a soft pill on the cover, like the player's chips */
+html[data-mobile][data-orient="port"] .main>.top>.search{height:48px;min-height:48px;border-radius:24px;background:rgb(255 255 255/.12);
+  border:0;box-shadow:none;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+html[data-mobile][data-orient="port"] #srv-dd-btn{min-height:40px;background:rgb(255 255 255/.12);border:0;box-shadow:none}
+html[data-mobile][data-orient="port"] .main .view{padding-inline:4px}
+
+/* tab bar: 44pt+ targets, the current tab a white pill like the player's
+   pressed toggles */
+html[data-mobile][data-orient="port"] .rail{height:calc(60px + env(safe-area-inset-bottom,0px))}
+html[data-mobile][data-orient="port"] .rail .navbtn{min-height:56px}
+html[data-mobile][data-theme="dark"] .rail .navbtn[aria-current="true"] .nav-icon-box{background:#fff;color:#111;box-shadow:none}
+html[data-mobile][data-theme="dark"] .rail .navbtn[aria-current="true"] .nav-icon-box .material-symbols-rounded{color:#111!important}
+html[data-mobile][data-theme="dark"] .rail .navbtn span:last-child{color:rgb(255 255 255/.68)}
+html[data-mobile][data-theme="dark"] .rail .navbtn[aria-current="true"] span:last-child{color:#fff}
+
+/* mini player: a grab handle says "pull me up", bigger play target */
+html[data-mobile][data-orient="port"] .bar::before{content:"";position:absolute;top:-1px;left:50%;width:36px;height:4px;margin-left:-18px;
+  border-radius:2px;background:rgb(255 255 255/.28)}
+html[data-mobile][data-orient="port"] .bar .seek{display:none}
+html[data-mobile][data-orient="port"] .barmain{padding-top:4px}
+html[data-mobile][data-orient="port"] .barmain .play{width:48px!important;height:48px!important}
+html[data-mobile][data-orient="port"] .barmain .ic{width:44px;height:44px}
+html[data-mobile][data-orient="port"] .np .art{width:46px;height:46px;border-radius:10px}
+
+/* lists: rows tall enough for a thumb */
+html[data-mobile] .row{min-height:58px}
+html[data-mobile] .tabs button{min-height:44px}
+
+/* ══ main shell, landscape: the desktop frame, minus the window chrome,
+   clear of the Dynamic Island on the side ═══════════════════════════════ */
+html[data-mobile][data-orient="land"] .app{
+  padding:max(6px,env(safe-area-inset-top,0px)) max(6px,env(safe-area-inset-right,0px)) max(6px,env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+
+/* ══ full-screen player ════════════════════════════════════════════════ */
+/* Touch has no "idle mouse": the controls never fade away on a phone (that
+   fade was half of "в режим текста зашёл и не выйти"). */
+html[data-mobile] #fpc[data-active="false"]{cursor:auto}
+html[data-mobile] #fpc[data-active="false"] .fpx-top{opacity:1;transform:none;pointer-events:auto}
+html[data-mobile] #fpc[data-active="false"] :is(.fpx-transport,.fpx-extras,.fpx-like,.fpx-more,.fpx-times,.fpx-side>.lyr-header){opacity:1;pointer-events:auto}
+/* the player frame never scrolls: a focused control near the edge used to
+   nudge it up and push the top buttons under the Dynamic Island */
+html[data-mobile] .fp{overflow:clip}
+html[data-mobile] #fp-fullscreen-toggle{display:none!important}
+html[data-mobile] .fpx-ib{width:44px;height:44px}
+
+/* the tab bar Плеер · Текст · Очередь (built by mobile.js) */
+.mfp-tabs{display:none}
+html[data-mobile][data-orient="port"] .mfp-tabs{--i:0;display:grid;grid-template-columns:repeat(3,1fr);position:absolute;z-index:7;
+  left:18px;right:18px;bottom:max(12px,env(safe-area-inset-bottom,0px));height:46px;padding:4px;box-sizing:border-box;
+  border-radius:23px;background:rgb(255 255 255/.12);
+  -webkit-backdrop-filter:blur(24px) saturate(1.4);backdrop-filter:blur(24px) saturate(1.4);
+  box-shadow:inset 0 0 0 1px rgb(255 255 255/.08)}
+html[data-mobile] .mfp-tabs button{min-height:0;position:relative;z-index:1;border-radius:19px;font:600 .86rem/1 var(--app-font,"Golos Text",Inter,system-ui,sans-serif);
+  color:rgb(255 255 255/.72);transition:color .25s var(--e)}
+html[data-mobile] .mfp-tabs button[aria-selected="true"]{color:#111}
+html[data-mobile] .mfp-tabs>i{position:absolute;z-index:0;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / 3);border-radius:19px;background:#fff;
+  transform:translate3d(calc(var(--i) * 100%),0,0);transition:transform .38s cubic-bezier(.22,1,.36,1)}
+
+@media (orientation:portrait){
+  /* room for the tabs under everything */
+  html[data-mobile] .fpx-body{bottom:calc(max(12px,env(safe-area-inset-bottom,0px)) + 62px)}
+  html[data-mobile] .fpx-top{top:max(8px,env(safe-area-inset-top,0px))}
+  html[data-mobile] .fpx{--cov:clamp(150px,min(calc(100dvh - 470px),86vw),420px)}
+  /* volume is the phone's own buttons; lyrics / queue live in the tabs */
+  html[data-mobile] .fpx-extras{display:none!important}
+  /* stage: cover, then the panel, centred in the free height */
+  html[data-mobile] .fpx[data-layout="stage"] .fpx-body{justify-content:center;gap:clamp(16px,3.5dvh,34px)}
+  html[data-mobile] .fpx-title{font-size:1.32rem}
+  html[data-mobile] .fpx-transport{justify-content:space-between}
+  /* lyrics / queue: the list fills the screen, a compact player under it */
+  html[data-mobile] .fpx[data-layout="lyrics"] .fpx-panel{gap:6px}
+  html[data-mobile] .fpx[data-layout="lyrics"] .fpx-meta{min-height:0}
+  html[data-mobile] .fpx[data-layout="lyrics"] .fpx-title{font-size:1.05rem}
+  html[data-mobile] .fpx[data-layout="lyrics"] .fpx-transport{transform:scale(.86);transform-origin:50% 100%;margin-top:-6px}
+  html[data-mobile] #fplyr.lyr-big{padding:12dvh 4px 26dvh}
+  html[data-mobile] #fplyr p{font-size:clamp(22px,7.2vw,32px);line-height:1.18}
+}
+
+/* landscape full-screen player: clear of the Dynamic Island and the home
+   indicator, no tabs (the desktop toggles are there) */
+@media (orientation:landscape){
+  html[data-mobile] .fpx{left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px)}
+  /* the bottom row (lyrics / queue / volume) was cut off at 393pt of height:
+     the tabs take the island's place at the top instead */
+  html[data-mobile] .fpx-extras{display:none!important}
+  html[data-mobile] .fpx-island{display:none!important}
+  html[data-mobile][data-orient="land"] .mfp-tabs{--i:0;display:grid;grid-template-columns:repeat(3,1fr);position:absolute;z-index:7;
+    top:6px;left:50%;width:min(330px,40vw);height:40px;margin-left:calc(min(330px,40vw) / -2);padding:3px;box-sizing:border-box;
+    border-radius:20px;background:var(--glass,rgb(8 8 12/.44))}
+  html[data-mobile][data-orient="land"] .mfp-tabs>i{top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 3)}
+  html[data-mobile][data-orient="land"] .mfp-tabs button{font-size:.8rem}
+  /* 393pt of height: a smaller cover and tighter rows so play is never cut */
+  html[data-mobile] #fpc .fpx,html[data-mobile] #fpc .fpx[data-layout="lyrics"]{--cov:clamp(72px,calc(100dvh - 300px),180px)}
+  html[data-mobile] .fpx-body{top:52px;bottom:max(8px,env(safe-area-inset-bottom,0px))}
+  html[data-mobile] .fpx-panel{gap:6px}
+  html[data-mobile] .fpx-play{width:56px;height:56px}
+}
+
+/* settings popover of the player: a bottom sheet clear of the home bar */
+html[data-mobile] #fp-settings-popover.fpset{padding-bottom:env(safe-area-inset-bottom,0px)}

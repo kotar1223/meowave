@@ -1,0 +1,120 @@
+name: Android Build
+
+# Builds Meowave for Android (Tauri 2 mobile, arm64 — every phone from the
+# last ~8 years) and produces a signed, installable Meowave.apk.
+#
+# Signing: with the repository secrets ANDROID_KEYSTORE_B64 (the .jks,
+# base64) and ANDROID_KEYSTORE_PASSWORD the APK is signed with that one key,
+# so each new build installs over the previous one. Without them it is
+# signed with a throwaway key made for this run: it installs, but the next
+# build needs the old one uninstalled first.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'scripts/**'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # The runner image ships the Android SDK and NDK; Tauri finds the NDK
+      # through NDK_HOME.
+      - name: Point Tauri at the NDK
+        run: |
+          echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+          echo "SDK: $ANDROID_HOME  NDK: $ANDROID_NDK_LATEST_HOME"
+
+      - name: Install NPM dependencies
+        run: npm ci || npm install
+
+      # tauri.conf.json bundles an ffmpeg sidecar for desktop; Android does not
+      # use it, but the bundler wants a file per target triple.
+      - name: Create mobile externalBin placeholder
+        run: |
+          mkdir -p src-tauri/ffmpeg
+          touch src-tauri/ffmpeg/ffmpeg-aarch64-linux-android
+          chmod +x src-tauri/ffmpeg/ffmpeg-aarch64-linux-android
+
+      - name: Initialize Tauri Android project
+        run: npx tauri android init --ci
+
+      - name: Build release APK (arm64)
+        run: npx tauri android build --apk --target aarch64 --ci
+
+      - name: Align and sign
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          UNSIGNED=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release-unsigned.apk' | head -n 1)
+          if [ -z "$UNSIGNED" ]; then
+            echo "No unsigned release APK found:"; find src-tauri/gen/android/app/build/outputs -name '*.apk' || true; exit 1
+          fi
+          echo "Unsigned APK: $UNSIGNED"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          if [ -n "${KS_B64:-}" ] && [ -n "${KS_PW:-}" ]; then
+            # secrets piped in from PowerShell end with a CRLF: drop it
+            KS_PW=$(printf %s "$KS_PW" | tr -d '\r\n'); export KS_PW
+            printf %s "$KS_B64" | tr -d '\r\n ' | base64 -d > /tmp/release.jks
+            echo "Signing with the repository keystore"
+          else
+            KS_PW=$(openssl rand -hex 16); export KS_PW
+            keytool -genkeypair -keystore /tmp/release.jks -storetype PKCS12 -alias meowave -keyalg RSA -keysize 2048 \
+              -validity 10000 -storepass "$KS_PW" -keypass "$KS_PW" -dname "CN=Meowave CI" >/dev/null
+            echo "::warning::No ANDROID_KEYSTORE_* secrets: signed with a throwaway key; uninstall the old APK before installing this one."
+          fi
+          "$BT/zipalign" -p -f 4 "$UNSIGNED" /tmp/aligned.apk
+          "$BT/apksigner" sign --ks /tmp/release.jks --ks-pass env:KS_PW --key-pass env:KS_PW --out Meowave.apk /tmp/aligned.apk
+          "$BT/apksigner" verify --print-certs Meowave.apk | head -n 3
+          rm -f /tmp/release.jks
+          ls -lh Meowave.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Meowave-Android-APK
+          path: Meowave.apk
+          if-no-files-found: error
