@@ -2,6 +2,7 @@ name: iOS Build
 
 # Builds Meowave for iOS (Tauri 2 mobile architecture) and produces an unsigned .ipa
 # suitable for sideloading via AltStore, Sideloadly, Scarlet, TrollStore, etc.
+# The .ipa stays a workflow artifact: it is not attached to GitHub releases.
 
 on:
   workflow_dispatch:
@@ -13,8 +14,6 @@ on:
       - 'src-tauri/**'
       - 'scripts/**'
       - '.github/workflows/ios.yml'
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -219,11 +218,3 @@ jobs:
           name: Meowave-iOS-IPA
           path: Meowave.ipa
           if-no-files-found: error
-
-      - name: Attach IPA to GitHub Release
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: Meowave.ipa
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
