@@ -138,3 +138,5 @@ cody.json
 .lovable/
 *llm*
 *gpt*
+ios-build/
+android-build/

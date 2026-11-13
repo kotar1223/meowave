@@ -3,6 +3,8 @@
 <head>
 <!-- Theme, platform and splash icon before the first paint (see boot.js). -->
 <script src="./boot.js"></script>
+<!-- Phones get their own interface layer (src/mobile/). -->
+<script src="./mobile/detect.js"></script>
 <!-- Icons and supabase-js are bundled locally, not from a CDN: the CDN is
      blocked on some networks, and when it failed every icon vanished and
      account sign-in died with it.
@@ -31,6 +33,7 @@
      the local defaults render first, the CDN never blocks boot. -->
 <link rel="stylesheet" data-fonts-async media="print" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Comfortaa:wght@600;700&family=Fira+Code:wght@500;600&family=Geist:wght@500;600;700&family=Manrope:wght@500;700;800&family=Montserrat:wght@500;700;800&family=Outfit:wght@500;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Roboto:wght@400;500;700&family=Rubik:wght@500;700&family=Russo+One&family=Space+Grotesk:wght@500;700&family=Syne:wght@600;700;800&family=Unbounded:wght@500;700;800&subset=cyrillic,cyrillic-ext,latin&display=swap">
 <link rel="stylesheet" href="./app.css">
+<link rel="stylesheet" href="./mobile/mobile.css">
 </head>
 <body>
 
@@ -1193,6 +1196,7 @@
 </div>
 
 <script src="./app.js" defer></script>
+<script src="./mobile/mobile.js" defer></script>
 <script src="./ready.js" defer></script>
 </body>
 </html>
