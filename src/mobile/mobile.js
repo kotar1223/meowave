@@ -100,6 +100,33 @@
   allow:e=>!e.target.closest("input,.track,button"),
   onEnd:(axis,dx,dy)=>{if(axis==="y"&&dy<-40){haptic();try{openFP()}catch{}}}});
 
+ /* ── home ("Волна"): the current cover, big, above the title ──
+    Tapping it opens the full-screen player (or starts the wave when
+    nothing is loaded yet). Follows the mini player, which app.js redraws on
+    every track change. */
+ const hero=document.getElementById("hero");
+ if(hero&&!hero.querySelector(".m-hero-art")){
+  const art=document.createElement("div");
+  art.className="m-hero-art";art.setAttribute("role","button");art.tabIndex=0;
+  art.setAttribute("aria-label",ru?"Открыть плеер":"Open player");
+  hero.prepend(art);
+  let last=null;
+  const paint=()=>{
+   const tr=typeof S!=="undefined"?S.current:null;
+   let u="";try{u=tr&&tr.mode!=="empty"&&tr.art?cssUrlRaw(tr.art):""}catch{}
+   if(u===last)return;last=u;
+   art.style.backgroundImage=u?`url("${u.replace(/"/g,"%22")}")`:"";
+   art.dataset.empty=String(!u)};
+  art.addEventListener("click",()=>{
+   haptic();
+   const tr=typeof S!=="undefined"?S.current:null;
+   if(tr&&tr.mode!=="empty"){try{openFP()}catch{}}
+   else document.getElementById("start")?.click()});
+  const np=document.getElementById("np");
+  if(np)new MutationObserver(paint).observe(np,{childList:true,subtree:true,attributes:true,attributeFilter:["src","style"]});
+  addEventListener("mw:legacy",paint);
+  setTimeout(paint,0)}
+
  /* the player is (re)built by renderFP(): add the tabs whenever it appears */
  const fpcEl=document.getElementById("fpc");
  if(fpcEl){new MutationObserver(ensureTabs).observe(fpcEl,{childList:true});ensureTabs()}

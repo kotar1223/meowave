@@ -6448,10 +6448,18 @@ html[data-coverbg="on"]:not([data-wall]) .artbg{display:block}
 html[data-theme="light"] .artbg{background:#f4f4f7}
 html[data-theme="light"] .artbg i{filter:blur(72px) saturate(1.2) brightness(1.1)}
 html[data-theme="light"] .artbg b{background:radial-gradient(ellipse at center,rgb(255 255 255/.3) 20%,rgb(250 250 252/.6) 100%);box-shadow:none}
-html[data-coverbg="on"]:not([data-wall]) .cvbg,
-html[data-coverbg="on"]:not([data-wall]) .haze{display:none}
-html[data-coverbg="on"]:not([data-wall]) #field,
-html[data-coverbg="on"]:not([data-wall]) #fieldgl{display:none!important}
+/* Only while a cover is really up (html[data-artbg="on"], set by artBg()):
+   before the first track the old wave stays, so the app never opens on a
+   flat void. frame() stops simulating the field while it is hidden. */
+html[data-artbg="on"][data-coverbg="on"]:not([data-wall]) .cvbg,
+html[data-artbg="on"][data-coverbg="on"]:not([data-wall]) .haze{display:none}
+html[data-artbg="on"][data-coverbg="on"]:not([data-wall]) #field,
+html[data-artbg="on"][data-coverbg="on"]:not([data-wall]) #fieldgl{display:none!important}
+/* phones: the layer arrives already blurred (artBgBake) — no filter */
+.artbg i[data-pre]{inset:0;filter:none!important;transform:translateZ(0)}
+.artbg:has(i[data-pre][data-on="true"]) b::before{content:"";position:absolute;inset:0;background:#000;
+  opacity:calc(.45 - .6 * var(--cv-k))}
+html[data-theme="light"] .artbg:has(i[data-pre][data-on="true"]) b::before{background:#fff;opacity:.1}
 
 @media (min-width:821px){
   html[data-theme] .app{gap:var(--fr-pad);

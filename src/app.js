@@ -1927,7 +1927,7 @@ function frame(now){
   }else{
    /* Background (src/ts/aura.ts): the wave, the light Аура, or nothing at all —
       "off" skips even the analyser read, so nothing under the glass moves. */
-   const bgm=window.MWAura?.bg||"wave";
+   const bgm=artBgOn()?"off":(window.MWAura?.bg||"wave");
    /* Behind any other screen (round 10: "the wave must not stop in the
       tabs"): it moves there too, at 30 updates a second, over glass panels
       that drop their backdrop blur while it does (app.css
@@ -8398,21 +8398,67 @@ function fpTint(a,b){
 /* The whole shell sits on the current cover, blurred — the same backdrop as
    the full-screen player. Two stacked layers crossfade on a track change. */
 let AB_FRONT=0,AB_URL="";
+/* True while a cover is actually on screen behind the shell: the particle
+   field under it is hidden then, so frame() skips its physics and drawing
+   (it used to keep simulating thousands of unseen particles). */
+function artBgOn(){
+ const d=document.documentElement;
+ return d.dataset.artbg==="on"&&d.dataset.coverbg==="on"&&!d.hasAttribute("data-wall")}
+/* Phones: the blur is baked into a 48 px copy of the cover once, in JS, and
+   that copy is stretched over the window — no CSS filter at all. A
+   blur(72px) over a full-screen layer is what the Android WebView could not
+   afford. Returns "" for a cross-origin cover that cannot be read back. */
+function artBgBake(img){
+ try{
+  const n=48,a=document.createElement("canvas");a.width=a.height=n*4;
+  const ax=a.getContext("2d");ax.imageSmoothingEnabled=true;ax.imageSmoothingQuality="high";
+  ax.drawImage(img,0,0,n*4,n*4);
+  const c=document.createElement("canvas");c.width=c.height=n;
+  const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  x.drawImage(a,0,0,n,n);
+  const d=x.getImageData(0,0,n,n),px=d.data,tmp=new Float32Array(px.length);
+  /* three box-blur passes ≈ a gaussian; edges clamp */
+  const R=4,pass=(src,dst,dx,dy)=>{
+   for(let y=0;y<n;y++)for(let xx=0;xx<n;xx++){
+    let r=0,g=0,bl=0;
+    for(let k=-R;k<=R;k++){
+     const sx=Math.min(n-1,Math.max(0,xx+k*dx)),sy=Math.min(n-1,Math.max(0,y+k*dy)),i=(sy*n+sx)*4;
+     r+=src[i];g+=src[i+1];bl+=src[i+2]}
+    const o=(y*n+xx)*4,w=2*R+1;dst[o]=r/w;dst[o+1]=g/w;dst[o+2]=bl/w;dst[o+3]=255}};
+  const buf=new Float32Array(px);
+  for(let i=0;i<3;i++){pass(buf,tmp,1,0);pass(tmp,buf,0,1)}
+  /* saturate(1.15), as the CSS filter did */
+  for(let i=0;i<px.length;i+=4){
+   const r=buf[i],g=buf[i+1],bl=buf[i+2],l=.2126*r+.7152*g+.0722*bl;
+   px[i]=l+(r-l)*1.15;px[i+1]=l+(g-l)*1.15;px[i+2]=l+(bl-l)*1.15;px[i+3]=255}
+  x.putImageData(d,0,0);
+  return c.toDataURL("image/png")}catch(_){return ""}}
 function artBg(tr){
  /* No track: keep the last cover, so the shell never drops to a flat void. */
  let raw=tr?.art||"";
  try{if(raw)localStorage.setItem("mw.lastArt",String(raw));else raw=localStorage.getItem("mw.lastArt")||""}catch{}
  const u=raw?cssUrlRaw(raw):"";
  if(u===AB_URL)return;AB_URL=u;
+ const de=document.documentElement;
  let box=document.getElementById("artbg");
  if(!box){box=document.createElement("div");box.id="artbg";box.className="artbg";box.setAttribute("aria-hidden","true");
   box.innerHTML="<i></i><i></i><b></b>";document.body.prepend(box)}
- if(!u){box.querySelectorAll("i").forEach(i=>i.dataset.on="false");return}
- const want=`url("${u.replace(/"/g,"%22")}")`;
- const show=()=>{if(AB_URL!==u)return;
+ if(!u){box.querySelectorAll("i").forEach(i=>i.dataset.on="false");de.dataset.artbg="off";return}
+ const mobile=de.hasAttribute("data-mobile");
+ const show=(img,clean)=>{if(AB_URL!==u)return;
   const L=box.querySelectorAll("i"),next=L[AB_FRONT^1],cur=L[AB_FRONT];
-  next.style.backgroundImage=want;next.dataset.on="true";cur.dataset.on="false";AB_FRONT^=1};
- const img=new Image();img.onload=show;img.onerror=show;img.src=u}
+  const baked=mobile&&clean&&img?artBgBake(img):"";
+  next.style.backgroundImage=baked?`url("${baked}")`:`url("${u.replace(/"/g,"%22")}")`;
+  if(baked)next.dataset.pre="1";else delete next.dataset.pre;
+  next.dataset.on="true";cur.dataset.on="false";AB_FRONT^=1;
+  de.dataset.artbg="on"};
+ /* CORS-clean first (needed to read the pixels back on phones); a cover
+    whose host sends no CORS headers is loaded plainly and blurred by CSS. */
+ const load=cors=>{const img=new Image();if(cors)img.crossOrigin="anonymous";
+  img.onload=()=>show(img,cors||!/^https?:/i.test(u));
+  img.onerror=()=>cors?load(false):show(null,false);
+  img.src=u};
+ load(mobile&&/^https?:/i.test(u))}
 /* At start the last cover goes up at once, before any track is restored. */
 setTimeout(()=>{try{if(!AB_URL)artBg(typeof S!=="undefined"?S.current:null)}catch{}},0);
 function adaptAccent(tr){
